@@ -2,8 +2,9 @@
 using System.Text.Encodings.Web;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Scim.Context;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,6 @@ namespace Bit.Scim.Utilities;
 
 public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthenticationOptions>
 {
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IScimContext _scimContext;
 
@@ -21,12 +21,10 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock,
-        IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IScimContext scimContext) :
         base(options, logger, encoder, clock)
     {
-        _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _scimContext = scimContext;
     }
@@ -66,13 +64,13 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         var orgApiKey = (await _organizationApiKeyRepository
             .GetManyByOrganizationIdTypeAsync(_scimContext.Organization.Id, OrganizationApiKeyType.Scim))
             .FirstOrDefault();
-        if (orgApiKey?.ApiKey != apiKey)
+        if (orgApiKey?.ApiKey == null || !CoreHelpers.FixedTimeEquals(orgApiKey.ApiKey, apiKey))
         {
-            Logger.LogWarning("An API request was received with an invalid API key: {apiKey}", apiKey);
+            Logger.LogWarning("An API request was received with an invalid API key for organization {OrganizationId}.", _scimContext.OrganizationId);
             return AuthenticateResult.Fail("Invalid parameters");
         }
 
-        Logger.LogInformation("Org {organizationId} authenticated", _scimContext.OrganizationId);
+        Logger.LogInformation("Org {OrganizationId} authenticated", _scimContext.OrganizationId);
 
         var claims = new[]
         {

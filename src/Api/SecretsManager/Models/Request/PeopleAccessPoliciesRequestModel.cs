@@ -1,4 +1,7 @@
-﻿using Bit.Api.SecretsManager.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.SecretsManager.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;

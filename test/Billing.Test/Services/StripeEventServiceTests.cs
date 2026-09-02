@@ -1,11 +1,10 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Billing.Test.Utilities;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
+using Stripe.Checkout;
 using Xunit;
 
 namespace Bit.Billing.Test.Services;
@@ -13,6 +12,7 @@ namespace Bit.Billing.Test.Services;
 public class StripeEventServiceTests
 {
     private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly StripeEventService _stripeEventService;
 
     public StripeEventServiceTests()
@@ -22,7 +22,11 @@ public class StripeEventServiceTests
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, Substitute.For<ILogger<StripeEventService>>(), _stripeFacade);
+        _stripeAdapter = Substitute.For<IStripeAdapter>();
+        _stripeEventService = new StripeEventService(
+            globalSettings,
+            _stripeFacade,
+            _stripeAdapter);
     }
 
     #region GetCharge
@@ -30,52 +34,44 @@ public class StripeEventServiceTests
     public async Task GetCharge_EventNotChargeRelated_ThrowsException()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.created", new Invoice { Id = "in_test" });
 
-        // Act
-        var function = async () => await _stripeEventService.GetCharge(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetCharge(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
             Arg.Any<string>(),
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<ChargeGetOptions>());
     }
 
     [Fact]
     public async Task GetCharge_NotFresh_ReturnsEventCharge()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.ChargeSucceeded);
+        var mockCharge = new Charge { Id = "ch_test", Amount = 1000 };
+        var stripeEvent = CreateMockEvent("evt_test", "charge.succeeded", mockCharge);
 
         // Act
         var charge = await _stripeEventService.GetCharge(stripeEvent);
 
         // Assert
-        charge.Should().BeEquivalentTo(stripeEvent.Data.Object as Charge);
+        Assert.Equal(mockCharge.Id, charge.Id);
+        Assert.Equal(mockCharge.Amount, charge.Amount);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
             Arg.Any<string>(),
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<ChargeGetOptions>());
     }
 
     [Fact]
     public async Task GetCharge_Fresh_Expand_ReturnsAPICharge()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.ChargeSucceeded);
+        var eventCharge = new Charge { Id = "ch_test", Amount = 1000 };
+        var stripeEvent = CreateMockEvent("evt_test", "charge.succeeded", eventCharge);
 
-        var eventCharge = stripeEvent.Data.Object as Charge;
-
-        var apiCharge = Copy(eventCharge);
+        var apiCharge = new Charge { Id = "ch_test", Amount = 2000 };
 
         var expand = new List<string> { "customer" };
 
@@ -88,14 +84,12 @@ public class StripeEventServiceTests
         var charge = await _stripeEventService.GetCharge(stripeEvent, true, expand);
 
         // Assert
-        charge.Should().Be(apiCharge);
-        charge.Should().NotBeSameAs(eventCharge);
+        Assert.Equal(apiCharge, charge);
+        Assert.NotSame(eventCharge, charge);
 
         await _stripeFacade.Received().GetCharge(
             apiCharge.Id,
-            Arg.Is<ChargeGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Is<ChargeGetOptions>(options => options.Expand == expand));
     }
     #endregion
 
@@ -104,52 +98,44 @@ public class StripeEventServiceTests
     public async Task GetCustomer_EventNotCustomerRelated_ThrowsException()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.created", new Invoice { Id = "in_test" });
 
-        // Act
-        var function = async () => await _stripeEventService.GetCustomer(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetCustomer(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
             Arg.Any<string>(),
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<CustomerGetOptions>());
     }
 
     [Fact]
     public async Task GetCustomer_NotFresh_ReturnsEventCustomer()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
+        var mockCustomer = new Customer { Id = "cus_test", Email = "test@example.com" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", mockCustomer);
 
         // Act
         var customer = await _stripeEventService.GetCustomer(stripeEvent);
 
         // Assert
-        customer.Should().BeEquivalentTo(stripeEvent.Data.Object as Customer);
+        Assert.Equal(mockCustomer.Id, customer.Id);
+        Assert.Equal(mockCustomer.Email, customer.Email);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
             Arg.Any<string>(),
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<CustomerGetOptions>());
     }
 
     [Fact]
     public async Task GetCustomer_Fresh_Expand_ReturnsAPICustomer()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
+        var eventCustomer = new Customer { Id = "cus_test", Email = "test@example.com" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", eventCustomer);
 
-        var eventCustomer = stripeEvent.Data.Object as Customer;
-
-        var apiCustomer = Copy(eventCustomer);
+        var apiCustomer = new Customer { Id = "cus_test", Email = "updated@example.com" };
 
         var expand = new List<string> { "subscriptions" };
 
@@ -162,14 +148,12 @@ public class StripeEventServiceTests
         var customer = await _stripeEventService.GetCustomer(stripeEvent, true, expand);
 
         // Assert
-        customer.Should().Be(apiCustomer);
-        customer.Should().NotBeSameAs(eventCustomer);
+        Assert.Equal(apiCustomer, customer);
+        Assert.NotSame(eventCustomer, customer);
 
         await _stripeFacade.Received().GetCustomer(
             apiCustomer.Id,
-            Arg.Is<CustomerGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Is<CustomerGetOptions>(options => options.Expand == expand));
     }
     #endregion
 
@@ -178,52 +162,44 @@ public class StripeEventServiceTests
     public async Task GetInvoice_EventNotInvoiceRelated_ThrowsException()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
 
-        // Act
-        var function = async () => await _stripeEventService.GetInvoice(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetInvoice(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
             Arg.Any<string>(),
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<InvoiceGetOptions>());
     }
 
     [Fact]
     public async Task GetInvoice_NotFresh_ReturnsEventInvoice()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var mockInvoice = new Invoice { Id = "in_test", AmountDue = 1000 };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.created", mockInvoice);
 
         // Act
         var invoice = await _stripeEventService.GetInvoice(stripeEvent);
 
         // Assert
-        invoice.Should().BeEquivalentTo(stripeEvent.Data.Object as Invoice);
+        Assert.Equal(mockInvoice.Id, invoice.Id);
+        Assert.Equal(mockInvoice.AmountDue, invoice.AmountDue);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
             Arg.Any<string>(),
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<InvoiceGetOptions>());
     }
 
     [Fact]
     public async Task GetInvoice_Fresh_Expand_ReturnsAPIInvoice()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var eventInvoice = new Invoice { Id = "in_test", AmountDue = 1000 };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.created", eventInvoice);
 
-        var eventInvoice = stripeEvent.Data.Object as Invoice;
-
-        var apiInvoice = Copy(eventInvoice);
+        var apiInvoice = new Invoice { Id = "in_test", AmountDue = 2000 };
 
         var expand = new List<string> { "customer" };
 
@@ -236,14 +212,12 @@ public class StripeEventServiceTests
         var invoice = await _stripeEventService.GetInvoice(stripeEvent, true, expand);
 
         // Assert
-        invoice.Should().Be(apiInvoice);
-        invoice.Should().NotBeSameAs(eventInvoice);
+        Assert.Equal(apiInvoice, invoice);
+        Assert.NotSame(eventInvoice, invoice);
 
         await _stripeFacade.Received().GetInvoice(
             apiInvoice.Id,
-            Arg.Is<InvoiceGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Is<InvoiceGetOptions>(options => options.Expand == expand));
     }
     #endregion
 
@@ -252,52 +226,44 @@ public class StripeEventServiceTests
     public async Task GetPaymentMethod_EventNotPaymentMethodRelated_ThrowsException()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
 
-        // Act
-        var function = async () => await _stripeEventService.GetPaymentMethod(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetPaymentMethod(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
             Arg.Any<string>(),
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<PaymentMethodGetOptions>());
     }
 
     [Fact]
     public async Task GetPaymentMethod_NotFresh_ReturnsEventPaymentMethod()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.PaymentMethodAttached);
+        var mockPaymentMethod = new PaymentMethod { Id = "pm_test", Type = "card" };
+        var stripeEvent = CreateMockEvent("evt_test", "payment_method.attached", mockPaymentMethod);
 
         // Act
         var paymentMethod = await _stripeEventService.GetPaymentMethod(stripeEvent);
 
         // Assert
-        paymentMethod.Should().BeEquivalentTo(stripeEvent.Data.Object as PaymentMethod);
+        Assert.Equal(mockPaymentMethod.Id, paymentMethod.Id);
+        Assert.Equal(mockPaymentMethod.Type, paymentMethod.Type);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
             Arg.Any<string>(),
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<PaymentMethodGetOptions>());
     }
 
     [Fact]
     public async Task GetPaymentMethod_Fresh_Expand_ReturnsAPIPaymentMethod()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.PaymentMethodAttached);
+        var eventPaymentMethod = new PaymentMethod { Id = "pm_test", Type = "card" };
+        var stripeEvent = CreateMockEvent("evt_test", "payment_method.attached", eventPaymentMethod);
 
-        var eventPaymentMethod = stripeEvent.Data.Object as PaymentMethod;
-
-        var apiPaymentMethod = Copy(eventPaymentMethod);
+        var apiPaymentMethod = new PaymentMethod { Id = "pm_test", Type = "card" };
 
         var expand = new List<string> { "customer" };
 
@@ -310,14 +276,12 @@ public class StripeEventServiceTests
         var paymentMethod = await _stripeEventService.GetPaymentMethod(stripeEvent, true, expand);
 
         // Assert
-        paymentMethod.Should().Be(apiPaymentMethod);
-        paymentMethod.Should().NotBeSameAs(eventPaymentMethod);
+        Assert.Equal(apiPaymentMethod, paymentMethod);
+        Assert.NotSame(eventPaymentMethod, paymentMethod);
 
         await _stripeFacade.Received().GetPaymentMethod(
             apiPaymentMethod.Id,
-            Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand));
     }
     #endregion
 
@@ -326,52 +290,44 @@ public class StripeEventServiceTests
     public async Task GetSubscription_EventNotSubscriptionRelated_ThrowsException()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
 
-        // Act
-        var function = async () => await _stripeEventService.GetSubscription(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetSubscription(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
             Arg.Any<string>(),
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
     public async Task GetSubscription_NotFresh_ReturnsEventSubscription()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var mockSubscription = new Subscription { Id = "sub_test", Status = "active" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
 
         // Act
         var subscription = await _stripeEventService.GetSubscription(stripeEvent);
 
         // Assert
-        subscription.Should().BeEquivalentTo(stripeEvent.Data.Object as Subscription);
+        Assert.Equal(mockSubscription.Id, subscription.Id);
+        Assert.Equal(mockSubscription.Status, subscription.Status);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
             Arg.Any<string>(),
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
     public async Task GetSubscription_Fresh_Expand_ReturnsAPISubscription()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var eventSubscription = new Subscription { Id = "sub_test", Status = "active" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", eventSubscription);
 
-        var eventSubscription = stripeEvent.Data.Object as Subscription;
-
-        var apiSubscription = Copy(eventSubscription);
+        var apiSubscription = new Subscription { Id = "sub_test", Status = "canceled" };
 
         var expand = new List<string> { "customer" };
 
@@ -384,14 +340,136 @@ public class StripeEventServiceTests
         var subscription = await _stripeEventService.GetSubscription(stripeEvent, true, expand);
 
         // Assert
-        subscription.Should().Be(apiSubscription);
-        subscription.Should().NotBeSameAs(eventSubscription);
+        Assert.Equal(apiSubscription, subscription);
+        Assert.NotSame(eventSubscription, subscription);
 
         await _stripeFacade.Received().GetSubscription(
             apiSubscription.Id,
-            Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand));
+    }
+    #endregion
+
+    #region GetSetupIntent
+    [Fact]
+    public async Task GetSetupIntent_EventNotSetupIntentRelated_ThrowsException()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetSetupIntent(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(SetupIntent)}'", exception.Message);
+
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSetupIntent(
+            Arg.Any<string>(),
+            Arg.Any<SetupIntentGetOptions>());
+    }
+
+    [Fact]
+    public async Task GetSetupIntent_NotFresh_ReturnsEventSetupIntent()
+    {
+        // Arrange
+        var mockSetupIntent = new SetupIntent { Id = "seti_test", Status = "succeeded" };
+        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
+
+        // Act
+        var setupIntent = await _stripeEventService.GetSetupIntent(stripeEvent);
+
+        // Assert
+        Assert.Equal(mockSetupIntent.Id, setupIntent.Id);
+        Assert.Equal(mockSetupIntent.Status, setupIntent.Status);
+
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSetupIntent(
+            Arg.Any<string>(),
+            Arg.Any<SetupIntentGetOptions>());
+    }
+
+    [Fact]
+    public async Task GetSetupIntent_Fresh_Expand_ReturnsAPISetupIntent()
+    {
+        // Arrange
+        var eventSetupIntent = new SetupIntent { Id = "seti_test", Status = "succeeded" };
+        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", eventSetupIntent);
+
+        var apiSetupIntent = new SetupIntent { Id = "seti_test", Status = "requires_action" };
+
+        var expand = new List<string> { "customer" };
+
+        _stripeFacade.GetSetupIntent(
+                apiSetupIntent.Id,
+                Arg.Is<SetupIntentGetOptions>(options => options.Expand == expand))
+            .Returns(apiSetupIntent);
+
+        // Act
+        var setupIntent = await _stripeEventService.GetSetupIntent(stripeEvent, true, expand);
+
+        // Assert
+        Assert.Equal(apiSetupIntent, setupIntent);
+        Assert.NotSame(eventSetupIntent, setupIntent);
+
+        await _stripeFacade.Received().GetSetupIntent(
+            apiSetupIntent.Id,
+            Arg.Is<SetupIntentGetOptions>(options => options.Expand == expand));
+    }
+    #endregion
+
+    #region GetCheckoutSession
+    [Fact]
+    public async Task GetCheckoutSession_EventNotCheckoutSessionRelated_ThrowsException()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetCheckoutSession(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Session)}'", exception.Message);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_NotFresh_ReturnsEventSession()
+    {
+        // Arrange
+        var mockSession = new Session { Id = "cs_test", SubscriptionId = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent);
+
+        // Assert
+        Assert.Equal(mockSession.Id, session.Id);
+        Assert.Equal(mockSession.SubscriptionId, session.SubscriptionId);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_Fresh_Expand_ReturnsAPISession()
+    {
+        // Arrange
+        var eventSession = new Session { Id = "cs_test", SubscriptionId = "sub_old" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", eventSession);
+
+        var apiSession = new Session { Id = "cs_test", SubscriptionId = "sub_new" };
+
+        var expand = new List<string> { "customer" };
+
+        _stripeAdapter.GetCheckoutSessionAsync(
+                apiSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand == expand))
+            .Returns(apiSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent, true, expand);
+
+        // Assert
+        Assert.Equal(apiSession, session);
+        Assert.NotSame(eventSession, session);
+
+        await _stripeAdapter.Received().GetCheckoutSessionAsync(
+            apiSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand == expand));
     }
     #endregion
 
@@ -400,74 +478,65 @@ public class StripeEventServiceTests
     public async Task ValidateCloudRegion_SubscriptionUpdated_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var mockSubscription = new Subscription { Id = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
 
-        var subscription = Copy(stripeEvent.Data.Object as Subscription);
-
-        var customer = await GetCustomerAsync();
-
-        subscription.Customer = customer;
+        var customer = CreateMockCustomer();
+        mockSubscription.Customer = customer;
 
         _stripeFacade.GetSubscription(
-                subscription.Id,
+                mockSubscription.Id,
                 Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
+            .Returns(mockSubscription);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockSubscription.Id,
+            Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_ChargeSucceeded_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.ChargeSucceeded);
+        var mockCharge = new Charge { Id = "ch_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "charge.succeeded", mockCharge);
 
-        var charge = Copy(stripeEvent.Data.Object as Charge);
-
-        var customer = await GetCustomerAsync();
-
-        charge.Customer = customer;
+        var customer = CreateMockCustomer();
+        mockCharge.Customer = customer;
 
         _stripeFacade.GetCharge(
-                charge.Id,
+                mockCharge.Id,
                 Arg.Any<ChargeGetOptions>())
-            .Returns(charge);
+            .Returns(mockCharge);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCharge(
-            charge.Id,
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockCharge.Id,
+            Arg.Any<ChargeGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_UpcomingInvoice_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceUpcoming);
+        var mockInvoice = new Invoice { Id = "in_test", CustomerId = "cus_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.upcoming", mockInvoice);
 
-        var invoice = Copy(stripeEvent.Data.Object as Invoice);
-
-        var customer = await GetCustomerAsync();
+        var customer = CreateMockCustomer();
 
         _stripeFacade.GetCustomer(
-                invoice.CustomerId,
+                mockInvoice.CustomerId,
                 Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
@@ -475,216 +544,306 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCustomer(
-            invoice.CustomerId,
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockInvoice.CustomerId,
+            Arg.Any<CustomerGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_InvoiceCreated_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
+        var mockInvoice = new Invoice { Id = "in_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.created", mockInvoice);
 
-        var invoice = Copy(stripeEvent.Data.Object as Invoice);
-
-        var customer = await GetCustomerAsync();
-
-        invoice.Customer = customer;
+        var customer = CreateMockCustomer();
+        mockInvoice.Customer = customer;
 
         _stripeFacade.GetInvoice(
-                invoice.Id,
+                mockInvoice.Id,
                 Arg.Any<InvoiceGetOptions>())
-            .Returns(invoice);
+            .Returns(mockInvoice);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetInvoice(
-            invoice.Id,
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockInvoice.Id,
+            Arg.Any<InvoiceGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_PaymentMethodAttached_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.PaymentMethodAttached);
+        var mockPaymentMethod = new PaymentMethod { Id = "pm_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "payment_method.attached", mockPaymentMethod);
 
-        var paymentMethod = Copy(stripeEvent.Data.Object as PaymentMethod);
-
-        var customer = await GetCustomerAsync();
-
-        paymentMethod.Customer = customer;
+        var customer = CreateMockCustomer();
+        mockPaymentMethod.Customer = customer;
 
         _stripeFacade.GetPaymentMethod(
-                paymentMethod.Id,
+                mockPaymentMethod.Id,
                 Arg.Any<PaymentMethodGetOptions>())
-            .Returns(paymentMethod);
+            .Returns(mockPaymentMethod);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetPaymentMethod(
-            paymentMethod.Id,
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockPaymentMethod.Id,
+            Arg.Any<PaymentMethodGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_CustomerUpdated_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated);
-
-        var customer = Copy(stripeEvent.Data.Object as Customer);
+        var mockCustomer = CreateMockCustomer();
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", mockCustomer);
 
         _stripeFacade.GetCustomer(
-                customer.Id,
+                mockCustomer.Id,
                 Arg.Any<CustomerGetOptions>())
-            .Returns(customer);
+            .Returns(mockCustomer);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCustomer(
-            customer.Id,
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockCustomer.Id,
+            Arg.Any<CustomerGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_MetadataNull_ReturnsFalse()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var mockSubscription = new Subscription { Id = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
 
-        var subscription = Copy(stripeEvent.Data.Object as Subscription);
-
-        var customer = await GetCustomerAsync();
-        customer.Metadata = null;
-
-        subscription.Customer = customer;
+        var customer = new Customer { Id = "cus_test", Metadata = null };
+        mockSubscription.Customer = customer;
 
         _stripeFacade.GetSubscription(
-                subscription.Id,
+                mockSubscription.Id,
                 Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
+            .Returns(mockSubscription);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeFalse();
+        Assert.False(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockSubscription.Id,
+            Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
     public async Task ValidateCloudRegion_MetadataNoRegion_DefaultUS_ReturnsTrue()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var mockSubscription = new Subscription { Id = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
 
-        var subscription = Copy(stripeEvent.Data.Object as Subscription);
-
-        var customer = await GetCustomerAsync();
-        customer.Metadata = new Dictionary<string, string>();
-
-        subscription.Customer = customer;
+        var customer = new Customer { Id = "cus_test", Metadata = new Dictionary<string, string>() };
+        mockSubscription.Customer = customer;
 
         _stripeFacade.GetSubscription(
-                subscription.Id,
+                mockSubscription.Id,
                 Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
+            .Returns(mockSubscription);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockSubscription.Id,
+            Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
-    public async Task ValidateCloudRegion_MetadataMiscasedRegion_ReturnsTrue()
+    public async Task ValidateCloudRegion_MetadataIncorrectlyCasedRegion_ReturnsTrue()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var mockSubscription = new Subscription { Id = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "customer.subscription.updated", mockSubscription);
 
-        var subscription = Copy(stripeEvent.Data.Object as Subscription);
-
-        var customer = await GetCustomerAsync();
-        customer.Metadata = new Dictionary<string, string>
+        var customer = new Customer
         {
-            { "Region", "US" }
+            Id = "cus_test",
+            Metadata = new Dictionary<string, string> { { "Region", "US" } }
         };
-
-        subscription.Customer = customer;
+        mockSubscription.Customer = customer;
 
         _stripeFacade.GetSubscription(
-                subscription.Id,
+                mockSubscription.Id,
                 Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
+            .Returns(mockSubscription);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+            mockSubscription.Id,
+            Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_SetupIntentSucceeded_WithCustomer_Success()
+    {
+        // Arrange
+        var customer = CreateMockCustomer();
+        var mockSetupIntent = new SetupIntent { Id = "seti_test", Customer = customer };
+        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
+
+        _stripeFacade.GetSetupIntent(
+                mockSetupIntent.Id,
+                Arg.Any<SetupIntentGetOptions>())
+            .Returns(mockSetupIntent);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.Received(1).GetSetupIntent(
+            mockSetupIntent.Id,
+            Arg.Any<SetupIntentGetOptions>());
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_SetupIntentSucceeded_NoCustomer_ReturnsFalse()
+    {
+        // Arrange
+        var mockSetupIntent = new SetupIntent { Id = "seti_test", Customer = null };
+        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
+
+        _stripeFacade.GetSetupIntent(
+                mockSetupIntent.Id,
+                Arg.Any<SetupIntentGetOptions>())
+            .Returns(mockSetupIntent);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.False(cloudRegionValid);
+
+        await _stripeFacade.Received(1).GetSetupIntent(
+            mockSetupIntent.Id,
+            Arg.Any<SetupIntentGetOptions>());
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_WithCustomer_ReturnsTrue()
+    {
+        // Arrange
+        var customer = CreateMockCustomer();
+        var mockSession = new Session { Id = "cs_test", CustomerId = customer.Id };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        var freshSession = new Session { Id = "cs_test", Customer = customer };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_NoCustomer_ReturnsFalse()
+    {
+        // Arrange
+        var mockSession = new Session { Id = "cs_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        var freshSession = new Session { Id = "cs_test", Customer = null };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.False(cloudRegionValid);
+
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CouponDeleted_ReturnsTrue()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "coupon.deleted", new Coupon { Id = "cou_test" });
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSetupIntent(null);
     }
     #endregion
 
-    private static T Copy<T>(T input)
+    private static Event CreateMockEvent<T>(string id, string type, T dataObject) where T : IStripeEntity
     {
-        var copy = (T)Activator.CreateInstance(typeof(T));
-
-        var properties = input.GetType().GetProperties();
-
-        foreach (var property in properties)
+        return new Event
         {
-            var value = property.GetValue(input);
-            copy!
-                .GetType()
-                .GetProperty(property.Name)!
-                .SetValue(copy, value);
-        }
-
-        return copy;
+            Id = id,
+            Type = type,
+            Data = new EventData
+            {
+                Object = (IHasObject)dataObject
+            }
+        };
     }
 
-    private static async Task<Customer> GetCustomerAsync()
-        => (await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated)).Data.Object as Customer;
+    private static Customer CreateMockCustomer()
+    {
+        return new Customer
+        {
+            Id = "cus_test",
+            Metadata = new Dictionary<string, string> { { "region", "US" } }
+        };
+    }
 }

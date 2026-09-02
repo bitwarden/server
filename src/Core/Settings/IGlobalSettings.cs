@@ -6,25 +6,34 @@ public interface IGlobalSettings
 {
     // This interface exists for testing. Add settings here as needed for testing
     bool SelfHosted { get; set; }
-    bool UnifiedDeployment { get; set; }
+    bool LiteDeployment { get; set; }
     string KnownProxies { get; set; }
+    string KnownNetworks { get; set; }
     string ProjectName { get; set; }
     bool EnableCloudCommunication { get; set; }
     string LicenseDirectory { get; set; }
     string LicenseCertificatePassword { get; set; }
+    string LicenseCertificatePath { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
+    int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; }
+    int DeviceLastActivityCacheTtlHours { get; set; }
     bool DisableUserRegistration { get; set; }
+    bool SuppressOnboardingInterstitials { get; set; }
     bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }
     IConnectionStringSettings Storage { get; set; }
     IBaseServiceUriSettings BaseServiceUri { get; set; }
     ISsoSettings Sso { get; set; }
-    ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
+    GlobalSettings.StripeSettings Stripe { get; set; }
     string DevelopmentDirectory { get; set; }
+    IWebPushSettings WebPush { get; set; }
+    GlobalSettings.EventLoggingSettings EventLogging { get; set; }
+    GlobalSettings.WebAuthnSettings WebAuthn { get; set; }
+    ICommunicationSettings Communication { get; set; }
 }

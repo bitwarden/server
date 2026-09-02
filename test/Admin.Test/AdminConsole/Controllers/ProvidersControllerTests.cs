@@ -1,16 +1,19 @@
 ﻿using Bit.Admin.AdminConsole.Controllers;
 using Bit.Admin.AdminConsole.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Services;
+using Bit.Core.Billing.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
+using Stripe;
 
 namespace Admin.Test.AdminConsole.Controllers;
 
@@ -77,49 +80,43 @@ public class ProvidersControllerTests
     }
     #endregion
 
-    #region CreateMultiOrganizationEnterpriseAsync
+    #region CreateBusinessUnitAsync
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_WithValidModel_CreatesProvider(
-        CreateMultiOrganizationEnterpriseProviderModel model,
+    public async Task CreateBusinessUnitAsync_WithValidModel_CreatesProvider(
+        CreateBusinessUnitProviderModel model,
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
 
         // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
+        var actual = await sutProvider.Sut.CreateBusinessUnit(model);
 
         // Assert
         Assert.NotNull(actual);
         await sutProvider.GetDependency<ICreateProviderCommand>()
             .Received(Quantity.Exactly(1))
-            .CreateMultiOrganizationEnterpriseAsync(
-                Arg.Is<Provider>(x => x.Type == ProviderType.MultiOrganizationEnterprise),
+            .CreateBusinessUnitAsync(
+                Arg.Is<Provider>(x => x.Type == ProviderType.BusinessUnit),
                 model.OwnerEmail,
                 Arg.Is<PlanType>(y => y == model.Plan),
                 model.EnterpriseSeatMinimum);
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
     }
 
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToExpectedPage_AfterCreatingProvider(
-        CreateMultiOrganizationEnterpriseProviderModel model,
+    public async Task CreateBusinessUnitAsync_RedirectsToExpectedPage_AfterCreatingProvider(
+        CreateBusinessUnitProviderModel model,
         Guid expectedProviderId,
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<ICreateProviderCommand>()
             .When(x =>
-                x.CreateMultiOrganizationEnterpriseAsync(
-                    Arg.Is<Provider>(y => y.Type == ProviderType.MultiOrganizationEnterprise),
+                x.CreateBusinessUnitAsync(
+                    Arg.Is<Provider>(y => y.Type == ProviderType.BusinessUnit),
                     model.OwnerEmail,
                     Arg.Is<PlanType>(y => y == model.Plan),
                     model.EnterpriseSeatMinimum))
@@ -129,12 +126,8 @@ public class ProvidersControllerTests
                 providerArgument.Id = expectedProviderId;
             });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
-
         // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
+        var actual = await sutProvider.Sut.CreateBusinessUnit(model);
 
         // Assert
         Assert.NotNull(actual);
@@ -143,53 +136,6 @@ public class ProvidersControllerTests
         Assert.Equal("Edit", actualResult.ActionName);
         Assert.Null(actualResult.ControllerName);
         Assert.Equal(expectedProviderId, actualResult.RouteValues["Id"]);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_ChecksFeatureFlag(
-        CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
-
-        // Assert
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToProviderTypeSelectionPage_WhenFeatureFlagIsDisabled(
-        CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(false);
-
-        // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
-
-        // Assert
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
-
-        Assert.IsType<RedirectToActionResult>(actual);
-        var actualResult = (RedirectToActionResult)actual;
-        Assert.Equal("Create", actualResult.ActionName);
-        Assert.Null(actualResult.ControllerName);
     }
     #endregion
 
@@ -202,9 +148,6 @@ public class ProvidersControllerTests
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
 
         // Act
         var actual = await sutProvider.Sut.CreateReseller(model);
@@ -246,6 +189,41 @@ public class ProvidersControllerTests
         Assert.Equal("Edit", actualResult.ActionName);
         Assert.Null(actualResult.ControllerName);
         Assert.Equal(expectedProviderId, actualResult.RouteValues["Id"]);
+    }
+    #endregion
+
+    #region Edit (GET)
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_DeletedStripeCustomer_StillRendersPageWithWarning(
+        Provider provider,
+        SutProvider<ProvidersController> sutProvider)
+    {
+        // PM-40292: a deleted Stripe customer is returned as a stub (Deleted = true) with null
+        // Metadata. The page must still render, PayByInvoice must default to false rather than
+        // NRE'ing, and the admin must be warned so they can fix the Gateway Customer ID.
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomer(provider)
+            .Returns(new Customer { Deleted = true, Metadata = null });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(provider.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<ProviderEditModel>(view.Model);
+        Assert.False(model.PayByInvoice);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be fully loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the provider and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
     }
     #endregion
 }

@@ -1,7 +1,11 @@
-﻿using System.Diagnostics;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
 using System.Text.Json;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -10,14 +14,19 @@ namespace Bit.Admin.Controllers;
 
 public class HomeController : Controller
 {
-    private readonly GlobalSettings _globalSettings;
-    private readonly HttpClient _httpClient = new HttpClient();
-    private readonly ILogger<HomeController> _logger;
+    public const string ExternalHttpClientName = "HomeControllerExternal";
 
-    public HomeController(GlobalSettings globalSettings, ILogger<HomeController> logger)
+    private readonly GlobalSettings _globalSettings;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<HomeController> _logger;
+    private readonly IBitwardenEnvironment _bitwardenEnvironment;
+
+    public HomeController(GlobalSettings globalSettings, IHttpClientFactory httpClientFactory, ILogger<HomeController> logger, IBitwardenEnvironment bitwardenEnvironment)
     {
         _globalSettings = globalSettings;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _bitwardenEnvironment = bitwardenEnvironment;
     }
 
     [Authorize]
@@ -26,7 +35,7 @@ public class HomeController : Controller
         return View(new HomeModel
         {
             GlobalSettings = _globalSettings,
-            CurrentVersion = Core.Utilities.AssemblyHelpers.GetVersion()
+            CurrentVersion = _bitwardenEnvironment.Version
         });
     }
 
@@ -44,7 +53,7 @@ public class HomeController : Controller
         var requestUri = $"https://selfhost.bitwarden.com/version.json";
         try
         {
-            var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            var response = await _httpClientFactory.CreateClient(ExternalHttpClientName).GetAsync(requestUri, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 var latestVersions = JsonConvert.DeserializeObject<LatestVersions>(await response.Content.ReadAsStringAsync());
@@ -58,7 +67,7 @@ public class HomeController : Controller
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+            _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
             return new JsonResult("Unable to fetch latest version") { StatusCode = StatusCodes.Status500InternalServerError };
         }
 
@@ -70,7 +79,7 @@ public class HomeController : Controller
         var requestUri = $"{_globalSettings.BaseServiceUri.InternalVault}/version.json";
         try
         {
-            var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            var response = await _httpClientFactory.CreateClient().GetAsync(requestUri, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
@@ -80,7 +89,7 @@ public class HomeController : Controller
         }
         catch (HttpRequestException e)
         {
-            _logger.LogError(e, $"Error encountered while sending GET request to {requestUri}");
+            _logger.LogError(e, "Error encountered while sending GET request to {RequestUri}", requestUri);
             return new JsonResult("Unable to fetch installed version") { StatusCode = StatusCodes.Status500InternalServerError };
         }
 

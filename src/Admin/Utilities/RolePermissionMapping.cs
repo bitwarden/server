@@ -24,6 +24,7 @@ public static class RolePermissionMapping
                 Permission.User_Billing_Edit,
                 Permission.User_Billing_LaunchGateway,
                 Permission.User_NewDeviceException_Edit,
+                Permission.Org_Name_Edit,
                 Permission.Org_CheckEnabledBox,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
@@ -41,16 +42,18 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_Edit,
                 Permission.Org_Billing_LaunchGateway,
+                Permission.Org_Billing_ConvertToBusinessUnit,
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
                 Permission.Provider_View,
                 Permission.Provider_ResendEmailInvite,
+                Permission.Provider_CheckEnabledBox,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_PromoteAdmin,
                 Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_ManageStripeSubscriptions
+                Permission.Org_InitiateSalesAssistedTrial
             }
         },
         { "admin", new List<Permission>
@@ -71,6 +74,7 @@ public static class RolePermissionMapping
                 Permission.User_Billing_Edit,
                 Permission.User_Billing_LaunchGateway,
                 Permission.User_NewDeviceException_Edit,
+                Permission.Org_Name_Edit,
                 Permission.Org_CheckEnabledBox,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
@@ -88,19 +92,22 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_Edit,
                 Permission.Org_Billing_LaunchGateway,
+                Permission.Org_Billing_ConvertToBusinessUnit,
                 Permission.Org_InitiateTrial,
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
                 Permission.Provider_View,
                 Permission.Provider_Edit,
                 Permission.Provider_ResendEmailInvite,
+                Permission.Provider_CheckEnabledBox,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_PromoteAdmin,
                 Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_ManageStripeSubscriptions,
-                Permission.Tools_CreateEditTransaction
+                Permission.Tools_CreateEditTransaction,
+                Permission.Tools_ManagePlanMigrationCohorts,
+                Permission.Org_InitiateSalesAssistedTrial
             }
         },
         { "cs", new List<Permission>
@@ -116,6 +123,7 @@ public static class RolePermissionMapping
                 Permission.User_Billing_View,
                 Permission.User_Billing_LaunchGateway,
                 Permission.User_NewDeviceException_Edit,
+                Permission.Org_Name_Edit,
                 Permission.Org_CheckEnabledBox,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
@@ -130,7 +138,8 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_LaunchGateway,
                 Permission.Org_RequestDelete,
                 Permission.Provider_List_View,
-                Permission.Provider_View
+                Permission.Provider_View,
+                Permission.Provider_CheckEnabledBox
             }
         },
         { "billing", new List<Permission>
@@ -148,6 +157,7 @@ public static class RolePermissionMapping
                 Permission.User_Billing_View,
                 Permission.User_Billing_Edit,
                 Permission.User_Billing_LaunchGateway,
+                Permission.Org_Name_Edit,
                 Permission.Org_CheckEnabledBox,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
@@ -162,17 +172,16 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_Edit,
                 Permission.Org_Billing_LaunchGateway,
+                Permission.Org_Billing_ConvertToBusinessUnit,
                 Permission.Org_RequestDelete,
                 Permission.Provider_Edit,
                 Permission.Provider_View,
                 Permission.Provider_List_View,
+                Permission.Provider_CheckEnabledBox,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_ManageStripeSubscriptions,
-                Permission.Tools_CreateEditTransaction,
-                Permission.Tools_ProcessStripeEvents,
-                Permission.Tools_MigrateProviders
+                Permission.Tools_CreateEditTransaction
             }
         },
         { "sales", new List<Permission>
@@ -185,6 +194,7 @@ public static class RolePermissionMapping
                 Permission.User_Premium_View,
                 Permission.User_Licensing_View,
                 Permission.User_Licensing_Edit,
+                Permission.Org_Name_Edit,
                 Permission.Org_CheckEnabledBox,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
@@ -201,7 +211,8 @@ public static class RolePermissionMapping
                 Permission.Provider_Create,
                 Permission.Provider_Edit,
                 Permission.Provider_View,
-                Permission.Provider_ResendEmailInvite
+                Permission.Provider_ResendEmailInvite,
+                Permission.Org_InitiateSalesAssistedTrial
             }
         },
     };

@@ -1,0 +1,206 @@
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
+using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.Core.Dirt.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using LinqToDB;
+using Microsoft.Extensions.DependencyInjection;
+
+
+namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories;
+
+public class OrganizationReportRepository :
+    Repository<OrganizationReport, Models.OrganizationReport, Guid>,
+    IOrganizationReportRepository
+{
+    public OrganizationReportRepository(IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationReports)
+    { }
+
+    public async Task<OrganizationReport> GetLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId
+                    && p.ReportData != string.Empty)
+                .OrderByDescending(p => p.RevisionDate)
+                .Take(1)
+                .FirstOrDefaultAsync();
+
+            if (result == null) return default;
+
+            return Mapper.Map<OrganizationReport>(result);
+        }
+    }
+
+    public async Task<OrganizationReport> ReadLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            // Substring match relies on SetReportFile (OrganizationReport.cs) serializing via
+            // JsonHelpers.IgnoreWritingNull (PascalCase, no whitespace). If those serializer
+            // options ever change, the substring stops matching V2 rows on non-MSSQL providers
+            // and the OR fallback silently serves the latest V1 inline row instead, masking
+            // the bug. The Dapper/MSSQL path uses JSON_VALUE which is format-agnostic.
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId
+                    && (
+                        (p.ReportFile != null && p.ReportFile.Contains("\"Validated\":true"))
+                        || p.ReportData != string.Empty
+                    ))
+                .OrderByDescending(p => p.RevisionDate)
+                .Take(1)
+                .FirstOrDefaultAsync();
+
+            if (result == null) return default;
+
+            return Mapper.Map<OrganizationReport>(result);
+        }
+    }
+
+    public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid organizationId, Guid reportId, string summaryData)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            // Update only SummaryData and RevisionDate
+            await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId && p.OrganizationId == organizationId)
+                .UpdateAsync(p => new Models.OrganizationReport
+                {
+                    SummaryData = summaryData,
+                    RevisionDate = DateTime.UtcNow
+                });
+
+            // Return the updated report
+            var updatedReport = await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .FirstOrDefaultAsync();
+
+            return Mapper.Map<OrganizationReport>(updatedReport);
+        }
+    }
+
+    public async Task<OrganizationReportSummaryDataResponse> GetSummaryDataAsync(Guid reportId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .Select(p => new OrganizationReportSummaryDataResponse
+                {
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    SummaryData = p.SummaryData,
+                    RevisionDate = p.RevisionDate
+                })
+                .FirstOrDefaultAsync();
+
+            return result;
+        }
+    }
+
+    public async Task<IEnumerable<OrganizationReportSummaryDataResponse>> GetSummaryDataByDateRangeAsync(
+        Guid organizationId,
+        DateTime startDate,
+        DateTime endDate)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var results = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId &&
+                            p.RevisionDate >= startDate && p.RevisionDate <= endDate)
+                .Select(p => new OrganizationReportSummaryDataResponse
+                {
+                    OrganizationId = p.OrganizationId,
+                    ContentEncryptionKey = p.ContentEncryptionKey,
+                    SummaryData = p.SummaryData,
+                    RevisionDate = p.RevisionDate
+                })
+                .ToListAsync();
+
+            return results;
+        }
+    }
+
+    public async Task<OrganizationReportApplicationDataResponse> GetApplicationDataAsync(Guid reportId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .Select(p => new OrganizationReportApplicationDataResponse
+                {
+                    ApplicationData = p.ApplicationData
+                })
+                .FirstOrDefaultAsync();
+
+            return result;
+        }
+    }
+
+    public async Task<OrganizationReport> UpdateApplicationDataAsync(Guid organizationId, Guid reportId, string applicationData)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            // Update only ApplicationData and RevisionDate
+            await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId && p.OrganizationId == organizationId)
+                .UpdateAsync(p => new Models.OrganizationReport
+                {
+                    ApplicationData = applicationData,
+                    RevisionDate = DateTime.UtcNow
+                });
+
+            // Return the updated report
+            var updatedReport = await dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .FirstOrDefaultAsync();
+
+            return Mapper.Map<OrganizationReport>(updatedReport);
+        }
+    }
+
+    public Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            return dbContext.OrganizationReports
+                .Where(p => p.Id == reportId)
+                .UpdateAsync(p => new Models.OrganizationReport
+                {
+                    ApplicationCount = metrics.ApplicationCount,
+                    ApplicationAtRiskCount = metrics.ApplicationAtRiskCount,
+                    CriticalApplicationCount = metrics.CriticalApplicationCount,
+                    CriticalApplicationAtRiskCount = metrics.CriticalApplicationAtRiskCount,
+                    MemberCount = metrics.MemberCount,
+                    MemberAtRiskCount = metrics.MemberAtRiskCount,
+                    CriticalMemberCount = metrics.CriticalMemberCount,
+                    CriticalMemberAtRiskCount = metrics.CriticalMemberAtRiskCount,
+                    PasswordCount = metrics.PasswordCount,
+                    PasswordAtRiskCount = metrics.PasswordAtRiskCount,
+                    CriticalPasswordCount = metrics.CriticalPasswordCount,
+                    CriticalPasswordAtRiskCount = metrics.CriticalPasswordAtRiskCount,
+                    RevisionDate = DateTime.UtcNow
+                });
+        }
+    }
+}

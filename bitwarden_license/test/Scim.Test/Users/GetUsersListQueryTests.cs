@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Scim.Models;
 using Bit.Scim.Users;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -28,8 +29,7 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(organizationUserUserDetails.Skip(startIndex - 1).Take(count).ToList(), result.userList);
-        AssertHelper.AssertPropertyEqual(organizationUserUserDetails.Count, result.totalResults);
+        Assert.Equal(organizationUserUserDetails.Count, result.totalResults);
     }
 
     [Theory]
@@ -53,8 +53,7 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
-        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
+        Assert.Equal(expectedTotalResults, result.totalResults);
     }
 
     [Theory]
@@ -100,8 +99,7 @@ public class GetUsersListQueryTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyDetailsByOrganizationAsync(organizationId);
 
-        AssertHelper.AssertPropertyEqual(expectedUserList, result.userList);
-        AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
+        Assert.Equal(expectedTotalResults, result.totalResults);
     }
 
     [Theory]

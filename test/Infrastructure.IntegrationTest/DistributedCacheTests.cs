@@ -65,7 +65,7 @@ public class DistributedCacheTests
     [DatabaseTheory, DatabaseData]
     public async Task MultipleWritesOnSameKey_ShouldNotThrow(IDistributedCache cache)
     {
-        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray());
-        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray());
+        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray(), TestContext.Current.CancellationToken);
+        await cache.SetAsync("test-duplicate", "some-value"u8.ToArray(), TestContext.Current.CancellationToken);
     }
 }

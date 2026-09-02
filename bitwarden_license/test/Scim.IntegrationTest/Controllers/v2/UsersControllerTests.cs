@@ -1,9 +1,13 @@
 ﻿using System.Text.Json;
+using Bit.Core;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
@@ -276,9 +280,18 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
-    [Fact]
-    public async Task Post_Success()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Post_Success(bool isScimInviteUserOptimizationEnabled)
     {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(isScimInviteUserOptimizationEnabled));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
         var email = "user5@example.com";
         var displayName = "Test User 5";
         var externalId = "UE";
@@ -306,7 +319,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
 
@@ -316,7 +329,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
 
-        var databaseContext = _factory.GetDatabaseContext();
+        var databaseContext = localFactory.GetDatabaseContext();
         Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
     }
 
@@ -324,7 +337,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Post_InvalidEmail_BadRequest(string email)
+    public async Task Post_InvalidEmail_BadRequest(string? email)
     {
         var displayName = "Test User 5";
         var externalId = "UE";
@@ -383,8 +396,127 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task Post_InviteUsersAfterProvisioningDisabled_CreatesStagedUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
+
+        var email = "user5@example.com";
+        var externalId = "UE";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = externalId,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+        Assert.Contains(context.Response.Headers, h => h.Key == "Location");
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
+
+        var stagedUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Staged, stagedUser.Status);
+        Assert.Equal(externalId, stagedUser.ExternalId);
+        Assert.Null(stagedUser.UserId);
+    }
+
+    [Fact]
+    public async Task Post_InviteUsersAfterProvisioningDisabled_WithoutFeatureFlag_InvitesUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(false));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
+
+        var email = "user5@example.com";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = "UE",
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        var newUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Invited, newUser.Status);
+    }
+
+    [Fact]
+    public async Task Post_InviteUsersAfterProvisioningEnabled_InvitesUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: true);
+
+        var email = "user5@example.com";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = "UE",
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        var newUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Invited, newUser.Status);
+    }
+
+    private static void SeedScimConnection(ScimApplicationFactory factory, bool inviteUsersAfterProvisioning)
+    {
+        var connection = new Infrastructure.EntityFramework.Models.OrganizationConnection
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = ScimApplicationFactory.TestOrganizationId1,
+            Type = OrganizationConnectionType.Scim,
+            Enabled = true
+        };
+        connection.SetConfig(new ScimConfig
+        {
+            Enabled = true,
+            InviteUsersAfterProvisioning = inviteUsersAfterProvisioning
+        });
+
+        var databaseContext = factory.GetDatabaseContext();
+        databaseContext.OrganizationConnections.Add(connection);
+        databaseContext.SaveChanges();
+    }
+
+    [Fact]
     public async Task Put_RevokeUser_Success()
     {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
         var inputModel = new ScimUserRequestModel
         {
@@ -406,13 +538,13 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+        var context = await localFactory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
-        var databaseContext = _factory.GetDatabaseContext();
+        var databaseContext = localFactory.GetDatabaseContext();
         var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }
@@ -545,6 +677,118 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
+    public async Task Patch_ExternalIdFromPath_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var newExternalId = "new-external-id-path";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
+        Assert.Equal(newExternalId, organizationUser.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_ExternalIdFromValue_Success()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId2;
+        var newExternalId = "new-external-id-value";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
+        Assert.Equal(newExternalId, organizationUser.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_ExternalIdDuplicate_ThrowsConflict()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var duplicateExternalId = "UB"; // This is the externalId of TestOrganizationUserId2
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{duplicateExternalId}\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+        var expectedResponse = new ScimErrorResponseModel
+        {
+            Status = StatusCodes.Status409Conflict,
+            Detail = "ExternalId already exists for another user.",
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
+    public async Task Patch_UnsupportedOperation_LogsWarningAndSucceeds()
+    {
+        var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "displayName",
+                    Value = JsonDocument.Parse("\"John Doe\"").RootElement
+                },
+            },
+            Schemas = new List<string>()
+        };
+
+        var context = await _factory.UsersPatchAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
+
+        // Unsupported operations are logged as warnings but don't fail the request
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
     }
 
     [Fact]

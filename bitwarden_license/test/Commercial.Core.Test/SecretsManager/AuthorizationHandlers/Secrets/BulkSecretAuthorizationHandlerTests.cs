@@ -207,7 +207,7 @@ public class BulkSecretAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default!, organizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
     }
 

@@ -1,4 +1,10 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -9,14 +15,14 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSponsorshipCommand
 {
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IMailService _mailService;
     private readonly ILogger<ValidateSponsorshipCommand> _logger;
 
     public ValidateSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationRepository organizationRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IMailService mailService,
         ILogger<ValidateSponsorshipCommand> logger) : base(organizationSponsorshipRepository, organizationRepository)
     {
@@ -91,7 +97,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoredPlan = Utilities.StaticStore.GetSponsoredPlan(existingSponsorship.PlanSponsorshipType.Value);
+        var sponsoredPlan = SponsoredPlans.Get(existingSponsorship.PlanSponsorshipType.Value);
 
         var sponsoringOrganization = await _organizationRepository
             .GetByIdAsync(existingSponsorship.SponsoringOrganizationId.Value);
@@ -103,8 +109,6 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
-
         if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization))
         {
             _logger.LogWarning("Sponsoring Organization {SponsoringOrganizationId} is disabled for more than 3 months.", sponsoringOrganization.Id);
@@ -113,7 +117,16 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        if (sponsoredPlan.SponsoringProductTierType != sponsoringOrgPlan.ProductTier)
+        if (existingSponsorship.IsAdminInitiated && !sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            _logger.LogWarning("Admin initiated sponsorship for sponsored Organization {SponsoredOrganizationId} is not allowed because sponsoring organization does not have UseAdminSponsoredFamilies enabled", sponsoredOrganizationId);
+            await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);
+            return false;
+        }
+
+        var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
+
+        if (sponsoredPlan.SponsoringProductTierType != sponsoringOrgProductTier)
         {
             _logger.LogWarning("Sponsoring Organization {SponsoringOrganizationId} is not on the required product type.", sponsoringOrganization.Id);
             await CancelSponsorshipAsync(sponsoredOrganization, existingSponsorship);

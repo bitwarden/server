@@ -1,4 +1,7 @@
-﻿using Azure;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Azure;
 using Azure.Data.Tables;
 
 namespace Bit.Core.Models.Data;

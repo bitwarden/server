@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -29,6 +32,7 @@ public class OrganizationNoPaymentCreateRequest
     [Required]
     public string Key { get; set; }
 
+    [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
@@ -75,6 +79,9 @@ public class OrganizationNoPaymentCreateRequest
 
     public string InitiationPath { get; set; }
 
+    [Range(0, 30)]
+    public int? TrialLength { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -107,9 +114,9 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            TrialLength = TrialLength,
+            Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
-
-        Keys?.ToOrganizationSignup(orgSignup);
 
         return orgSignup;
     }

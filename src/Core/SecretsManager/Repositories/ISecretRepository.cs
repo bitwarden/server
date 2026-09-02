@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
@@ -13,6 +16,7 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
+    Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
     Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
     Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);

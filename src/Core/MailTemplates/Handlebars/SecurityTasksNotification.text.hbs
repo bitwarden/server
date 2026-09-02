@@ -1,0 +1,18 @@
+﻿{{#>SecurityTasksHtmlLayout}}
+{{OrgName}} has identified {{TaskCount}} {{plurality TaskCount "login" "logins"}} that {{plurality TaskCount "has an" "have"}} exposed, weak, or reused {{plurality TaskCount "password" "passwords"}}. Change {{plurality TaskCount "it" "them"}} immediately to keep you and your organization safe.
+
+Launch the Bitwarden extension to review the {{plurality TaskCount "password" "passwords"}}.
+
+Review at-risk passwords ({{{ReviewPasswordsUrl}}})
+
+{{#if AdminOwnerEmails.[0]}}
+  {{#if AdminOwnerEmails.[1]}}
+    This request was initiated by
+    {{#each AdminOwnerEmails}}
+      {{#if @last}}and {{/if}}{{this}}{{#unless @last}}, {{/unless}}
+    {{/each}}.
+  {{else}}
+    This request was initiated by {{AdminOwnerEmails.[0]}}.
+  {{/if}}
+{{/if}}
+{{/SecurityTasksHtmlLayout}}

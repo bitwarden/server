@@ -1,18 +1,30 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using AutoFixture.Xunit2;
 using Bit.Api.Tools.Controllers;
+using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Tools.Models.Response;
-using Bit.Core.Context;
+using Bit.Core;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -23,32 +35,47 @@ namespace Bit.Api.Test.Tools.Controllers;
 public class SendsControllerTests : IDisposable
 {
     private readonly SendsController _sut;
-    private readonly GlobalSettings _globalSettings;
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
-    private readonly ISendService _sendService;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
+    private readonly ISendOwnerQuery _sendOwnerQuery;
+    private readonly ISendAuthorizationService _sendAuthorizationService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly ILogger<SendsController> _logger;
-    private readonly ICurrentContext _currentContext;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly IEventService _eventService;
+    private readonly ISendEventClassifier _sendEventClassifier;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsControllerTests()
     {
         _userService = Substitute.For<IUserService>();
         _sendRepository = Substitute.For<ISendRepository>();
-        _sendService = Substitute.For<ISendService>();
+        _nonAnonymousSendCommand = Substitute.For<INonAnonymousSendCommand>();
+        _sendOwnerQuery = Substitute.For<ISendOwnerQuery>();
+        _sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         _sendFileStorageService = Substitute.For<ISendFileStorageService>();
-        _globalSettings = new GlobalSettings();
         _logger = Substitute.For<ILogger<SendsController>>();
-        _currentContext = Substitute.For<ICurrentContext>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _hasPremiumAccessQuery = Substitute.For<IHasPremiumAccessQuery>();
+        _eventService = Substitute.For<IEventService>();
+        _sendEventClassifier = Substitute.For<ISendEventClassifier>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
 
         _sut = new SendsController(
             _sendRepository,
             _userService,
-            _sendService,
+            _sendAuthorizationService,
+            _nonAnonymousSendCommand,
+            _sendOwnerQuery,
             _sendFileStorageService,
             _logger,
-            _globalSettings,
-            _currentContext
+            _pushNotificationService,
+            _hasPremiumAccessQuery,
+            _eventService,
+            _sendEventClassifier,
+            _featureService
         );
     }
 
@@ -57,51 +84,1701 @@ public class SendsControllerTests : IDisposable
         _sut?.Dispose();
     }
 
-    [Theory, AutoData]
-    public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
-        Guid id, Send send, User user)
-    {
-        var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
-
-        send.Id = default;
-        send.Type = SendType.Text;
-        send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
-        send.HideEmail = true;
-
-        _sendService.AccessAsync(id, null).Returns((send, false, false));
-        _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
-
-        var request = new SendAccessRequestModel();
-        var actionResult = await _sut.Access(accessId, request);
-        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
-
-        Assert.NotNull(response);
-        Assert.Null(response.CreatorIdentifier);
-    }
-
     [Fact]
     public async Task Post_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
     {
         var now = DateTime.UtcNow;
         var expected = "You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.";
-        var request = new SendRequestModel() { DeletionDate = now.AddDays(32) };
+                       "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                       "and try again.";
+        var request = new SendRequestModel() { Key = "test_key", DeletionDate = now.AddDays(32) };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
         Assert.Equal(expected, exception.Message);
     }
 
-    [Fact]
-    public async Task PostFile_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
+    [Theory, AutoData]
+    public async Task Post_ItemSendWithFeatureFlagOff_ThrowsBadRequest(Guid userId)
     {
-        var now = DateTime.UtcNow;
-        var expected = "You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.";
-        var request = new SendRequestModel() { Type = SendType.File, FileLength = 1024L, DeletionDate = now.AddDays(32) };
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+        var request = new SendRequestModel()
+        {
+            Key = "test_key",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            Type = SendType.Item
+        };
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+        Assert.Equal("Item type Sends are not yet enabled", exception.Message);
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithValidId_ReturnsSendResponseModel(Guid sendId, Send send)
+    {
+        send.Type = SendType.Text;
+        var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
+        send.Data = JsonSerializer.Serialize(textData);
+        _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
+
+        var result = await _sut.Get(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.IsType<SendResponseModel>(result);
+        Assert.Equal(send.Id, result.Id);
+        await _sendOwnerQuery.Received(1).Get(sendId, Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithInvalidGuid_ThrowsException(string invalidId)
+    {
+        await Assert.ThrowsAsync<FormatException>(() => _sut.Get(invalidId));
+    }
+
+    [Theory, AutoData]
+    public async Task Get_WithItemSendFeatureFlagOff_ThrowsException(Guid sendId, Send send)
+    {
+        send.Type = SendType.Item;
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        send.Data = JsonSerializer.Serialize(itemData);
+        _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Get(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task GetAll_WithItemSendFeatureFlagOff_FiltersOutItemSends(Guid userId, Send send1, Send send2)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        send1.Type = SendType.Item;
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        send1.Data = JsonSerializer.Serialize(itemData);
+        send2.Type = SendType.Text;
+        var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
+        send2.Data = JsonSerializer.Serialize(textData);
+        _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns([send1, send2]);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        var result = await _sut.GetAll();
+        Assert.Single(result.Data);
+        Assert.Equal(SendType.Text, result.Data.First().Type);
+    }
+
+    [Fact]
+    public async Task GetAllOwned_ReturnsListResponseModelWithSendResponseModels()
+    {
+        var textSendData = new SendTextData("Test Send 1", "Notes 1", "Sample text", false);
+        var fileSendData = new SendFileData("Test Send 2", "Notes 2", "test.txt") { Id = "file-123", Size = 1024 };
+        var sends = new List<Send>
+        {
+            new Send { Id = Guid.NewGuid(), Type = SendType.Text, Data = JsonSerializer.Serialize(textSendData) },
+            new Send { Id = Guid.NewGuid(), Type = SendType.File, Data = JsonSerializer.Serialize(fileSendData) }
+        };
+        _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns(sends);
+
+        var result = await _sut.GetAll();
+
+        Assert.NotNull(result);
+        Assert.IsType<ListResponseModel<SendResponseModel>>(result);
+        Assert.Equal(2, result.Data.Count());
+        var sendResponseModels = result.Data.ToList();
+        Assert.Equal(sends[0].Id, sendResponseModels[0].Id);
+        Assert.Equal(sends[1].Id, sendResponseModels[1].Id);
+        await _sendOwnerQuery.Received(1).GetOwned(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Fact]
+    public async Task GetAllOwned_WhenNoSends_ReturnsEmptyListResponseModel()
+    {
+        _sendOwnerQuery.GetOwned(Arg.Any<ClaimsPrincipal>()).Returns(new List<Send>());
+
+        var result = await _sut.GetAll();
+
+        Assert.NotNull(result);
+        Assert.IsType<ListResponseModel<SendResponseModel>>(result);
+        Assert.Empty(result.Data);
+        await _sendOwnerQuery.Received(1).GetOwned(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Post_WithPasswordAuthType_SetsAuthTypePassword(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendAuthorizationService.HashPassword(Arg.Any<string>()).Returns("hashed_password");
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Password = "password",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Post(request);
+
+        Assert.NotNull(result);
+        Assert.Equal(AuthType.Password, result.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.AuthType == AuthType.Password &&
+            s.Password != null &&
+            s.Emails == null &&
+            s.UserId == userId &&
+            s.Type == SendType.Text));
+        _userService.Received(1).GetProperUserId(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Post_WithEmailAuthType_SetsAuthTypeEmail(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Post(request);
+
+        Assert.NotNull(result);
+        Assert.Equal(AuthType.Email, result.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.AuthType == AuthType.Email &&
+            s.Emails != null &&
+            s.Password == null &&
+            s.UserId == userId &&
+            s.Type == SendType.Text));
+        _userService.Received(1).GetProperUserId(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Post_WithNoneAuthType_SetsAuthTypeNone(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.None,
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Post(request);
+
+        Assert.NotNull(result);
+        Assert.Equal(AuthType.None, result.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
+            s.Emails == null &&
+            s.UserId == userId &&
+            s.Type == SendType.Text));
+        _userService.Received(1).GetProperUserId(Arg.Any<ClaimsPrincipal>());
+    }
+
+    [Theory, AutoData]
+    public async Task Post_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFile_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.File,
+            Key = "key",
+            File = new SendFileModel { FileName = "test.txt" },
+            FileLength = 1024L,
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
-        Assert.Equal(expected, exception.Message);
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>());
     }
+
+    [Theory, AutoData]
+    public async Task Put_WithEmails_WhenNotPremium_ThrowsBadRequestException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(false);
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+
+        Assert.Equal("Email verified Sends require a premium membership", exception.Message);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory]
+    [InlineData(AuthType.Password)]
+    [InlineData(AuthType.Email)]
+    [InlineData(AuthType.None)]
+    public async Task Get_ReturnsCorrectAuthType(AuthType authType)
+    {
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = authType
+        };
+
+        _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
+
+        var result = await _sut.Get(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(authType, result.AuthType);
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithValidSend_UpdatesSuccessfully(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            AuthType = AuthType.None
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            Password = "new-password",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s => s.Id == sendId));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithNonExistentSend_ThrowsNotFoundException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        var request = new SendRequestModel
+        {
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Put(sendId.ToString(), request));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithWrongUser_ThrowsNotFoundException(Guid userId, Guid otherUserId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = otherUserId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            Type = SendType.Text,
+            Key = "key",
+            Text = new SendTextModel { Text = "text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Put(sendId.ToString(), request));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ItemSendWithFeatureFlagOff_ThrowsBadRequestException(Guid sendId)
+    {
+        var request = new SendRequestModel
+        {
+            Type = SendType.Item,
+            Key = "key",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+        Assert.Equal("Item type Sends are not yet enabled", error.Message);
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ChangingSendType_ThrowsBadRequestException(Guid sendId, Guid userId)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+        var request = new SendRequestModel
+        {
+            Type = SendType.Item,
+            Key = "key",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Put(sendId.ToString(), request));
+        Assert.Equal("Cannot change a Send's type", error.Message);
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemovePassword_WithValidSend_RemovesPasswordAndSetsAuthTypeNone(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password",
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var result = await _sut.PutRemovePassword(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        Assert.Equal(AuthType.None, result.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.Password == null &&
+            s.AuthType == AuthType.None));
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemovePassword_WithNonExistentSend_ThrowsNotFoundException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PutRemovePassword(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemovePassword_WithWrongUser_ThrowsNotFoundException(Guid userId, Guid otherUserId,
+        Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = otherUserId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password"
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PutRemovePassword(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task Delete_WithValidSend_DeletesSuccessfully(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        await _sut.Delete(sendId.ToString());
+
+        await _nonAnonymousSendCommand.Received(1).DeleteSendAsync(Arg.Is<Send>(s => s.Id == sendId));
+    }
+
+    [Theory, AutoData]
+    public async Task Delete_WithNonExistentSend_ThrowsNotFoundException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Delete(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task Delete_WithWrongUser_ThrowsNotFoundException(Guid userId, Guid otherUserId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = otherUserId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false))
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Delete(sendId.ToString()));
+    }
+
+    [Theory, AutoData]
+    public async Task PostFile_WithPasswordAuthType_SetsAuthTypePassword(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendAuthorizationService.HashPassword(Arg.Any<string>()).Returns("hashed_password");
+        _nonAnonymousSendCommand.SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>())
+            .Returns("https://example.com/upload")
+            .AndDoes(callInfo =>
+            {
+                var send = callInfo.ArgAt<Send>(0);
+                var data = callInfo.ArgAt<SendFileData>(1);
+                send.Data = JsonSerializer.Serialize(data);
+            });
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            Type = SendType.File,
+            Key = "key",
+            File = new SendFileModel { FileName = "test.txt" },
+            FileLength = 1024L,
+            Password = "password",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.PostFile(request);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.SendResponse);
+        Assert.Equal(AuthType.Password, result.SendResponse.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveFileSendAsync(
+            Arg.Is<Send>(s =>
+                s.AuthType == AuthType.Password &&
+                s.Password != null &&
+                s.Emails == null &&
+                s.UserId == userId),
+            Arg.Any<SendFileData>(),
+            1024L);
+    }
+
+    [Theory, AutoData]
+    public async Task PostFile_WithEmailAuthType_SetsAuthTypeEmail(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        _nonAnonymousSendCommand.SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>())
+            .Returns("https://example.com/upload")
+            .AndDoes(callInfo =>
+            {
+                var send = callInfo.ArgAt<Send>(0);
+                var data = callInfo.ArgAt<SendFileData>(1);
+                send.Data = JsonSerializer.Serialize(data);
+            });
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.File,
+            Key = "key",
+            File = new SendFileModel { FileName = "test.txt" },
+            FileLength = 1024L,
+            Emails = "test@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.PostFile(request);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.SendResponse);
+        Assert.Equal(AuthType.Email, result.SendResponse.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveFileSendAsync(
+            Arg.Is<Send>(s =>
+                s.AuthType == AuthType.Email &&
+                s.Emails != null &&
+                s.Password == null &&
+                s.UserId == userId),
+            Arg.Any<SendFileData>(),
+            1024L);
+    }
+
+    [Theory, AutoData]
+    public async Task PostFile_WithNoneAuthType_SetsAuthTypeNone(Guid userId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _nonAnonymousSendCommand.SaveFileSendAsync(Arg.Any<Send>(), Arg.Any<SendFileData>(), Arg.Any<long>())
+            .Returns("https://example.com/upload")
+            .AndDoes(callInfo =>
+            {
+                var send = callInfo.ArgAt<Send>(0);
+                var data = callInfo.ArgAt<SendFileData>(1);
+                send.Data = JsonSerializer.Serialize(data);
+            });
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.None,
+            Type = SendType.File,
+            Key = "key",
+            File = new SendFileModel { FileName = "test.txt" },
+            FileLength = 1024L,
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.PostFile(request);
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.SendResponse);
+        Assert.Equal(AuthType.None, result.SendResponse.AuthType);
+        await _nonAnonymousSendCommand.Received(1).SaveFileSendAsync(
+            Arg.Is<Send>(s =>
+                s.AuthType == AuthType.None &&
+                s.Password == null &&
+                s.Emails == null &&
+                s.UserId == userId),
+            Arg.Any<SendFileData>(),
+            1024L);
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ChangingFromPasswordToEmails_UpdatesAuthTypeToEmail(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            Password = "hashed-password",
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            Emails = "new@example.com",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.AuthType == AuthType.Email &&
+            s.Emails != null &&
+            s.Password == null));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ChangingFromEmailToPassword_UpdatesAuthTypeToPassword(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendAuthorizationService.HashPassword(Arg.Any<string>()).Returns("hashed_password");
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            Emails = "old@example.com",
+            AuthType = AuthType.Email
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            Password = "new-password",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.AuthType == AuthType.Password &&
+            s.Password != null &&
+            s.Emails == null));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithoutPasswordOrEmails_PreservesNoneAuthType(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            Password = null,
+            Emails = null,
+            AuthType = AuthType.None
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.None,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.AuthType == AuthType.None &&
+            s.Password == null &&
+            s.Emails == null));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_WithExistingAndRequestPasswordAuth_PreservesExistingPasswordHash(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            Password = "hashed-password",
+            Emails = null,
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.AuthType == AuthType.Password &&
+            s.Password != null &&
+            s.Emails == null));
+    }
+
+    [Theory, AutoData]
+    public async Task Put_ChangingFromEmailToNone_ClearsEmailAuth(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _hasPremiumAccessQuery.HasPremiumAccessAsync(userId).Returns(true);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Old", "Old notes", "Old text", false)),
+            Emails = "old@example.com",
+            Password = null,
+            AuthType = AuthType.Email
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var request = new SendRequestModel
+        {
+            AuthType = AuthType.None,
+            Type = SendType.Text,
+            Key = "updated-key",
+            Text = new SendTextModel { Text = "updated text" },
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        var result = await _sut.Put(sendId.ToString(), request);
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.AuthType == AuthType.None &&
+            s.Emails == null &&
+            s.Password == null));
+    }
+
+    #region Access Endpoints
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithValidSend_ReturnsSendAccessResponse(Guid sendId, User creator)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = creator.Id,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            HideEmail = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _userService.GetUserByIdAsync(creator.Id).Returns(creator);
+
+        var result = await _sut.AccessUsingAuth();
+
+        Assert.NotNull(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<SendAccessResponseModel>(objectResult.Value);
+        Assert.Equal(CoreHelpers.Base64UrlEncode(sendId.ToByteArray()), response.Id);
+        Assert.Equal(creator.Email, response.CreatorIdentifier);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.Received(1).GetUserByIdAsync(creator.Id);
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithHideEmail_DoesNotIncludeCreatorIdentifier(Guid sendId, User creator)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = creator.Id,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        var result = await _sut.AccessUsingAuth();
+
+        Assert.NotNull(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<SendAccessResponseModel>(objectResult.Value);
+        Assert.Equal(CoreHelpers.Base64UrlEncode(sendId.ToByteArray()), response.Id);
+        Assert.Null(response.CreatorIdentifier);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithNoUserId_DoesNotIncludeCreatorIdentifier(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            HideEmail = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        var result = await _sut.AccessUsingAuth();
+
+        Assert.NotNull(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<SendAccessResponseModel>(objectResult.Value);
+        Assert.Equal(CoreHelpers.Base64UrlEncode(sendId.ToByteArray()), response.Id);
+        Assert.Null(response.CreatorIdentifier);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithNonExistentSend_ThrowsBadRequestException(Guid sendId)
+    {
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.AccessUsingAuth());
+
+        Assert.Equal("Could not locate send", exception.Message);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithFileSend_ReturnsCorrectResponse(Guid sendId, User creator)
+    {
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf") { Id = "file-123", Size = 2048 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = creator.Id,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            HideEmail = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _userService.GetUserByIdAsync(creator.Id).Returns(creator);
+
+        var result = await _sut.AccessUsingAuth();
+
+        Assert.NotNull(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<SendAccessResponseModel>(objectResult.Value);
+        Assert.Equal(CoreHelpers.Base64UrlEncode(sendId.ToByteArray()), response.Id);
+        Assert.Equal(SendType.File, response.Type);
+        Assert.NotNull(response.File);
+        Assert.Equal("file-123", response.File.Id);
+        Assert.Equal(creator.Email, response.CreatorIdentifier);
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithDisabledSend_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = true,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithMaxAccessCountReached_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 10,
+            MaxAccessCount = 10
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithExpiredSend_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired yesterday
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithDeletionDatePassed_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(-1), // Deletion date has passed
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task AccessUsingAuth_WithItemSendAndFeatureFlagOff_ThrowsNotFoundException(Guid sendId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }")),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.AccessUsingAuth());
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _userService.DidNotReceive().GetUserByIdAsync(Arg.Any<Guid>());
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task GetSendFileDownloadDataUsingAuth_WithValidFileId_ReturnsDownloadUrl(
+        Guid sendId, string fileId, string expectedUrl)
+    {
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf") { Id = fileId, Size = 2048 };
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns((expectedUrl, SendAccessResult.Granted));
+
+        var result = await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        Assert.NotNull(result);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        var response = Assert.IsType<SendFileDownloadDataResponseModel>(objectResult.Value);
+        Assert.Equal(fileId, response.Id);
+        Assert.Equal(expectedUrl, response.Url);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSendFileDownloadDataUsingAuth_WithNonExistentSend_ThrowsBadRequestException(
+        Guid sendId, string fileId)
+    {
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
+
+        Assert.Equal("Could not locate send", exception.Message);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Theory, AutoData]
+    public async Task GetSendFileDownloadDataUsingAuth_WithTextSend_ThrowsBadRequestException(
+        Guid sendId, string fileId)
+    {
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand
+            .When(x => x.GetSendFileDownloadUrlAsync(send, fileId))
+            .Do(x => throw new BadRequestException("Can only get a download URL for a file type of Send"));
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.GetSendFileDownloadDataUsingAuth(fileId));
+
+        Assert.Equal("Can only get a download URL for a file type of Send", exception.Message);
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSendFileDownloadDataUsingAuth_WithAccessDenied_ThrowsNotFoundException(
+        Guid sendId, string fileId)
+    {
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf") { Id = fileId, Size = 2048 };
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns((null, SendAccessResult.Denied));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.GetSendFileDownloadDataUsingAuth(fileId));
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+
+    #endregion
+
+    #region PutRemoveAuth Tests
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithPasswordProtectedSend_RemovesPasswordAndSetsAuthTypeNone(Guid userId,
+        Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password",
+            Emails = null,
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var result = await _sut.PutRemoveAuth(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        Assert.Equal(AuthType.None, result.AuthType);
+        Assert.Null(result.Password);
+        Assert.Null(result.Emails);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.Password == null &&
+            s.Emails == null &&
+            s.AuthType == AuthType.None));
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithEmailProtectedSend_RemovesEmailsAndSetsAuthTypeNone(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = null,
+            Emails = "test@example.com,user@example.com",
+            AuthType = AuthType.Email
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var result = await _sut.PutRemoveAuth(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        Assert.Equal(AuthType.None, result.AuthType);
+        Assert.Null(result.Password);
+        Assert.Null(result.Emails);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.Password == null &&
+            s.Emails == null &&
+            s.AuthType == AuthType.None));
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithNonExistentSend_ThrowsNotFoundException(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PutRemoveAuth(sendId.ToString()));
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithWrongUser_ThrowsNotFoundException(Guid userId, Guid otherUserId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = otherUserId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password",
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PutRemoveAuth(sendId.ToString()));
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithNullUserId_ThrowsInvalidOperationException(Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns((Guid?)null);
+
+        var exception =
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.PutRemoveAuth(sendId.ToString()));
+
+        Assert.Equal("User ID not found", exception.Message);
+        await _sendRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _nonAnonymousSendCommand.DidNotReceive().SaveSendAsync(Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_WithSendHavingBothPasswordAndEmails_RemovesBoth(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password",
+            Emails = "test@example.com",
+            AuthType = AuthType.Password
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var result = await _sut.PutRemoveAuth(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        Assert.Equal(AuthType.None, result.AuthType);
+        Assert.Null(result.Password);
+        Assert.Null(result.Emails);
+        await _nonAnonymousSendCommand.Received(1).SaveSendAsync(Arg.Is<Send>(s =>
+            s.Id == sendId &&
+            s.Password == null &&
+            s.Emails == null &&
+            s.AuthType == AuthType.None));
+    }
+
+    [Theory, AutoData]
+    public async Task PutRemoveAuth_PreservesOtherSendProperties(Guid userId, Guid sendId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var deletionDate = DateTime.UtcNow.AddDays(7);
+        var expirationDate = DateTime.UtcNow.AddDays(3);
+        var existingSend = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("Test", "Notes", "Text", false)),
+            Password = "hashed-password",
+            AuthType = AuthType.Password,
+            Key = "encryption-key",
+            MaxAccessCount = 10,
+            AccessCount = 3,
+            DeletionDate = deletionDate,
+            ExpirationDate = expirationDate,
+            Disabled = false,
+            HideEmail = true
+        };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        var result = await _sut.PutRemoveAuth(sendId.ToString());
+
+        Assert.NotNull(result);
+        Assert.Equal(sendId, result.Id);
+        Assert.Equal(AuthType.None, result.AuthType);
+        // Verify other properties are preserved
+        Assert.Equal("encryption-key", result.Key);
+        Assert.Equal(10, result.MaxAccessCount);
+        Assert.Equal(3, result.AccessCount);
+        Assert.Equal(deletionDate, result.DeletionDate);
+        Assert.Equal(expirationDate, result.ExpirationDate);
+        Assert.False(result.Disabled);
+        Assert.True(result.HideEmail);
+    }
+
+    #endregion
+
+    #region PostFileForExistingSend Tests
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithNullUserId_ThrowsInvalidOperationException(
+        Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns((Guid?)null);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.PostFileForExistingSend(sendId.ToString(), fileId));
+
+        Assert.Equal("User ID not found", exception.Message);
+        await _sendRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithNonMultipartContentType_ThrowsBadRequestException(
+        Guid userId, Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "application/json";
+        _sut.ControllerContext = new ControllerContext { HttpContext = context };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostFileForExistingSend(sendId.ToString(), fileId));
+
+        Assert.Equal("Invalid content.", exception.Message);
+        await _sendRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithNullContentType_ThrowsBadRequestException(
+        Guid userId, Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var context = new DefaultHttpContext();
+        _sut.ControllerContext = new ControllerContext { HttpContext = context };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostFileForExistingSend(sendId.ToString(), fileId));
+
+        Assert.Equal("Invalid content.", exception.Message);
+        await _sendRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>());
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithNonExistentSend_ThrowsNotFoundException(
+        Guid userId, Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "multipart/form-data; boundary=test-boundary";
+        _sut.ControllerContext = new ControllerContext { HttpContext = context };
+        _sendRepository.GetByIdAsync(sendId).Returns((Send)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.PostFileForExistingSend(sendId.ToString(), fileId));
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithWrongUser_ThrowsNotFoundException(
+        Guid userId, Guid otherUserId, Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = "multipart/form-data; boundary=test-boundary";
+        _sut.ControllerContext = new ControllerContext { HttpContext = context };
+        var existingSend = new Send { Id = sendId, UserId = otherUserId };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.PostFileForExistingSend(sendId.ToString(), fileId));
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.DidNotReceive()
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Any<Send>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostFileForExistingSend_WithValidData_UploadsFileSuccessfully(
+        Guid userId, Guid sendId, string fileId)
+    {
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        var existingSend = new Send { Id = sendId, UserId = userId };
+        _sendRepository.GetByIdAsync(sendId).Returns(existingSend);
+
+        const string boundary = "test-boundary-123";
+        var bodyBuilder = new StringBuilder();
+        bodyBuilder.Append($"--{boundary}\r\n");
+        bodyBuilder.Append("Content-Disposition: form-data; name=\"data\"; filename=\"test.txt\"\r\n");
+        bodyBuilder.Append("\r\n");
+        bodyBuilder.Append("file content here");
+        bodyBuilder.Append($"\r\n--{boundary}--\r\n");
+        var bodyBytes = Encoding.UTF8.GetBytes(bodyBuilder.ToString());
+
+        var context = new DefaultHttpContext();
+        context.Request.ContentType = $"multipart/form-data; boundary={boundary}";
+        context.Request.Body = new MemoryStream(bodyBytes);
+        _sut.ControllerContext = new ControllerContext { HttpContext = context };
+
+        await _sut.PostFileForExistingSend(sendId.ToString(), fileId);
+
+        await _sendRepository.Received(1).GetByIdAsync(sendId);
+        await _nonAnonymousSendCommand.Received(1)
+            .UploadFileToExistingSendAsync(Arg.Any<Stream>(), Arg.Is<Send>(s => s.Id == sendId));
+    }
+
+    #endregion
+
+    #region Access Event Logging Tests
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_LogsSendAccessedText()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_Text,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_FileSend_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = "fileid", Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.None,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_LogsSendAccessedFile()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _eventService.Received(1).LogSendEventAsync(
+            userId,
+            Arg.Any<Guid>(),
+            EventType.Send_Accessed_File,
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_NullUserId_DoesNotLogAccessEvent()
+    {
+        var sendId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = null,
+            OrganizationId = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.None,
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(CreateUserWithSendIdClaim(sendId));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default, default);
+    }
+
+    [Fact]
+    public async Task AccessUsingAuth_TextSend_PassesAccessorEmail_ToClassifier()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.Text,
+            Data = JsonSerializer.Serialize(new SendTextData("a", "b", "c", false)),
+            AuthType = AuthType.Email,
+            Emails = "alice@example.com",
+            HideEmail = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(
+            CreateUserWithSendIdAndEmailClaims(sendId, "alice@example.com"));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        await _sut.AccessUsingAuth();
+
+        await _sendEventClassifier.Received(1).BuildAccessContextAsync(
+            userId,
+            "alice@example.com");
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadDataUsingAuth_PassesAccessorEmail_ToClassifier()
+    {
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "fileid";
+        var fileData = new SendFileData("name", "notes", "file.pdf") { Id = fileId, Size = 1024 };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            AuthType = AuthType.Email,
+            Emails = "alice@example.com",
+        };
+
+        _sut.ControllerContext = CreateControllerContextWithUser(
+            CreateUserWithSendIdAndEmailClaims(sendId, "alice@example.com"));
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId)
+            .Returns(("https://example.test/url", SendAccessResult.Granted));
+
+        await _sut.GetSendFileDownloadDataUsingAuth(fileId);
+
+        await _sendEventClassifier.Received(1).BuildAccessContextAsync(
+            userId,
+            "alice@example.com");
+    }
+
+    #endregion
+
+    #region Test Helpers
+
+    private static ClaimsPrincipal CreateUserWithSendIdClaim(Guid sendId)
+    {
+        var claims = new List<Claim> { new Claim("send_id", sendId.ToString()) };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        return new ClaimsPrincipal(identity);
+    }
+
+    private static ClaimsPrincipal CreateUserWithSendIdAndEmailClaims(Guid sendId, string email)
+    {
+        var claims = new List<Claim>
+        {
+            new Claim("send_id", sendId.ToString()),
+            new Claim("send_email", email),
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        return new ClaimsPrincipal(identity);
+    }
+
+    private static ControllerContext CreateControllerContextWithUser(ClaimsPrincipal user)
+    {
+        return new ControllerContext { HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext { User = user } };
+    }
+
+    #endregion
 }

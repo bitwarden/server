@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "user": {
+    "email": "premuser@individual.example",
+    "premium": true,
+    "maxStorageGb": 1
+  },
+  "ciphers": { "count": 0 }
+}

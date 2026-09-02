@@ -1,4 +1,8 @@
-﻿using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -9,6 +13,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using OneOf.Types;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -17,13 +22,25 @@ namespace Bit.Core.Test.Auth.UserFeatures.Registration;
 [SutProviderCustomize]
 public class SendVerificationEmailForRegistrationCommandTests
 {
+    private static RegisterStartOpenOrgInviteRequestModel BuildOpenOrgInvite(
+        Guid organizationId,
+        Guid code,
+        string sealedOpenOrgInviteData = "opaque-base64url-sealed-data") =>
+        new()
+        {
+            OrganizationId = organizationId,
+            Code = code,
+            SealedOpenOrgInviteData = sealedOpenOrgInviteData,
+        };
 
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenIsNewUserAndEnableEmailVerificationTrue_SendsEmailAndReturnsNull(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .ReturnsNull();
@@ -34,9 +51,9 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
-        sutProvider.GetDependency<IMailService>()
-            .SendRegistrationVerificationEmailAsync(email, Arg.Any<string>())
-            .Returns(Task.CompletedTask);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
 
         var mockedToken = "token";
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
@@ -44,21 +61,62 @@ public class SendVerificationEmailForRegistrationCommandTests
             .Returns(mockedToken);
 
         // Act
-        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails);
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null);
 
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendRegistrationVerificationEmailAsync(email, mockedToken);
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, null);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenFromMarketingIsPremium_SendsEmailWithMarketingParameterAndReturnsNull(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        var fromMarketing = MarketingInitiativeConstants.Premium;
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, fromMarketing);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, fromMarketing, null);
         Assert.Null(result);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenIsExistingUserAndEnableEmailVerificationTrue_ReturnsNull(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .Returns(new User());
@@ -69,27 +127,33 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         var mockedToken = "token";
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
             .Returns(mockedToken);
 
         // Act
-        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails);
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null);
 
         // Assert
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendRegistrationVerificationEmailAsync(email, mockedToken);
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, null);
         Assert.Null(result);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenIsNewUserAndEnableEmailVerificationFalse_ReturnsToken(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .ReturnsNull();
@@ -100,13 +164,17 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         var mockedToken = "token";
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
             .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
             .Returns(mockedToken);
 
         // Act
-        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails);
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null);
 
         // Assert
         Assert.Equal(mockedToken, result);
@@ -115,22 +183,30 @@ public class SendVerificationEmailForRegistrationCommandTests
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenOpenRegistrationDisabled_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = true;
 
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails, null));
     }
 
     [Theory]
     [BitAutoData]
     public async Task SendVerificationEmailForRegistrationCommand_WhenIsExistingUserAndEnableEmailVerificationFalse_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
-        string email, string name, bool receiveMarketingEmails)
+        string name, bool receiveMarketingEmails)
     {
         // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(email)
             .Returns(new User());
@@ -138,8 +214,15 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .EnableEmailVerification = false;
 
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
         // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails, null));
     }
 
     [Theory]
@@ -150,7 +233,7 @@ public class SendVerificationEmailForRegistrationCommandTests
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
 
-        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run(null, name, receiveMarketingEmails));
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run(null, name, receiveMarketingEmails, null));
     }
 
     [Theory]
@@ -160,6 +243,369 @@ public class SendVerificationEmailForRegistrationCommandTests
     {
         sutProvider.GetDependency<GlobalSettings>()
             .DisableUserRegistration = false;
-        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run("", name, receiveMarketingEmails));
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.Run("", name, receiveMarketingEmails, null));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenBlockedDomain_ThrowsBadRequestException(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@blockedcompany.com";
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blockedcompany.com")
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Run(email, name, receiveMarketingEmails, null));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenAllowedDomain_Succeeds(SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@allowedcompany.com";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = false;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("allowedcompany.com")
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null);
+
+        // Assert
+        Assert.Equal(mockedToken, result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_InvalidEmailFormat_ThrowsBadRequestException(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = "invalid-email-format";
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.Run(email, name, receiveMarketingEmails, null));
+        Assert.Equal("Invalid email address format.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenNewUserAndOpenOrgInviteProvided_ForwardsSealedDataToMailService(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, openOrgInvite.SealedOpenOrgInviteData);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_WhenExistingUserAndOpenOrgInviteProvided_SilentlyDiscardsSealedData(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Existing-user branch: response mirrors the new-user path with the sealed data dropped (anti-enumeration).
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .Returns(new User());
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Null_UsesUnfilteredDomainBlockCheck(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite: null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), null);
+
+        await sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .DidNotReceive()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_ValidLink_PassesExcludeOrgId(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_InvalidCode_ThrowsBadRequest(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new InviteLinkNotFound()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite));
+        Assert.Equal("Invalid or expired organization invite link.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_LinksDisabled_ThrowsBadRequest(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new InviteLinkNotAvailable()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite));
+        Assert.Equal("Invalid or expired organization invite link.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_LinksEnabled_UnblocksClaimedDomain(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // Arrange
+        var email = $"test+{Guid.NewGuid()}@claimeddomain.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = false;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // Excluded-org path returns false; unfiltered path would return true. Verifies the excludeOrganizationId branch is taken.
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("claimeddomain.com", (Guid?)null)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("claimeddomain.com", organizationId)
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        // Act
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        // Assert
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, openOrgInvite.SealedOpenOrgInviteData);
+        Assert.Null(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SendVerificationEmailForRegistrationCommand_OpenOrgInvite_Provided_OpenRegistrationDisabled_Succeeds(
+        SutProvider<SendVerificationEmailForRegistrationCommand> sutProvider,
+        string name, bool receiveMarketingEmails, Guid organizationId, Guid code)
+    {
+        // The DisableUserRegistration toggle targets open self-registration. A validated open-org
+        // invite is the authorization for that path, so the toggle must not block it — fedramp
+        // deployments rely on this combination.
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = BuildOpenOrgInvite(organizationId, code);
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .ReturnsNull();
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .EnableEmailVerification = true;
+
+        sutProvider.GetDependency<GlobalSettings>()
+            .DisableUserRegistration = true;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        var mockedToken = "token";
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(mockedToken);
+
+        var result = await sutProvider.Sut.Run(email, name, receiveMarketingEmails, null, openOrgInvite);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRegistrationVerificationEmailAsync(email, mockedToken, null, openOrgInvite.SealedOpenOrgInviteData);
+        Assert.Null(result);
     }
 }

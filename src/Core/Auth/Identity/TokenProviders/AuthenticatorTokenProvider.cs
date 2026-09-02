@@ -1,6 +1,8 @@
-﻿using Bit.Core.Auth.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,16 +14,13 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 {
     private const string CacheKeyFormat = "Authenticator_TOTP_{0}_{1}";
 
-    private readonly IServiceProvider _serviceProvider;
     private readonly IDistributedCache _distributedCache;
     private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
 
     public AuthenticatorTokenProvider(
-        IServiceProvider serviceProvider,
         [FromKeyedServices("persistent")]
         IDistributedCache distributedCache)
     {
-        _serviceProvider = serviceProvider;
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
@@ -29,15 +28,14 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         };
     }
 
-    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    public Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-        if (string.IsNullOrWhiteSpace((string)provider?.MetaData["Key"]))
+        var authenticatorProvider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
+        if (string.IsNullOrWhiteSpace((string)authenticatorProvider?.MetaData["Key"]))
         {
-            return false;
+            return Task.FromResult(false);
         }
-        return await _serviceProvider.GetRequiredService<IUserService>()
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, user);
+        return Task.FromResult(authenticatorProvider.Enabled);
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)

@@ -1,4 +1,7 @@
-﻿namespace Bit.Setup;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Setup;
 
 public class AppIdBuilder
 {
@@ -18,9 +21,9 @@ public class AppIdBuilder
 
         // Needed for backwards compatability with migrated U2F tokens.
         Helpers.WriteLine(_context, "Building FIDO U2F app id.");
-        Directory.CreateDirectory("/bitwarden/web/");
+        Directory.CreateDirectory($"{_context.App.RootDirectory}/web/");
         var template = Helpers.ReadTemplate("AppId");
-        using (var sw = File.CreateText("/bitwarden/web/app-id.json"))
+        using (var sw = File.CreateText($"{_context.App.RootDirectory}/web/app-id.json"))
         {
             sw.Write(template(model));
         }

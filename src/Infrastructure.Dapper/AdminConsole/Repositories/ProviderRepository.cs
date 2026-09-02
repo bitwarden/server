@@ -21,6 +21,32 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task<Provider?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Provider>(
+                "[dbo].[Provider_ReadByGatewayCustomerId]",
+                new { GatewayCustomerId = gatewayCustomerId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<Provider?> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Provider>(
+                "[dbo].[Provider_ReadByGatewaySubscriptionId]",
+                new { GatewaySubscriptionId = gatewaySubscriptionId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<Provider?> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -48,15 +74,15 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
         }
     }
 
-    public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
+    public async Task<ProviderAbility?> GetAbilityAsync(Guid id)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<ProviderAbility>(
-                "[dbo].[Provider_ReadAbilities]",
-                commandType: CommandType.StoredProcedure);
+        await using var connection = new SqlConnection(ReadOnlyConnectionString);
 
-            return results.ToList();
-        }
+        var results = await connection.QueryAsync<ProviderAbility>(
+            "[dbo].[Provider_ReadAbilityById]",
+            new { Id = id },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
     }
 }

@@ -29,7 +29,8 @@ public class UserCompare : IEqualityComparer<User>
                 x.LicenseKey == y.LicenseKey &&
                 x.ApiKey == y.ApiKey &&
                 x.Kdf == y.Kdf &&
-                x.KdfIterations == y.KdfIterations;
+                x.KdfIterations == y.KdfIterations &&
+                x.SignedPublicKey == y.SignedPublicKey;
     }
 
     public int GetHashCode([DisallowNull] User obj)

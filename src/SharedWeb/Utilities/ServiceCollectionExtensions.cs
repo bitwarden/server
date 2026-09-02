@@ -1,8 +1,11 @@
-﻿using System.Net;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -12,45 +15,53 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
-using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Auth.UserFeatures.Devices;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
+using Bit.Core.Auth.UserFeatures.PasswordValidation;
+using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Providers.Services.NoopImplementations;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.TrialInitiation;
+using Bit.Core.Dirt.Reports.ReportFeatures;
+using Bit.Core.Dirt.Reports.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
-using Bit.Core.Identity;
-using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
-using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
+using Bit.Core.Pam.Services;
 using Bit.Core.Platform;
+using Bit.Core.Platform.Mail.Delivery;
+using Bit.Core.Platform.Mail.Enqueuing;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
-using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Platform.PushRegistration.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
+using Bit.Core.Services.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.ReportFeatures;
+using Bit.Core.Tools.ImportFeatures;
+using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedWeb.Play;
 using DnsClient;
-using IdentityModel;
-using LaunchDarkly.Sdk.Server;
-using LaunchDarkly.Sdk.Server.Interfaces;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -63,12 +74,15 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Caching.Cosmos;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 using StackExchange.Redis;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Constants = Bit.Core.Constants;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
@@ -105,29 +119,70 @@ public static class ServiceCollectionExtensions
         return provider;
     }
 
+    /// <summary>
+    /// Registers test PlayId tracking services for test data management and cleanup.
+    /// This infrastructure is isolated to test environments and enables tracking of test-generated entities.
+    /// </summary>
+    public static void AddTestPlayIdTracking(this IServiceCollection services, GlobalSettings globalSettings)
+    {
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            var (provider, _) = GetDatabaseProvider(globalSettings);
+
+            // Include PlayIdService for tracking Play Ids in repositories
+            // We need the http context accessor to use the Singleton version, which pulls from the scoped version
+            services.AddHttpContextAccessor();
+
+            services.AddSingleton<IPlayItemService, PlayItemService>();
+            services.AddSingleton<IPlayIdService, PlayIdSingletonService>();
+            services.AddScoped<PlayIdService>();
+
+            // Replace standard repositories with PlayId tracking decorators
+            if (provider == SupportedDatabaseProviders.SqlServer)
+            {
+                services.AddPlayIdTrackingDapperRepositories();
+            }
+            else
+            {
+                services.AddPlayIdTrackingEFRepositories();
+            }
+        }
+        else
+        {
+            services.AddSingleton<IPlayIdService, NeverPlayIdServices>();
+        }
+    }
+
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<ICipherService, CipherService>();
+        services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
+        // overrides this default by registering the real gate after AddBaseServices, where the last
+        // registration wins — the shape AddOosServices uses for IProviderService. That override must
+        // be a plain Add*; a TryAdd* would no-op against this default and leave leasing ungated.
+        services.AddScoped<ICipherLeaseGate, UnrestrictedCipherLeaseGate>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
         services.AddPolicyServices();
-        services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
+        services.AddDeviceServices();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
-        services.AddScoped<ISendService, SendService>();
-        services.AddLoginServices();
+        services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
-        services.AddReportingServices();
+        services.AddReportingServices(globalSettings);
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
         services.AddPlatformServices();
+        services.AddImportServices();
+        services.AddSendServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -145,14 +200,6 @@ public static class ServiceCollectionExtensions
                 EmergencyAccessInviteTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<EmergencyAccessInviteTokenable>>>())
-        );
-
-        services.AddSingleton<IDataProtectorTokenFactory<HCaptchaTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<HCaptchaTokenable>(
-                HCaptchaTokenable.ClearTextPrefix,
-                HCaptchaTokenable.DataProtectorPurpose,
-                serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<HCaptchaTokenable>>>())
         );
 
         services.AddSingleton<IDataProtectorTokenFactory<SsoTokenable>>(serviceProvider =>
@@ -213,6 +260,22 @@ public static class ServiceCollectionExtensions
                 TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
+        services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
+                TwoFactorUserVerificationTokenable.ClearTextPrefix,
+                TwoFactorUserVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>>()));
+
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<ISalesAssistedRegistrationTokenableFactory, SalesAssistedRegistrationTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>(
+                SalesAssistedRegistrationTokenable.ClearTextPrefix,
+                SalesAssistedRegistrationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -234,10 +297,14 @@ public static class ServiceCollectionExtensions
                 PrivateKey = globalSettings.Braintree.PrivateKey
             };
         });
-        services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+        services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
+        // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
+        // Modern mailers
+        services.AddMailer();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
@@ -245,18 +312,10 @@ public static class ServiceCollectionExtensions
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
-        services.AddOptionality();
+        services.ApplyServerCompatibilityLayer();
         services.AddTokenizers();
-
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddSingleton<IApplicationCacheService, InMemoryServiceBusApplicationCacheService>();
-        }
-        else
-        {
-            services.AddSingleton<IApplicationCacheService, InMemoryApplicationCacheService>();
-        }
+        services.AddOrganizationAbilityCache(globalSettings);
+        services.AddProviderAbilityCache(globalSettings);
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
         if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
@@ -276,37 +335,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
         }
 
-        services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        if (globalSettings.SelfHosted)
-        {
-            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
-            {
-                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
-                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
-            }
-            else
-            {
-                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
-            }
-
-            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
-                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
-            {
-                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
-            }
-        }
-        else if (!globalSettings.SelfHosted)
-        {
-            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
-            services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
-            }
-        }
+        services.AddPush(globalSettings);
+        services.AddPushRegistration();
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
         {
@@ -317,18 +347,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IMailEnqueuingService, BlockingMailEnqueuingService>();
         }
 
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
-        {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-        }
-        else if (globalSettings.SelfHosted)
-        {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
-        }
-        else
-        {
-            services.AddSingleton<IEventWriteService, NoopEventWriteService>();
-        }
+        services.AddEventWriteServices(globalSettings);
 
         if (CoreHelpers.SettingHasValue(globalSettings.Attachment.ConnectionString))
         {
@@ -356,23 +375,17 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISendFileStorageService, NoopSendFileStorageService>();
         }
 
-        if (globalSettings.SelfHosted)
+        if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.ConnectionString))
         {
-            services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();
+            services.AddSingleton<IOrganizationReportStorageService, AzureOrganizationReportStorageService>();
+        }
+        else if (CoreHelpers.SettingHasValue(globalSettings.OrganizationReport.BaseDirectory))
+        {
+            services.AddSingleton<IOrganizationReportStorageService, LocalOrganizationReportStorageService>();
         }
         else
         {
-            services.AddSingleton<IReferenceEventService, AzureQueueReferenceEventService>();
-        }
-
-        if (CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSecretKey) &&
-            CoreHelpers.SettingHasValue(globalSettings.Captcha?.HCaptchaSiteKey))
-        {
-            services.AddSingleton<ICaptchaValidationService, HCaptchaValidationService>();
-        }
-        else
-        {
-            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
+            services.AddSingleton<IOrganizationReportStorageService, NoopOrganizationReportStorageService>();
         }
     }
 
@@ -381,25 +394,27 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, NoopProviderService>();
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
         services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<ISecretVersionRepository, NoopSecretVersionRepository>();
         services.AddScoped<IProjectRepository, NoopProjectRepository>();
+        services.AddTransient<IBusinessUnitConverter, NoopBusinessUnitConverter>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
     {
         services.AddSingleton<IMailService, NoopMailService>();
         services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
-        services.AddSingleton<IPushNotificationService, NoopPushNotificationService>();
         services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         services.AddSingleton<IAttachmentStorageService, NoopAttachmentStorageService>();
         services.AddSingleton<ILicensingService, NoopLicensingService>();
-        services.AddSingleton<IEventWriteService, NoopEventWriteService>();
     }
 
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
+        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
+
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
-        services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
+        services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
             options.TokenLifespan = TimeSpan.FromDays(30);
@@ -481,46 +496,9 @@ public static class ServiceCollectionExtensions
                 addAuthorization.Invoke(config);
             });
         }
-
-        if (environment.IsDevelopment())
-        {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-        }
     }
 
-    public static void AddCustomDataProtectionServices(
-        this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
-    {
-        var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
-        if (env.IsDevelopment())
-        {
-            return;
-        }
 
-        if (globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
-        {
-            builder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
-        }
-
-        if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Storage?.ConnectionString))
-        {
-            X509Certificate2 dataProtectionCert = null;
-            if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificateThumbprint))
-            {
-                dataProtectionCert = CoreHelpers.GetCertificate(
-                    globalSettings.DataProtection.CertificateThumbprint);
-            }
-            else if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.CertificatePassword))
-            {
-                dataProtectionCert = CoreHelpers.GetBlobCertificateAsync(globalSettings.Storage.ConnectionString, "certificates",
-                    "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
-                    .GetAwaiter().GetResult();
-            }
-            builder
-                .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
-                .ProtectKeysWithCertificate(dataProtectionCert);
-        }
-    }
 
     public static IIdentityServerBuilder AddIdentityServerCertificate(
         this IIdentityServerBuilder identityServerBuilder, IWebHostEnvironment env, GlobalSettings globalSettings)
@@ -546,27 +524,14 @@ public static class ServiceCollectionExtensions
         return identityServerBuilder;
     }
 
-    public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-        IConfiguration configuration, IHostEnvironment environment)
-    {
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
-
-        if (environment.IsDevelopment() && configuration.GetValue<bool>("developSelfHosted"))
-        {
-            // Override settings with selfHostedOverride settings
-            ConfigurationBinder.Bind(configuration.GetSection("Dev:SelfHostOverride:GlobalSettings"), globalSettings);
-        }
-
-        services.AddSingleton(s => globalSettings);
-        services.AddSingleton<IGlobalSettings, GlobalSettings>(s => globalSettings);
-        return globalSettings;
-    }
-
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
         app.UseMiddleware<RequestLoggingMiddleware>();
+        if (globalSettings.TestPlayIdTrackingEnabled)
+        {
+            app.UseMiddleware<PlayIdMiddleware>();
+        }
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
@@ -576,7 +541,7 @@ public static class ServiceCollectionExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
-        if (!globalSettings.UnifiedDeployment)
+        if (!globalSettings.LiteDeployment)
         {
             // Trust the X-Forwarded-Host header of the nginx docker container
             try
@@ -604,10 +569,24 @@ public static class ServiceCollectionExtensions
                 }
             }
         }
-        if (options.KnownProxies.Count > 1)
+
+        if (!string.IsNullOrWhiteSpace(globalSettings.KnownNetworks))
+        {
+            var proxyNetworks = globalSettings.KnownNetworks.Split(',');
+            foreach (var proxyNetwork in proxyNetworks)
+            {
+                if (System.Net.IPNetwork.TryParse(proxyNetwork.Trim(), out var ipn))
+                {
+                    options.KnownIPNetworks.Add(ipn);
+                }
+            }
+        }
+
+        if (options.KnownProxies.Count > 1 || options.KnownIPNetworks.Count > 1)
         {
             options.ForwardLimit = null;
         }
+
         app.UseForwardedHeaders(options);
     }
 
@@ -655,8 +634,23 @@ public static class ServiceCollectionExtensions
         {
             options.ServerDomain = new Uri(globalSettings.BaseServiceUri.Vault).Host;
             options.ServerName = "Bitwarden";
-            options.Origins = new HashSet<string> { globalSettings.BaseServiceUri.Vault, };
             options.TimestampDriftTolerance = 300000;
+
+            if (globalSettings.Fido2?.Origins?.Any() == true)
+            {
+                options.Origins = new HashSet<string>(globalSettings.Fido2.Origins);
+            }
+            else
+            {
+                // Default to allowing the vault domain and chromium browser extension IDs
+                options.Origins = new HashSet<string> {
+                    globalSettings.BaseServiceUri.Vault,
+                    Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.ChromeBetaId,
+                    Constants.BrowserExtensions.EdgeId,
+                    Constants.BrowserExtensions.OperaId
+                 };
+            }
         });
     }
 
@@ -691,8 +685,9 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses a memory
-    /// cache if self hosted or no Redis connection string is available in GlobalSettings.
+    ///     Adds an implementation of <see cref="IDistributedCache"/> to the service collection. Uses Redis
+    /// if a connection string is available in GlobalSettings, a database-backed distributed cache if
+    /// self-hosted or a distributed memory cache as a final fallback.
     /// </summary>
     public static void AddDistributedCache(
         this IServiceCollection services,
@@ -707,19 +702,26 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
-            if (databaseProvider == SupportedDatabaseProviders.SqlServer)
+            if (globalSettings.SelfHosted)
             {
-                services.AddDistributedSqlServerCache(o =>
+                var (databaseProvider, databaseConnectionString) = GetDatabaseProvider(globalSettings);
+                if (databaseProvider == SupportedDatabaseProviders.SqlServer)
                 {
-                    o.ConnectionString = databaseConnectionString;
-                    o.SchemaName = "dbo";
-                    o.TableName = "Cache";
-                });
+                    services.AddDistributedSqlServerCache(o =>
+                    {
+                        o.ConnectionString = databaseConnectionString;
+                        o.SchemaName = "dbo";
+                        o.TableName = "Cache";
+                    });
+                }
+                else
+                {
+                    services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                }
             }
             else
             {
-                services.AddSingleton<IDistributedCache, EntityFrameworkCache>();
+                services.AddDistributedMemoryCache();
             }
         }
 
@@ -738,19 +740,6 @@ public static class ServiceCollectionExtensions
         {
             services.AddKeyedSingleton("persistent", (s, _) => s.GetRequiredService<IDistributedCache>());
         }
-    }
-
-    public static IServiceCollection AddOptionality(this IServiceCollection services)
-    {
-        services.AddSingleton<ILdClient>(s =>
-        {
-            return new LdClient(LaunchDarklyFeatureService.GetConfiguredClient(
-                s.GetRequiredService<GlobalSettings>()));
-        });
-
-        services.AddScoped<IFeatureService, LaunchDarklyFeatureService>();
-
-        return services;
     }
 
     private static (SupportedDatabaseProviders provider, string connectionString)
@@ -792,5 +781,52 @@ public static class ServiceCollectionExtensions
         }
 
         return (provider, connectionString);
+    }
+
+    /// <summary>
+    /// Adds a server with its corresponding OAuth2 client credentials security definition and requirement.
+    /// </summary>
+    /// <param name="config">The SwaggerGen configuration</param>
+    /// <param name="serverId">Unique identifier for this server (e.g., "us-server", "eu-server")</param>
+    /// <param name="serverUrl">The API server URL</param>
+    /// <param name="identityTokenUrl">The identity server token URL</param>
+    /// <param name="serverDescription">Human-readable description for the server</param>
+    public static void AddSwaggerServerWithSecurity(
+        this SwaggerGenOptions config,
+        string serverId,
+        string serverUrl,
+        string identityTokenUrl,
+        string serverDescription)
+    {
+        // Add server
+        config.AddServer(new OpenApiServer
+        {
+            Url = serverUrl,
+            Description = serverDescription
+        });
+
+        // Add security definition
+        config.AddSecurityDefinition(serverId, new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.OAuth2,
+            Description = $"**Use this option if you've selected the {serverDescription}**",
+            Flows = new OpenApiOAuthFlows
+            {
+                ClientCredentials = new OpenApiOAuthFlow
+                {
+                    TokenUrl = new Uri(identityTokenUrl),
+                    Scopes = new Dictionary<string, string>
+                    {
+                        { ApiScopes.ApiOrganization, $"Organization APIs ({serverDescription})" },
+                    },
+                }
+            },
+        });
+
+        // Add security requirement
+        config.AddSecurityRequirement((document) => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference(serverId, document)] = [ApiScopes.ApiOrganization]
+        });
     }
 }

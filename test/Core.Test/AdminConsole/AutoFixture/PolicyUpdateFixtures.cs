@@ -18,7 +18,7 @@ internal class PolicyUpdateCustomization(PolicyType type, bool enabled) : ICusto
     }
 }
 
-public class PolicyUpdateAttribute(PolicyType type, bool enabled = true) : CustomizeAttribute
+public class PolicyUpdateAttribute(PolicyType type = PolicyType.FreeFamiliesSponsorshipPolicy, bool enabled = true) : CustomizeAttribute
 {
     public override ICustomization GetCustomization(ParameterInfo parameter)
     {

@@ -1,9 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Utilities;
 using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
+using JsonConverterAttribute = System.Text.Json.Serialization.JsonConverterAttribute;
 
 namespace Bit.Api.AdminConsole.Public.Models.Response;
 
@@ -25,10 +29,7 @@ public class PolicyResponseModel : PolicyBaseModel, IResponseModel
         Id = policy.Id;
         Type = policy.Type;
         Enabled = policy.Enabled;
-        if (!string.IsNullOrWhiteSpace(policy.Data))
-        {
-            Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policy.Data);
-        }
+        Data = string.IsNullOrWhiteSpace(policy.Data) ? null : policy.Data;
     }
 
     /// <summary>
@@ -48,4 +49,9 @@ public class PolicyResponseModel : PolicyBaseModel, IResponseModel
     /// </summary>
     [Required]
     public PolicyType? Type { get; set; }
+    /// <summary>
+    /// Data for the policy.
+    /// </summary>
+    [JsonConverter(typeof(RawJsonConverter))]
+    public new string Data { get; set; }
 }

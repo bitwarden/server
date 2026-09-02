@@ -1,6 +1,13 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Services;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,44 +15,39 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 {
-    private readonly IDataProtector _dataProtector;
-    private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IAcceptOrganizationMembershipValidator _acceptOrganizationMembershipValidator;
+    private readonly IPushAutoConfirmNotificationCommand _pushAutoConfirmNotificationCommand;
+    private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
     public AcceptOrgUserCommand(
-        IDataProtectionProvider dataProtectionProvider,
-        IGlobalSettings globalSettings,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
-        IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IAcceptOrganizationMembershipValidator acceptOrganizationMembershipValidator,
+        IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+        IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
-
-        // TODO: remove data protector when old token validation removed
-        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
-        _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
-        _policyService = policyService;
         _mailService = mailService;
         _userRepository = userRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _acceptOrganizationMembershipValidator = acceptOrganizationMembershipValidator;
+        _pushAutoConfirmNotificationCommand = pushAutoConfirmNotificationCommand;
+        _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -54,25 +56,15 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null)
         {
-            throw new BadRequestException("User invalid.");
+            throw new BadRequestException(new OrganizationUserNotFoundError().Message);
         }
 
-        // Tokens will have been created in two ways in the OrganizationService invite methods:
-        // 1. New way - via OrgUserInviteTokenable
-        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
-        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
+        var tokenValidationError = OrgUserInviteTokenable.ValidateOrgUserInvite(
+            _orgUserInviteTokenDataFactory, emailToken, orgUser.Id, orgUser.Email);
 
-        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, emailToken, orgUser);
-
-        var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
-                             _globalSettings);
-
-        if (!tokenValid)
+        if (tokenValidationError != null)
         {
-            throw new BadRequestException("Invalid token.");
+            throw new BadRequestException(tokenValidationError.ErrorMessage);
         }
 
         var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
@@ -81,15 +73,15 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             if (orgUser.Status == OrganizationUserStatusType.Accepted)
             {
-                throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
+                throw new BadRequestException(new InvitationAlreadyAcceptedError().Message);
             }
-            throw new BadRequestException("You are already part of this organization.");
+            throw new BadRequestException(new AlreadyPartOfOrganizationError().Message);
         }
 
         if (string.IsNullOrWhiteSpace(orgUser.Email) ||
             !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
-            throw new BadRequestException("User email does not match invite.");
+            throw new BadRequestException(new EmailMismatchError().Message);
         }
 
         var organizationUser = await AcceptOrgUserAsync(orgUser, user, userService);
@@ -104,25 +96,18 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return organizationUser;
     }
 
-    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
-    {
-        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
-    }
-
     public async Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgSsoIdentifier, User user, IUserService userService)
     {
         var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException(new OrganizationNotFoundError().Message);
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException("User not found within organization.");
+            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -133,13 +118,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
-            throw new BadRequestException("Organization invalid.");
+            throw new BadRequestException(new OrganizationNotFoundError().Message);
         }
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
-            throw new BadRequestException("User not found within organization.");
+            throw new BadRequestException(new UserNotFoundInOrganizationError().Message);
         }
 
         return await AcceptOrgUserAsync(orgUser, user, userService);
@@ -148,58 +133,37 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     public async Task<OrganizationUser> AcceptOrgUserAsync(OrganizationUser orgUser, User user,
         IUserService userService)
     {
+        var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+
         if (orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException("Your organization access has been revoked.");
+            throw new BadRequestException(new OrganizationAccessRevoked(org?.DisplayName() ?? string.Empty).Message);
         }
 
         if (orgUser.Status != OrganizationUserStatusType.Invited)
         {
-            throw new BadRequestException("Already accepted.");
+            throw new BadRequestException(new AlreadyAcceptedError().Message);
         }
 
         if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
         {
-            var org = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
             if (org.PlanType == PlanType.Free)
             {
                 var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
                     user.Id);
                 if (adminCount > 0)
                 {
-                    throw new BadRequestException("You can only be an admin of one free organization.");
+                    throw new BadRequestException(new FreeOrgAdminLimitError().Message);
                 }
             }
         }
 
-        // Enforce Single Organization Policy of organization user is trying to join
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
-        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
+        var membershipValidationResult = await ValidateMembershipAsync(orgUser, user, allOrgUsers);
+        if (membershipValidationResult.AutoConfirmPolicyEnabled)
         {
-            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
-        }
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await userService.TwoFactorIsEnabledAsync(user))
-        {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
+            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
 
         orgUser.Status = OrganizationUserStatusType.Accepted;
@@ -213,11 +177,38 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (adminEmails.Count > 0)
         {
-            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
-            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
+            await _mailService.SendOrganizationAcceptedEmailAsync(org, user.Email, adminEmails);
         }
+
+        await _pushAutoConfirmNotificationCommand.PushAsync(user.Id, orgUser.OrganizationId);
 
         return orgUser;
     }
 
+    private async Task<AcceptOrganizationMembershipValidationResult> ValidateMembershipAsync(
+        OrganizationUser orgUser, User user, ICollection<OrganizationUser> allOrgUsers)
+    {
+        var request = new AcceptOrganizationMembershipValidationRequest
+        {
+            OrganizationId = orgUser.OrganizationId,
+            User = user,
+            AllOrganizationMemberships = allOrgUsers,
+            ExistingMembership = orgUser,
+        };
+
+        var result = await _acceptOrganizationMembershipValidator.ValidateAsync(request);
+        if (result.IsError)
+        {
+            var message = result.AsError switch
+            {
+                UserIsAMemberOfAnotherOrganization => new UserCannotAcceptInviteMemberOfAnotherOrg().Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotAcceptInviteForbiddenByOtherOrg().Message,
+                _ => result.AsError.Message
+            };
+            throw new BadRequestException(message);
+        }
+
+        return result.Request;
+    }
 }
+

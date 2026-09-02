@@ -23,11 +23,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_Success()
     {
         // Arrange
-        var sendService = Substitute.For<ISendService>();
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendService,
+            sendAuthorizationService,
             sendRepository
         );
 
@@ -52,11 +52,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_SendNotReturnedFromRepository_NotIncludedInOutput()
     {
         // Arrange
-        var sendService = Substitute.For<ISendService>();
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendService,
+            sendAuthorizationService,
             sendRepository
         );
 
@@ -76,11 +76,11 @@ public class SendRotationValidatorTests
     public async Task ValidateAsync_InputMissingUserSend_Throws()
     {
         // Arrange
-        var sendService = Substitute.For<ISendService>();
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
         var sut = new SendRotationValidator(
-            sendService,
+            sendAuthorizationService,
             sendRepository
         );
 
@@ -102,6 +102,7 @@ public class SendRotationValidatorTests
         {
             new SendWithIdRequestModel
             {
+                AuthType = AuthType.None,
                 DeletionDate = new DateTime(2080, 12, 31),
                 Disabled = false,
                 Id = new Guid("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"),
@@ -112,6 +113,7 @@ public class SendRotationValidatorTests
             },
             new SendWithIdRequestModel
             {
+                AuthType = AuthType.None,
                 DeletionDate = new DateTime(2080, 12, 31),
                 Disabled = true,
                 Id = new Guid("6b55836c-9280-4589-8762-01b0d8172c97"),
@@ -123,6 +125,7 @@ public class SendRotationValidatorTests
             },
             new SendWithIdRequestModel
             {
+                AuthType = AuthType.None,
                 DeletionDate = new DateTime(2080, 12, 31),
                 Disabled = false,
                 Id = new Guid("9a65bbfb-8138-4aa5-a572-e5c0a41b540e"),

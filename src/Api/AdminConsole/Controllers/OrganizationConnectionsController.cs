@@ -2,13 +2,13 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +54,7 @@ public class OrganizationConnectionsController : Controller
     [HttpPost]
     public async Task<OrganizationConnectionResponseModel> CreateConnection([FromBody] OrganizationConnectionRequestModel model)
     {
-        if (!await HasPermissionAsync(model?.OrganizationId))
+        if (!await HasPermissionAsync(model.OrganizationId, model.Type))
         {
             throw new BadRequestException($"You do not have permission to create a connection of type {model.Type}.");
         }
@@ -89,9 +89,14 @@ public class OrganizationConnectionsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await HasPermissionAsync(model?.OrganizationId, model?.Type))
+        if (!await HasPermissionAsync(existingOrganizationConnection.OrganizationId, existingOrganizationConnection.Type))
         {
             throw new BadRequestException("You do not have permission to update this connection.");
+        }
+
+        if (model.Type != existingOrganizationConnection.Type)
+        {
+            throw new BadRequestException("The connection type cannot be changed.");
         }
 
         if (await HasConnectionTypeAsync(model, organizationConnectionId, model.Type))
@@ -137,7 +142,6 @@ public class OrganizationConnectionsController : Controller
     }
 
     [HttpDelete("{organizationConnectionId}")]
-    [HttpPost("{organizationConnectionId}/delete")]
     public async Task DeleteConnection(Guid organizationConnectionId)
     {
         var connection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
@@ -166,6 +170,15 @@ public class OrganizationConnectionsController : Controller
         return existingConnections.Any(c => c.Type == model.Type && (!connectionId.HasValue || c.Id != connectionId.Value));
     }
 
+    /// <summary>
+    /// Returns whether the current user has permission to manage a connection of the given <paramref name="type"/>
+    /// in the given organization. The required permission varies by connection type (e.g. Scim requires Manage SCIM,
+    /// while CloudBillingSync requires Organization Owner).
+    /// </summary>
+    /// <remarks>
+    /// When authorizing an update or delete against an existing connection, <paramref name="type"/> MUST be sourced
+    /// from the persisted connection — never from the request body.
+    /// </remarks>
     private async Task<bool> HasPermissionAsync(Guid? organizationId, OrganizationConnectionType? type = null)
     {
         if (!organizationId.HasValue)
@@ -186,7 +199,8 @@ public class OrganizationConnectionsController : Controller
             throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
         }
         var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
-        if (!_licensingService.VerifyLicense(license))
+
+        if (license == null || !_licensingService.VerifyLicense(license))
         {
             throw new BadRequestException("Cannot verify license file.");
         }
@@ -196,7 +210,7 @@ public class OrganizationConnectionsController : Controller
     private async Task<OrganizationConnectionResponseModel> CreateOrUpdateOrganizationConnectionAsync<T>(
         Guid? organizationConnectionId,
         OrganizationConnectionRequestModel model,
-        Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
+        Func<OrganizationConnectionRequestModel<T>, Task>? validateAction = null)
         where T : IConnectionConfig
     {
         var typedModel = new OrganizationConnectionRequestModel<T>(model);

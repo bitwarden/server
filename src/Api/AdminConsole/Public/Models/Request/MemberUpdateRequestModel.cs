@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -21,9 +24,14 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
         existingUser.Type = Type.Value;
         existingUser.ExternalId = ExternalId;
 
-        // Permissions property is optional for backwards compatibility with existing usage
-        if (existingUser.Type is OrganizationUserType.Custom && Permissions is not null)
+        if (existingUser.Type is not OrganizationUserType.Custom)
         {
+            // Clear any permissions left over from a previous Custom role.
+            existingUser.Permissions = null;
+        }
+        else if (Permissions is not null)
+        {
+            // Permissions property is optional for backwards compatibility with existing usage
             existingUser.SetPermissions(Permissions.ToData());
         }
 

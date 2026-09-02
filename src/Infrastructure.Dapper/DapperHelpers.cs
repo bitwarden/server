@@ -81,7 +81,7 @@ public class DataTableBuilder<T>
             return true;
         }
 
-        // Value type properties will implicitly box into the object so 
+        // Value type properties will implicitly box into the object so
         // we need to look past the Convert expression
         // i => (System.Object?)i.Id
         if (
@@ -150,12 +150,29 @@ public static class DapperHelpers
             os => os.LastSyncDate,
             os => os.ValidUntil,
             os => os.ToDelete,
+            os => os.IsAdminInitiated,
+            os => os.Notes,
         ]
     );
 
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
         return ids.ToArrayTVP("GuidId");
+    }
+
+    public static DataTable ToTwoGuidIdArrayTVP(this IEnumerable<(Guid id1, Guid id2)> values)
+    {
+        var table = new DataTable();
+        table.SetTypeName("[dbo].[TwoGuidIdArray]");
+        table.Columns.Add("Id1", typeof(Guid));
+        table.Columns.Add("Id2", typeof(Guid));
+
+        foreach (var value in values)
+        {
+            table.Rows.Add(value.id1, value.id2);
+        }
+
+        return table;
     }
 
     public static DataTable ToArrayTVP<T>(this IEnumerable<T> values, string columnName)

@@ -1,0 +1,394 @@
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Microsoft.Extensions.Logging;
+using OneOf;
+using Stripe;
+
+namespace Bit.Core.Billing.Subscriptions.Queries;
+
+using static StripeConstants;
+using static Utilities;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
+
+public interface IGetBitwardenSubscriptionQuery
+{
+    /// <summary>
+    /// Retrieves detailed subscription information for a user, including subscription status,
+    /// cart items, discounts, and billing details.
+    /// </summary>
+    /// <param name="user">The user whose subscription information to retrieve.</param>
+    /// <returns>
+    /// A <see cref="BitwardenSubscription"/> containing the subscription details, or null if no
+    /// subscription is found or the subscription status is not recognized.
+    /// </returns>
+    /// <remarks>
+    /// Currently only supports <see cref="User"/> subscribers. Future versions will support all
+    /// <see cref="ISubscriber"/> types (User and Organization).
+    /// </remarks>
+    Task<BitwardenSubscription?> Run(User user);
+}
+
+public class GetBitwardenSubscriptionQuery(
+    ILogger<GetBitwardenSubscriptionQuery> logger,
+    IPricingClient pricingClient,
+    IStripeAdapter stripeAdapter) : IGetBitwardenSubscriptionQuery
+{
+    public async Task<BitwardenSubscription?> Run(User user)
+    {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return null;
+        }
+
+        var subscription = await FetchSubscriptionAsync(user);
+
+        if (subscription == null)
+        {
+            return null;
+        }
+
+        var cart = await GetPremiumCartAsync(subscription);
+
+        var baseSubscription = new BitwardenSubscription { Status = subscription.Status, Cart = cart, Storage = user };
+
+        switch (subscription.Status)
+        {
+            case SubscriptionStatus.Incomplete:
+            case SubscriptionStatus.IncompleteExpired:
+                return baseSubscription with { Suspension = subscription.Created.AddHours(23), GracePeriod = 1 };
+
+            case SubscriptionStatus.Trialing:
+            case SubscriptionStatus.Active:
+                return baseSubscription with
+                {
+                    NextCharge = subscription.GetCurrentPeriodEnd(),
+                    CancelAt = subscription.CancelAt
+                };
+
+            case SubscriptionStatus.PastDue:
+            case SubscriptionStatus.Unpaid:
+                var suspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
+                if (suspension == null)
+                {
+                    return baseSubscription;
+                }
+                return baseSubscription with { Suspension = suspension.SuspensionDate, GracePeriod = suspension.GracePeriod };
+
+            case SubscriptionStatus.Canceled:
+                return baseSubscription with { Canceled = subscription.CanceledAt };
+
+            default:
+                {
+                    logger.LogError("Subscription ({SubscriptionID}) has an unmanaged status ({Status})", subscription.Id, subscription.Status);
+                    throw new ConflictException("Subscription is in an invalid state. Please contact support for assistance.");
+                }
+        }
+    }
+
+    private async Task<Cart> GetPremiumCartAsync(
+        Subscription subscription)
+    {
+        var plans = await pricingClient.ListPremiumPlans();
+
+        var passwordManagerSeatsItem = subscription.Items.FirstOrDefault(item =>
+            plans.Any(plan => plan.Seat.StripePriceId == item.Price.Id));
+
+        if (passwordManagerSeatsItem == null)
+        {
+            throw new ConflictException("Premium subscription does not have a Password Manager line item.");
+        }
+
+        var additionalStorageItem = subscription.Items.FirstOrDefault(item =>
+            plans.Any(plan => plan.Storage.StripePriceId == item.Price.Id));
+
+        var coupons = await GetRelevantCouponsAsync(subscription);
+        var (cartLevelCoupon, productLevelCoupons) = PartitionCouponsByScope(coupons);
+
+        var availablePlan = plans.First(plan => plan.Available);
+        var onCurrentPricing = passwordManagerSeatsItem.Price.Id == availablePlan.Seat.StripePriceId;
+
+        decimal seatCost;
+        decimal estimatedTax;
+
+        if (onCurrentPricing)
+        {
+            seatCost = GetCost(passwordManagerSeatsItem);
+            estimatedTax = await EstimatePremiumTaxAsync(subscription);
+        }
+        else
+        {
+            seatCost = availablePlan.Seat.Price;
+            estimatedTax = await EstimatePremiumTaxAsync(
+                subscription, plans, availablePlan,
+                [.. coupons.Select(c => c.Id)]);
+        }
+
+        var passwordManagerSeats = new CartItem
+        {
+            TranslationKey = "premiumMembership",
+            Quantity = passwordManagerSeatsItem.Quantity,
+            Cost = seatCost,
+            Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(passwordManagerSeatsItem))
+        };
+
+        var additionalStorage = additionalStorageItem != null
+            ? new CartItem
+            {
+                TranslationKey = "additionalStorageGB",
+                Quantity = additionalStorageItem.Quantity,
+                Cost = GetCost(additionalStorageItem),
+                Discount = productLevelCoupons.FirstOrDefault(coupon => coupon.AppliesTo(additionalStorageItem))
+            }
+            : null;
+
+        return new Cart
+        {
+            PasswordManager = new PasswordManagerCartItems
+            {
+                Seats = passwordManagerSeats,
+                AdditionalStorage = additionalStorage
+            },
+            Cadence = PlanCadenceType.Annually,
+            Discount = cartLevelCoupon,
+            EstimatedTax = estimatedTax
+        };
+    }
+
+    private async Task<decimal> EstimatePremiumTaxAsync(
+        Subscription subscription,
+        List<PremiumPlan>? plans = null,
+        PremiumPlan? availablePlan = null,
+        List<string>? couponIds = null)
+    {
+        try
+        {
+            var options = new InvoiceCreatePreviewOptions
+            {
+                Customer = subscription.Customer.Id
+            };
+
+            if (plans != null && availablePlan != null)
+            {
+                options.AutomaticTax = new InvoiceAutomaticTaxOptions
+                {
+                    Enabled = subscription.AutomaticTax?.Enabled ?? false
+                };
+
+                options.SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+                {
+                    Items = [.. subscription.Items.Select(item =>
+                    {
+                        var isSeatItem = plans.Any(plan => plan.Seat.StripePriceId == item.Price.Id);
+
+                        return new InvoiceSubscriptionDetailsItemOptions
+                        {
+                            Price = isSeatItem ? availablePlan.Seat.StripePriceId : item.Price.Id,
+                            Quantity = item.Quantity
+                        };
+                    })],
+                    BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
+                };
+
+                if (couponIds is { Count: > 0 })
+                {
+                    options.Discounts = [.. couponIds.Select(id => new InvoiceDiscountOptions { Coupon = id })];
+                }
+            }
+            else
+            {
+                options.Subscription = subscription.Id;
+            }
+
+            var invoice = await stripeAdapter.CreateInvoicePreviewAsync(options);
+
+            return GetCost(invoice.TotalTaxes);
+        }
+        catch (StripeException stripeException) when
+            (stripeException.StripeError.Code == ErrorCodes.InvoiceUpcomingNone)
+        {
+            return 0;
+        }
+    }
+
+    private static decimal GetCost(OneOf<SubscriptionItem, List<InvoiceTotalTax>> value) =>
+        value.Match(
+            item => (item.Price.UnitAmountDecimal ?? 0) / 100M,
+            taxes => taxes.Sum(invoiceTotalTax => invoiceTotalTax.Amount) / 100M);
+
+    /// <summary>
+    /// Returns the coupons relevant to the subscription's upcoming invoice. When a subscription
+    /// schedule is attached, Phase 2's discounts are the source of truth (they reflect the
+    /// upcoming-renewal state, including any preserved current discounts plus migration coupons).
+    /// Otherwise the subscription's current discounts are used. Customer-level discounts apply
+    /// independently of the schedule and are always included.
+    /// </summary>
+    private async Task<List<Coupon>> GetRelevantCouponsAsync(Subscription subscription)
+    {
+        var couponIds = new List<string>();
+
+        if (subscription.Customer.Discount.IsValid())
+        {
+            couponIds.Add(subscription.Customer.Discount.Source.Coupon.Id);
+        }
+
+        if (!string.IsNullOrEmpty(subscription.ScheduleId))
+        {
+            couponIds.AddRange(await GetSchedulePhase2CouponIdsAsync(subscription));
+        }
+        else
+        {
+            couponIds.AddRange((subscription.Discounts ?? [])
+                .Where(d => d.IsValid())
+                .Select(d => d.Source.Coupon.Id));
+        }
+
+        // Re-fetch each unique coupon with applies_to explicitly expanded.
+        //
+        // Two long-standing Stripe rules interact here:
+        //  1. `expand` strings have a max depth of 4 (https://docs.stripe.com/expand).
+        //  2. `coupon.applies_to` is expandable, not inline — without an explicit
+        //     expand it comes back null (https://docs.stripe.com/api/coupons/object).
+        //
+        // Before the 2025-09-30.clover API version, Discount pointed at Coupon
+        // directly, so `customer.discount.coupon.applies_to` sat at exactly 4 levels
+        // and both rules were satisfied. That release moved Coupon under a Source
+        // wrapper (Discount.Source.Coupon), pushing the equivalent path to 5
+        // levels and over the cap. Rooting a separate fetch at the Coupon itself
+        // keeps applies_to only 1 level deep.
+        //
+        // Skipping this refetch would let every product-scoped coupon silently
+        // misclassify as cart-level in PartitionCouponsByScope below.
+        var uniqueIds = couponIds
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // Defensive fetch: a subscription can still reference a coupon that was later
+        // deleted in Stripe, and GetCouponAsync throws on a missing coupon — one
+        // deleted coupon would otherwise fail the whole batch. Drop the nulls instead.
+        var enriched = await Task.WhenAll(uniqueIds.Select(TryGetCouponAsync));
+
+        return enriched
+            .Where(coupon => coupon is not null)
+            .Select(coupon => coupon!)
+            .ToList();
+    }
+
+    private static (Coupon? CartLevel, List<Coupon> ProductLevel) PartitionCouponsByScope(
+        IEnumerable<Coupon> coupons)
+    {
+        var cartLevel = new List<Coupon>();
+        var productLevel = new List<Coupon>();
+
+        foreach (var coupon in coupons)
+        {
+            switch (coupon)
+            {
+                case { AppliesTo.Products: null or { Count: 0 } }:
+                case { AppliesTo: null }:
+                    cartLevel.Add(coupon);
+                    break;
+                case { AppliesTo.Products.Count: > 0 }:
+                    productLevel.Add(coupon);
+                    break;
+            }
+        }
+
+        return (cartLevel.FirstOrDefault(), productLevel);
+    }
+
+    private async Task<List<string>> GetSchedulePhase2CouponIdsAsync(Subscription subscription)
+    {
+        try
+        {
+            var schedule = await stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
+                new SubscriptionScheduleGetOptions
+                {
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no per-coupon refetch
+                    // is needed for the phase-2 branch.
+                    Expand = ["phases.discounts.coupon.applies_to"]
+                });
+
+            if (schedule.Status != SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return [];
+            }
+
+            var phase2 = schedule.Phases[1];
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            if (phase2.StartDate < now)
+            {
+                logger.LogInformation(
+                    "Schedule phase 2 for subscription schedule ({ScheduleID}) has already started, skipping discount display",
+                    subscription.ScheduleId);
+                return [];
+            }
+
+            return phase2.Discounts?
+                .Where(d => d?.Coupon?.Valid == true)
+                .Select(d => d.Coupon!.Id)
+                .ToList() ?? [];
+        }
+        catch (StripeException stripeException)
+        {
+            // Rethrow rather than soft-fail. The schedule's coupons feed both the discount display
+            // and the tax-preview's `options.Discounts` list — silently dropping them would inflate
+            // the tax estimate the user sees against the new pricing without any error signal.
+            logger.LogError(stripeException,
+                "Failed to retrieve subscription schedule ({ScheduleID}) for discount resolution",
+                subscription.ScheduleId);
+            throw;
+        }
+    }
+
+    private async Task<Subscription?> FetchSubscriptionAsync(User user)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId, new SubscriptionGetOptions
+            {
+                Expand =
+                [
+                    // Stops at 4 levels: `customer.discount.source.coupon.applies_to`
+                    // would be 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
+                    // change wrapped Coupon under Discount.Source). AppliesTo is filled
+                    // in by GetRelevantCouponsAsync's per-coupon refetch step.
+                    "customer.discount.source.coupon",
+                    "discounts.source.coupon.applies_to",
+                    "items.data.price.product",
+                    "test_clock"
+                ]
+            });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionID}) for User ({UserID}) was not found", user.GatewaySubscriptionId, user.Id);
+            return null;
+        }
+    }
+
+    private async Task<Coupon?> TryGetCouponAsync(string couponId)
+    {
+        try
+        {
+            return await stripeAdapter.GetCouponAsync(couponId, new CouponGetOptions { Expand = ["applies_to"] });
+        }
+        catch (StripeException stripeException)
+        {
+            logger.LogWarning(
+                "GetBitwardenSubscriptionQuery: Could not retrieve coupon ({CouponId}) | Code = {Code}",
+                couponId, stripeException.StripeError?.Code);
+            return null;
+        }
+    }
+}

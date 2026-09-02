@@ -1,0 +1,61 @@
+﻿using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
+
+#nullable enable
+
+namespace Bit.Core.Tools.SendFeatures.Queries;
+
+/// <inheritdoc cref="ISendAuthenticationQuery"/>
+public class SendAuthenticationQuery : ISendAuthenticationQuery
+{
+    private static readonly NotAuthenticated NOT_AUTHENTICATED = new NotAuthenticated();
+    private static readonly SendInaccessible SEND_INACCESSIBLE = new SendInaccessible();
+
+    private readonly ISendRepository _sendRepository;
+
+    /// <summary>
+    /// Instantiates the command
+    /// </summary>
+    /// <param name="sendRepository">
+    /// Retrieves send records
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="sendRepository"/> is <see langword="null"/>.
+    /// </exception>
+    public SendAuthenticationQuery(ISendRepository sendRepository)
+    {
+        _sendRepository = sendRepository ?? throw new ArgumentNullException(nameof(sendRepository));
+    }
+
+    /// <inheritdoc cref="ISendAuthenticationQuery.GetAuthenticationMethod"/>
+    public async Task<SendAuthenticationMethod> GetAuthenticationMethod(Guid sendId)
+    {
+        var send = await _sendRepository.GetByIdAsync(sendId);
+
+        SendAuthenticationMethod method = send switch
+        {
+            null => SEND_INACCESSIBLE,
+            var s when s.Disabled => SEND_INACCESSIBLE,
+            var s when s.AccessCount >= s.MaxAccessCount.GetValueOrDefault(int.MaxValue) => SEND_INACCESSIBLE,
+            var s when s.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < DateTime.UtcNow => SEND_INACCESSIBLE,
+            var s when s.DeletionDate <= DateTime.UtcNow => SEND_INACCESSIBLE,
+            var s when s.AuthType == AuthType.Email && s.Emails is not null => EmailOtp(s.Emails),
+            var s when s.AuthType == AuthType.Password && s.Password is not null => new ResourcePassword(s.Password),
+            _ => NOT_AUTHENTICATED
+        };
+
+        return method;
+    }
+
+    private static EmailOtp EmailOtp(string? emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return new EmailOtp([]);
+        }
+        var list = emails.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return new EmailOtp(list);
+    }
+}

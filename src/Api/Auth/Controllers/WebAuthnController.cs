@@ -3,9 +3,9 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -19,11 +19,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("webauthn")]
-[Authorize("Web")]
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
-    private readonly IPolicyService _policyService;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
@@ -31,20 +29,20 @@ public class WebAuthnController : Controller
     private readonly ICreateWebAuthnLoginCredentialCommand _createWebAuthnLoginCredentialCommand;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public WebAuthnController(
         IUserService userService,
-        IPolicyService policyService,
         IWebAuthnCredentialRepository credentialRepository,
         IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialCreateOptionsCommand getWebAuthnLoginCredentialCreateOptionsCommand,
         ICreateWebAuthnLoginCredentialCommand createWebAuthnLoginCredentialCommand,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
-        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand)
+        IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _userService = userService;
-        _policyService = policyService;
         _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
@@ -52,9 +50,10 @@ public class WebAuthnController : Controller
         _createWebAuthnLoginCredentialCommand = createWebAuthnLoginCredentialCommand;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
-
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
+    [Authorize(Policies.Application)]
     [HttpGet("")]
     public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
@@ -64,11 +63,12 @@ public class WebAuthnController : Controller
         return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("attestation-options")]
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var options = await _getWebAuthnLoginCredentialCreateOptionsCommand.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
@@ -81,6 +81,7 @@ public class WebAuthnController : Controller
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("assertion-options")]
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
     {
@@ -97,11 +98,12 @@ public class WebAuthnController : Controller
         };
     }
 
+    [Authorize(Policies.Application)]
     [HttpPost("")]
-    public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
+    public async Task<WebAuthnCredentialResponseModel> Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
         var user = await GetUserAsync();
-        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
+        await ValidateIfUserCanUsePasskeyLogin(user.Id);
         var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
 
         if (!tokenable.TokenIsValid(user))
@@ -109,28 +111,31 @@ public class WebAuthnController : Controller
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var success = await _createWebAuthnLoginCredentialCommand.CreateWebAuthnLoginCredentialAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
-        if (!success)
+        var credential = await _createWebAuthnLoginCredentialCommand.CreateWebAuthnLoginCredentialAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
+        if (credential == null)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
         }
+
+        return new WebAuthnCredentialResponseModel(credential);
     }
 
-    private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
+    private async Task ValidateIfUserCanUsePasskeyLogin(Guid userId)
     {
-        var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+        var requireSsoPolicyRequirement = await _policyRequirementQuery.GetAsyncVNext<RequireSsoPolicyRequirement>(userId);
 
-        if (requireSsoLogin)
+        if (!requireSsoPolicyRequirement.CanUsePasskeyLogin)
         {
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
     }
 
+    [Authorize(Policies.Application)]
     [HttpPut()]
     public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
     {
         var tokenable = _assertionOptionsDataProtector.Unprotect(model.Token);
-        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet))
+        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.UpdateKeySet) || tokenable.Options == null)
         {
             throw new BadRequestException("The token associated with your request is invalid or has expired. A valid token is required to continue.");
         }
@@ -149,6 +154,7 @@ public class WebAuthnController : Controller
         await _credentialRepository.UpdateAsync(credential);
     }
 
+    [Authorize(Policies.Web)]
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id, [FromBody] SecretVerificationRequestModel model)
     {

@@ -53,8 +53,20 @@ CREATE TABLE [dbo].[Organization] (
     [SecretsManagerBeta]            BIT              NOT NULL CONSTRAINT [DF_Organization_SecretsManagerBeta] DEFAULT (0),
     [LimitCollectionCreation]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreation] DEFAULT (0),
     [LimitCollectionDeletion]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionDeletion] DEFAULT (0),
+    [LimitItemDeletion]             BIT              NOT NULL CONSTRAINT [DF_Organization_LimitItemDeletion] DEFAULT (0),
     [AllowAdminAccessToAllCollectionItems]   BIT              NOT NULL CONSTRAINT [DF_Organization_AllowAdminAccessToAllCollectionItems] DEFAULT (0),
     [UseRiskInsights]               BIT              NOT NULL CONSTRAINT [DF_Organization_UseRiskInsights] DEFAULT (0),
+    [UseOrganizationDomains]        BIT              NOT NULL CONSTRAINT [DF_Organization_UseOrganizationDomains] DEFAULT (0),
+    [UseAdminSponsoredFamilies]     BIT              NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] DEFAULT (0),
+    [SyncSeats]                     BIT              NOT NULL CONSTRAINT [DF_Organization_SyncSeats] DEFAULT (0),
+    [UseAutomaticUserConfirmation]  BIT              NOT NULL CONSTRAINT [DF_Organization_UseAutomaticUserConfirmation] DEFAULT (0),
+    [MaxStorageGbIncreased]         SMALLINT         NULL,
+    [UsePhishingBlocker]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePhishingBlocker] DEFAULT (0),
+    [UseDisableSmAdsForUsers]       BIT              NOT NULL CONSTRAINT [DF_Organization_UseDisableSmAdsForUsers] DEFAULT (0),
+    [UseMyItems]                    BIT              NOT NULL CONSTRAINT [DF_Organization_UseMyItems] DEFAULT (0),
+    [ExemptFromBillingAutomation]   BIT              NOT NULL CONSTRAINT [DF_Organization_ExemptFromBillingAutomation] DEFAULT (0),
+    [UseInviteLinks]                BIT              NOT NULL CONSTRAINT [DF_Organization_UseInviteLinks] DEFAULT (0),
+    [UsePam]                        BIT              NOT NULL CONSTRAINT [DF_Organization_UsePam] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -62,9 +74,19 @@ CREATE TABLE [dbo].[Organization] (
 GO
 CREATE NONCLUSTERED INDEX [IX_Organization_Enabled]
     ON [dbo].[Organization]([Id] ASC, [Enabled] ASC)
-    INCLUDE ([UseTotp]);
+    INCLUDE ([UseTotp], [UsersGetPremium]);
 
 GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
     WHERE [Identifier] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewayCustomerId]
+    ON [dbo].[Organization]([GatewayCustomerId])
+    WHERE [GatewayCustomerId] IS NOT NULL;
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Organization_GatewaySubscriptionId]
+    ON [dbo].[Organization]([GatewaySubscriptionId])
+    WHERE [GatewaySubscriptionId] IS NOT NULL;

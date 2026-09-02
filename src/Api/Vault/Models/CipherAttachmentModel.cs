@@ -1,4 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models;
@@ -13,8 +16,10 @@ public class CipherAttachmentModel
         Key = data.Key;
     }
 
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string FileName { get; set; }
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Key { get; set; }
 }

@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
@@ -44,6 +44,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -94,11 +95,8 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -129,7 +127,15 @@ public class Startup
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
 
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
+
         // Add MVC to the request pipeline.
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }

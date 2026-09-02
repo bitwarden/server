@@ -1,0 +1,847 @@
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Vault.Entities;
+
+namespace Bit.Core.Services;
+
+public class EventService : IEventService
+{
+    private readonly IEventWriteService _eventWriteService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
+    private readonly ICurrentContext _currentContext;
+
+    public EventService(
+        IEventWriteService eventWriteService,
+        IOrganizationUserRepository organizationUserRepository,
+        IProviderUserRepository providerUserRepository,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
+        ICurrentContext currentContext)
+    {
+        _eventWriteService = eventWriteService;
+        _organizationUserRepository = organizationUserRepository;
+        _providerUserRepository = providerUserRepository;
+        _providerAbilityCacheService = providerAbilityCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
+        _currentContext = currentContext;
+    }
+
+    public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null,
+        bool includeAcceptedStatusOrgs = false)
+    {
+        var events = new List<IEvent>
+        {
+            new EventMessage(_currentContext)
+            {
+                UserId = userId,
+                ActingUserId = userId,
+                Type = type,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            }
+        };
+
+        IEnumerable<EventMessage> orgEvents;
+        if (includeAcceptedStatusOrgs)
+        {
+            var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+            var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgUsers.Select(ou => ou.OrganizationId).Distinct());
+            orgEvents = orgUsers
+                .Where(ou => ou.Status is OrganizationUserStatusType.Confirmed
+                                       or OrganizationUserStatusType.Accepted)
+                .Where(ou => CanUseEvents(orgAbilities, ou.OrganizationId))
+                .Select(ou => new EventMessage(_currentContext)
+                {
+                    OrganizationId = ou.OrganizationId,
+                    UserId = userId,
+                    ActingUserId = userId,
+                    Type = type,
+                    Date = DateTime.UtcNow
+                });
+        }
+        else
+        {
+            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, userId);
+            var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgs.Select(organization => organization.Id));
+            orgEvents = orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
+                .Select(o => new EventMessage(_currentContext)
+                {
+                    OrganizationId = o.Id,
+                    UserId = userId,
+                    ActingUserId = userId,
+                    Type = type,
+                    Date = DateTime.UtcNow
+                });
+        }
+
+        var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, userId);
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(provider => provider.Id));
+        var providerEvents = providers.Where(o => CanUseProviderEvents(providerAbilities, o.Id))
+            .Select(p => new EventMessage(_currentContext)
+            {
+                ProviderId = p.Id,
+                UserId = userId,
+                ActingUserId = userId,
+                Type = type,
+                Date = DateTime.UtcNow
+            });
+
+        if (orgEvents.Any() || providerEvents.Any())
+        {
+            events.AddRange(orgEvents);
+            events.AddRange(providerEvents);
+            await _eventWriteService.CreateManyAsync(events);
+        }
+        else
+        {
+            await _eventWriteService.CreateAsync(events.First());
+        }
+    }
+
+    public async Task LogCipherEventAsync(Cipher cipher, EventType type, DateTime? date = null)
+    {
+        var e = await BuildCipherEventMessageAsync(cipher, type, date);
+        if (e != null)
+        {
+            await _eventWriteService.CreateAsync(e);
+        }
+    }
+
+    public async Task LogCipherEventsAsync(IEnumerable<Tuple<Cipher, EventType, DateTime?>> events)
+    {
+        var cipherEvents = new List<IEvent>();
+        foreach (var ev in events)
+        {
+            var e = await BuildCipherEventMessageAsync(ev.Item1, ev.Item2, ev.Item3);
+            if (e != null)
+            {
+                cipherEvents.Add(e);
+            }
+        }
+        await _eventWriteService.CreateManyAsync(cipherEvents);
+    }
+
+    private async Task<EventMessage> BuildCipherEventMessageAsync(Cipher cipher, EventType type, DateTime? date = null)
+    {
+        // Only logging organization cipher events for now.
+        if (!cipher.OrganizationId.HasValue || (!_currentContext?.UserId.HasValue ?? true))
+        {
+            return null;
+        }
+
+        if (cipher.OrganizationId.HasValue)
+        {
+            var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value);
+            if (!CanUseEvents(orgAbility))
+            {
+                return null;
+            }
+        }
+
+        return new EventMessage(_currentContext)
+        {
+            OrganizationId = cipher.OrganizationId,
+            UserId = cipher.OrganizationId.HasValue ? null : cipher.UserId,
+            CipherId = cipher.Id,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            ProviderId = await GetProviderIdAsync(cipher.OrganizationId),
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+    }
+
+    public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null) =>
+        await LogCollectionEventsAsync(new[] { (collection, type, date) });
+
+
+    public async Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
+    {
+        // Batch lookup provider IDs for all unique organization IDs upfront
+        var materializedEvents = events.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedEvents, eventItem => eventItem.collection.OrganizationId);
+        var uniqueOrgIds = orgAbilities.Keys
+            .Where(orgId => CanUseEvents(orgAbilities, orgId))
+            .ToList();
+
+        var providerIds = new Dictionary<Guid, Guid?>();
+        foreach (var orgId in uniqueOrgIds)
+        {
+            providerIds[orgId] = await GetProviderIdAsync(orgId);
+        }
+
+        var eventMessages = new List<IEvent>();
+        foreach (var (collection, type, date) in materializedEvents)
+        {
+            if (!CanUseEvents(orgAbilities, collection.OrganizationId))
+            {
+                continue;
+            }
+
+            eventMessages.Add(new EventMessage(_currentContext)
+            {
+                OrganizationId = collection.OrganizationId,
+                CollectionId = collection.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                ProviderId = providerIds.GetValueOrDefault(collection.OrganizationId),
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            });
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null) =>
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)null, date) });
+
+    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null) =>
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)systemUser, date) });
+
+    public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
+    {
+        // Batch lookup provider IDs for all unique organization IDs upfront
+        var materializedEvents = events.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedEvents, eventItem => eventItem.group.OrganizationId);
+        var uniqueOrgIds = orgAbilities.Keys
+            .Where(orgId => CanUseEvents(orgAbilities, orgId))
+            .ToList();
+
+        var providerIds = new Dictionary<Guid, Guid?>();
+        foreach (var orgId in uniqueOrgIds)
+        {
+            providerIds[orgId] = await GetProviderIdAsync(orgId);
+        }
+
+        var eventMessages = new List<IEvent>();
+        foreach (var (group, type, systemUser, date) in materializedEvents)
+        {
+            if (!CanUseEvents(orgAbilities, group.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = group.OrganizationId,
+                GroupId = group.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                ProviderId = providerIds.GetValueOrDefault(group.OrganizationId),
+                SystemUser = systemUser,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+
+            if (systemUser is EventSystemUser.SCIM)
+            {
+                // System user only used for SCIM logs in this method
+                // and we want event logs to report server instead of unknown
+                e.DeviceType = DeviceType.Server;
+            }
+
+            eventMessages.Add(e);
+        }
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(policy.OrganizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = policy.OrganizationId,
+            PolicyId = policy.Id,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            ProviderId = await GetProviderIdAsync(policy.OrganizationId),
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type,
+        DateTime? date = null) where T : IOrganizationUser =>
+        await CreateLogOrganizationUserEventsAsync(new (T, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
+
+    public async Task LogOrganizationUserEventAsync<T>(T organizationUser, EventType type,
+        EventSystemUser systemUser, DateTime? date = null) where T : IOrganizationUser =>
+        await CreateLogOrganizationUserEventsAsync(new (T, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
+
+    public async Task LogOrganizationUserEventsAsync<T>(
+        IEnumerable<(T, EventType, DateTime?)> events) where T : IOrganizationUser
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
+    }
+
+    public async Task LogOrganizationUserEventsAsync<T>(
+        IEnumerable<(T, EventType, EventSystemUser, DateTime?)> events) where T : IOrganizationUser
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
+    }
+
+    private async Task CreateLogOrganizationUserEventsAsync<T>(IEnumerable<(T, EventType, EventSystemUser?, DateTime?)> events) where T : IOrganizationUser
+    {
+        var materializedEvents = events.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedEvents, e => e.Item1.OrganizationId);
+        var eventMessages = new List<IEvent>();
+        foreach (var (organizationUser, type, systemUser, date) in materializedEvents)
+        {
+            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = organizationUser.OrganizationId,
+                UserId = organizationUser.UserId,
+                OrganizationUserId = organizationUser.Id,
+                ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow),
+                SystemUser = systemUser
+            };
+
+            if (systemUser is EventSystemUser.SCIM)
+            {
+                // System user only used for SCIM logs in this method
+                // and we want event logs to report server instead of unknown
+                e.DeviceType = DeviceType.Server;
+            }
+
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
+        => await LogOrganizationEventAsync(new OrganizationAbility(organization), type, date);
+
+    public async Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null)
+    {
+        if (!organization.Enabled || !organization.UseEvents)
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organization.Id,
+            ProviderId = await GetProviderIdAsync(organization.Id),
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            InstallationId = GetInstallationId(),
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationEventAsync(Organization organization, EventType type, EventSystemUser systemUser, DateTime? date = null)
+    {
+        if (!organization.Enabled || !organization.UseEvents)
+        {
+            return;
+        }
+
+        var EventMessage = new EventMessage
+        {
+            OrganizationId = organization.Id,
+            ProviderId = await GetProviderIdAsync(organization.Id),
+            Type = type,
+            SystemUser = systemUser,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(EventMessage);
+    }
+
+    public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
+    {
+        await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
+    }
+
+    public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
+    {
+        var materializedEvents = events.ToList();
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
+            materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
+        var eventMessages = new List<IEvent>();
+        foreach (var (providerUser, type, date) in materializedEvents)
+        {
+            if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
+            {
+                continue;
+            }
+            eventMessages.Add(new EventMessage(_currentContext)
+            {
+                ProviderId = providerUser.ProviderId,
+                UserId = providerUser.UserId,
+                ProviderUserId = providerUser.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            });
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
+        DateTime? date = null)
+    {
+        await LogProviderOrganizationEventsAsync(new[] { (providerOrganization, type, date) });
+    }
+
+    public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
+    {
+        var materializedEvents = events.ToList();
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(
+            materializedEvents.Select(materializedEvent => materializedEvent.Item1.ProviderId));
+        var eventMessages = new List<IEvent>();
+        foreach (var (providerOrganization, type, date) in materializedEvents)
+        {
+            if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                ProviderId = providerOrganization.ProviderId,
+                ProviderOrganizationId = providerOrganization.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+            DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+        EventSystemUser systemUser,
+        DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationDomain.OrganizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            SystemUser = systemUser,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
+    {
+        var materializedSecrets = secrets.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedSecrets, secret => secret.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        foreach (var secret in materializedSecrets)
+        {
+            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = secret.OrganizationId,
+                Type = type,
+                SecretId = secret.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
+    {
+        var materializedSecrets = secrets.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedSecrets, secret => secret.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        foreach (var secret in materializedSecrets)
+        {
+            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = secret.OrganizationId,
+                Type = type,
+                SecretId = secret.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var materializedProjects = projects.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedProjects, project => project.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in materializedProjects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                UserId = userId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogServiceAccountProjectsEventAsync(Guid serviceAccountId, IEnumerable<Project> projects, EventType type, DateTime? date = null)
+    {
+        var materializedProjects = projects.ToList();
+        var orgAbilities = await GetOrganizationAbilitiesAsync(materializedProjects, project => project.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        foreach (var project in materializedProjects)
+        {
+            if (!CanUseEvents(orgAbilities, project.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = project.OrganizationId,
+                Type = type,
+                ProjectId = project.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+
+    public async Task LogServiceAccountPeopleEventAsync(Guid userId, UserServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var eventMessages = new List<IEvent>();
+        var orgUser = await _organizationUserRepository.GetByIdAsync((Guid)policy.OrganizationUserId);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(orgUser.OrganizationId);
+
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+        if (actingUserId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        if (policy.OrganizationUserId != null)
+        {
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = orgUser.OrganizationId,
+                Type = type,
+                GrantedServiceAccountId = policy.GrantedServiceAccountId,
+                ServiceAccountId = serviceAccountId,
+                UserId = policy.OrganizationUserId,
+                ActingUserId = actingUserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    public async Task LogServiceAccountGroupEventAsync(Guid userId, GroupServiceAccountAccessPolicy policy, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(policy.Group.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+        if (actingUserId is null && serviceAccountId is null)
+        {
+            return;
+        }
+
+        if (policy.GroupId != null)
+        {
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = policy.Group.OrganizationId,
+                Type = type,
+                GrantedServiceAccountId = policy.GrantedServiceAccountId,
+                ServiceAccountId = serviceAccountId,
+                GroupId = policy.GroupId,
+                ActingUserId = actingUserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
+
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    public async Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccounts, EventType type, IdentityClientType identityClientType, DateTime? date = null)
+    {
+        var orgAbilities = await GetOrganizationAbilitiesAsync(serviceAccounts, serviceAccount => serviceAccount.OrganizationId);
+        var eventMessages = new List<IEvent>();
+
+        foreach (var serviceAccount in serviceAccounts)
+        {
+            if (!CanUseEvents(orgAbilities, serviceAccount.OrganizationId))
+            {
+                continue;
+            }
+
+            var (actingUserId, serviceAccountId) = MapIdentityClientType(userId, identityClientType);
+
+            if (actingUserId is null && serviceAccountId is null)
+            {
+                continue;
+            }
+
+            if (serviceAccount != null)
+            {
+                var e = new EventMessage(_currentContext)
+                {
+                    OrganizationId = serviceAccount.OrganizationId,
+                    Type = type,
+                    GrantedServiceAccountId = serviceAccount.Id,
+                    ServiceAccountId = serviceAccountId,
+                    ActingUserId = actingUserId,
+                    Date = date.GetValueOrDefault(DateTime.UtcNow)
+                };
+                eventMessages.Add(e);
+            }
+        }
+
+        if (eventMessages.Any())
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
+        }
+    }
+
+    // Logs a Send event, recording the Send on every row. For access events, organizationContext
+    // attributes the access per organization: a confirmed member via ActingUserId, an accessor on a
+    // claimed domain via DomainName, anyone else External (no attribution). Create/edit/delete events
+    // pass no context, so every row keeps the Send owner as the acting user.
+    public async Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
+        IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null)
+    {
+        var events = new List<IEvent>
+        {
+            new EventMessage(_currentContext)
+            {
+                UserId = sendOwnerUserId,
+                ActingUserId = sendOwnerUserId,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }
+        };
+
+        var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, sendOwnerUserId);
+        var orgAbilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgs.Select(o => o.Id));
+        events.AddRange(orgs.Where(o => CanUseEvents(orgAbilities, o.Id))
+            .Select(o =>
+            {
+
+                // Per-org attribution of this row (ActingUserId / DomainName):
+                //   create/edit/delete (no context)      -> Owner:    ActingUserId = sendOwnerUserId, DomainName = null
+                //   access (context has this org)         -> Accessor: ActingUserId / DomainName per the context entry
+                //   access (context lacks this org)       -> External: ActingUserId = null,           DomainName = null
+                Guid? actingUserId = sendOwnerUserId;
+                string domainName = null;
+                if (organizationContext != null)
+                {
+                    organizationContext.TryGetValue(o.Id, out var context);
+                    actingUserId = context?.AccessorUserId;
+                    domainName = context?.ClaimedDomain;
+                }
+
+                return new EventMessage(_currentContext)
+                {
+                    OrganizationId = o.Id,
+                    UserId = sendOwnerUserId,
+                    ActingUserId = actingUserId,
+                    DomainName = domainName,
+                    Type = type,
+                    SendId = sendId,
+                    Date = DateTime.UtcNow
+                };
+            }));
+
+        var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, sendOwnerUserId);
+        var providerAbilities = await _providerAbilityCacheService.GetProviderAbilitiesAsync(providers.Select(p => p.Id));
+        events.AddRange(providers.Where(p => CanUseProviderEvents(providerAbilities, p.Id))
+            .Select(p => new EventMessage(_currentContext)
+            {
+                ProviderId = p.Id,
+                UserId = sendOwnerUserId,
+                // Access events (context present) get the same External attribution as a non-context
+                // org: don't credit the owner, who did not access the Send. Providers have no claimed
+                // domains, so there is nothing further to attribute. Create/edit/delete (no context)
+                // keep the owner, who did perform the action.
+                ActingUserId = organizationContext == null ? sendOwnerUserId : null,
+                Type = type,
+                SendId = sendId,
+                Date = DateTime.UtcNow
+            }));
+
+        if (events.Count > 1)
+        {
+            await _eventWriteService.CreateManyAsync(events);
+        }
+        else
+        {
+            await _eventWriteService.CreateAsync(events.First());
+        }
+    }
+
+    private (Guid? actingUserId, Guid? serviceAccountId) MapIdentityClientType(
+           Guid userId, IdentityClientType identityClientType)
+    {
+        if (identityClientType == IdentityClientType.Organization)
+        {
+            return (null, null);
+        }
+
+        return identityClientType switch
+        {
+            IdentityClientType.User => (userId, null),
+            IdentityClientType.ServiceAccount => (null, userId),
+            _ => throw new InvalidOperationException("Unknown identity client type.")
+        };
+    }
+
+
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync<T>(IEnumerable<T> items, Func<T, Guid> selector)
+    {
+        var orgIds = items.Select(selector).Distinct().ToList();
+
+        return await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(orgIds);
+    }
+
+
+    private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
+    {
+        if (_currentContext == null || !orgId.HasValue)
+        {
+            return null;
+        }
+
+        return await _currentContext.ProviderIdForOrg(orgId.Value);
+    }
+
+    private Guid? GetInstallationId()
+    {
+        if (_currentContext == null)
+        {
+            return null;
+        }
+
+        return _currentContext.InstallationId;
+    }
+
+    private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+    {
+        return orgAbilities != null && orgAbilities.TryGetValue(orgId, out var orgAbility) &&
+               orgAbility.Enabled && orgAbility.UseEvents;
+    }
+
+    private bool CanUseEvents(OrganizationAbility orgAbility)
+    {
+        return orgAbility is { Enabled: true, UseEvents: true };
+    }
+
+    private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
+    {
+        return providerAbilities != null && providerAbilities.TryGetValue(providerId, out var providerAbility) &&
+               providerAbility.Enabled && providerAbility.UseEvents;
+    }
+}

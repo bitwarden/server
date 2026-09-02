@@ -1,12 +1,20 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyResponseModel : ResponseModel
 {
+    public PolicyResponseModel() : base("policy")
+    {
+    }
+
     public PolicyResponseModel(Policy policy, string obj = "policy")
         : base(obj)
     {
@@ -19,15 +27,16 @@ public class PolicyResponseModel : ResponseModel
         OrganizationId = policy.OrganizationId;
         Type = policy.Type;
         Enabled = policy.Enabled;
-        if (!string.IsNullOrWhiteSpace(policy.Data))
-        {
-            Data = JsonSerializer.Deserialize<Dictionary<string, object>>(policy.Data);
-        }
+        Data = string.IsNullOrWhiteSpace(policy.Data) ? null : policy.Data;
+        RevisionDate = policy.RevisionDate;
     }
 
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public PolicyType Type { get; set; }
-    public Dictionary<string, object> Data { get; set; }
+
+    [JsonConverter(typeof(RawJsonConverter))]
+    public string Data { get; set; }
     public bool Enabled { get; set; }
+    public DateTime RevisionDate { get; set; }
 }

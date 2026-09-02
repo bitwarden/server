@@ -1,16 +1,28 @@
 ﻿using System.Text.Json;
-using Bit.Core.Models.Api;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.Tools.Models.Response;
 
+/// <summary>
+/// A response issued to a Bitwarden client in response to access operations.
+/// </summary>
 public class SendAccessResponseModel : ResponseModel
 {
-    public SendAccessResponseModel(Send send, GlobalSettings globalSettings)
+    /// <summary>
+    /// Instantiates a send access response model
+    /// </summary>
+    /// <param name="send">Content to transmit to the client.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="send"/> is <see langword="null" />
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="send" /> has an invalid <see cref="Send.Type"/>.
+    /// </exception>
+    public SendAccessResponseModel(Send send)
         : base("send-access")
     {
         if (send == null)
@@ -20,33 +32,94 @@ public class SendAccessResponseModel : ResponseModel
 
         Id = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
+        AuthType = send.AuthType;
 
-        SendData sendData;
         switch (send.Type)
         {
             case SendType.File:
-                var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
-                sendData = fileData;
+                var fileData =
+                    JsonSerializer.Deserialize<SendFileData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send file data.");
+                Name = fileData.Name;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
-                var textData = JsonSerializer.Deserialize<SendTextData>(send.Data);
-                sendData = textData;
+                var textData =
+                    JsonSerializer.Deserialize<SendTextData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send text data.");
+                Name = textData.Name;
                 Text = new SendTextModel(textData);
+                break;
+            case SendType.Item:
+                var itemData = JsonSerializer.Deserialize<SendItemData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send item data.");
+                Name = itemData.Name;
+                Data = new SendDataModel(itemData);
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
 
-        Name = sendData.Name;
         ExpirationDate = send.ExpirationDate;
     }
 
+    /// <summary>
+    /// Identifies the send in a send URL
+    /// </summary>
     public string Id { get; set; }
+
+    /// <summary>
+    /// Indicates whether the send contains text or file data.
+    /// </summary>
     public SendType Type { get; set; }
+
+    /// <summary>
+    /// Specifies the authentication method required to access this Send.
+    /// </summary>
+    public AuthType? AuthType { get; set; }
+
+    /// <summary>
+    /// Label for the send. This is only visible to the owner of the send.
+    /// </summary>
+    /// <remarks>
+    /// This field contains a base64-encoded byte array. The array contains
+    /// the E2E-encrypted encrypted content.
+    /// </remarks>
     public string Name { get; set; }
-    public SendFileModel File { get; set; }
-    public SendTextModel Text { get; set; }
+
+    /// <summary>
+    /// Describes the file attached to the send.
+    /// </summary>
+    /// <remarks>
+    /// File content is downloaded separately using
+    /// <see cref="Controllers.SendsController.GetSendFileDownloadDataUsingAuth" />
+    /// </remarks>
+    public SendFileModel? File { get; set; }
+
+    /// <summary>
+    /// Contains text data uploaded with the send.
+    /// </summary>
+    public SendTextModel? Text { get; set; }
+
+    /// <summary>
+    /// Encrypted string containing secret Send data
+    /// </summary>
+    public SendDataModel? Data { get; set; }
+
+    /// <summary>
+    /// The date after which a send cannot be accessed. When this value is
+    /// <see langword="null"/>, there is no expiration date.
+    /// </summary>
     public DateTime? ExpirationDate { get; set; }
-    public string CreatorIdentifier { get; set; }
+
+    /// <summary>
+    /// Indicates the person that created the send to the accessor.
+    /// </summary>
+    public string? CreatorIdentifier { get; set; }
 }

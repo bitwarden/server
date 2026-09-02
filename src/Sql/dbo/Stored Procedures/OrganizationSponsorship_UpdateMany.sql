@@ -6,7 +6,7 @@ BEGIN
 
     UPDATE
         OS
-    SET 
+    SET
         [Id] = OSI.[Id],
         [SponsoringOrganizationId] = OSI.[SponsoringOrganizationId],
         [SponsoringOrganizationUserID] = OSI.[SponsoringOrganizationUserID],
@@ -16,7 +16,9 @@ BEGIN
         [PlanSponsorshipType] = OSI.[PlanSponsorshipType],
         [ToDelete] = OSI.[ToDelete],
         [LastSyncDate] = OSI.[LastSyncDate],
-        [ValidUntil] = OSI.[ValidUntil]
+        [ValidUntil] = OSI.[ValidUntil],
+        [IsAdminInitiated] = OSI.[IsAdminInitiated],
+        [Notes] = OSI.[Notes]
     FROM
         [dbo].[OrganizationSponsorship] OS
     INNER JOIN

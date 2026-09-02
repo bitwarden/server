@@ -1,4 +1,7 @@
-﻿using Bit.Scim.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Models;
 
@@ -15,8 +18,8 @@ public abstract class BaseScimUserModel : BaseScimModel
     public string UserName { get; set; }
     public NameModel Name { get; set; }
     public List<EmailModel> Emails { get; set; }
-    public string PrimaryEmail => Emails?.FirstOrDefault(e => e.Primary)?.Value;
-    public string WorkEmail => Emails?.FirstOrDefault(e => e.Type == "work")?.Value;
+    public string PrimaryEmail => Emails?.FirstOrDefault(e => e.Primary && !string.IsNullOrWhiteSpace(e.Value))?.Value;
+    public string WorkEmail => Emails?.FirstOrDefault(e => e.Type == "work" && !string.IsNullOrWhiteSpace(e.Value))?.Value;
     public string DisplayName { get; set; }
     public bool Active { get; set; }
     public List<string> Groups { get; set; }

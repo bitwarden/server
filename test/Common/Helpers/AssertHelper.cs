@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Collections;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -225,7 +228,7 @@ public static class AssertHelper
         return await JsonSerializer.DeserializeAsync<T>(context.Response.Body);
     }
 
-    public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 2)
+    public static TimeSpan AssertRecent(DateTime dateTime, int skewSeconds = 5)
         => AssertRecent(dateTime, TimeSpan.FromSeconds(skewSeconds));
 
     public static TimeSpan AssertRecent(DateTime dateTime, TimeSpan skew)

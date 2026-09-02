@@ -8,9 +8,14 @@ jobs:
   stale:
     name: Check for stale issues and PRs
     runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Check
-        uses: actions/stale@28ca1036281a5e5922ead5184a1bbf96e5fc984e # v9.0.0
+        uses: actions/stale@1e223db275d687790206a7acac4d1a11bd6fe629 # v10.4.0
         with:
           stale-issue-label: "needs-reply"
           stale-pr-label: "needs-changes"

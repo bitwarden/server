@@ -2,8 +2,6 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-#nullable enable
-
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 
 public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>
@@ -34,8 +32,10 @@ public class EmergencyAccessDetailsViewQuery : IQuery<EmergencyAccessDetails>
             RevisionDate = x.ea.RevisionDate,
             GranteeName = x.grantee.Name,
             GranteeEmail = x.grantee.Email ?? x.ea.Email,
+            GranteeAvatarColor = x.grantee.AvatarColor,
             GrantorName = x.grantor.Name,
             GrantorEmail = x.grantor.Email,
+            GrantorAvatarColor = x.grantor.AvatarColor,
         });
     }
 }

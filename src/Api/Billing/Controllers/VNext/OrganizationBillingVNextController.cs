@@ -1,0 +1,193 @@
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.Billing.Attributes;
+using Bit.Api.Billing.Models.Requests.Payment;
+using Bit.Api.Billing.Models.Requests.Subscriptions;
+using Bit.Api.Billing.Models.Requirements;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Payment.Commands;
+using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Subscriptions.Commands;
+using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+// ReSharper disable RouteTemplates.MethodMissingRouteParameters
+
+namespace Bit.Api.Billing.Controllers.VNext;
+
+[Authorize("Application")]
+[Route("organizations/{organizationId:guid}/billing/vnext")]
+[SelfHosted(NotSelfHostedOnly = true)]
+public class OrganizationBillingVNextController(
+    ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    IGetAnnualUpgradeOfferQuery getAnnualUpgradeOfferQuery,
+    IGetBillingAddressQuery getBillingAddressQuery,
+    IGetChurnMitigationOfferQuery getChurnMitigationOfferQuery,
+    IGetCreditQuery getCreditQuery,
+    IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
+    IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
+    IGetPaymentMethodQuery getPaymentMethodQuery,
+    IRedeemAnnualUpgradeOfferCommand redeemAnnualUpgradeOfferCommand,
+    IRedeemChurnMitigationOfferCommand redeemChurnMitigationOfferCommand,
+    IRestartSubscriptionCommand restartSubscriptionCommand,
+    IUpdateBillingAddressCommand updateBillingAddressCommand,
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
+{
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("address")]
+    [InjectOrganization]
+    public async Task<IResult> GetBillingAddressAsync(
+        [BindNever] Organization organization)
+    {
+        var billingAddress = await getBillingAddressQuery.Run(organization);
+        return TypedResults.Ok(billingAddress);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPut("address")]
+    [InjectOrganization]
+    public async Task<IResult> UpdateBillingAddressAsync(
+        [BindNever] Organization organization,
+        [FromBody] BillingAddressRequest request)
+    {
+        var billingAddress = request.ToDomain();
+        var result = await updateBillingAddressCommand.Run(organization, billingAddress);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("credit")]
+    [InjectOrganization]
+    public async Task<IResult> GetCreditAsync(
+        [BindNever] Organization organization)
+    {
+        var credit = await getCreditQuery.Run(organization);
+        return TypedResults.Ok(credit);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("credit/bitpay")]
+    [InjectOrganization]
+    public async Task<IResult> AddCreditViaBitPayAsync(
+        [BindNever] Organization organization,
+        [FromBody] BitPayCreditRequest request)
+    {
+        var result = await createBitPayInvoiceForCreditCommand.Run(
+            organization,
+            request.Amount,
+            request.RedirectUrl);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("payment-method")]
+    [InjectOrganization]
+    public async Task<IResult> GetPaymentMethodAsync(
+        [BindNever] Organization organization)
+    {
+        var paymentMethod = await getPaymentMethodQuery.Run(organization);
+        return TypedResults.Ok(paymentMethod);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPut("payment-method")]
+    [InjectOrganization]
+    public async Task<IResult> UpdatePaymentMethodAsync(
+        [BindNever] Organization organization,
+        [FromBody] TokenizedPaymentMethodRequest request)
+    {
+        var (paymentMethod, billingAddress) = request.ToDomain();
+        var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, billingAddress);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("subscription/restart")]
+    [InjectOrganization]
+    public async Task<IResult> RestartSubscriptionAsync(
+        [BindNever] Organization organization,
+        [FromBody] RestartSubscriptionRequest request)
+    {
+        var (paymentMethod, billingAddress) = request.ToDomain();
+        var result = await updatePaymentMethodCommand.Run(organization, paymentMethod, null)
+            .AndThenAsync(_ => updateBillingAddressCommand.Run(organization, billingAddress))
+            .AndThenAsync(_ => restartSubscriptionCommand.Run(organization));
+        return Handle(result);
+    }
+
+    [Authorize<MemberOrProviderRequirement>]
+    [HttpGet("metadata")]
+    [InjectOrganization]
+    public async Task<IResult> GetMetadataAsync(
+        [BindNever] Organization organization)
+    {
+        var metadata = await getOrganizationMetadataQuery.Run(organization);
+
+        if (metadata == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.Ok(metadata);
+    }
+
+    [Authorize<MemberOrProviderRequirement>]
+    [HttpGet("warnings")]
+    [InjectOrganization]
+    public async Task<IResult> GetWarningsAsync(
+        [BindNever] Organization organization)
+    {
+        var warnings = await getOrganizationWarningsQuery.Run(organization);
+        return TypedResults.Ok(warnings);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("churn-mitigation-offer")]
+    [InjectOrganization]
+    public async Task<IResult> GetChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getChurnMitigationOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("churn-mitigation-offer/redeem")]
+    [InjectOrganization]
+    public async Task<IResult> RedeemChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemChurnMitigationOfferCommand.Run(organization);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("annual-upgrade-offer")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [InjectOrganization]
+    public async Task<IResult> GetAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getAnnualUpgradeOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("annual-upgrade-offer/redeem")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [InjectOrganization]
+    public async Task<IResult> RedeemAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemAnnualUpgradeOfferCommand.Run(organization);
+        return Handle(result);
+    }
+}

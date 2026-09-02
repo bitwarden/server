@@ -1,6 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Platform.PushRegistration;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
@@ -22,7 +26,9 @@ public class DeviceRequestModel
     {
         return ToDevice(new Device
         {
-            UserId = userId == null ? default(Guid) : userId.Value
+            UserId = userId == null ? default(Guid) : userId.Value,
+            // Device creation counts as first activity.
+            LastActivityDate = DateTime.UtcNow,
         });
     }
 
@@ -34,6 +40,26 @@ public class DeviceRequestModel
         existingDevice.Type = Type.Value;
 
         return existingDevice;
+    }
+}
+
+public class WebPushAuthRequestModel
+{
+    [Required]
+    public string Endpoint { get; set; }
+    [Required]
+    public string P256dh { get; set; }
+    [Required]
+    public string Auth { get; set; }
+
+    public WebPushRegistrationData ToData()
+    {
+        return new WebPushRegistrationData
+        {
+            Endpoint = Endpoint,
+            P256dh = P256dh,
+            Auth = Auth
+        };
     }
 }
 

@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Jane Doe Free (individual, free)",
+    "command": "individual",
+    "args": {
+      "subscription": "free",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "email": "jane@bw.example"
+    }
+  },
+  {
+    "label": "John Doe (individual, premium)",
+    "command": "individual",
+    "args": {
+      "subscription": "premium",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@bw.example"
+    }
+  },
+  {
+    "label": "Dev Playground (dev.playground preset)",
+    "command": "preset",
+    "args": {
+      "name": "dev.playground"
+    }
+  }
+]

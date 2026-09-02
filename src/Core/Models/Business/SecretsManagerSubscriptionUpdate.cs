@@ -7,6 +7,7 @@ namespace Bit.Core.Models.Business;
 public class SecretsManagerSubscriptionUpdate
 {
     public Organization Organization { get; }
+    public Plan Plan { get; }
 
     /// <summary>
     /// The total seats the organization will have after the update, including any base seats included in the plan
@@ -35,6 +36,12 @@ public class SecretsManagerSubscriptionUpdate
     public bool Autoscaling { get; }
 
     /// <summary>
+    /// Free service accounts beyond the plan's baseline, granted to organizations migrated from a
+    /// plan with a higher baseline.
+    /// </summary>
+    public int ServiceAccountGrace { get; set; }
+
+    /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
@@ -43,27 +50,18 @@ public class SecretsManagerSubscriptionUpdate
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int SmServiceAccountsExcludingBase => SmServiceAccounts.HasValue ? SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount : 0;
+    public int SmServiceAccountsExcludingBase => SmServiceAccounts.HasValue ? Math.Max(0, SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount - ServiceAccountGrace) : 0;
     public bool SmSeatsChanged => SmSeats != Organization.SmSeats;
     public bool SmServiceAccountsChanged => SmServiceAccounts != Organization.SmServiceAccounts;
     public bool MaxAutoscaleSmSeatsChanged => MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;
     public bool MaxAutoscaleSmServiceAccountsChanged =>
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
-    public Plan Plan => Utilities.StaticStore.GetPlan(Organization.PlanType);
-    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
-    public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
-                                                         MaxAutoscaleSmServiceAccounts.HasValue &&
-                                                         SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
 
-    public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
+    public SecretsManagerSubscriptionUpdate(Organization organization, Plan plan, bool autoscaling)
     {
-        if (organization == null)
-        {
-            throw new NotFoundException("Organization is not found.");
-        }
-
-        Organization = organization;
+        Organization = organization ?? throw new NotFoundException("Organization is not found.");
+        Plan = plan;
 
         if (!Plan.SupportsSecretsManager)
         {

@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -118,7 +121,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpEntityId) });
             }
 
-            if (!Uri.IsWellFormedUriString(IdpEntityId, UriKind.Absolute) && string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
+            if (string.IsNullOrWhiteSpace(IdpSingleSignOnServiceUrl))
             {
                 yield return new ValidationResult(i18nService.GetLocalizedHtmlString("IdpSingleSignOnServiceUrlValidationError"),
                     new[] { nameof(IdpSingleSignOnServiceUrl) });
@@ -136,6 +139,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                     new[] { nameof(IdpSingleLogoutServiceUrl) });
             }
 
+            // TODO: On server, make public certificate required for SAML2 SSO: https://bitwarden.atlassian.net/browse/PM-26028
             if (!string.IsNullOrWhiteSpace(IdpX509PublicCert))
             {
                 // Validate the certificate is in a valid format
@@ -143,7 +147,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
                 try
                 {
                     var certData = CoreHelpers.Base64UrlDecode(StripPemCertificateElements(IdpX509PublicCert));
-                    new X509Certificate2(certData);
+                    X509CertificateLoader.LoadCertificate(certData);
                 }
                 catch (FormatException)
                 {

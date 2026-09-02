@@ -54,7 +54,18 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @LimitCollectionCreation BIT = null,
     @LimitCollectionDeletion BIT = null,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
-    @UseRiskInsights BIT = 0
+    @UseRiskInsights BIT = 0,
+    @LimitItemDeletion BIT = 0,
+    @UseOrganizationDomains BIT = 0,
+    @UseAdminSponsoredFamilies BIT = 0,
+    @SyncSeats BIT = 0,
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0,
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UseMyItems BIT = 0,
+    @ExemptFromBillingAutomation BIT = 0,
+    @UseInviteLinks BIT = 0,
+    @UsePam BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -116,7 +127,19 @@ BEGIN
         [LimitCollectionCreation] = @LimitCollectionCreation,
         [LimitCollectionDeletion] = @LimitCollectionDeletion,
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
-        [UseRiskInsights] = @UseRiskInsights
+        [UseRiskInsights] = @UseRiskInsights,
+        [LimitItemDeletion] = @LimitItemDeletion,
+        [UseOrganizationDomains] = @UseOrganizationDomains,
+        [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
+        [SyncSeats] = @SyncSeats,
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [UsePhishingBlocker] = @UsePhishingBlocker,
+        [MaxStorageGbIncreased] = @MaxStorageGb,
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
+        [UseMyItems] = @UseMyItems,
+        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
+        [UseInviteLinks] = @UseInviteLinks,
+        [UsePam] = @UsePam
     WHERE
-        [Id] = @Id
+        [Id] = @Id;
 END

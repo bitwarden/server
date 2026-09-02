@@ -1,51 +1,162 @@
-﻿using Stripe;
+﻿using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
+using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
+
+#nullable enable
 
 namespace Bit.Core.Models.Business;
 
 public class SubscriptionInfo
 {
-    public BillingCustomerDiscount CustomerDiscount { get; set; }
-    public BillingSubscription Subscription { get; set; }
-    public BillingUpcomingInvoice UpcomingInvoice { get; set; }
+    /// <summary>
+    /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
+    /// IMPORTANT: Only supports USD. All Bitwarden subscriptions are USD-only.
+    /// </summary>
+    private const decimal StripeMinorUnitDivisor = 100M;
 
+    /// <summary>
+    /// Converts Stripe's minor currency units (cents) to major currency units (dollars).
+    /// Preserves null semantics to distinguish between "no amount" (null) and "zero amount" (0.00m).
+    /// </summary>
+    /// <param name="amountInCents">The amount in Stripe's minor currency units (e.g., cents for USD).</param>
+    /// <returns>The amount in major currency units (e.g., dollars for USD), or null if the input is null.</returns>
+    private static decimal? ConvertFromStripeMinorUnits(long? amountInCents)
+    {
+        return amountInCents.HasValue ? amountInCents.Value / StripeMinorUnitDivisor : null;
+    }
+
+    public BillingCustomerDiscount? CustomerDiscount { get; set; }
+    public BillingSubscription? Subscription { get; set; }
+    public BillingUpcomingInvoice? UpcomingInvoice { get; set; }
+
+    /// <summary>
+    /// Represents customer discount information from Stripe billing.
+    /// </summary>
     public class BillingCustomerDiscount
     {
         public BillingCustomerDiscount() { }
 
+        /// <summary>
+        /// Creates a BillingCustomerDiscount from a Stripe Discount object.
+        /// </summary>
+        /// <param name="discount">The Stripe discount containing coupon and expiration information.</param>
         public BillingCustomerDiscount(Discount discount)
         {
-            Id = discount.Coupon?.Id;
+            Id = discount.Source?.Coupon?.Id;
+            // Active = true only for perpetual/recurring discounts (no end date)
+            // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
-            PercentOff = discount.Coupon?.PercentOff;
-            AppliesTo = discount.Coupon?.AppliesTo?.Products ?? [];
+            End = discount.End;
+            DurationInMonths = discount.Source?.Coupon?.DurationInMonths;
+            PercentOff = discount.Source?.Coupon?.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(discount.Source?.Coupon?.AmountOff);
+            // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
+            AppliesTo = discount.Source?.Coupon?.AppliesTo?.Products;
         }
 
-        public string Id { get; set; }
+        /// <summary>
+        /// Creates a BillingCustomerDiscount from a Stripe Coupon object.
+        /// Unlike <see cref="BillingCustomerDiscount(Discount)"/>, this constructor does not have
+        /// access to a Discount wrapper, so Active is unconditionally set to true.
+        /// </summary>
+        public BillingCustomerDiscount(Coupon coupon)
+        {
+            Id = coupon.Id;
+            Active = true;
+            End = null;
+            DurationInMonths = coupon.DurationInMonths;
+            PercentOff = coupon.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(coupon.AmountOff);
+            AppliesTo = coupon.AppliesTo?.Products;
+        }
+
+        /// <summary>
+        /// The Stripe coupon ID (e.g., "cm3nHfO1").
+        /// Note: Only specific coupon IDs are displayed in the UI based on feature flag configuration,
+        /// though Stripe may apply additional discounts that are not shown.
+        /// </summary>
+        public string? Id { get; set; }
+
+        /// <summary>
+        /// When constructed from a Discount, true only for perpetual discounts (End == null).
+        /// When constructed from a Coupon directly, always true (no end-date information available).
+        /// Product decision for Milestone 2: only show perpetual discounts in UI.
+        /// </summary>
         public bool Active { get; set; }
+
+        /// <summary>
+        /// The instant the discount stops applying, from Stripe's Discount.end.
+        /// Null when the discount has no end date (perpetual) or when constructed from a
+        /// Coupon directly (Phase-2 scheduled discount — no Discount wrapper available).
+        /// </summary>
+        public DateTime? End { get; set; }
+
+        /// <summary>
+        /// For a `repeating` coupon, the number of months the discount applies (Stripe Coupon.duration_in_months).
+        /// Null for `once`/`forever` coupons.
+        /// </summary>
+        public long? DurationInMonths { get; set; }
+
+        /// <summary>
+        /// Percentage discount applied to the subscription (e.g., 20.0 for 20% off).
+        /// Null if this is an amount-based discount.
+        /// </summary>
         public decimal? PercentOff { get; set; }
-        public List<string> AppliesTo { get; set; }
+
+        /// <summary>
+        /// Fixed amount discount in USD (e.g., 14.00 for $14 off).
+        /// Converted from Stripe's cent-based values (1400 cents → $14.00).
+        /// Null if this is a percentage-based discount.
+        /// </summary>
+        public decimal? AmountOff { get; set; }
+
+        /// <summary>
+        /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
+        /// <para>
+        /// Null: discount applies to all products with no restrictions (AppliesTo not specified in Stripe).
+        /// Empty list: discount restricted to zero products (edge case - AppliesTo.Products = [] in Stripe).
+        /// Non-empty list: discount applies only to the specified product IDs.
+        /// </para>
+        /// </summary>
+        public IReadOnlyList<string>? AppliesTo { get; set; }
+
+        /// <summary>
+        /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+        /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+        /// a deferred price-migration coupon from a real discount. Defaults to false.
+        /// </summary>
+        public bool IsFromSchedule { get; set; }
     }
 
     public class BillingSubscription
     {
         public BillingSubscription(Subscription sub)
         {
-            Status = sub.Status;
-            TrialStartDate = sub.TrialStart;
-            TrialEndDate = sub.TrialEnd;
-            PeriodStartDate = sub.CurrentPeriodStart;
-            PeriodEndDate = sub.CurrentPeriodEnd;
-            CancelledDate = sub.CanceledAt;
-            CancelAtEndDate = sub.CancelAtPeriodEnd;
-            Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
-            if (sub.Items?.Data != null)
+            Status = sub?.Status;
+            TrialStartDate = sub?.TrialStart;
+            TrialEndDate = sub?.TrialEnd;
+            var currentPeriod = sub?.GetCurrentPeriod();
+            if (currentPeriod != null)
+            {
+                var (start, end) = currentPeriod.Value;
+                PeriodStartDate = start;
+                PeriodEndDate = end;
+            }
+            CancelledDate = sub?.CanceledAt;
+            CancelAtEndDate = sub?.CancelAtPeriodEnd ?? false;
+            var status = sub?.Status;
+            Cancelled = status == "canceled" || status == "unpaid" || status == "incomplete_expired";
+            if (sub?.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
-            CollectionMethod = sub.CollectionMethod;
-            GracePeriod = sub.CollectionMethod == "charge_automatically"
+            CollectionMethod = sub?.CollectionMethod;
+            GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
+            ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            ScheduleId = sub?.ScheduleId;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -55,13 +166,26 @@ public class SubscriptionInfo
         public TimeSpan? PeriodDuration => PeriodEndDate - PeriodStartDate;
         public DateTime? CancelledDate { get; set; }
         public bool CancelAtEndDate { get; set; }
-        public string Status { get; set; }
+        public string? Status { get; set; }
         public bool Cancelled { get; set; }
         public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
-        public string CollectionMethod { get; set; }
+        public string? CollectionMethod { get; set; }
         public DateTime? SuspensionDate { get; set; }
         public DateTime? UnpaidPeriodEndDate { get; set; }
         public int GracePeriod { get; set; }
+
+        /// <summary>
+        /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline
+        /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
+        /// </summary>
+        public int ServiceAccountGrace { get; set; }
+
+        /// <summary>
+        /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;
+        /// not mapped to the API response. Used to gate billing lookups that are only meaningful for a
+        /// scheduled subscription.
+        /// </summary>
+        public string? ScheduleId { get; set; }
 
         public class BillingSubscriptionItem
         {
@@ -69,25 +193,60 @@ public class SubscriptionInfo
             {
                 if (item.Plan != null)
                 {
+                    PriceId = item.Price?.Id;
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
-                    Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
+                    Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
                     Interval = item.Plan.Interval;
-                    AddonSubscriptionItem =
-                        Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
+
+                    if (item.Price?.Metadata != null)
+                    {
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) && bool.Parse(value);
+                    }
                 }
 
                 Quantity = (int)item.Quantity;
-                SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
+                SponsoredSubscriptionItem = item.Plan != null && SponsoredPlans.All.Any(p => p.StripePlanId == item.Plan.Id);
+            }
+
+            /// <summary>
+            /// Builds a line item from a subscription schedule phase item. Phase items carry an
+            /// expanded <see cref="Price"/> and no <see cref="Plan"/>, so the fields the
+            /// <see cref="SubscriptionItem"/> constructor reads off the plan are read off the price here.
+            /// </summary>
+            public BillingSubscriptionItem(SubscriptionSchedulePhaseItem item)
+            {
+                var price = item.Price;
+                if (price != null)
+                {
+                    PriceId = price.Id;
+                    ProductId = price.ProductId;
+                    Name = price.Nickname;
+                    Amount = ConvertFromStripeMinorUnits(price.UnitAmount) ?? 0;
+                    Interval = price.Recurring?.Interval;
+
+                    if (price.Metadata != null)
+                    {
+                        AddonSubscriptionItem =
+                            price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) &&
+                            bool.TryParse(value, out var isAddOn) && isAddOn;
+                    }
+
+                    SponsoredSubscriptionItem = SponsoredPlans.All.Any(p => p.StripePlanId == price.Id);
+                }
+
+                Quantity = (int)item.Quantity;
             }
 
             public bool AddonSubscriptionItem { get; set; }
 
-            public string ProductId { get; set; }
-            public string Name { get; set; }
+            /// <summary>Internal only; not mapped to the API response. Used to match a line to a plan's price.</summary>
+            public string? PriceId { get; set; }
+            public string? ProductId { get; set; }
+            public string? Name { get; set; }
             public decimal Amount { get; set; }
             public int Quantity { get; set; }
-            public string Interval { get; set; }
+            public string? Interval { get; set; }
             public bool SponsoredSubscriptionItem { get; set; }
         }
     }
@@ -98,7 +257,7 @@ public class SubscriptionInfo
 
         public BillingUpcomingInvoice(Invoice inv)
         {
-            Amount = inv.AmountDue / 100M;
+            Amount = ConvertFromStripeMinorUnits(inv.AmountDue) ?? 0;
             Date = inv.Created;
         }
 

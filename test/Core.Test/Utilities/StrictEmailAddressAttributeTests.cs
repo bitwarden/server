@@ -47,7 +47,7 @@ public class StrictEmailAttributeTests
     [InlineData("hellothere@world.com-")]               // domain ending in hyphen
     [InlineData("hellö@world.com")]                     // unicode at end of local-part
     [InlineData("héllo@world.com")]                     // unicode in middle of local-part
-    public void IsValid_ReturnsFalseWhenInvalid(string email)
+    public void IsValid_ReturnsFalseWhenInvalid(string? email)
     {
         var sut = new StrictEmailAddressAttribute();
 

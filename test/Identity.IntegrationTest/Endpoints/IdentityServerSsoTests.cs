@@ -6,19 +6,23 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Identity.Models.Request.Accounts;
+using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Constants;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -35,7 +39,15 @@ public class IdentityServerSsoTests
     public async Task Test_MasterPassword_DecryptionType()
     {
         // Arrange
-        using var responseBody = await RunSuccessTestAsync(MemberDecryptionType.MasterPassword);
+        User? expectedUser = null;
+        using var responseBody = await RunSuccessTestAsync(async factory =>
+        {
+            var database = factory.GetDatabaseContext();
+
+            expectedUser = await database.Users.SingleAsync(u => u.Email == TestEmail);
+            Assert.NotNull(expectedUser);
+        }, MemberDecryptionType.MasterPassword);
+        Assert.NotNull(expectedUser);
 
         // Assert
         // If the organization has a member decryption type of MasterPassword that should be the only option in the reply
@@ -46,13 +58,33 @@ public class IdentityServerSsoTests
         // Expected to look like:
         // "UserDecryptionOptions": {
         //   "Object": "userDecryptionOptions"
-        //   "HasMasterPassword": true
+        //   "HasMasterPassword": true,
+        //   "MasterPasswordUnlock": {
+        //     "Kdf": {
+        //       "KdfType": 0,
+        //       "Iterations": 600000
+        //     },
+        //     "MasterKeyEncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+        //     "Salt": "sso_user@email.com"
+        //   }
         // }
 
         AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
-
-        // One property for the Object and one for master password
-        Assert.Equal(2, userDecryptionOptions.EnumerateObject().Count());
+        var objectString = AssertHelper.AssertJsonProperty(userDecryptionOptions, "Object", JsonValueKind.String).ToString();
+        Assert.Equal("userDecryptionOptions", objectString);
+        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(userDecryptionOptions, "MasterPasswordUnlock", JsonValueKind.Object);
+        // MasterPasswordUnlock.Kdf
+        var kdf = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Kdf", JsonValueKind.Object);
+        var kdfType = AssertHelper.AssertJsonProperty(kdf, "KdfType", JsonValueKind.Number).GetInt32();
+        Assert.Equal((int)expectedUser.Kdf, kdfType);
+        var kdfIterations = AssertHelper.AssertJsonProperty(kdf, "Iterations", JsonValueKind.Number).GetInt32();
+        Assert.Equal(expectedUser.KdfIterations, kdfIterations);
+        // MasterPasswordUnlock.MasterKeyEncryptedUserKey
+        var masterKeyEncryptedUserKey = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "MasterKeyEncryptedUserKey", JsonValueKind.String).ToString();
+        Assert.Equal(expectedUser.Key, masterKeyEncryptedUserKey);
+        // MasterPasswordUnlock.Salt
+        var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
+        Assert.Equal(TestEmail, salt);
     }
 
     [Fact]
@@ -281,8 +313,8 @@ public class IdentityServerSsoTests
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
 
-        const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
-        const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+        const string expectedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring;
+        const string expectedUserKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring;
 
         var device = await deviceRepository.CreateAsync(new Device
         {
@@ -291,7 +323,7 @@ public class IdentityServerSsoTests
             Name = "Thing",
             UserId = user.Id,
             EncryptedPrivateKey = expectedPrivateKey,
-            EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+            EncryptedPublicKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             EncryptedUserKey = expectedUserKey,
         });
 
@@ -491,10 +523,6 @@ public class IdentityServerSsoTests
 
         var keyConnectorUrl = AssertHelper.AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String).GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
-
-        // For backwards compatibility reasons the url should also be on the root
-        keyConnectorUrl = AssertHelper.AssertJsonProperty(root, "KeyConnectorUrl", JsonValueKind.String).GetString();
-        Assert.Equal("https://key_connector.com", keyConnectorUrl);
     }
 
     private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
@@ -515,21 +543,70 @@ public class IdentityServerSsoTests
         }, challenge, trustedDeviceEnabled);
 
         await configureFactory(factory);
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "deviceType", "10" },
+                { "deviceIdentifier", "test_id" },
+                { "deviceName", "firefox" },
+                { "twoFactorToken", "TEST" },
+                { "twoFactorProvider", "5" }, // RememberMe Provider
+                { "twoFactorRemember", "0" },
+                { "grant_type", "authorization_code" },
+                { "code", "test_code" },
+                { "code_verifier", challenge },
+                { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+            }));
+
+        // If this fails, surface detailed error information to aid debugging
+        if (context.Response.StatusCode != StatusCodes.Status200OK)
         {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+            string contentType = context.Response.ContentType ?? string.Empty;
+            string rawBody = "<unreadable>";
+            try
+            {
+                if (context.Response.Body.CanSeek)
+                {
+                    context.Response.Body.Position = 0;
+                }
+                using var reader = new StreamReader(context.Response.Body, leaveOpen: true);
+                rawBody = await reader.ReadToEndAsync();
+            }
+            catch
+            {
+                // leave rawBody as unreadable
+            }
+
+            string? error = null;
+            string? errorDesc = null;
+            string? errorModelMsg = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(rawBody);
+                var root = doc.RootElement;
+                if (root.TryGetProperty("error", out var e)) error = e.GetString();
+                if (root.TryGetProperty("error_description", out var ed)) errorDesc = ed.GetString();
+                if (root.TryGetProperty("ErrorModel", out var em) && em.ValueKind == JsonValueKind.Object)
+                {
+                    if (em.TryGetProperty("Message", out var msg) && msg.ValueKind == JsonValueKind.String)
+                    {
+                        errorModelMsg = msg.GetString();
+                    }
+                }
+            }
+            catch
+            {
+                // Not JSON, continue with raw body
+            }
+
+            var message =
+                $"Unexpected status {context.Response.StatusCode}." +
+                $" error='{error}' error_description='{errorDesc}' ErrorModel.Message='{errorModelMsg}'" +
+                $" ContentType='{contentType}' RawBody='{rawBody}'";
+            Assert.Fail(message);
+        }
 
         // Only calls that result in a 200 OK should call this helper
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -545,6 +622,12 @@ public class IdentityServerSsoTests
     {
         var factory = new IdentityApplicationFactory();
 
+        // Bypass client version gating to isolate SSO test behavior
+        factory.SubstituteService<IClientVersionValidator>(svc =>
+        {
+            svc.Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
+                .Returns(true);
+        });
 
         var authorizationCode = new AuthorizationCode
         {
@@ -552,28 +635,33 @@ public class IdentityServerSsoTests
             CreationTime = DateTime.UtcNow,
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = new[] { "api", "offline_access" },
+            RequestedScopes = ["api", "offline_access"],
             CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain", //
+            CodeChallengeMethod = "plain",
             Subject = null!, // Temporarily set it to null
         };
 
         factory.SubstituteService<IAuthorizationCodeStore>(service =>
         {
+            // Return our pre-built authorization code regardless of handle representation
             service.GetAuthorizationCodeAsync("test_code")
                 .Returns(authorizationCode);
         });
 
-        // This starts the server and finalizes services
-        var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = TestEmail,
-            MasterPasswordHash = "master_password_hash",
-        });
-
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(TestEmail);
-        Assert.NotNull(user);
+        var user = await factory.RegisterNewIdentityFactoryUserAsync(
+            new RegisterFinishRequestModel
+            {
+                Email = TestEmail,
+                MasterPasswordHash = "masterPasswordHash",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+                UserAsymmetricKeys = new KeysRequestModel()
+                {
+                    PublicKey = TestEncryptionConstants.PublicKey,
+                    EncryptedPrivateKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring // v1-format so parsing succeeds and user is treated as v1
+                },
+                UserSymmetricKey = TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
+            });
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -614,7 +702,7 @@ public class IdentityServerSsoTests
             new Claim("organizationId", organization.Id.ToString()),
             new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
             new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
+            new Claim(JwtClaimTypes.AuthenticationTime, new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds().ToString())
         }, "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
 
         authorizationCode.Subject = subject;

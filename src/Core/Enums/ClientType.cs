@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Core.Enums;
 
@@ -14,5 +13,7 @@ public enum ClientType : byte
     [Display(Name = "Desktop App")]
     Desktop = 3,
     [Display(Name = "Mobile App")]
-    Mobile = 4
+    Mobile = 4,
+    [Display(Name = "CLI")]
+    Cli = 5
 }

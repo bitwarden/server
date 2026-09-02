@@ -1,12 +1,15 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -16,24 +19,27 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("emergency-access")]
-[Authorize("Application")]
+[Authorize(Core.Auth.Identity.Policies.Application)]
 public class EmergencyAccessController : Controller
 {
     private readonly IUserService _userService;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IEmergencyAccessService _emergencyAccessService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public EmergencyAccessController(
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
         _emergencyAccessService = emergencyAccessService;
         _globalSettings = globalSettings;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("trusted")]
@@ -72,12 +78,11 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var policies = await _emergencyAccessService.GetPoliciesAsync(id, user);
-        var responses = policies.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
+        var responses = policies?.Select(policy => new PolicyResponseModel(policy));
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
     [HttpPut("{id}")]
-    [HttpPost("{id}")]
     public async Task Put(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
     {
         var emergencyAccess = await _emergencyAccessRepository.GetByIdAsync(id);
@@ -90,12 +95,25 @@ public class EmergencyAccessController : Controller
         await _emergencyAccessService.SaveAsync(model.ToEmergencyAccess(emergencyAccess), user);
     }
 
+    [HttpPost("{id}")]
+    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
+    public async Task Post(Guid id, [FromBody] EmergencyAccessUpdateRequestModel model)
+    {
+        await Put(id, model);
+    }
+
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User);
         await _emergencyAccessService.DeleteAsync(id, userId.Value);
+    }
+
+    [HttpPost("{id}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
+    public async Task PostDelete(Guid id)
+    {
+        await Delete(id);
     }
 
     [HttpPost("invite")]
@@ -134,7 +152,7 @@ public class EmergencyAccessController : Controller
     }
 
     [HttpPost("{id}/approve")]
-    public async Task Accept(Guid id)
+    public async Task Approve(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         await _emergencyAccessService.ApproveAsync(id, user);
@@ -159,15 +177,43 @@ public class EmergencyAccessController : Controller
     public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (model.RequestHasNewDataTypes())
+        {
+            var result = await _emergencyAccessService.FinishRecoveryTakeoverAsync(
+                id,
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData());
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+
         await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
     }
 
+    /// <remarks>
+    /// Emergency access exposes the grantor's personal vault only, and a user-owned cipher is never
+    /// leasing-gated, so the gate authorizes all of them.
+    /// </remarks>
     [HttpPost("{id}/view")]
     public async Task<EmergencyAccessViewResponseModel> ViewCiphers(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, viewResult.Ciphers);
+        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user,
+            fullAccess);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

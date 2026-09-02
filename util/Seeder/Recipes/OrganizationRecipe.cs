@@ -1,0 +1,58 @@
+﻿using Bit.Seeder.Models;
+using Bit.Seeder.Options;
+using Bit.Seeder.Pipeline;
+
+namespace Bit.Seeder.Recipes;
+
+/// <summary>
+/// Seeds an organization from an embedded preset or programmatic options.
+/// </summary>
+/// <remarks>
+/// Thin facade over the internal Pipeline architecture (RecipeOrchestrator).
+/// All orchestration logic is encapsulated within the Pipeline, keeping this Recipe simple.
+/// The CLI remains "dumb" - it creates this recipe and calls SeedAsync().
+/// </remarks>
+public class OrganizationRecipe(SeederDependencies deps)
+{
+    private readonly RecipeOrchestrator _orchestrator = new(deps);
+
+    /// <summary>
+    /// Seeds an organization from an embedded preset.
+    /// </summary>
+    /// <param name="presetName">Name of the embedded preset (e.g., "dunder-mifflin-full")</param>
+    /// <param name="password">Optional password for all seeded accounts</param>
+    /// <param name="kdfIterations">Optional KDF iteration count override</param>
+    /// <param name="orgName">Optional organization name override. Replaces the preset/fixture name when provided.</param>
+    /// <param name="ownerEmail">Optional owner email override. Replaces the default <c>owner@&lt;domain&gt;</c> when provided.</param>
+    /// <param name="stripeBilling">When set, creates real Stripe test-environment billing for the organization.</param>
+    /// <returns>The organization ID and summary statistics.</returns>
+    public async Task<OrganizationSeedResult> SeedAsync(
+        string presetName,
+        string? password = null,
+        int? kdfIterations = null,
+        string? orgName = null,
+        string? ownerEmail = null,
+        StripeBillingOptions? stripeBilling = null)
+    {
+        var result = await _orchestrator.ExecuteAsync(presetName, password, kdfIterations, orgName, ownerEmail, stripeBilling);
+
+        if (result.OrganizationId is null)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' is not an organization preset. Use IndividualUserRecipe instead.");
+        }
+
+        return OrganizationSeedResult.From(result);
+    }
+
+    /// <summary>
+    /// Seeds an organization from programmatic options (CLI arguments).
+    /// </summary>
+    /// <param name="options">Options specifying what to seed.</param>
+    /// <returns>The organization ID and summary statistics.</returns>
+    public async Task<OrganizationSeedResult> SeedAsync(OrganizationVaultOptions options)
+    {
+        var result = await _orchestrator.ExecuteAsync(options);
+        return OrganizationSeedResult.From(result);
+    }
+}

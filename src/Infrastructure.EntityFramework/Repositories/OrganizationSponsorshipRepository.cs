@@ -104,12 +104,13 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         }
     }
 
-    public async Task<Core.Entities.OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+    public async Task<Core.Entities.OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId, bool isAdminInitiated = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var orgSponsorship = await GetDbSet(dbContext).Where(e => e.SponsoringOrganizationUserId == sponsoringOrganizationUserId)
+            var orgSponsorship = await GetDbSet(dbContext)
+                .Where(e => e.SponsoringOrganizationUserId == sponsoringOrganizationUserId && e.IsAdminInitiated == isAdminInitiated)
                 .FirstOrDefaultAsync();
             return orgSponsorship;
         }

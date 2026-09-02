@@ -1,13 +1,18 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -15,17 +20,20 @@ using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class OrganizationEditModel : OrganizationViewModel
+public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
 {
+    private readonly List<Plan> _plans;
+
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Provider provider)
+    public OrganizationEditModel(Provider provider, List<Plan> plans)
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
         Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
+        _plans = plans;
     }
 
     public OrganizationEditModel(
@@ -40,6 +48,7 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingHistoryInfo billingHistoryInfo,
         IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings,
+        List<Plan> plans,
         int secrets,
         int projects,
         int serviceAccounts,
@@ -81,6 +90,7 @@ public class OrganizationEditModel : OrganizationViewModel
         UseApi = org.UseApi;
         UseSecretsManager = org.UseSecretsManager;
         UseRiskInsights = org.UseRiskInsights;
+        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -96,6 +106,16 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+        UseOrganizationDomains = org.UseOrganizationDomains;
+        UseAutomaticUserConfirmation = org.UseAutomaticUserConfirmation;
+        UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
+        UsePhishingBlocker = org.UsePhishingBlocker;
+        UseMyItems = org.UseMyItems;
+        UseInviteLinks = org.UseInviteLinks;
+        UsePam = org.UsePam;
+        ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
+
+        _plans = plans;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -147,6 +167,10 @@ public class OrganizationEditModel : OrganizationViewModel
     public new bool UseSecretsManager { get; set; }
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Phishing Blocker")]
+    public new bool UsePhishingBlocker { get; set; }
+    [Display(Name = "Admin Sponsored Families")]
+    public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -176,14 +200,45 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Use Organization Domains")]
+    public bool UseOrganizationDomains { get; set; }
+    [Display(Name = "Disable SM Ads For Users")]
+    public new bool UseDisableSmAdsForUsers { get; set; }
 
+    [Display(Name = "Automatic User Confirmation")]
+    public bool UseAutomaticUserConfirmation { get; set; }
+    [Display(Name = "Create My Items for organization ownership")]
+    public bool UseMyItems { get; set; }
+    [Display(Name = "Invite Links")]
+    public bool UseInviteLinks { get; set; }
+    [Display(Name = "Use PAM")]
+    public bool UsePam { get; set; }
+    [Display(Name = "Exempt From Billing Automation")]
+    public bool ExemptFromBillingAutomation { get; set; }
+
+    [Display(Name = "Migration cohort")]
+    public Guid? MigrationCohortId { get; set; }
+
+    /// <summary>
+    /// All cohorts (active and inactive) used to populate the migration cohort dropdown.
+    /// Set during the Edit GET so the view can render the dropdown options; null otherwise.
+    /// </summary>
+    public IReadOnlyList<OrganizationPlanMigrationCohort> AvailableMigrationCohorts { get; set; }
+
+    public bool MigrationCohortLocked { get; set; }
+
+    public string MigrationCohortLockReason { get; set; }
+
+    public bool MigrationCohortMismatch { get; set; }
+
+    public bool MigrationCohortOrphaned { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
      * Add mappings for individual properties as you need them
      */
     public object GetPlansHelper() =>
-        StaticStore.Plans
+        _plans
             .Select(p =>
             {
                 var plan = new
@@ -205,16 +260,21 @@ public class OrganizationEditModel : OrganizationViewModel
                     Has2fa = p.Has2fa,
                     HasApi = p.HasApi,
                     HasSso = p.HasSso,
+                    HasOrganizationDomains = p.HasOrganizationDomains,
                     HasKeyConnector = p.HasKeyConnector,
                     HasScim = p.HasScim,
                     HasResetPassword = p.HasResetPassword,
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
+                    HasMyItems = p.HasMyItems,
+                    HasInviteLinks = p.HasInviteLinks,
+                    HasRiskInsights = p.HasRiskInsights,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
                     Disabled = p.Disabled,
                     SupportsSecretsManager = p.SupportsSecretsManager,
+                    AutomaticUserConfirmation = p.AutomaticUserConfirmation,
                     PasswordManager =
                         new
                         {
@@ -288,6 +348,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseApi = UseApi;
         existingOrganization.UseSecretsManager = UseSecretsManager;
         existingOrganization.UseRiskInsights = UseRiskInsights;
+        existingOrganization.UseAdminSponsoredFamilies = UseAdminSponsoredFamilies;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;
@@ -304,6 +365,24 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.UseOrganizationDomains = UseOrganizationDomains;
+        existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
+        existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
+        existingOrganization.UseMyItems = UseMyItems;
+        existingOrganization.UseInviteLinks = UseInviteLinks;
+        existingOrganization.UsePam = UsePam;
+        existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (UseMyItems && !UsePolicies)
+        {
+            var displayName = nameof(UseMyItems).GetDisplayAttribute<OrganizationEditModel>()?.GetName() ?? nameof(UseMyItems);
+            yield return new ValidationResult(
+                $"The {displayName} feature requires Policies to be enabled.",
+                [nameof(UseMyItems)]);
+        }
     }
 }

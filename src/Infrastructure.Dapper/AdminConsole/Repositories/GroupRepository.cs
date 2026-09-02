@@ -109,9 +109,13 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
-    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        var connectionString = useReadOnlyReplica
+            ? ReadOnlyConnectionString
+            : ConnectionString;
+
+        using (var connection = new SqlConnection(connectionString))
         {
             var results = await connection.QueryAsync<Guid>(
                 $"[{Schema}].[GroupUser_ReadOrganizationUserIdsByGroupId]",
@@ -164,24 +168,35 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
-    public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId)
+    public async Task DeleteUserAsync(Guid groupId, Guid organizationUserId, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[GroupUser_Delete]",
-                new { GroupId = groupId, OrganizationUserId = organizationUserId },
+                new { GroupId = groupId, OrganizationUserId = organizationUserId, RevisionDate = revisionDate },
                 commandType: CommandType.StoredProcedure);
         }
     }
 
-    public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    public async Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateUsers]",
-                new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+                new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), RevisionDate = revisionDate },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds, DateTime revisionDate)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                "[dbo].[GroupUser_AddUsers]",
+                new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), RevisionDate = revisionDate },
                 commandType: CommandType.StoredProcedure);
         }
     }

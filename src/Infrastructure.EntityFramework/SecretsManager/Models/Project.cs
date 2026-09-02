@@ -1,4 +1,7 @@
-﻿using AutoMapper;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using AutoMapper;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 namespace Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -18,6 +21,7 @@ public class ProjectMapperProfile : Profile
     {
         CreateMap<Core.SecretsManager.Entities.Project, Project>()
             .PreserveReferences()
+            .MaxDepth(5)
             .ReverseMap();
     }
 }

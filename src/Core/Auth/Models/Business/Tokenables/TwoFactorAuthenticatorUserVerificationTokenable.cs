@@ -1,4 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Newtonsoft.Json;
 
@@ -27,9 +30,6 @@ public class TwoFactorAuthenticatorUserVerificationTokenable : ExpiringTokenable
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid UserId { get; set; }
     public string Key { get; set; }
-
-    public override bool Valid => Identifier == TokenIdentifier &&
-                                  UserId != default;
 
     [JsonConstructor]
     public TwoFactorAuthenticatorUserVerificationTokenable()

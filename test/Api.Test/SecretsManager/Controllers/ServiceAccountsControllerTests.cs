@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,6 +16,7 @@ using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -118,6 +120,8 @@ public class ServiceAccountsControllerTests
         ServiceAccountCreateRequestModel data, Organization organization)
     {
         ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
 
         await sutProvider.Sut.CreateAsync(organization.Id, data);
 
@@ -357,7 +361,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, Guid userId)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -373,6 +377,7 @@ public class ServiceAccountsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 
@@ -386,7 +391,7 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    public async Task BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, Guid userId)
     {
         var ids = data.Select(sa => sa.Id).ToList();
         var organizationId = data.First().OrganizationId;
@@ -400,6 +405,7 @@ public class ServiceAccountsControllerTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         var results = await sutProvider.Sut.BulkDeleteAsync(ids);
 

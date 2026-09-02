@@ -66,6 +66,16 @@ BEGIN
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
 
+    -- Migrate DefaultUserCollection to SharedCollection before deleting CollectionUser records
+    DECLARE @OrgUserIds [dbo].[GuidIdArray]
+    INSERT INTO @OrgUserIds (Id)
+    SELECT [Id] FROM [dbo].[OrganizationUser] WHERE [UserId] IN (SELECT * FROM @ParsedIds)
+    
+    IF EXISTS (SELECT 1 FROM @OrgUserIds)
+    BEGIN
+        EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @OrgUserIds
+    END
+
     -- Delete collection users
     DELETE
         CU

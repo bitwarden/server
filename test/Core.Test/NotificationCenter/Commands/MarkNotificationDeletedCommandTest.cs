@@ -1,11 +1,14 @@
 ﻿#nullable enable
 using System.Security.Claims;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Platform.Push;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -32,7 +35,8 @@ public class MarkNotificationDeletedCommandTest
             .GetByNotificationIdAndUserIdAsync(notificationId, userId ?? Arg.Any<Guid>())
             .Returns(notificationStatus);
         sutProvider.GetDependency<INotificationStatusRepository>()
-            .CreateAsync(Arg.Any<NotificationStatus>());
+            .CreateAsync(Arg.Any<NotificationStatus>())
+            .Returns(x => x.Arg<NotificationStatus>());
         sutProvider.GetDependency<INotificationStatusRepository>()
             .UpdateAsync(notificationStatus ?? Arg.Any<NotificationStatus>());
         sutProvider.GetDependency<IAuthorizationService>()
@@ -63,6 +67,12 @@ public class MarkNotificationDeletedCommandTest
         Setup(sutProvider, notificationId, userId: null, notification, notificationStatus, true, true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -74,6 +84,12 @@ public class MarkNotificationDeletedCommandTest
         Setup(sutProvider, notificationId, userId, notification: null, notificationStatus, true, true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -86,6 +102,12 @@ public class MarkNotificationDeletedCommandTest
             true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -98,6 +120,12 @@ public class MarkNotificationDeletedCommandTest
             authorizedCreate: false, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -110,6 +138,12 @@ public class MarkNotificationDeletedCommandTest
             authorizedUpdate: false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -119,13 +153,21 @@ public class MarkNotificationDeletedCommandTest
         Guid notificationId, Guid userId, Notification notification)
     {
         Setup(sutProvider, notificationId, userId, notification, notificationStatus: null, true, true, true);
+        var expectedNotificationStatus = new NotificationStatus
+        {
+            NotificationId = notificationId,
+            UserId = userId,
+            ReadDate = null,
+            DeletedDate = DateTime.UtcNow
+        };
 
         await sutProvider.Sut.MarkDeletedAsync(notificationId);
 
         await sutProvider.GetDependency<INotificationStatusRepository>().Received(1)
-            .CreateAsync(Arg.Is<NotificationStatus>(ns =>
-                ns.NotificationId == notificationId && ns.UserId == userId && !ns.ReadDate.HasValue &&
-                ns.DeletedDate.HasValue && DateTime.UtcNow - ns.DeletedDate.Value < TimeSpan.FromMinutes(1)));
+            .CreateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(expectedNotificationStatus, ns)));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.NotificationStatus && n.Payload.Id == notification.Id));
     }
 
     [Theory]
@@ -134,18 +176,26 @@ public class MarkNotificationDeletedCommandTest
         SutProvider<MarkNotificationDeletedCommand> sutProvider,
         Guid notificationId, Guid userId, Notification notification, NotificationStatus notificationStatus)
     {
-        var deletedDate = notificationStatus.DeletedDate;
-
         Setup(sutProvider, notificationId, userId, notification, notificationStatus, true, true, true);
 
         await sutProvider.Sut.MarkDeletedAsync(notificationId);
 
         await sutProvider.GetDependency<INotificationStatusRepository>().Received(1)
-            .UpdateAsync(Arg.Is<NotificationStatus>(ns =>
-                ns.Equals(notificationStatus) &&
-                ns.NotificationId == notificationStatus.NotificationId && ns.UserId == notificationStatus.UserId &&
-                ns.ReadDate == notificationStatus.ReadDate && ns.DeletedDate != deletedDate &&
-                ns.DeletedDate.HasValue &&
-                DateTime.UtcNow - ns.DeletedDate.Value < TimeSpan.FromMinutes(1)));
+            .UpdateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(notificationStatus, ns)));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.NotificationStatus && n.Payload.Id == notification.Id));
+    }
+
+    private static void AssertNotificationStatus(NotificationStatus expectedNotificationStatus,
+        NotificationStatus? actualNotificationStatus)
+    {
+        Assert.NotNull(actualNotificationStatus);
+        Assert.Equal(expectedNotificationStatus.NotificationId, actualNotificationStatus.NotificationId);
+        Assert.Equal(expectedNotificationStatus.UserId, actualNotificationStatus.UserId);
+        Assert.Equal(expectedNotificationStatus.ReadDate, actualNotificationStatus.ReadDate);
+        Assert.NotEqual(expectedNotificationStatus.DeletedDate, actualNotificationStatus.DeletedDate);
+        Assert.NotNull(actualNotificationStatus.DeletedDate);
+        Assert.Equal(DateTime.UtcNow, actualNotificationStatus.DeletedDate.Value, TimeSpan.FromMinutes(1));
     }
 }

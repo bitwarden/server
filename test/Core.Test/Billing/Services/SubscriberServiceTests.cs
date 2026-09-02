@@ -1,12 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
-using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -17,7 +16,6 @@ using Stripe;
 using Xunit;
 
 using static Bit.Core.Test.Billing.Utilities;
-using Address = Stripe.Address;
 using Customer = Stripe.Customer;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
@@ -42,19 +40,19 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.CancelSubscription(organization, new OffboardingSurveyResponse(), false));
+            sutProvider.Sut.CancelSubscription(organization, false, new OffboardingSurveyResponse()));
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
     }
 
     [Theory, BitAutoData]
@@ -79,8 +77,11 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -89,16 +90,16 @@ public class SubscriberServiceTests
             Feedback = "Lorem ipsum"
         };
 
-        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, true);
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
 
         await stripeAdapter
             .Received(1)
-            .SubscriptionUpdateAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(
-                options => options.Metadata["cancellingUserId"] == userId.ToString()));
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(
+                options => options.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString()));
 
         await stripeAdapter
             .Received(1)
-            .SubscriptionCancelAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
                 options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
                 options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason));
     }
@@ -125,8 +126,11 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -135,21 +139,21 @@ public class SubscriberServiceTests
             Feedback = "Lorem ipsum"
         };
 
-        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, true);
+        await sutProvider.Sut.CancelSubscription(organization, true, offboardingSurveyResponse);
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
 
         await stripeAdapter
             .Received(1)
-            .SubscriptionCancelAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(options =>
                 options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
                 options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason));
     }
 
     [Theory, BitAutoData]
-    public async Task CancelSubscription_DoNotCancelImmediately_UpdateSubscriptionToCancelAtEndOfPeriod(
+    public async Task CancelSubscription_CancelAtEndOfPeriod_UpdateSubscriptionToCancelAtEndOfPeriod(
         Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -168,8 +172,11 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
+
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
         var offboardingSurveyResponse = new OffboardingSurveyResponse
         {
@@ -178,19 +185,354 @@ public class SubscriberServiceTests
             Feedback = "Lorem ipsum"
         };
 
-        await sutProvider.Sut.CancelSubscription(organization, offboardingSurveyResponse, false);
+        await sutProvider.Sut.CancelSubscription(organization, false, offboardingSurveyResponse);
 
         await stripeAdapter
             .Received(1)
-            .SubscriptionUpdateAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(options =>
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(options =>
                 options.CancelAtPeriodEnd == true &&
                 options.CancellationDetails.Comment == offboardingSurveyResponse.Feedback &&
                 options.CancellationDetails.Feedback == offboardingSurveyResponse.Reason &&
-                options.Metadata["cancellingUserId"] == userId.ToString()));
+                options.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString()));
 
         await stripeAdapter
             .DidNotReceiveWithAnyArgs()
-            .SubscriptionCancelAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>()); ;
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_NullSurvey_CancelImmediately_CancelsWithoutMetadataOrDetails(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", "org_id" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
+
+        // No metadata update because survey is null, even though subscription has organizationId
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+
+        // Cancel called with no CancellationDetails
+        await stripeAdapter
+            .Received(1)
+            .CancelSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionCancelOptions>(
+                options => options.CancellationDetails == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_NullSurvey_CancelAtEndOfPeriod_SetsCancelAtPeriodEndWithoutMetadataOrDetails(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "subscription_id";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
+
+        await stripeAdapter
+            .Received(1)
+            .UpdateSubscriptionAsync(subscriptionId, Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAtPeriodEnd == true &&
+                options.Metadata == null &&
+                options.CancellationDetails == null));
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_CancelImmediately_WithActiveSchedule_ReleasesScheduleBeforeCancelling(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+        const string scheduleId = "sched_1";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = scheduleId,
+                        SubscriptionId = subscriptionId,
+                        Status = StripeConstants.SubscriptionScheduleStatus.Active
+                    }
+                ]
+            });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
+
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .Received(1).Release("cus_1", subscriptionId);
+        await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_PreservesMigrationCohortMetadataOnCancel(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+        const string cohortId = "some-cohort-id";
+        const string cohortName = "A1(a)";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1",
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organization.Id.ToString() },
+                { StripeConstants.MetadataKeys.MigrationCohortId, cohortId },
+                { StripeConstants.MetadataKeys.MigrationCohortName, cohortName }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = Guid.NewGuid(),
+            Reason = "too_expensive",
+            Feedback = "Too expensive"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false, offboardingSurveyResponse);
+
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                !o.Metadata.ContainsKey(StripeConstants.MetadataKeys.MigrationCohortId) &&
+                !o.Metadata.ContainsKey(StripeConstants.MetadataKeys.MigrationCohortName)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_CancelImmediately_NoSchedule_ProceedsNormally(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: true);
+
+        await sutProvider.GetDependency<IPriceIncreaseScheduler>()
+            .DidNotReceiveWithAnyArgs().Release(Arg.Any<string>(), Arg.Any<string>());
+        await stripeAdapter.Received(1).CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_CancelAtEndOfPeriod_TwoPhaseSchedule_ReleasesScheduleAndSetsCancelAtPeriodEnd(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+        const string scheduleId = "sched_1";
+        var startDate = DateTime.UtcNow;
+        var endDate = startDate.AddYears(1);
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = scheduleId,
+                        SubscriptionId = subscriptionId,
+                        Status = StripeConstants.SubscriptionScheduleStatus.Active,
+                        Phases =
+                        [
+                            new SubscriptionSchedulePhase
+                            {
+                                StartDate = startDate,
+                                EndDate = endDate,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "old-price", Quantity = 1 }]
+                            },
+                            new SubscriptionSchedulePhase
+                            {
+                                StartDate = endDate,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "new-price", Quantity = 1 }]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
+
+        await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId);
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.CancelAtPeriodEnd == true &&
+                o.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancelledDuringDeferredPriceIncrease)));
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_CancelAtEndOfPeriod_TwoPhaseSchedule_WithSurvey_ReleasesScheduleAndUpdatesCancellationDetails(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+        const string scheduleId = "sched_1";
+        var userId = Guid.NewGuid();
+        var startDate = DateTime.UtcNow;
+        var endDate = startDate.AddYears(1);
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule>
+            {
+                Data =
+                [
+                    new SubscriptionSchedule
+                    {
+                        Id = scheduleId,
+                        SubscriptionId = subscriptionId,
+                        Status = StripeConstants.SubscriptionScheduleStatus.Active,
+                        Phases =
+                        [
+                            new SubscriptionSchedulePhase
+                            {
+                                StartDate = startDate,
+                                EndDate = endDate,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "old-price", Quantity = 1 }]
+                            },
+                            new SubscriptionSchedulePhase
+                            {
+                                StartDate = endDate,
+                                Items = [new SubscriptionSchedulePhaseItem { PriceId = "new-price", Quantity = 1 }]
+                            }
+                        ]
+                    }
+                ]
+            });
+
+        var offboardingSurveyResponse = new OffboardingSurveyResponse
+        {
+            UserId = userId,
+            Reason = "too_expensive",
+            Feedback = "Too pricey"
+        };
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false, offboardingSurveyResponse);
+
+        await stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(scheduleId);
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.CancelAtPeriodEnd == true &&
+                o.CancellationDetails.Comment == "Too pricey" &&
+                o.CancellationDetails.Feedback == "too_expensive" &&
+                o.Metadata[StripeConstants.MetadataKeys.CancellingUserId] == userId.ToString() &&
+                o.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancelledDuringDeferredPriceIncrease)));
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .CancelSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionCancelOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelSubscription_CancelAtEndOfPeriod_NoSchedule_SetsCancelAtPeriodEnd(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        const string subscriptionId = "sub_1";
+
+        var subscription = new Subscription
+        {
+            Id = subscriptionId,
+            Status = "active",
+            CustomerId = "cus_1"
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
+
+        await sutProvider.Sut.CancelSubscription(organization, cancelImmediately: false);
+
+        await stripeAdapter.DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(o => o.CancelAtPeriodEnd == true));
     }
 
     #endregion
@@ -221,7 +563,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .ReturnsNull();
 
         var customer = await sutProvider.Sut.GetCustomer(organization);
@@ -235,7 +577,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .ThrowsAsync<StripeException>();
 
         var customer = await sutProvider.Sut.GetCustomer(organization);
@@ -251,7 +593,7 @@ public class SubscriberServiceTests
         var customer = new Customer();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .Returns(customer);
 
         var gotCustomer = await sutProvider.Sut.GetCustomer(organization);
@@ -285,7 +627,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .ReturnsNull();
 
         await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetCustomerOrThrow(organization));
@@ -299,7 +641,7 @@ public class SubscriberServiceTests
         var stripeException = new StripeException();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .ThrowsAsync(stripeException);
 
         await ThrowsBillingExceptionAsync(
@@ -316,7 +658,7 @@ public class SubscriberServiceTests
         var customer = new Customer();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId)
+            .GetCustomerAsync(organization.GatewayCustomerId)
             .Returns(customer);
 
         var gotCustomer = await sutProvider.Sut.GetCustomerOrThrow(organization);
@@ -326,14 +668,15 @@ public class SubscriberServiceTests
 
     #endregion
 
-    #region GetPaymentMethod
+    #region GetPaymentSource
+
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_NullSubscriber_ThrowsArgumentNullException(
+    public async Task GetPaymentSource_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider) =>
         await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetPaymentSource(null));
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Braintree_NoDefaultPaymentMethod_ReturnsNull(
+    public async Task GetPaymentSource_Braintree_NoDefaultPaymentMethod_ReturnsNull(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -348,7 +691,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
                 Arg.Is<CustomerGetOptions>(
                     options => options.Expand.Contains("default_source") &&
                                options.Expand.Contains("invoice_settings.default_payment_method")))
@@ -370,7 +713,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Braintree_PayPalAccount_Succeeds(
+    public async Task GetPaymentSource_Braintree_PayPalAccount_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -385,7 +728,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
                 Arg.Is<CustomerGetOptions>(
                     options => options.Expand.Contains("default_source") &&
                                options.Expand.Contains("invoice_settings.default_payment_method")))
@@ -419,7 +762,7 @@ public class SubscriberServiceTests
     // TODO: Determine if we need to test Braintree.UsBankAccount
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_BankAccountPaymentMethod_Succeeds(
+    public async Task GetPaymentSource_Stripe_BankAccountPaymentMethod_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -439,7 +782,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
                 Arg.Is<CustomerGetOptions>(
                     options => options.Expand.Contains("default_source") &&
                                options.Expand.Contains("invoice_settings.default_payment_method")))
@@ -453,7 +796,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_CardPaymentMethod_Succeeds(
+    public async Task GetPaymentSource_Stripe_CardPaymentMethod_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -475,7 +818,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
                 Arg.Is<CustomerGetOptions>(
                     options => options.Expand.Contains("default_source") &&
                                options.Expand.Contains("invoice_settings.default_payment_method")))
@@ -489,43 +832,38 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_SetupIntentForBankAccount_Succeeds(
+    public async Task GetPaymentSource_Stripe_SetupIntentForBankAccount_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
-        var customer = new Customer
-        {
-            Id = provider.GatewayCustomerId
-        };
+        var customer = new Customer { Id = provider.GatewayCustomerId };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
-                Arg.Is<CustomerGetOptions>(
-                    options => options.Expand.Contains("default_source") &&
-                               options.Expand.Contains("invoice_settings.default_payment_method")))
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(options => options.Expand.Contains("default_source") &&
+                                                      options.Expand.Contains(
+                                                          "invoice_settings.default_payment_method")))
             .Returns(customer);
 
         var setupIntent = new SetupIntent
         {
             Id = "setup_intent_id",
             Status = "requires_action",
-            NextAction = new SetupIntentNextAction
-            {
-                VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
-            },
+            NextAction =
+                new SetupIntentNextAction
+                {
+                    VerifyWithMicrodeposits = new SetupIntentNextActionVerifyWithMicrodeposits()
+                },
             PaymentMethod = new PaymentMethod
             {
-                UsBankAccount = new PaymentMethodUsBankAccount
-                {
-                    BankName = "Chase",
-                    Last4 = "9999"
-                }
+                UsBankAccount = new PaymentMethodUsBankAccount { BankName = "Chase", Last4 = "9999" }
             }
         };
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
-
-        sutProvider.GetDependency<IStripeAdapter>().SetupIntentGet(setupIntent.Id, Arg.Is<SetupIntentGetOptions>(
-            options => options.Expand.Contains("payment_method"))).Returns(setupIntent);
+        sutProvider.GetDependency<IStripeAdapter>().ListSetupIntentsAsync(
+            Arg.Is<SetupIntentListOptions>(options =>
+                options.Customer == customer.Id &&
+                options.Expand.Contains("data.payment_method")))
+            .Returns([setupIntent]);
 
         var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
 
@@ -535,24 +873,19 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_LegacyBankAccount_Succeeds(
+    public async Task GetPaymentSource_Stripe_LegacyBankAccount_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
         var customer = new Customer
         {
-            DefaultSource = new BankAccount
-            {
-                Status = "verified",
-                BankName = "Chase",
-                Last4 = "9999"
-            }
+            DefaultSource = new BankAccount { Status = "verified", BankName = "Chase", Last4 = "9999" }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
-                Arg.Is<CustomerGetOptions>(
-                    options => options.Expand.Contains("default_source") &&
-                               options.Expand.Contains("invoice_settings.default_payment_method")))
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(options => options.Expand.Contains("default_source") &&
+                                                      options.Expand.Contains(
+                                                          "invoice_settings.default_payment_method")))
             .Returns(customer);
 
         var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
@@ -563,25 +896,19 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_LegacyCard_Succeeds(
+    public async Task GetPaymentSource_Stripe_LegacyCard_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
         var customer = new Customer
         {
-            DefaultSource = new Card
-            {
-                Brand = "Visa",
-                Last4 = "9999",
-                ExpMonth = 9,
-                ExpYear = 2028
-            }
+            DefaultSource = new Card { Brand = "Visa", Last4 = "9999", ExpMonth = 9, ExpYear = 2028 }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
-                Arg.Is<CustomerGetOptions>(
-                    options => options.Expand.Contains("default_source") &&
-                               options.Expand.Contains("invoice_settings.default_payment_method")))
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
+                Arg.Is<CustomerGetOptions>(options => options.Expand.Contains("default_source") &&
+                                                      options.Expand.Contains(
+                                                          "invoice_settings.default_payment_method")))
             .Returns(customer);
 
         var paymentMethod = await sutProvider.Sut.GetPaymentSource(provider);
@@ -592,7 +919,7 @@ public class SubscriberServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPaymentMethod_Stripe_LegacySourceCard_Succeeds(
+    public async Task GetPaymentSource_Stripe_LegacySourceCard_Succeeds(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
@@ -610,7 +937,7 @@ public class SubscriberServiceTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId,
+        sutProvider.GetDependency<IStripeAdapter>().GetCustomerAsync(provider.GatewayCustomerId,
                 Arg.Is<CustomerGetOptions>(
                     options => options.Expand.Contains("default_source") &&
                                options.Expand.Contains("invoice_settings.default_payment_method")))
@@ -650,7 +977,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .ReturnsNull();
 
         var subscription = await sutProvider.Sut.GetSubscription(organization);
@@ -664,7 +991,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .ThrowsAsync<StripeException>();
 
         var subscription = await sutProvider.Sut.GetSubscription(organization);
@@ -680,7 +1007,7 @@ public class SubscriberServiceTests
         var subscription = new Subscription();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var gotSubscription = await sutProvider.Sut.GetSubscription(organization);
@@ -712,7 +1039,7 @@ public class SubscriberServiceTests
         SutProvider<SubscriberService> sutProvider)
     {
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .ReturnsNull();
 
         await ThrowsBillingExceptionAsync(async () => await sutProvider.Sut.GetSubscriptionOrThrow(organization));
@@ -726,7 +1053,7 @@ public class SubscriberServiceTests
         var stripeException = new StripeException();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId)
             .ThrowsAsync(stripeException);
 
         await ThrowsBillingExceptionAsync(
@@ -743,72 +1070,13 @@ public class SubscriberServiceTests
         var subscription = new Subscription();
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .SubscriptionGetAsync(organization.GatewaySubscriptionId)
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         var gotSubscription = await sutProvider.Sut.GetSubscriptionOrThrow(organization);
 
         Assert.Equivalent(subscription, gotSubscription);
     }
-    #endregion
-
-    #region GetTaxInformation
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformation_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.GetTaxInformation(null));
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformation_NullAddress_ReturnsNull(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(new Customer());
-
-        var taxInformation = await sutProvider.Sut.GetTaxInformation(organization);
-
-        Assert.Null(taxInformation);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetTaxInformation_Success(
-        Organization organization,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var address = new Address
-        {
-            Country = "US",
-            PostalCode = "12345",
-            Line1 = "123 Example St.",
-            Line2 = "Unit 1",
-            City = "Example Town",
-            State = "NY"
-        };
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
-            .Returns(new Customer
-            {
-                Address = address,
-                TaxIds = new StripeList<TaxId>
-                {
-                    Data = [new TaxId { Value = "tax_id" }]
-                }
-            });
-
-        var taxInformation = await sutProvider.Sut.GetTaxInformation(organization);
-
-        Assert.NotNull(taxInformation);
-        Assert.Equal(address.Country, taxInformation.Country);
-        Assert.Equal(address.PostalCode, taxInformation.PostalCode);
-        Assert.Equal("tax_id", taxInformation.TaxId);
-        Assert.Equal(address.Line1, taxInformation.Line1);
-        Assert.Equal(address.Line2, taxInformation.Line2);
-        Assert.Equal(address.City, taxInformation.City);
-        Assert.Equal(address.State, taxInformation.State);
-    }
-
     #endregion
 
     #region RemovePaymentMethod
@@ -833,7 +1101,7 @@ public class SubscriberServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         var (braintreeGateway, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
@@ -868,7 +1136,7 @@ public class SubscriberServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
@@ -905,7 +1173,7 @@ public class SubscriberServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
@@ -960,7 +1228,7 @@ public class SubscriberServiceTests
         };
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
@@ -1019,21 +1287,21 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         stripeAdapter
-            .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>()));
+            .ListPaymentMethodsAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>()));
 
         await sutProvider.Sut.RemovePaymentSource(organization);
 
-        await stripeAdapter.Received(1).BankAccountDeleteAsync(stripeCustomer.Id, bankAccountId);
+        await stripeAdapter.Received(1).DeleteBankAccountAsync(stripeCustomer.Id, bankAccountId);
 
-        await stripeAdapter.Received(1).CardDeleteAsync(stripeCustomer.Id, cardId);
+        await stripeAdapter.Received(1).DeleteCardAsync(stripeCustomer.Id, cardId);
 
         await stripeAdapter.DidNotReceiveWithAnyArgs()
-            .PaymentMethodDetachAsync(Arg.Any<string>(), Arg.Any<PaymentMethodDetachOptions>());
+            .DetachPaymentMethodAsync(Arg.Any<string>(), Arg.Any<PaymentMethodDetachOptions>());
     }
 
     [Theory, BitAutoData]
@@ -1051,12 +1319,12 @@ public class SubscriberServiceTests
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         stripeAdapter
-            .CustomerGetAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
+            .GetCustomerAsync(organization.GatewayCustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(stripeCustomer);
 
         stripeAdapter
-            .PaymentMethodListAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
-            .Returns(GetPaymentMethodsAsync(new List<Stripe.PaymentMethod>
+            .ListPaymentMethodsAutoPagingAsync(Arg.Any<PaymentMethodListOptions>())
+            .Returns(GetPaymentMethodsAsync(new List<PaymentMethod>
             {
                 new ()
                 {
@@ -1070,19 +1338,19 @@ public class SubscriberServiceTests
 
         await sutProvider.Sut.RemovePaymentSource(organization);
 
-        await stripeAdapter.DidNotReceiveWithAnyArgs().BankAccountDeleteAsync(Arg.Any<string>(), Arg.Any<string>());
+        await stripeAdapter.DidNotReceiveWithAnyArgs().DeleteBankAccountAsync(Arg.Any<string>(), Arg.Any<string>());
 
-        await stripeAdapter.DidNotReceiveWithAnyArgs().CardDeleteAsync(Arg.Any<string>(), Arg.Any<string>());
-
-        await stripeAdapter.Received(1)
-            .PaymentMethodDetachAsync(bankAccountId);
+        await stripeAdapter.DidNotReceiveWithAnyArgs().DeleteCardAsync(Arg.Any<string>(), Arg.Any<string>());
 
         await stripeAdapter.Received(1)
-            .PaymentMethodDetachAsync(cardId);
+            .DetachPaymentMethodAsync(bankAccountId);
+
+        await stripeAdapter.Received(1)
+            .DetachPaymentMethodAsync(cardId);
     }
 
-    private static async IAsyncEnumerable<Stripe.PaymentMethod> GetPaymentMethodsAsync(
-        IEnumerable<Stripe.PaymentMethod> paymentMethods)
+    private static async IAsyncEnumerable<PaymentMethod> GetPaymentMethodsAsync(
+        IEnumerable<PaymentMethod> paymentMethods)
     {
         foreach (var paymentMethod in paymentMethods)
         {
@@ -1105,520 +1373,490 @@ public class SubscriberServiceTests
     }
     #endregion
 
-    #region UpdatePaymentMethod
+    #region IsValidGatewayCustomerIdAsync
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentSource(null, null));
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NullTokenizedPaymentMethod_ThrowsArgumentNullException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdatePaymentSource(provider, null));
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_NoToken_ThrowsBillingException(
-        Provider provider,
+    public async Task IsValidGatewayCustomerIdAsync_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider)
     {
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer());
-
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.Card, null)));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.IsValidGatewayCustomerIdAsync(null));
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_UnsupportedPaymentMethod_ThrowsBillingException(
-        Provider provider,
+    public async Task IsValidGatewayCustomerIdAsync_NullGatewayCustomerId_ReturnsTrue(
+        Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer());
+        organization.GatewayCustomerId = null;
 
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.BitPay, "TOKEN")));
-    }
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
 
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_BankAccount_IncorrectNumberOfSetupIntentsForToken_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer());
-
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
-            .Returns([new SetupIntent(), new SetupIntent()]);
-
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.BankAccount, "TOKEN")));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_BankAccount_Succeeds(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = "braintree_customer_id"
-                }
-            });
-
-        var matchingSetupIntent = new SetupIntent { Id = "setup_intent_1" };
-
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.PaymentMethod == "TOKEN"))
-            .Returns([matchingSetupIntent]);
-
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
-            .Returns([
-                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
-                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
-            ]);
-
-        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
-            new PaymentMethod { Id = "payment_method_1" }
-        ]);
-
-        await sutProvider.Sut.UpdatePaymentSource(provider,
-            new TokenizedPaymentSource(PaymentMethodType.BankAccount, "TOKEN"));
-
-        await sutProvider.GetDependency<ISetupIntentCache>().Received(1).Set(provider.Id, "setup_intent_1");
-
-        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
-            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
-
-        await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
-
-        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-            options => options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Card_Succeeds(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = "braintree_customer_id"
-                }
-            });
-
-        stripeAdapter.SetupIntentList(Arg.Is<SetupIntentListOptions>(options => options.Customer == provider.GatewayCustomerId))
-            .Returns([
-                new SetupIntent { Id = "setup_intent_2", Status = "requires_payment_method" },
-                new SetupIntent { Id = "setup_intent_3", Status = "succeeded" }
-            ]);
-
-        stripeAdapter.CustomerListPaymentMethods(provider.GatewayCustomerId).Returns([
-            new PaymentMethod { Id = "payment_method_1" }
-        ]);
-
-        await sutProvider.Sut.UpdatePaymentSource(provider,
-            new TokenizedPaymentSource(PaymentMethodType.Card, "TOKEN"));
-
-        await stripeAdapter.Received(1).SetupIntentCancel("setup_intent_2",
-            Arg.Is<SetupIntentCancelOptions>(options => options.CancellationReason == "abandoned"));
-
-        await stripeAdapter.Received(1).PaymentMethodDetachAsync("payment_method_1");
-
-        await stripeAdapter.Received(1).PaymentMethodAttachAsync("TOKEN", Arg.Is<PaymentMethodAttachOptions>(
-            options => options.Customer == provider.GatewayCustomerId));
-
-        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-            options =>
-                options.InvoiceSettings.DefaultPaymentMethod == "TOKEN" &&
-                options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == null));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_NullCustomer_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string braintreeCustomerId = "braintree_customer_id";
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
-                }
-            });
-
-        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        customerGateway.FindAsync(braintreeCustomerId).ReturnsNull();
-
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
-
-        await paymentMethodGateway.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<PaymentMethodRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_CreatePaymentMethodFails_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string braintreeCustomerId = "braintree_customer_id";
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
-                }
-            });
-
-        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        var customer = Substitute.For<Braintree.Customer>();
-
-        customer.Id.Returns(braintreeCustomerId);
-
-        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
-
-        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
-
-        createPaymentMethodResult.IsSuccess().Returns(false);
-
-        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
-                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
-            .Returns(createPaymentMethodResult);
-
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
-
-        await customerGateway.DidNotReceiveWithAnyArgs().UpdateAsync(Arg.Any<string>(), Arg.Any<CustomerRequest>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_UpdateCustomerFails_DeletePaymentMethod_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string braintreeCustomerId = "braintree_customer_id";
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
-                }
-            });
-
-        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        var customer = Substitute.For<Braintree.Customer>();
-
-        customer.Id.Returns(braintreeCustomerId);
-
-        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
-
-        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
-
-        var createdPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
-
-        createdPaymentMethod.Token.Returns("TOKEN");
-
-        createPaymentMethodResult.IsSuccess().Returns(true);
-
-        createPaymentMethodResult.Target.Returns(createdPaymentMethod);
-
-        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
-                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
-            .Returns(createPaymentMethodResult);
-
-        var updateCustomerResult = Substitute.For<Result<Braintree.Customer>>();
-
-        updateCustomerResult.IsSuccess().Returns(false);
-
-        customerGateway.UpdateAsync(braintreeCustomerId, Arg.Is<CustomerRequest>(options =>
-                options.DefaultPaymentMethodToken == createPaymentMethodResult.Target.Token))
-            .Returns(updateCustomerResult);
-
-        await ThrowsBillingExceptionAsync(() => sutProvider.Sut.UpdatePaymentSource(provider, new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
-
-        await paymentMethodGateway.Received(1).DeleteAsync(createPaymentMethodResult.Target.Token);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_ReplacePaymentMethod_Success(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string braintreeCustomerId = "braintree_customer_id";
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId,
-                Metadata = new Dictionary<string, string>
-                {
-                    [Core.Billing.Utilities.BraintreeCustomerIdKey] = braintreeCustomerId
-                }
-            });
-
-        var (_, customerGateway, paymentMethodGateway) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        var customer = Substitute.For<Braintree.Customer>();
-
-        var existingPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
-
-        existingPaymentMethod.Token.Returns("OLD_TOKEN");
-
-        existingPaymentMethod.IsDefault.Returns(true);
-
-        customer.PaymentMethods.Returns([existingPaymentMethod]);
-
-        customer.Id.Returns(braintreeCustomerId);
-
-        customerGateway.FindAsync(braintreeCustomerId).Returns(customer);
-
-        var createPaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
-
-        var updatedPaymentMethod = Substitute.For<Braintree.PaymentMethod>();
-
-        updatedPaymentMethod.Token.Returns("TOKEN");
-
-        createPaymentMethodResult.IsSuccess().Returns(true);
-
-        createPaymentMethodResult.Target.Returns(updatedPaymentMethod);
-
-        paymentMethodGateway.CreateAsync(Arg.Is<PaymentMethodRequest>(
-                options => options.CustomerId == braintreeCustomerId && options.PaymentMethodNonce == "TOKEN"))
-            .Returns(createPaymentMethodResult);
-
-        var updateCustomerResult = Substitute.For<Result<Braintree.Customer>>();
-
-        updateCustomerResult.IsSuccess().Returns(true);
-
-        customerGateway.UpdateAsync(braintreeCustomerId, Arg.Is<CustomerRequest>(options =>
-                options.DefaultPaymentMethodToken == createPaymentMethodResult.Target.Token))
-            .Returns(updateCustomerResult);
-
-        var deletePaymentMethodResult = Substitute.For<Result<Braintree.PaymentMethod>>();
-
-        deletePaymentMethodResult.IsSuccess().Returns(true);
-
-        paymentMethodGateway.DeleteAsync(existingPaymentMethod.Token).Returns(deletePaymentMethodResult);
-
-        await sutProvider.Sut.UpdatePaymentSource(provider,
-            new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN"));
-
-        await paymentMethodGateway.Received(1).DeleteAsync(existingPaymentMethod.Token);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_CustomerUpdateFails_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider)
-    {
-        const string braintreeCustomerId = "braintree_customer_id";
-
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId
-            });
-
-        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
-            {
-                CloudRegion = "US"
-            });
-
-        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        var createCustomerResult = Substitute.For<Result<Braintree.Customer>>();
-
-        createCustomerResult.IsSuccess().Returns(false);
-
-        customerGateway.CreateAsync(Arg.Is<CustomerRequest>(
-                options =>
-                    options.Id == braintreeCustomerId &&
-                    options.CustomFields[provider.BraintreeIdField()] == provider.Id.ToString() &&
-                    options.CustomFields[provider.BraintreeCloudRegionField()] == "US" &&
-                    options.Email == provider.BillingEmailAddress() &&
-                    options.PaymentMethodNonce == "TOKEN"))
-            .Returns(createCustomerResult);
-
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.UpdatePaymentSource(provider,
-                new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN")));
-
+        Assert.True(result);
         await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
-            .CustomerUpdateAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>());
+            .GetCustomerAsync(Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdatePaymentMethod_Braintree_CreateCustomer_Succeeds(
-        Provider provider,
+    public async Task IsValidGatewayCustomerIdAsync_EmptyGatewayCustomerId_ReturnsTrue(
+        Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
-        const string braintreeCustomerId = "braintree_customer_id";
+        organization.GatewayCustomerId = "";
 
-        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(provider.GatewayCustomerId)
-            .Returns(new Customer
-            {
-                Id = provider.GatewayCustomerId
-            });
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
 
-        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
-            {
-                CloudRegion = "US"
-            });
-
-        var (_, customerGateway, _) = SetupBraintree(sutProvider.GetDependency<IBraintreeGateway>());
-
-        var createCustomerResult = Substitute.For<Result<Braintree.Customer>>();
-
-        var createdCustomer = Substitute.For<Braintree.Customer>();
-
-        createdCustomer.Id.Returns(braintreeCustomerId);
-
-        createCustomerResult.IsSuccess().Returns(true);
-
-        createCustomerResult.Target.Returns(createdCustomer);
-
-        customerGateway.CreateAsync(Arg.Is<CustomerRequest>(
-                options =>
-                    options.CustomFields[provider.BraintreeIdField()] == provider.Id.ToString() &&
-                    options.CustomFields[provider.BraintreeCloudRegionField()] == "US" &&
-                    options.Email == provider.BillingEmailAddress() &&
-                    options.PaymentMethodNonce == "TOKEN"))
-            .Returns(createCustomerResult);
-
-        await sutProvider.Sut.UpdatePaymentSource(provider,
-            new TokenizedPaymentSource(PaymentMethodType.PayPal, "TOKEN"));
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).CustomerUpdateAsync(provider.GatewayCustomerId,
-            Arg.Is<CustomerUpdateOptions>(
-                options => options.Metadata[Core.Billing.Utilities.BraintreeCustomerIdKey] == braintreeCustomerId));
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetCustomerAsync(Arg.Any<string>());
     }
 
-    #endregion
-
-    #region UpdateTaxInformation
-
     [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(
-        () => sutProvider.Sut.UpdateTaxInformation(null, null));
-
-    [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_NullTaxInformation_ThrowsArgumentNullException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => sutProvider.Sut.UpdateTaxInformation(provider, null));
-
-    [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_NonUser_MakesCorrectInvocations(
-        Provider provider,
+    public async Task IsValidGatewayCustomerIdAsync_ValidCustomerId_ReturnsTrue(
+        Organization organization,
         SutProvider<SubscriberService> sutProvider)
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId).Returns(new Customer());
 
-        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] } };
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
 
-        stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
-            options => options.Expand.Contains("tax_ids"))).Returns(customer);
+        Assert.True(result);
+        await stripeAdapter.Received(1).GetCustomerAsync(organization.GatewayCustomerId);
+    }
 
-        var taxInformation = new TaxInformation(
-            "US",
-            "12345",
-            "123456789",
-            "us_ein",
-            "123 Example St.",
-            null,
-            "Example Town",
-            "NY");
+    [Theory, BitAutoData]
+    public async Task IsValidGatewayCustomerIdAsync_InvalidCustomerId_ReturnsFalse(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var stripeException = new StripeException { StripeError = new StripeError { Code = "resource_missing" } };
+        stripeAdapter.GetCustomerAsync(organization.GatewayCustomerId).Throws(stripeException);
 
-        await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
+        var result = await sutProvider.Sut.IsValidGatewayCustomerIdAsync(organization);
 
-        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-            options =>
-                options.Address.Country == taxInformation.Country &&
-                options.Address.PostalCode == taxInformation.PostalCode &&
-                options.Address.Line1 == taxInformation.Line1 &&
-                options.Address.Line2 == taxInformation.Line2 &&
-                options.Address.City == taxInformation.City &&
-                options.Address.State == taxInformation.State));
-
-        await stripeAdapter.Received(1).TaxIdDeleteAsync(provider.GatewayCustomerId, "tax_id_1");
-
-        await stripeAdapter.Received(1).TaxIdCreateAsync(provider.GatewayCustomerId, Arg.Is<TaxIdCreateOptions>(
-            options => options.Type == "us_ein" &&
-                       options.Value == taxInformation.TaxId));
+        Assert.False(result);
+        await stripeAdapter.Received(1).GetCustomerAsync(organization.GatewayCustomerId);
     }
 
     #endregion
 
-    #region VerifyBankAccount
+    #region IsValidGatewaySubscriptionIdAsync
 
     [Theory, BitAutoData]
-    public async Task VerifyBankAccount_NoSetupIntentId_ThrowsBillingException(
-        Provider provider,
-        SutProvider<SubscriberService> sutProvider) => await ThrowsBillingExceptionAsync(() => sutProvider.Sut.VerifyBankAccount(provider, ""));
-
-    [Theory, BitAutoData]
-    public async Task VerifyBankAccount_MakesCorrectInvocations(
-        Provider provider,
+    public async Task IsValidGatewaySubscriptionIdAsync_NullSubscriber_ThrowsArgumentNullException(
         SutProvider<SubscriberService> sutProvider)
     {
-        const string descriptorCode = "SM1234";
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(null));
+    }
 
-        var setupIntent = new SetupIntent
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_NullGatewaySubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_EmptyGatewaySubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "";
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IStripeAdapter>().DidNotReceiveWithAnyArgs()
+            .GetSubscriptionAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_ValidSubscriptionId_ReturnsTrue(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Returns(new Subscription());
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.True(result);
+        await stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsValidGatewaySubscriptionIdAsync_InvalidSubscriptionId_ReturnsFalse(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var stripeException = new StripeException { StripeError = new StripeError { Code = "resource_missing" } };
+        stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId).Throws(stripeException);
+
+        var result = await sutProvider.Sut.IsValidGatewaySubscriptionIdAsync(organization);
+
+        Assert.False(result);
+        await stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId);
+    }
+
+    #endregion
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_NoGatewaySubscriptionId_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_SubscriptionNull_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ReturnsNull();
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_SubscriptionNotUnpaid_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
         {
-            Id = "setup_intent_id",
-            PaymentMethodId = "payment_method_id"
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                { StripeConstants.MetadataKeys.CancellationOrigin, StripeConstants.CancellationOrigins.UnpaidSubscription }
+            }
         };
 
-        sutProvider.GetDependency<ISetupIntentCache>().Get(provider.Id).Returns(setupIntent.Id);
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_MetadataMissing_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_WrongMetadataValue_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>
+            {
+                { StripeConstants.MetadataKeys.CancellationOrigin, "some_other_origin" }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_UnpaidWithMatchingMetadata_ClearsCancellationAndMetadata(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>
+            {
+                { StripeConstants.MetadataKeys.CancellationOrigin, StripeConstants.CancellationOrigins.UnpaidSubscription }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.CancelAtPeriodEnd == false &&
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancellationOrigin) &&
+                options.Metadata[StripeConstants.MetadataKeys.CancellationOrigin] == string.Empty));
+
+        // The subscription feeds ScheduleForSubscription, which reads Source.Coupon (moved under
+        // Source by the 2025-09-30.clover refactor); expand through source.coupon or it's unexpanded.
+        await stripeAdapter.Received(1).GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.Contains("discounts.source.coupon") &&
+                options.Expand.Contains("customer.discount.source.coupon")));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_NoGatewaySubscriptionId_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        stripeAdapter.SetupIntentGet(setupIntent.Id).Returns(setupIntent);
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
 
-        await sutProvider.Sut.VerifyBankAccount(provider, descriptorCode);
-
-        await stripeAdapter.Received(1).SetupIntentVerifyMicroDeposit(setupIntent.Id,
-            Arg.Is<SetupIntentVerifyMicrodepositsOptions>(
-                options => options.DescriptorCode == descriptorCode));
-
-        await stripeAdapter.Received(1).PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
-            Arg.Is<PaymentMethodAttachOptions>(
-                options => options.Customer == provider.GatewayCustomerId));
-
-        await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
-            options => options.InvoiceSettings.DefaultPaymentMethod == setupIntent.PaymentMethodId));
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
     }
 
-    #endregion
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_SubscriptionNull_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .ReturnsNull();
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_SubscriptionNotUnpaid_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_AlreadyHasCancelAt_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            CancelAt = DateTime.UtcNow.AddDays(7)
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_AlreadyHasUnpaidOriginMetadata_NoOp(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>
+            {
+                { StripeConstants.MetadataKeys.CancellationOrigin, StripeConstants.CancellationOrigins.UnpaidSubscription }
+            }
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        await stripeAdapter
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_UnpaidAndUnscheduled_SchedulesCancellation(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>()
+        };
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var before = DateTime.UtcNow.AddDays(7).AddMinutes(-1);
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        var after = DateTime.UtcNow.AddDays(7).AddMinutes(1);
+
+        await stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                ((DateTime?)options.CancelAt).HasValue &&
+                (DateTime?)options.CancelAt > before &&
+                (DateTime?)options.CancelAt < after &&
+                options.Metadata != null &&
+                options.Metadata.ContainsKey(StripeConstants.MetadataKeys.CancellationOrigin) &&
+                options.Metadata[StripeConstants.MetadataKeys.CancellationOrigin] == StripeConstants.CancellationOrigins.UnpaidSubscription));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ScheduleUnpaidCancellationAsync_UnpaidAndUnscheduled_ReleasesScheduleBeforeUpdatingSubscription(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            CustomerId = "cus_1",
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>()
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ScheduleUnpaidCancellationAsync(organization);
+
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IPriceIncreaseScheduler>()
+                .Release("cus_1", organization.GatewaySubscriptionId);
+            sutProvider.GetDependency<IStripeAdapter>()
+                .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResumeFromUnpaidCancellationAsync_UnpaidWithMatchingMetadata_SchedulesAfterClearing(
+        Organization organization,
+        SutProvider<SubscriberService> sutProvider)
+    {
+        var subscription = new Subscription
+        {
+            Id = organization.GatewaySubscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Unpaid,
+            Metadata = new Dictionary<string, string>
+            {
+                { StripeConstants.MetadataKeys.CancellationOrigin, StripeConstants.CancellationOrigins.UnpaidSubscription }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        await sutProvider.Sut.ResumeFromUnpaidCancellationAsync(organization);
+
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IStripeAdapter>()
+                .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+            sutProvider.GetDependency<IPriceIncreaseScheduler>()
+                .ScheduleForSubscription(subscription, Arg.Any<OrganizationPriceIncreaseOptions>());
+        });
+    }
 }

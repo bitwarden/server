@@ -12,8 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-
-#nullable enable
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.Services.Implementations;
 
@@ -27,6 +26,8 @@ public class AuthRequestService : IAuthRequestService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IMailService _mailService;
+    private readonly ILogger<AuthRequestService> _logger;
 
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
@@ -36,7 +37,9 @@ public class AuthRequestService : IAuthRequestService
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IOrganizationUserRepository organizationRepository)
+        IOrganizationUserRepository organizationRepository,
+        IMailService mailService,
+        ILogger<AuthRequestService> logger)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -46,11 +49,13 @@ public class AuthRequestService : IAuthRequestService
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
+        _mailService = mailService;
+        _logger = logger;
     }
 
-    public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
+    public async Task<AuthRequest?> GetAuthRequestAsync(Guid authRequestId, Guid userId)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
         if (authRequest == null || authRequest.UserId != userId)
         {
             return null;
@@ -59,10 +64,10 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid id, string code)
+    public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid authRequestId, string accessCode)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(id);
-        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code))
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, accessCode))
         {
             return null;
         }
@@ -75,12 +80,6 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    /// <summary>
-    /// Validates and Creates an <see cref="AuthRequest" /> in the database, as well as pushes it through notifications services
-    /// </summary>
-    /// <remarks>
-    /// This method can only be called inside of an HTTP call because of it's reliance on <see cref="ICurrentContext" />
-    /// </remarks>
     public async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model)
     {
         if (!_currentContext.DeviceType.HasValue)
@@ -109,6 +108,12 @@ public class AuthRequestService : IAuthRequestService
             throw new BadRequestException("User or known device not found.");
         }
 
+        // Ensure authenticated user id matches target user (allows anon scenarios still)
+        if (_currentContext.UserId.HasValue && user!.Id != _currentContext.UserId.Value)
+        {
+            throw new BadRequestException("User or known device not found.");
+        }
+
         // AdminApproval requests require correlating the user and their organization
         if (model.Type == AuthRequestType.AdminApproval)
         {
@@ -125,13 +130,15 @@ public class AuthRequestService : IAuthRequestService
 
             Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
             // A user event will automatically create logs for each organization/provider this user belongs to.
-            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval, includeAcceptedStatusOrgs: true);
 
             AuthRequest? firstAuthRequest = null;
             foreach (var organizationUser in organizationUsers)
             {
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
+
+                await NotifyAdminsOfDeviceApprovalRequestAsync(organizationUser, user);
             }
 
             // I know this won't be null because I have already validated that at least one organization exists
@@ -152,6 +159,7 @@ public class AuthRequestService : IAuthRequestService
             RequestDeviceIdentifier = model.DeviceIdentifier,
             RequestDeviceType = _currentContext.DeviceType.Value,
             RequestIpAddress = _currentContext.IpAddress,
+            RequestCountryName = _currentContext.CountryName,
             AccessCode = model.AccessCode,
             PublicKey = model.PublicKey,
             UserId = user.Id,
@@ -164,12 +172,7 @@ public class AuthRequestService : IAuthRequestService
 
     public async Task<AuthRequest> UpdateAuthRequestAsync(Guid authRequestId, Guid currentUserId, AuthRequestUpdateRequestModel model)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
-
-        if (authRequest == null)
-        {
-            throw new NotFoundException();
-        }
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId) ?? throw new NotFoundException();
 
         // Once Approval/Disapproval has been set, this AuthRequest should not be updated again.
         if (authRequest.Approved is not null)
@@ -177,12 +180,17 @@ public class AuthRequestService : IAuthRequestService
             throw new DuplicateAuthRequestException();
         }
 
+        if (authRequest.UserId != currentUserId)
+        {
+            throw new NotFoundException();
+        }
+
         // Do type specific validation
         switch (authRequest.Type)
         {
             case AuthRequestType.AdminApproval:
-                // AdminApproval has a different expiration time, by default is 7 days compared to
-                // non-AdminApproval ones having a default of 15 minutes.
+                // AdminApproval has a default expiration of 7 days
+
                 if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration))
                 {
                     throw new NotFoundException();
@@ -190,22 +198,16 @@ public class AuthRequestService : IAuthRequestService
                 break;
             case AuthRequestType.AuthenticateAndUnlock:
             case AuthRequestType.Unlock:
+                // Non-AdminApproval has a default expiration of 15 minutes.
                 if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration))
                 {
                     throw new NotFoundException();
                 }
+                // Non-AdminApproval responses are tied to a specific device, so we need to validate them
+                var device =
+                    await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, currentUserId)
+                        ?? throw new BadRequestException("Invalid device.");
 
-                if (authRequest.UserId != currentUserId)
-                {
-                    throw new NotFoundException();
-                }
-
-                // Admin approval responses are not tied to a specific device, but these types are so we need to validate them
-                var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, currentUserId);
-                if (device == null)
-                {
-                    throw new BadRequestException("Invalid device.");
-                }
                 authRequest.ResponseDeviceId = device.Id;
                 break;
         }
@@ -275,5 +277,44 @@ public class AuthRequestService : IAuthRequestService
     private static bool IsDateExpired(DateTime savedDate, TimeSpan allowedLifetime)
     {
         return DateTime.UtcNow > savedDate.Add(allowedLifetime);
+    }
+
+    private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
+    {
+        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
+
+        if (adminEmails.Count == 0)
+        {
+            _logger.LogWarning("There are no admin emails to send to.");
+            return;
+        }
+
+        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
+            adminEmails,
+            organizationUser.OrganizationId,
+            user.Email,
+            user.Name);
+    }
+
+    /// <summary>
+    /// Returns a list of emails for admins and custom users with the ManageResetPassword permission.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within</param>
+    private async Task<List<string>> GetAdminAndAccountRecoveryEmailsAsync(Guid organizationId)
+    {
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+            organizationId,
+            OrganizationUserType.Admin);
+
+        var customUsers = await _organizationUserRepository.GetManyDetailsByRoleAsync(
+            organizationId,
+            OrganizationUserType.Custom);
+
+        return admins.Select(a => a.Email)
+            .Concat(customUsers
+                .Where(a => a.GetPermissions().ManageResetPassword)
+                .Select(a => a.Email))
+            .Distinct()
+            .ToList();
     }
 }

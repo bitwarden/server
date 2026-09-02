@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -52,32 +54,40 @@ IBaseRequestValidatorTestWrapper
         IEventService eventService,
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
-        IOrganizationUserRepository organizationUserRepository,
-        IMailService mailService,
+        ISsoRequestValidator ssoRequestValidator,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IAuthRequestRepository authRequestRepository,
+        IMailService mailService,
+        IUserAccountKeysQuery userAccountKeysQuery,
+        IClientVersionValidator clientVersionValidator,
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand) :
          base(
             userManager,
             userService,
             eventService,
             deviceValidator,
             twoFactorAuthenticationValidator,
-            organizationUserRepository,
-            mailService,
+            ssoRequestValidator,
             logger,
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            policyRequirementQuery,
+            authRequestRepository,
+            mailService,
+            userAccountKeysQuery,
+            clientVersionValidator,
+            updateDeviceLastActivityCommand)
     {
     }
 
@@ -93,19 +103,12 @@ IBaseRequestValidatorTestWrapper
         return context.ValidatedTokenRequest.Subject ?? new ClaimsPrincipal();
     }
 
+    [Obsolete]
     protected override void SetErrorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
     {
         context.GrantResult = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
-    }
-
-    protected override void SetSsoResult(
-        BaseRequestValidationContextFake context,
-        Dictionary<string, object> customResponse)
-    {
-        context.GrantResult = new GrantValidationResult(
-            TokenRequestErrors.InvalidGrant, "Sso authentication required.", customResponse);
     }
 
     protected override Task SetSuccessResult(
@@ -118,15 +121,21 @@ IBaseRequestValidatorTestWrapper
         return Task.CompletedTask;
     }
 
+    [Obsolete]
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
-    { }
+    {
+        context.GrantResult = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant, "Two-factor authentication required.", customResponse);
+    }
 
     protected override void SetValidationErrorResult(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext requestContext)
-    { }
+    {
+        context.GrantResult.IsError = true;
+    }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

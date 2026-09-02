@@ -12,7 +12,7 @@ using Duo = DuoUniversal;
 
 namespace Bit.Core.Test.Auth.Identity;
 
-public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<DuoUniversalTokenProvider>
+public class DuoUniversalTwoFactorTokenProviderTests : BaseTwoFactorTokenProviderTests<DuoUniversalTokenProvider>
 {
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = Substitute.For<IDuoUniversalTokenService>();
     public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Duo;
@@ -83,6 +83,7 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
         User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
+        AdditionalSetup(sutProvider, user);
         user.Premium = true;
         user.PremiumExpirationDate = DateTime.UtcNow.AddDays(1);
 
@@ -100,6 +101,8 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
+        AdditionalSetup(sutProvider, user);
+
         user.Premium = false;
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()

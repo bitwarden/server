@@ -1,0 +1,112 @@
+{
+  "UserConfig": {
+    "Namespaces": [
+      {
+        "Name": "sbemulatorns",
+        "Topics": [
+          {
+            "Name": "event-logging",
+            "Subscriptions": [
+              {
+                "Name": "events-write-subscription"
+              },
+              {
+                "Name": "events-slack-subscription"
+              },
+              {
+                "Name": "events-webhook-subscription"
+              },
+              {
+                "Name": "events-hec-subscription"
+              },
+              {
+                "Name": "events-datadog-subscription"
+              },
+              {
+                "Name": "events-teams-subscription"
+              }
+            ]
+          },
+          {
+            "Name": "event-integrations",
+            "Subscriptions": [
+              {
+                "Name": "integration-slack-subscription",
+                "Rules": [
+                  {
+                    "Name": "slack-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "slack"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-webhook-subscription",
+                "Rules": [
+                  {
+                    "Name": "webhook-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "webhook"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-hec-subscription",
+                "Rules": [
+                  {
+                    "Name": "hec-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "hec"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-datadog-subscription",
+                "Rules": [
+                  {
+                    "Name": "datadog-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "datadog"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "Name": "integration-teams-subscription",
+                "Rules": [
+                  {
+                    "Name": "teams-integration-filter",
+                    "Properties": {
+                      "FilterType": "Correlation",
+                      "CorrelationFilter": {
+                        "Label": "teams"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "Logging": {
+      "Type": "File"
+    }
+  }
+}

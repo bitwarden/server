@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Density Test Org",
+    "domain": "density-test.example",
+    "planType": "enterprise-annually"
+  },
+  "users": { "count": 100, "realisticStatusMix": true },
+  "groups": { "count": 10 },
+  "collections": { "count": 50 },
+  "density": {
+    "membership": { "shape": "powerLaw", "skew": 0.8 },
+    "collectionFanOut": {
+      "min": 1,
+      "max": 5,
+      "shape": "powerLaw",
+      "emptyGroupRate": 0.2
+    },
+    "directAccessRatio": 0.6,
+    "permissions": {
+      "readOnly": 0.5,
+      "readWrite": 0.3,
+      "manage": 0.15,
+      "hidePasswords": 0.05
+    },
+    "cipherAssignment": { "skew": "heavyRight", "orphanRate": 0.1 }
+  },
+  "ciphers": { "count": 500 }
+}

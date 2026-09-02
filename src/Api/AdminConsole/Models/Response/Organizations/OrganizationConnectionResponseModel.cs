@@ -1,4 +1,8 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
@@ -11,6 +15,9 @@ public class OrganizationConnectionResponseModel
     public Guid OrganizationId { get; set; }
     public bool Enabled { get; set; }
     public JsonDocument Config { get; set; }
+
+    [JsonConstructor]
+    public OrganizationConnectionResponseModel() { }
 
     public OrganizationConnectionResponseModel(OrganizationConnection connection, Type configType)
     {

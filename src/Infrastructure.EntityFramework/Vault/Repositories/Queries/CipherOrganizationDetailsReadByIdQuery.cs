@@ -33,6 +33,8 @@ public class CipherOrganizationDetailsReadByIdQuery : IQuery<CipherOrganizationD
                         CreationDate = c.CreationDate,
                         RevisionDate = c.RevisionDate,
                         DeletedDate = c.DeletedDate,
+                        Key = c.Key,
+                        Reprompt = c.Reprompt,
                         OrganizationUseTotp = o.UseTotp,
                     };
         return query;

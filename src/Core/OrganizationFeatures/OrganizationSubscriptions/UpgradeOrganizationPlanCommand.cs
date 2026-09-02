@@ -1,13 +1,23 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Services;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -15,10 +25,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
@@ -27,56 +33,78 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyQuery _policyQuery;
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IPricingClient _pricingClient;
+    private readonly IUpgradeOrganizationPlanVNextCommand _upgradeOrganizationPlanVNextCommand;
+    private readonly IUserRepository _userRepository;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
-        IPaymentService paymentService,
+        IStripePaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyQuery policyQuery,
         ISsoConfigRepository ssoConfigRepository,
-        IReferenceEventService referenceEventService,
         IOrganizationConnectionRepository organizationConnectionRepository,
-        ICurrentContext currentContext,
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IFeatureService featureService,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService,
+        IPricingClient pricingClient,
+        IUpgradeOrganizationPlanVNextCommand upgradeOrganizationPlanVNextCommand,
+        IUserRepository userRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyQuery = policyQuery;
         _ssoConfigRepository = ssoConfigRepository;
-        _referenceEventService = referenceEventService;
         _organizationConnectionRepository = organizationConnectionRepository;
-        _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
+        _pricingClient = pricingClient;
+        _upgradeOrganizationPlanVNextCommand = upgradeOrganizationPlanVNextCommand;
+        _userRepository = userRepository;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade, Guid? userId = null)
     {
         var organization = await GetOrgById(organizationId);
+
         if (organization == null)
         {
             throw new NotFoundException();
+        }
+
+        /*
+         * Billing is going to take over this entire command as part of our refactoring work around the
+         * organization subscription upgrade process.
+         */
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand))
+        {
+            var plan = await _pricingClient.GetPlanOrThrow(upgrade.Plan);
+            var result = await _upgradeOrganizationPlanVNextCommand.Run(
+                organization,
+                plan,
+                upgrade.Keys);
+            result.GetValueOrThrow();
+            return new Tuple<bool, string>(true, null);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -84,14 +112,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             throw new BadRequestException("Your account has no payment method available.");
         }
 
-        var existingPlan = StaticStore.GetPlan(organization.PlanType);
-        if (existingPlan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var existingPlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
-        if (newPlan == null)
+        var newPlan = await _pricingClient.GetPlanOrThrow(upgrade.Plan);
+
+        if (newPlan.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }
@@ -117,12 +142,20 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                                                   (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
-            var occupiedSeats =
-                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > updatedPasswordManagerSeats)
+            var seatCounts =
+                await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            if (seatCounts.Total > updatedPasswordManagerSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                if (organization.UseAdminSponsoredFamilies || seatCounts.Sponsored > 0)
+                {
+                    throw new BadRequestException($"Your organization has {seatCounts.Users} members and {seatCounts.Sponsored} sponsored families. " +
+                                                  $"To decrease the seat count below {seatCounts.Total}, you must remove members or sponsorships.");
+                }
+                else
+                {
+                    throw new BadRequestException($"Your organization currently has {seatCounts.Total} seats filled. " +
                                               $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users.");
+                }
             }
         }
 
@@ -133,9 +166,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
             if (collectionCount > newPlan.PasswordManager.MaxCollections.Value)
             {
-                throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                                              $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) collections. " +
-                                              "Remove some collections.");
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
+                throw new BadRequestException($"Your organization currently has {collectionCount} {collectionTerm}. " +
+                                              $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) {collectionTerm}. " +
+                                              $"Remove some {collectionTerm}.");
             }
         }
 
@@ -181,9 +215,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (!newPlan.HasResetPassword && organization.UseResetPassword)
         {
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
+            var resetPasswordPolicy = await _policyQuery.RunAsync(organization.Id, PolicyType.ResetPassword);
+            if (resetPasswordPolicy.Enabled)
             {
                 throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
                                               "Disable your Password Reset policy.");
@@ -224,27 +257,20 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            if (_featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
+            // Check if the user performing the upgrade is an owner of the organization
+            // This is used for discount validation - discounts only apply if the owner is upgrading
+            User owner = null;
+            if (userId.HasValue)
             {
-                var sale = OrganizationSale.From(organization, upgrade);
-                await _organizationBillingService.Finalize(sale);
-            }
-            else
-            {
-                try
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId.Value);
+                if (organizationUser != null && organizationUser.Type == OrganizationUserType.Owner)
                 {
-                    paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                        newPlan, upgrade);
-                    success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
-                }
-                catch
-                {
-                    await _paymentService.CancelAndRecoverChargesAsync(organization);
-                    organization.GatewayCustomerId = null;
-                    await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-                    throw;
+                    owner = await _userRepository.GetByIdAsync(organizationUser.UserId.Value);
                 }
             }
+
+            var sale = OrganizationSale.From(organization, upgrade, owner);
+            await _organizationBillingService.Finalize(sale);
         }
         else
         {
@@ -261,39 +287,14 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
 
         organization.BusinessName = upgrade.BusinessName;
-        organization.PlanType = newPlan.Type;
-        organization.Seats = (short)(newPlan.PasswordManager.BaseSeats + upgrade.AdditionalSeats);
-        organization.MaxCollections = newPlan.PasswordManager.MaxCollections;
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
-        organization.SelfHost = newPlan.HasSelfHost;
-        organization.UsePolicies = newPlan.HasPolicies;
-        organization.MaxStorageGb = !newPlan.PasswordManager.BaseStorageGb.HasValue
-            ? (short?)null
-            : (short)(newPlan.PasswordManager.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
-        organization.UseSso = newPlan.HasSso;
-        organization.UseKeyConnector = newPlan.HasKeyConnector;
-        organization.UseScim = newPlan.HasScim;
-        organization.UseResetPassword = newPlan.HasResetPassword;
-        organization.SelfHost = newPlan.HasSelfHost;
+        organization.ChangePlan(newPlan);
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
-        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
-        organization.Plan = newPlan.Name;
+        organization.Seats = (short)(newPlan.PasswordManager.BaseSeats + upgrade.AdditionalSeats);
+        organization.MaxStorageGb = (short)(newPlan.PasswordManager.BaseStorageGb + upgrade.AdditionalStorageGb);
         organization.Enabled = success;
-        organization.PublicKey = upgrade.PublicKey;
-        organization.PrivateKey = upgrade.PrivateKey;
-        organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
+
+        organization.BackfillPublicPrivateKeys(upgrade.Keys);
 
         if (upgrade.UseSecretsManager)
         {
@@ -303,25 +304,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-
-        if (success)
-        {
-            var upgradePath = GetUpgradePath(existingPlan.ProductTier, newPlan.ProductTier);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
-                {
-                    PlanName = newPlan.Name,
-                    PlanType = newPlan.Type,
-                    OldPlanName = existingPlan.Name,
-                    OldPlanType = existingPlan.Type,
-                    Seats = organization.Seats,
-                    SignupInitiationPath = "Upgrade in-product",
-                    PlanUpgradePath = upgradePath,
-                    Storage = organization.MaxStorageGb,
-                    // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-                });
-        }
-
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 

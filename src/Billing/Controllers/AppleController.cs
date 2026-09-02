@@ -1,4 +1,7 @@
-﻿using System.Text;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
@@ -28,8 +31,8 @@ public class AppleController : Controller
             return new BadRequestResult();
         }
 
-        var key = HttpContext.Request.Query.ContainsKey("key") ?
-            HttpContext.Request.Query["key"].ToString() : null;
+        var key = HttpContext.Request.Query.TryGetValue("key", out var keyValue) ?
+            keyValue.ToString() : null;
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.AppleWebhookKey))
         {
             return new BadRequestResult();

@@ -1,20 +1,19 @@
-﻿using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
 
 public class InfoController : Controller
 {
     [HttpGet("~/alive")]
-    [HttpGet("~/now")]
     public DateTime GetAlive()
     {
         return DateTime.UtcNow;
     }
 
-    [HttpGet("~/version")]
-    public JsonResult GetVersion()
+    [HttpGet("~/now")]
+    [Obsolete("This endpoint is deprecated. Use GET /alive instead.")]
+    public DateTime GetNow()
     {
-        return Json(AssemblyHelpers.GetVersion());
+        return GetAlive();
     }
 }

@@ -89,4 +89,47 @@ public class OrganizationCiphersQueryTests
             c.CollectionIds.Any(cId => cId == targetCollectionId) &&
             c.CollectionIds.Any(cId => cId == otherCollectionId));
     }
+
+
+    [Theory, BitAutoData]
+    public async Task GetAllOrganizationCiphersExcludingDefaultUserCollections_DelegatesToRepository(
+         Guid organizationId,
+         SutProvider<OrganizationCiphersQuery> sutProvider)
+    {
+        var item1 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+        var item2 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+
+        var repo = sutProvider.GetDependency<ICipherRepository>();
+        repo.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(organizationId)
+            .Returns(Task.FromResult<IEnumerable<CipherOrganizationDetailsWithCollections>>(
+                new[] { item1, item2 }));
+
+        var actual = (await sutProvider.Sut
+            .GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId))
+            .ToList();
+
+        Assert.Equal(2, actual.Count);
+        Assert.Same(item1, actual[0]);
+        Assert.Same(item2, actual[1]);
+
+        // and we indeed called the repo once
+        await repo.Received(1)
+            .GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(organizationId);
+    }
+
+    private CipherOrganizationDetailsWithCollections MakeWith(
+        CipherOrganizationDetails baseCipher,
+        params Guid[] cols)
+    {
+        var dict = cols
+          .Select(cid => new CollectionCipher { CipherId = baseCipher.Id, CollectionId = cid })
+          .GroupBy(cc => cc.CipherId)
+          .ToDictionary(g => g.Key, g => g);
+
+        return new CipherOrganizationDetailsWithCollections(baseCipher, dict);
+    }
 }

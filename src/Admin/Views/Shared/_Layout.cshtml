@@ -1,8 +1,10 @@
 @using Bit.Admin.Enums;
+@using Bit.Core;
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -13,12 +15,15 @@
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
     var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
-    var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
-    var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
-    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
+    var enablePersonalDiscounts = FeatureService.IsEnabled(FeatureFlagKeys.PM29108_EnablePersonalDiscounts);
+    var canManageCohorts =
+        AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
+        && FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
+    var canSendSalesAssistedTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateSalesAssistedTrial)
+        && FeatureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials);
 
     var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
-                        canGenerateLicense || canManageStripeSubscriptions;
+                        canGenerateLicense || canManageCohorts || canSendSalesAssistedTrial;
 }
 
 <!DOCTYPE html>
@@ -65,6 +70,14 @@
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
                                 </li>
                             }
+                            @if (canCreateTransaction && enablePersonalDiscounts)
+                            {
+                                <li class="nav-item" active-controller="SubscriptionDiscounts">
+                                    <a class="nav-link" asp-controller="SubscriptionDiscounts" asp-action="Index">
+                                        Discounts
+                                    </a>
+                                </li>
+                            }
                             @if (canViewTools)
                             {
                                 <li class="nav-item dropdown" active-controller="tools">
@@ -103,22 +116,22 @@
                                                 Generate License
                                             </a>
                                         }
-                                        @if (canManageStripeSubscriptions)
+                                        @if (canManageCohorts)
                                         {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
-                                                Manage Stripe Subscriptions
+                                            <a class="dropdown-item" asp-controller="OrganizationPlanMigrationCohorts" asp-action="Index">
+                                                Manage Migration Cohorts
                                             </a>
                                         }
-                                         @if (canProcessStripeEvents)
+                                        @if (canManageCohorts)
                                         {
-                                            <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
-                                                Process Stripe Events
+                                            <a class="dropdown-item" asp-controller="OrganizationPlanMigrationCohortAssignments" asp-action="Index">
+                                                Bulk Assign Cohorts
                                             </a>
                                         }
-                                        @if (canMigrateProviders)
+                                        @if (canSendSalesAssistedTrial)
                                         {
-                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
-                                                Migrate Providers
+                                            <a class="dropdown-item" asp-controller="SalesAssistedTrial" asp-action="Index">
+                                                Send Trial Invitation
                                             </a>
                                         }
                                     </ul>
@@ -172,6 +185,14 @@
         <script>
             $(document).ready(function () {
                 toastr.success("@TempData["Success"]")
+            });
+        </script>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.warning("@TempData["Warning"]")
             });
         </script>
     }

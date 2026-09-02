@@ -1,17 +1,18 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-public class OrganizationUserOrganizationDetails
+public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
     public Guid OrganizationUserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string Name { get; set; }
+    public string Name { get; set; } = null!;
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
     public bool UseKeyConnector { get; set; }
@@ -30,32 +31,49 @@ public class OrganizationUserOrganizationDetails
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
-    public string Key { get; set; }
+    public string? Key { get; set; }
     public Enums.OrganizationUserStatusType Status { get; set; }
     public Enums.OrganizationUserType Type { get; set; }
     public bool Enabled { get; set; }
     public PlanType PlanType { get; set; }
-    public string SsoExternalId { get; set; }
-    public string Identifier { get; set; }
-    public string Permissions { get; set; }
-    public string ResetPasswordKey { get; set; }
-    public string PublicKey { get; set; }
-    public string PrivateKey { get; set; }
+    public string? SsoExternalId { get; set; }
+    public string? Identifier { get; set; }
+    public string? Permissions { get; set; }
+    public string? ResetPasswordKey { get; set; }
+    public string? PublicKey { get; set; }
+    public string? PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
-    public string ProviderName { get; set; }
+    public string? ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
-    public string FamilySponsorshipFriendlyName { get; set; }
-    public string SsoConfig { get; set; }
+    public string? FamilySponsorshipFriendlyName { get; set; }
+    public bool? SsoEnabled { get; set; }
+    public string? SsoConfig { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public Enums.RevocationReason? RevocationReason { get; set; }
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     public bool UseRiskInsights { get; set; }
+    public bool UseOrganizationDomains { get; set; }
+    public bool UseAdminSponsoredFamilies { get; set; }
+    public bool? IsAdminInitiated { get; set; }
+    public bool UseAutomaticUserConfirmation { get; set; }
+    public bool UseDisableSMAdsForUsers { get; set; }
+    public bool UsePhishingBlocker { get; set; }
+    public bool UseMyItems { get; set; }
+    public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
+    public bool AccessPam { get; set; }
 }

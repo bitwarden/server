@@ -3,9 +3,9 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -48,7 +48,7 @@ public class CreateProviderCommand : ICreateProviderCommand
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
     }
 
-    public async Task CreateMultiOrganizationEnterpriseAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
+    public async Task CreateBusinessUnitAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 

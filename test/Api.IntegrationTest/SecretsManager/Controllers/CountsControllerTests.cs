@@ -413,7 +413,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
             if (user != null)
             {
-                await _organizationUserRepository.UpdateGroupsAsync(user.Id, [group.Id]);
+                await _organizationUserRepository.UpdateGroupsAsync(user.Id, [group.Id], DateTime.UtcNow);
             }
         }
 

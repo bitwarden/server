@@ -29,7 +29,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             attachmentData.AttachmentId
         );
 
-    public static (string cipherId, string organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
+    public static (string cipherId, string? organizationId, string attachmentId) IdentifiersFromBlobName(string blobName)
     {
         var parts = blobName.Split('/');
         switch (parts.Length)
@@ -68,6 +68,11 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         return sasUri.ToString();
     }
 
+    public (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token)
+    {
+        throw new NotSupportedException("Token-based downloads are not supported with Azure storage.");
+    }
+
     public async Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         await InitAsync(EventGridEnabledContainerName);
@@ -91,7 +96,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         }
         else
         {
-            metadata.Add("organizationId", cipher.OrganizationId.Value.ToString());
+            metadata.Add("organizationId", cipher.OrganizationId!.Value.ToString());
         }
 
         var headers = new BlobHttpHeaders
@@ -190,6 +195,12 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
         await InitAsync(_defaultContainerName);
     }
 
+    public Task<Stream?> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        // Azure storage uses SAS URLs for downloads; direct streaming is not supported.
+        return Task.FromResult<Stream?>(null);
+    }
+
     public async Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
     {
         await InitAsync(attachmentData.ContainerName);
@@ -208,7 +219,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             }
             else
             {
-                metadata["organizationId"] = cipher.OrganizationId.Value.ToString();
+                metadata["organizationId"] = cipher.OrganizationId!.Value.ToString();
             }
             await blobClient.SetMetadataAsync(metadata);
 
@@ -240,7 +251,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             await InitAsync(container);
             var blobContainerClient = _attachmentContainers[container];
 
-            var blobItems = blobContainerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: path);
+            var blobItems = blobContainerClient.GetBlobsAsync(new GetBlobsOptions { Prefix = path });
             await foreach (var blobItem in blobItems)
             {
                 BlobClient blobClient = blobContainerClient.GetBlobClient(blobItem.Name);
@@ -251,16 +262,17 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
 
     private async Task InitAsync(string containerName)
     {
-        if (!_attachmentContainers.ContainsKey(containerName) || _attachmentContainers[containerName] == null)
+        if (!_attachmentContainers.TryGetValue(containerName, out var attachmentContainer) || attachmentContainer == null)
         {
-            _attachmentContainers[containerName] = _blobServiceClient.GetBlobContainerClient(containerName);
+            attachmentContainer = _blobServiceClient.GetBlobContainerClient(containerName);
+            _attachmentContainers[containerName] = attachmentContainer;
             if (containerName == "attachments")
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.Blob, null, null);
             }
             else
             {
-                await _attachmentContainers[containerName].CreateIfNotExistsAsync(PublicAccessType.None, null, null);
+                await attachmentContainer.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
             }
         }
     }

@@ -1,0 +1,301 @@
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
+using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
+
+namespace Bit.Core.Tools.SendFeatures.Commands;
+
+public class NonAnonymousSendCommand : INonAnonymousSendCommand
+{
+    private readonly ISendRepository _sendRepository;
+    private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ISendValidationService _sendValidationService;
+    private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly IEventService _eventService;
+    private readonly ILogger<NonAnonymousSendCommand> _logger;
+
+    public NonAnonymousSendCommand(ISendRepository sendRepository,
+        ISendFileStorageService sendFileStorageService,
+        IPushNotificationService pushNotificationService,
+        ISendValidationService sendValidationService,
+        ISendCoreHelperService sendCoreHelperService,
+        IEventService eventService,
+        ILogger<NonAnonymousSendCommand> logger)
+    {
+        _sendRepository = sendRepository;
+        _sendFileStorageService = sendFileStorageService;
+        _pushNotificationService = pushNotificationService;
+        _sendValidationService = sendValidationService;
+        _sendCoreHelperService = sendCoreHelperService;
+        _eventService = eventService;
+        _logger = logger;
+    }
+
+    public async Task SaveSendAsync(Send send)
+    {
+        // Normalize the email list before persisting so every downstream consumer is correct on
+        // every DB engine. Runs before Data Protection encrypts the emails.
+        send.Emails = NormalizeEmails(send.Emails);
+
+        // Make sure user can save Sends
+        await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
+
+        // New Send
+        if (send.Id == default(Guid))
+        {
+            await _sendRepository.CreateAsync(send);
+            await _pushNotificationService.PushSyncSendCreateAsync(send);
+            await LogSendCreatedEventAsync(send);
+        }
+        // Edit existing Send
+        else
+        {
+            send.RevisionDate = DateTime.UtcNow;
+            await _sendRepository.UpsertAsync(send);
+            await _pushNotificationService.PushSyncSendUpdateAsync(send);
+            await LogSendUpdatedEventAsync(send);
+        }
+    }
+
+    private async Task LogSendCreatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
+        }
+    }
+
+    private async Task LogSendDeletedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
+        }
+    }
+
+    // Returns the comma-separated email list with each entry trimmed and lowercased, or the
+    // original value when there are no emails (password / no-auth Sends). Idempotent, so re-saving an
+    // already-normalized Send is a no-op.
+    private static string NormalizeEmails(string emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return emails;
+        }
+
+        var normalized = emails
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(email => email.ToLowerInvariant());
+
+        return string.Join(",", normalized);
+    }
+
+    private static EventType ResolveSendCreatedEventType(Send send)
+    {
+        // send.AuthType is populated by SendRequestModel.ToSendBase before SaveSendAsync runs
+        var authType = send.AuthType ?? AuthType.None;
+
+        return (send.Type, authType) switch
+        {
+            (SendType.Text, AuthType.Password) => EventType.Send_Created_Text_WithPasswordProtection,
+            (SendType.Text, AuthType.Email) => EventType.Send_Created_Text_WithEmailVerification,
+            (SendType.Text, _) => EventType.Send_Created_Text,
+            (SendType.File, AuthType.Password) => EventType.Send_Created_File_WithPasswordProtection,
+            (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
+            _ => EventType.Send_Created_File,
+        };
+    }
+
+    public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)
+    {
+        if (send.Type != SendType.File)
+        {
+            throw new BadRequestException("Send is not of type \"file\".");
+        }
+
+        if (fileLength < 1)
+        {
+            throw new BadRequestException("No file data.");
+        }
+
+        if (fileLength > SendFileSettingHelper.MAX_FILE_SIZE)
+        {
+            throw new BadRequestException($"Max file size is {SendFileSettingHelper.MAX_FILE_SIZE_READABLE}.");
+        }
+
+        var storageBytesRemaining = await _sendValidationService.StorageRemainingForSendAsync(send);
+
+        if (storageBytesRemaining < fileLength)
+        {
+            throw new BadRequestException("Not enough storage available.");
+        }
+
+        var fileId = _sendCoreHelperService.SecureRandomString(32, useUpperCase: false, useSpecial: false);
+
+        try
+        {
+            data.Id = fileId;
+            data.Size = fileLength;
+            data.Validated = false;
+            send.Data = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
+            await SaveSendAsync(send);
+            return await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId);
+        }
+        catch
+        {
+            _logger.LogWarning(
+                "Deleted file from {SendId} because an error occurred when creating the upload URL.",
+                send.Id
+            );
+
+            // Clean up since this is not transactional
+            await _sendFileStorageService.DeleteFileAsync(send, fileId);
+            throw;
+        }
+    }
+    public async Task UploadFileToExistingSendAsync(Stream stream, Send send)
+    {
+        if (stream.Position > 0)
+        {
+            stream.Position = 0;
+        }
+
+        if (send?.Data == null)
+        {
+            throw new BadRequestException("Send does not have file data");
+        }
+
+        if (send.Type != SendType.File)
+        {
+            throw new BadRequestException("Not a File Type Send.");
+        }
+
+        var data = JsonSerializer.Deserialize<SendFileData>(send.Data);
+
+        if (data.Validated)
+        {
+            throw new BadRequestException("File has already been uploaded.");
+        }
+
+        await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
+
+        if (!await ConfirmFileSize(send))
+        {
+            throw new BadRequestException("File received does not match expected file length.");
+        }
+    }
+    public async Task DeleteSendAsync(Send send)
+    {
+        if (send.Type == Enums.SendType.File && send.Data != null)
+        {
+            try
+            {
+                var data = send.Data != null ? JsonSerializer.Deserialize<SendFileData>(send.Data) : null;
+                if (data?.Id != null)
+                {
+                    await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+            }
+        }
+        await _sendRepository.DeleteAsync(send);
+        await _pushNotificationService.PushSyncSendDeleteAsync(send);
+        await LogSendDeletedEventAsync(send);
+    }
+
+    public async Task<bool> ConfirmFileSize(Send send)
+    {
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
+
+        var minimum = fileData.Size - SendFileSettingHelper.FILE_SIZE_LEEWAY;
+        var maximum = Math.Min(
+            fileData.Size + SendFileSettingHelper.FILE_SIZE_LEEWAY,
+            SendFileSettingHelper.MAX_FILE_SIZE
+        );
+        var (valid, size) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, minimum, maximum);
+
+        // protect file service from upload hijacking by deleting invalid sends
+        if (!valid)
+        {
+            _logger.LogWarning(
+                "Deleted {SendId} because its reported size {Size} was outside the expected range ({Minimum} - {Maximum}).",
+                send.Id,
+                size,
+                minimum,
+                maximum
+            );
+            await DeleteSendAsync(send);
+            return false;
+        }
+
+        // replace expected size with validated size
+        fileData.Size = size;
+        fileData.Validated = true;
+        send.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
+        await SaveSendAsync(send);
+
+        return valid;
+    }
+
+    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
+    {
+        if (send.Type != SendType.File)
+        {
+            throw new BadRequestException("Can only get a download URL for a file type of Send");
+        }
+
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        {
+            return (null, SendAccessResult.Denied);
+        }
+
+        send.AccessCount++;
+        await _sendRepository.ReplaceAsync(send);
+        await _pushNotificationService.PushSyncSendUpdateAsync(send);
+        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), SendAccessResult.Granted);
+    }
+}

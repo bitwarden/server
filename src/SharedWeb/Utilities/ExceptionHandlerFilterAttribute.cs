@@ -1,4 +1,7 @@
-﻿using Bit.Core.Exceptions;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -72,7 +75,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         else
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
-            logger.LogError(0, exception, exception.Message);
+            logger.LogError(0, exception, "Unhandled exception");
             errorMessage = "An unhandled server error has occurred.";
             context.HttpContext.Response.StatusCode = 500;
         }

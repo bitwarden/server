@@ -11,19 +11,19 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
     //  - 6 Minutes for Attestation (max webauthn timeout)
     //  - 6 Minutes for PRF Assertion (max webauthn timeout)
     //  - 5 minutes for user to complete the process (name their passkey, etc)
-    private static readonly TimeSpan _tokenLifetime = TimeSpan.FromMinutes(17);
+    public static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(17);
     public const string ClearTextPrefix = "BWWebAuthnLoginAssertionOptions_";
     public const string DataProtectorPurpose = "WebAuthnLoginAssertionOptionsDataProtector";
     public const string TokenIdentifier = "WebAuthnLoginAssertionOptionsToken";
 
     public string Identifier { get; set; } = TokenIdentifier;
-    public AssertionOptions Options { get; set; }
+    public AssertionOptions? Options { get; set; }
     public WebAuthnLoginAssertionOptionsScope Scope { get; set; }
 
     [JsonConstructor]
     public WebAuthnLoginAssertionOptionsTokenable()
     {
-        ExpirationDate = DateTime.UtcNow.Add(_tokenLifetime);
+        ExpirationDate = DateTime.UtcNow.Add(TokenLifetime);
     }
 
     public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions options) : this()

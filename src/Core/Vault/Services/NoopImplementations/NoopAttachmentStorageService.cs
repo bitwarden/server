@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -57,6 +60,16 @@ public class NoopAttachmentStorageService : IAttachmentStorageService
     public Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         return Task.FromResult((string)null);
+    }
+
+    public (Guid cipherId, string attachmentId) ParseAttachmentDownloadToken(string token)
+    {
+        throw new NotSupportedException("Token-based downloads are not supported with noop storage.");
+    }
+
+    public Task<Stream> GetAttachmentReadStreamAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    {
+        return Task.FromResult<Stream>(null);
     }
 
     public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)

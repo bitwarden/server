@@ -1,12 +1,12 @@
-﻿using System.Collections.Specialized;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using Quartz.Impl;
 using Quartz.Impl.Matchers;
 
 namespace Bit.Core.Jobs;
+
+#nullable enable
 
 public abstract class BaseJobsHostedService : IHostedService, IDisposable
 {
@@ -16,7 +16,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
     private readonly ILogger<JobListener> _listenerLogger;
     protected readonly ILogger _logger;
 
-    private IScheduler _scheduler;
+    private IScheduler? _scheduler;
     protected GlobalSettings _globalSettings;
 
     public BaseJobsHostedService(
@@ -31,62 +31,72 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         _globalSettings = globalSettings;
     }
 
-    public IEnumerable<Tuple<Type, ITrigger>> Jobs { get; protected set; }
+    public IEnumerable<Tuple<Type, ITrigger>>? Jobs { get; protected set; }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
-        var props = new NameValueCollection
+        var fullName = GetType().FullName;
+        if (fullName == null)
         {
-            {"quartz.serializer.type", "binary"},
-        };
+            throw new InvalidOperationException("Hosted service must have a valid type name.");
+        }
+        var schedulerBuilder = SchedulerBuilder.Create()
+            .WithName(fullName) // Ensure each project has a unique instanceName
+            .WithId("AUTO");
 
         if (!string.IsNullOrEmpty(_globalSettings.SqlServer.JobSchedulerConnectionString))
         {
-            // Ensure each project has a unique instanceName
-            props.Add("quartz.scheduler.instanceName", GetType().FullName);
-            props.Add("quartz.scheduler.instanceId", "AUTO");
-            props.Add("quartz.jobStore.type", "Quartz.Impl.AdoJobStore.JobStoreTX");
-            props.Add("quartz.jobStore.driverDelegateType", "Quartz.Impl.AdoJobStore.SqlServerDelegate");
-            props.Add("quartz.jobStore.useProperties", "true");
-            props.Add("quartz.jobStore.dataSource", "default");
-            props.Add("quartz.jobStore.tablePrefix", "QRTZ_");
-            props.Add("quartz.jobStore.clustered", "true");
-            props.Add("quartz.dataSource.default.provider", "SqlServer");
-            props.Add("quartz.dataSource.default.connectionString", _globalSettings.SqlServer.JobSchedulerConnectionString);
+            schedulerBuilder = schedulerBuilder.UsePersistentStore(options =>
+            {
+                options.UseProperties = true;
+                options.UseClustering();
+                options.UseBinarySerializer();
+                options.UseSqlServer(connectionString: _globalSettings.SqlServer.JobSchedulerConnectionString);
+            });
         }
 
-        var factory = new StdSchedulerFactory(props);
+        var factory = schedulerBuilder.Build();
         _scheduler = await factory.GetScheduler(cancellationToken);
         _scheduler.JobFactory = new JobFactory(_serviceProvider);
-        _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger),
-            GroupMatcher<JobKey>.AnyGroup());
+
+        _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger), GroupMatcher<JobKey>.AnyGroup());
+
         await _scheduler.Start(cancellationToken);
+
+        var jobKeys = new List<JobKey>();
+        var triggerKeys = new List<TriggerKey>();
+
         if (Jobs != null)
         {
             foreach (var (job, trigger) in Jobs)
             {
+                jobKeys.Add(JobBuilder.Create(job)
+                    .WithIdentity(job.FullName!)
+                    .Build().Key);
+                triggerKeys.Add(trigger.Key);
+
                 for (var retry = 0; retry < MaximumJobRetries; retry++)
                 {
                     // There's a race condition when starting multiple containers simultaneously, retry until it succeeds..
                     try
                     {
-                        var dupeT = await _scheduler.GetTrigger(trigger.Key);
+                        var dupeT = await _scheduler.GetTrigger(trigger.Key, cancellationToken);
                         if (dupeT != null)
                         {
-                            await _scheduler.RescheduleJob(trigger.Key, trigger);
+                            await _scheduler.RescheduleJob(trigger.Key, trigger, cancellationToken);
                         }
 
                         var jobDetail = JobBuilder.Create(job)
-                            .WithIdentity(job.FullName)
+                            .WithIdentity(job.FullName!)
                             .Build();
 
-                        var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
+                        var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key, cancellationToken);
                         if (dupeJ != null)
                         {
-                            await _scheduler.DeleteJob(jobDetail.Key);
+                            await _scheduler.DeleteJob(jobDetail.Key, cancellationToken);
                         }
 
-                        await _scheduler.ScheduleJob(jobDetail, trigger);
+                        await _scheduler.ScheduleJob(jobDetail, trigger, cancellationToken);
                         break;
                     }
                     catch (Exception e)
@@ -96,23 +106,16 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                             throw new Exception("Job failed to start after 10 retries.");
                         }
 
-                        _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                        _logger.LogWarning(e, "Exception while trying to schedule job: {JobName}", job.FullName);
                         var random = new Random();
-                        Thread.Sleep(random.Next(50, 250));
+                        await Task.Delay(random.Next(50, 250));
                     }
                 }
             }
         }
 
         // Delete old Jobs and Triggers
-        var existingJobKeys = await _scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup());
-        var jobKeys = Jobs.Select(j =>
-        {
-            var job = j.Item1;
-            return JobBuilder.Create(job)
-                .WithIdentity(job.FullName)
-                .Build().Key;
-        });
+        var existingJobKeys = await _scheduler.GetJobKeys(GroupMatcher<JobKey>.AnyGroup(), cancellationToken);
 
         foreach (var key in existingJobKeys)
         {
@@ -121,12 +124,11 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Deleting old job with key {key}");
-            await _scheduler.DeleteJob(key);
+            _logger.LogInformation("Deleting old job with key {Key}", key);
+            await _scheduler.DeleteJob(key, cancellationToken);
         }
 
-        var existingTriggerKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
-        var triggerKeys = Jobs.Select(j => j.Item2.Key);
+        var existingTriggerKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup(), cancellationToken);
 
         foreach (var key in existingTriggerKeys)
         {
@@ -135,14 +137,32 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                 continue;
             }
 
-            _logger.LogInformation($"Unscheduling old trigger with key {key}");
-            await _scheduler.UnscheduleJob(key);
+            _logger.LogInformation("Unscheduling old trigger with key {Key}", key);
+            await _scheduler.UnscheduleJob(key, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Immediately fires an already-scheduled job on the running scheduler, outside its normal
+    /// trigger cadence. The job executes with its registered identity, so job-level attributes
+    /// like <see cref="DisallowConcurrentExecutionAttribute"/> still apply.
+    /// </summary>
+    public virtual async Task TriggerJobNowAsync<T>(CancellationToken cancellationToken = default) where T : class, IJob
+    {
+        if (_scheduler is null)
+        {
+            throw new InvalidOperationException("Scheduler has not been started; cannot trigger job.");
+        }
+
+        await _scheduler.TriggerJob(new JobKey(typeof(T).FullName!), cancellationToken);
     }
 
     public virtual async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _scheduler?.Shutdown(cancellationToken);
+        if (_scheduler is not null)
+        {
+            await _scheduler.Shutdown(cancellationToken);
+        }
     }
 
     public virtual void Dispose()

@@ -1,0 +1,1589 @@
+﻿using System.Text.Json;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models;
+using Bit.Core.Platform.Push;
+using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
+using Bit.Core.Test.Tools.AutoFixture.SendFixtures;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Commands;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
+using Bit.Core.Tools.Services;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Xunit;
+
+namespace Bit.Core.Test.Tools.Services;
+
+[SutProviderCustomize]
+[CurrentContextCustomize]
+[UserSendCustomize]
+public class NonAnonymousSendCommandTests
+{
+    private readonly ISendRepository _sendRepository;
+    private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly ISendValidationService _sendValidationService;
+    private readonly ICurrentContext _currentContext;
+    private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly IEventService _eventService;
+    private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
+
+    private readonly ILogger<NonAnonymousSendCommand> _logger;
+
+    public NonAnonymousSendCommandTests()
+    {
+        _sendRepository = Substitute.For<ISendRepository>();
+        _sendFileStorageService = Substitute.For<ISendFileStorageService>();
+        _pushNotificationService = Substitute.For<IPushNotificationService>();
+        _sendValidationService = Substitute.For<ISendValidationService>();
+        _currentContext = Substitute.For<ICurrentContext>();
+        _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
+        _eventService = Substitute.For<IEventService>();
+        _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
+
+        _nonAnonymousSendCommand = new NonAnonymousSendCommand(
+            _sendRepository,
+            _sendFileStorageService,
+            _pushNotificationService,
+            _sendValidationService,
+            _sendCoreHelperService,
+            _eventService,
+            _logger
+        );
+    }
+
+    // Disable Send policy check
+    [Theory]
+    [InlineData(SendType.File)]
+    [InlineData(SendType.Text)]
+    public async Task SaveSendAsync_DisableSend_Applies_throws(SendType sendType)
+    {
+        // Arrange
+        var send = new Send
+        {
+            Id = default,
+            Type = sendType,
+            UserId = Guid.NewGuid()
+        };
+
+        var user = new User
+        {
+            Id = send.UserId.Value,
+            Email = "test@example.com"
+        };
+
+        // Configure validation service to throw when DisableSend policy applies
+        _sendValidationService.ValidateUserCanSaveAsync(send.UserId.Value, send)
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveSendAsync(send));
+
+        Assert.Contains("Enterprise policy", exception.Message);
+
+        // Verify the validation service was called
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(send.UserId.Value, send);
+
+        // Verify repository was not called since exception was thrown
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+    }
+
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableSend_DoesntApply_success(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            Data = "Text with Notes"
+        };
+
+        var initialDate = DateTime.UtcNow.AddMinutes(-5);
+        send.RevisionDate = initialDate;
+
+        // Configure validation service to NOT throw (policy doesn't apply)
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Set up context for reference event
+        _currentContext.ClientId.Returns("test-client");
+        _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        // Verify validation was checked
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        if (isNewSend)
+        {
+            // For new Sends
+            await _sendRepository.Received(1).CreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
+        }
+        else
+        {
+            // For existing Sends
+            await _sendRepository.Received(1).UpsertAsync(send);
+            Assert.NotEqual(initialDate, send.RevisionDate);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableHideEmail_Applies_throws(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            HideEmail = true
+        };
+
+        // Configure validation service to throw when HideEmail policy applies
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send)
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveSendAsync(send));
+
+        Assert.Contains("hide your email address", exception.Message);
+
+        // Verify validation was called
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        // Verify repository was not called (exception prevented save)
+        if (isNewSend)
+        {
+            await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        }
+        else
+        {
+            await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        }
+
+        // Verify push notification wasn't sent
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableHideEmail_DoesntApply_success(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            HideEmail = true  // Setting HideEmail to true
+        };
+
+        var initialDate = DateTime.UtcNow.AddMinutes(-5);
+        send.RevisionDate = initialDate;
+
+        // Configure validation service to NOT throw (policy doesn't apply)
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Set up context for reference event
+        _currentContext.ClientId.Returns("test-client");
+        _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        // Verify validation was checked
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        if (isNewSend)
+        {
+            // For new Sends
+            await _sendRepository.Received(1).CreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
+        }
+        else
+        {
+            // For existing Sends
+            await _sendRepository.Received(1).UpsertAsync(send);
+            Assert.NotEqual(initialDate, send.RevisionDate);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+        }
+    }
+
+    [Theory]
+    [InlineData(SendType.File)]
+    [InlineData(SendType.Text)]
+    public async Task SaveSendAsync_DisableSend_Applies_Throws_vNext(SendType sendType)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = sendType,
+            UserId = userId
+        };
+
+        // Configure validation service to throw when DisableSend policy applies in vNext implementation
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send)
+            .Returns(Task.FromException(new BadRequestException("Due to an Enterprise policy, you are only able to delete an existing Send.")));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveSendAsync(send));
+
+        Assert.Contains("Enterprise policy", exception.Message);
+
+        // Verify validation service was called
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        // Verify repository and notification methods were not called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableSend_DoesntApply_Success_vNext(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            Data = "Text with Notes"
+        };
+
+        var initialDate = DateTime.UtcNow.AddMinutes(-5);
+        send.RevisionDate = initialDate;
+
+        // Configure validation service to return success for vNext implementation
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Set up context for reference event
+        _currentContext.ClientId.Returns("test-client");
+        _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        // Verify validation was checked with vNext path
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        if (isNewSend)
+        {
+            // For new Sends
+            await _sendRepository.Received(1).CreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
+        }
+        else
+        {
+            // For existing Sends
+            await _sendRepository.Received(1).UpsertAsync(send);
+            Assert.NotEqual(initialDate, send.RevisionDate);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+        }
+    }
+
+    // Send Options Policy - Disable Hide Email check
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableHideEmail_Applies_Throws_vNext(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            HideEmail = true
+        };
+
+        // Configure validation service to throw when DisableHideEmail policy applies in vNext implementation
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send)
+            .Throws(new BadRequestException("Due to an Enterprise policy, you are not allowed to hide your email address from recipients when creating or editing a Send."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveSendAsync(send));
+
+        Assert.Contains("hide your email address", exception.Message);
+
+        // Verify validation was called
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        // Verify repository was not called (exception prevented save)
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+
+        // Verify push notification wasn't sent
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Theory]
+    [InlineData(true)]  // New Send (Id is default)
+    [InlineData(false)] // Existing Send (Id is not default)
+    public async Task SaveSendAsync_DisableHideEmail_Applies_ButEmailNotHidden_Success_vNext(bool isNewSend)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = isNewSend ? default : Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+            HideEmail = false  // Email is not hidden, so policy doesn't block
+        };
+
+        var initialDate = DateTime.UtcNow.AddMinutes(-5);
+        send.RevisionDate = initialDate;
+
+        // Configure validation service to allow saves when HideEmail is false
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Set up context for reference event
+        _currentContext.ClientId.Returns("test-client");
+        _currentContext.ClientVersion.Returns(Version.Parse("1.0.0"));
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        // Verify validation was called with vNext path
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        if (isNewSend)
+        {
+            // For new Sends
+            await _sendRepository.Received(1).CreateAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendCreate && n.Payload.Id == send.Id));
+        }
+        else
+        {
+            // For existing Sends
+            await _sendRepository.Received(1).UpsertAsync(send);
+            Assert.NotEqual(initialDate, send.RevisionDate);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+        }
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_ExistingSend_Updates()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.Text,
+            UserId = userId,
+            Data = "Some text data"
+        };
+
+        var initialDate = DateTime.UtcNow.AddMinutes(-5);
+        send.RevisionDate = initialDate;
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        // Verify validation was called
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        // Verify repository was called with updated send
+        await _sendRepository.Received(1).UpsertAsync(send);
+
+        // Check that the revision date was updated
+        Assert.NotEqual(initialDate, send.RevisionDate);
+
+        // Verify push notification was sent for the update
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_TextType_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text, // Text type instead of File
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 1024L; // 1KB
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("not of type \"file\"", exception.Message);
+
+        // Verify no further methods were called
+        await _sendValidationService.DidNotReceive().StorageRemainingForSendAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_EmptyFile_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 0L; // Empty file
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("No file data", exception.Message);
+
+        // Verify no methods were called after validation failed
+        await _sendValidationService.DidNotReceive().StorageRemainingForSendAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCannotAccessPremium_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 1024L; // 1KB
+
+        // Configure validation service to throw when checking storage
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Throws(new BadRequestException("You must have premium status to use file Sends."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("premium status", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserHasUnconfirmedEmail_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 1024L; // 1KB
+
+        // Configure validation service to pass storage check
+        _sendValidationService.StorageRemainingForSendAsync(send).Returns(10240L); // 10KB remaining
+
+        // Configure validation service to throw when checking user can save
+        _sendValidationService.When(x => x.ValidateUserCanSaveAsync(userId, send))
+            .Throw(new BadRequestException("You must confirm your email before creating a Send."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("confirm your email", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify SaveSendAsync attempted to be called, triggering email validation
+        await _sendValidationService.Received(1).ValidateUserCanSaveAsync(userId, send);
+
+        // Verify no repository or notification methods were called after validation failed
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_HasNoStorage_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 1024L; // 1KB
+
+        // Configure validation service to return 0 storage remaining
+        _sendValidationService.StorageRemainingForSendAsync(send).Returns(0L);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Not enough storage available", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_StorageFull_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 1024L; // 1KB
+
+        // Configure validation service to return less storage remaining than needed
+        _sendValidationService.StorageRemainingForSendAsync(send).Returns(512L); // Only 512 bytes available
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Not enough storage available", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsSelfHosted_GiantFile_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 15L * 1024L * 1024L; // 15 MB
+
+        // Configure validation service to return insufficient storage
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Returns(10L * 1024L * 1024L); // 10 MB remaining
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Not enough storage available", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_TwoGigabyteFile_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L * 1024L; // 2MB
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Max file size is ", exception.Message);
+
+        // Verify no further methods were called
+        await _sendValidationService.DidNotReceive().StorageRemainingForSendAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_UserCanAccessPremium_IsNotPremium_IsNotSelfHosted_NotEnoughSpace_ThrowsBadRequest()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L; // 2MB
+
+        // Configure validation service to return 1 MB storage remaining
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Returns(1L * 1024L * 1024L);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Not enough storage available", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_ThrowsBadRequest()
+    {
+        // Arrange
+        var organizationId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            OrganizationId = organizationId
+        };
+
+        var fileData = new SendFileData
+        {
+            FileName = "test.txt"
+        };
+
+        const long fileLength = 1000;
+
+        // Set up validation service to return 0 storage remaining
+        // This simulates the case when an organization's max storage is null
+        _sendValidationService.StorageRemainingForSendAsync(send).Returns(0L);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Equal("Not enough storage available.", exception.Message);
+
+        // Verify the method was called exactly once
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsNull_TwoGBFile_ThrowsBadRequest()
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            OrganizationId = orgId,
+            UserId = null
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
+
+        // Configure validation service to throw BadRequest when checking storage for org without storage
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Throws(new BadRequestException("This organization cannot use file sends."));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("This organization cannot use file sends", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_ThroughOrg_MaxStorageIsOneGB_TwoGBFile_ThrowsBadRequest()
+    {
+        // Arrange
+        var orgId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            OrganizationId = orgId,
+            UserId = null
+        };
+        var fileData = new SendFileData();
+        var fileLength = 2L * 1024L * 1024L; // 2 MB
+
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Returns(1L * 1024L * 1024L); // 1 MB remaining
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        Assert.Contains("Not enough storage available", exception.Message);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify no further methods were called
+        await _sendRepository.DidNotReceive().CreateAsync(Arg.Any<Send>());
+        await _sendRepository.DidNotReceive().UpsertAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_HasEnoughStorage_Success()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 500L * 1024L; // 500KB
+        var expectedFileId = "generatedfileid";
+        var expectedUploadUrl = "https://upload.example.com/url";
+
+        // Configure storage validation to return more storage than needed
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Returns(1024L * 1024L); // 1MB remaining
+
+        // Configure file storage service to return upload URL
+        _sendFileStorageService.GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>())
+            .Returns(expectedUploadUrl);
+
+        // Set up string generator to return predictable file ID
+        _sendCoreHelperService.SecureRandomString(32, false, false)
+            .Returns(expectedFileId);
+
+        // Act
+        var result = await _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength);
+
+        // Assert
+        Assert.Equal(expectedUploadUrl, result);
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify upload URL was requested
+        await _sendFileStorageService.Received(1).GetSendFileUploadUrlAsync(send, expectedFileId);
+    }
+
+    [Fact]
+    public async Task SaveFileSendAsync_HasEnoughStorage_SendFileThrows_CleansUp()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId
+        };
+        var fileData = new SendFileData();
+        var fileLength = 500L * 1024L; // 500KB
+        var expectedFileId = "generatedfileid";
+
+        // Configure storage validation to return more storage than needed
+        _sendValidationService.StorageRemainingForSendAsync(send)
+            .Returns(1024L * 1024L); // 1MB remaining
+
+        // Set up string generator to return predictable file ID
+        _sendCoreHelperService.SecureRandomString(32, false, false)
+            .Returns(expectedFileId);
+
+        // Configure file storage service to throw exception when getting upload URL
+        _sendFileStorageService.GetSendFileUploadUrlAsync(Arg.Any<Send>(), Arg.Any<string>())
+            .Throws(new Exception("Storage service unavailable"));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() =>
+            _nonAnonymousSendCommand.SaveFileSendAsync(send, fileData, fileLength));
+
+        // Verify storage validation was called
+        await _sendValidationService.Received(1).StorageRemainingForSendAsync(send);
+
+        // Verify file was cleaned up after failure
+        await _sendFileStorageService.Received(1).DeleteFileAsync(send, expectedFileId);
+    }
+
+    [Fact]
+    public async Task UpdateFileToExistingSendAsync_SendNull_ThrowsBadRequest()
+    {
+        // Arrange
+        Stream stream = new MemoryStream();
+        Send send = null;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
+
+        Assert.Equal("Send does not have file data", exception.Message);
+
+        // Verify no interactions with storage service
+        await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
+            Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task UpdateFileToExistingSendAsync_SendDataNull_ThrowsBadRequest()
+    {
+        // Arrange
+        Stream stream = new MemoryStream();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Data = null // Send exists but has null Data property
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
+
+        Assert.Equal("Send does not have file data", exception.Message);
+
+        // Verify no interactions with storage service
+        await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
+            Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task UpdateFileToExistingSendAsync_NotFileType_ThrowsBadRequest()
+    {
+        // Arrange
+        Stream stream = new MemoryStream();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text, // Not a file type
+            UserId = Guid.NewGuid(),
+            Data = "{\"someData\":\"value\"}" // Has data, but not file data
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
+
+        Assert.Equal("Not a File Type Send.", exception.Message);
+
+        // Verify no interactions with storage service
+        await _sendFileStorageService.DidNotReceiveWithAnyArgs().UploadNewFileAsync(
+            Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task UpdateFileToExistingSendAsync_StreamPositionRestToZero_Success()
+    {
+        // Arrange
+        var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        stream.Position = 2;
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "existingfileid123";
+
+        var sendFileData = new SendFileData { Id = fileId, Size = 1000, Validated = false };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(sendFileData)
+        };
+
+        // Setup validation to succeed
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
+
+        // Act
+        await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
+
+        // Assert
+        // Verify file was uploaded with correct parameters
+        await _sendFileStorageService.Received(1).UploadNewFileAsync(
+            Arg.Is<Stream>(s => s == stream && s.Position == 0), // Ensure stream position is reset
+            Arg.Is<Send>(s => s.Id == sendId && s.UserId == userId),
+            Arg.Is<string>(id => id == fileId)
+        );
+    }
+
+
+    [Fact]
+    public async Task UploadFileToExistingSendAsync_Success()
+    {
+        // Arrange
+        var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        stream.Position = 2; // Simulate a non-zero position
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "existingfileid123";
+
+        var sendFileData = new SendFileData { Id = fileId, Size = 1000, Validated = false };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(sendFileData)
+        };
+
+        _sendFileStorageService.ValidateFileAsync(send, sendFileData.Id, Arg.Any<long>(), Arg.Any<long>()).Returns((true, sendFileData.Size));
+
+        // Act
+        await _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send);
+
+        // Assert
+        // Verify file was uploaded with correct parameters
+        await _sendFileStorageService.Received(1).UploadNewFileAsync(
+            Arg.Is<Stream>(s => s == stream && s.Position == 0), // Ensure stream position is reset
+            Arg.Is<Send>(s => s.Id == sendId && s.UserId == userId),
+            Arg.Is<string>(id => id == fileId)
+        );
+    }
+
+    [Fact]
+    public async Task UpdateFileToExistingSendAsync_InvalidSize_ThrowsBadRequest()
+    {
+        // Arrange
+        var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        var sendId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var fileId = "existingfileid123";
+
+        var sendFileData = new SendFileData { Id = fileId, Size = 1000, Validated = false };
+        var send = new Send
+        {
+            Id = sendId,
+            UserId = userId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(sendFileData)
+        };
+
+        // Configure storage service to upload successfully
+        _sendFileStorageService.UploadNewFileAsync(
+                Arg.Any<Stream>(), Arg.Any<Send>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask);
+
+        // Configure validation to fail due to file size mismatch
+        _sendFileStorageService.ValidateFileAsync(send, fileId, Arg.Any<long>(), Arg.Any<long>())
+            .Returns((false, 0L));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.UploadFileToExistingSendAsync(stream, send));
+
+        Assert.Equal("File received does not match expected file length.", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithTextSend_ThrowsBadRequest()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = Guid.NewGuid()
+        };
+        var fileId = "somefile123";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId));
+
+        Assert.Equal("Can only get a download URL for a file type of Send", exception.Message);
+
+        // Verify no storage service methods were called
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithDisabledSend_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithMaxAccessCountReached_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 5,
+            MaxAccessCount = 5
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithExpiredSend_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1), // Expired yesterday
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithDeletionDatePassed_ReturnsDenied()
+    {
+        // Arrange
+        var fileId = "file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(-1), // Deletion date has passed
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Null(url);
+        Assert.Equal(SendAccessResult.Denied, result);
+
+        // Verify no repository updates occurred
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _sendFileStorageService.DidNotReceive()
+            .GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithValidSend_ReturnsUrlAndIncrementsAccessCount()
+    {
+        // Arrange
+        var fileId = "file123";
+        var expectedUrl = "https://download.example.com/file123";
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 3,
+            MaxAccessCount = 10
+        };
+
+        _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
+
+        // Act
+        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
+
+        // Assert
+        Assert.Equal(expectedUrl, url);
+        Assert.Equal(SendAccessResult.Granted, result);
+
+        // Verify access count was incremented
+        Assert.Equal(4, send.AccessCount);
+
+        // Verify repository was updated
+        await _sendRepository.Received(1).ReplaceAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
+
+        // Verify file storage service was called
+        await _sendFileStorageService.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithDisabledSend_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = true,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithMaxAccessCountReached_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 10,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithExpiredSend_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(-1),
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithDeletionDatePassed_ReturnsFalse()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(-1),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithValidSend_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = DateTime.UtcNow.AddDays(7),
+            AccessCount = 5,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithNullMaxAccessCount_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 100,
+            MaxAccessCount = null
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void SendCanBeAccessed_WithNullExpirationDate_ReturnsTrue()
+    {
+        // Arrange
+        var send = new Send
+        {
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = 10
+        };
+
+        // Act
+        var result = INonAnonymousSendCommand.SendCanBeAccessed(send);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DeleteSendAsync_FileSend_DeletesFileBeforeDbRecord()
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var fileData = new SendFileData { Id = "file123", FileName = "test.txt", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            UserId = Guid.NewGuid()
+        };
+
+        var callOrder = new List<string>();
+        _sendFileStorageService.DeleteFileAsync(send, fileData.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        _sendRepository.DeleteAsync(send)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendFileStorageService.Received(1).DeleteFileAsync(send, fileData.Id);
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
+        Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
+
+    [Theory]
+    [InlineData("Alice@Example.COM,BOB@example.com", "alice@example.com,bob@example.com")]
+    [InlineData("  Spaced@Example.com  ", "spaced@example.com")]
+    [InlineData("a@x.com,,  ,b@x.com", "a@x.com,b@x.com")]
+    public async Task SaveSendAsync_NormalizesEmailAllowList_BeforeSave(string input, string expected)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            AuthType = AuthType.Email,
+            Emails = input,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        Assert.Equal(expected, send.Emails);
+        await _sendRepository.Received(1).CreateAsync(Arg.Is<Send>(s => s.Emails == expected));
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NullEmailAllowList_LeavesEmailsNull()
+    {
+        // Arrange — password / no-auth Sends have no email list and must not gain one.
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            Emails = null,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        // Act
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        // Assert
+        Assert.Null(send.Emails);
+        await _sendRepository.Received(1).CreateAsync(Arg.Is<Send>(s => s.Emails == null));
+    }
+
+    public static IEnumerable<object[]> SendCreatedEventTypeData()
+    {
+        yield return new object[] { SendType.Text, AuthType.None, EventType.Send_Created_Text };
+        yield return new object[] { SendType.Text, AuthType.Email, EventType.Send_Created_Text_WithEmailVerification };
+        yield return new object[] { SendType.Text, AuthType.Password, EventType.Send_Created_Text_WithPasswordProtection };
+        yield return new object[] { SendType.File, AuthType.None, EventType.Send_Created_File };
+        yield return new object[] { SendType.File, AuthType.Email, EventType.Send_Created_File_WithEmailVerification };
+        yield return new object[] { SendType.File, AuthType.Password, EventType.Send_Created_File_WithPasswordProtection };
+    }
+
+    [Theory]
+    [MemberData(nameof(SendCreatedEventTypeData))]
+    public async Task SaveSendAsync_NewSend_LogsExpectedEventType(
+        SendType sendType, AuthType authType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = sendType,
+            UserId = userId,
+            AuthType = authType,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).CreateAsync(send);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NewSend_NullAuthType_LogsBaseSendCreatedEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+            AuthType = null,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), EventType.Send_Created_Text);
+    }
+
+    [Theory]
+    [InlineData(SendType.Text, EventType.Send_Edited_Text)]
+    [InlineData(SendType.File, EventType.Send_Edited_File)]
+    public async Task SaveSendAsync_ExistingSend_LogsExpectedEventType(
+        SendType sendType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = sendType,
+            UserId = userId,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send);
+
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+
+    [Theory]
+    [InlineData(SendType.Text, EventType.Send_Deleted_Text)]
+    [InlineData(SendType.File, EventType.Send_Deleted_File)]
+    public async Task DeleteSendAsync_LogsExpectedEventType(
+        SendType sendType, EventType expectedEventType)
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = sendType,
+            UserId = userId,
+        };
+
+        await _nonAnonymousSendCommand.DeleteSendAsync(send);
+
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
+        await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+}

@@ -1,0 +1,19 @@
+{{#>TitleContactUsTextLayout}}
+{{OrganizationName}} is rolling out Bitwarden to increase security and protect your sensitive data. Once you accept this invitation, you can:
+
+- Store logins securely so you never forget your passwords.
+- Sign in to accounts quickly by filling passwords with one click.
+- Share logins easily with your team.
+
+{{#if InviterEmail}}
+This invitation was sent by {{InviterEmail}} and expires {{ExpirationDate}}.
+{{else}}
+This invitation expires {{ExpirationDate}}.
+{{/if}}
+
+Your existing account will be owned by {{OrganizationName}}
+
+By accepting this invitation, your account ({{Email}}) will be owned by {{OrganizationName}} and will be subject to their security and management policies. Contact your administrator with any questions or concerns.
+
+Accept invitation: {{Url}}
+{{/TitleContactUsTextLayout}}

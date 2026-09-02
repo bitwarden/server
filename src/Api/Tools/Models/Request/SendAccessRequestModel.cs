@@ -5,5 +5,5 @@ namespace Bit.Api.Tools.Models.Request;
 public class SendAccessRequestModel
 {
     [StringLength(300)]
-    public string Password { get; set; }
+    public string? Password { get; set; }
 }

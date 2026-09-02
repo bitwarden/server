@@ -1,16 +1,33 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
-using NS = Newtonsoft.Json;
-using NSL = Newtonsoft.Json.Linq;
 
 namespace Bit.Api.Vault.Models.Request;
 
-public class CipherRequestModel
+public class CipherRequestModel : IValidatableObject
 {
+    /// <summary>
+    /// The Id of the user that encrypted the cipher. It should always represent a UserId.
+    /// </summary>
+    [Obsolete("Use EncryptedByKeyId instead, which identifies the key the cipher was encrypted with.")]
+    public Guid? EncryptedFor { get; set; }
+
+    /// <summary>
+    /// Hex-encoded key id of the key the client held when it encrypted this cipher: the user key for a
+    /// user-owned cipher, the organization key for an organization cipher. Absent for clients that
+    /// predate the field. For a user-owned cipher it must match the acting user's current user key id;
+    /// for an organization cipher it is not validated, because organizations carry no key id yet.
+    /// </summary>
+    [KeyId]
+    public string EncryptedByKeyId { get; set; }
+
     public CipherType Type { get; set; }
 
     [StringLength(36)]
@@ -19,7 +36,6 @@ public class CipherRequestModel
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
-    [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
@@ -33,16 +49,65 @@ public class CipherRequestModel
     // TODO: Rename to Attachments whenever the above is finally removed.
     public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
+    [Obsolete("Use Data instead.")]
     public CipherLoginModel Login { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherCardModel Card { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherIdentityModel Identity { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSecureNoteModel SecureNote { get; set; }
+
+    [Obsolete("Use Data instead.")]
     public CipherSSHKeyModel SSHKey { get; set; }
+
+    [Obsolete("Use Data instead.")] public CipherBankAccountModel BankAccount { get; set; }
+
+    [Obsolete("Use Data instead.")] public CipherDriversLicenseModel DriversLicense { get; set; }
+
+    [Obsolete("Use Data instead.")] public CipherPassportModel Passport { get; set; }
+
+    /// <summary>
+    /// JSON string containing cipher-specific data
+    /// </summary>
+    [StringLength(500000)]
+    public string Data { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
+    public DateTime? ArchivedDate { get; set; }
+
+    /// <summary>
+    /// The key the client encrypted this cipher with, or null when it did not supply one.
+    /// </summary>
+    public KeyId GetEncryptedByKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(EncryptedByKeyId) ? null : EncryptedByKeyId);
+
+    /// <summary>
+    /// Blob-encrypted ciphers carry all their content in <see cref="Data"/> and leave Name unused.
+    /// Every other format still stores Name as a structured field, so it stays required there.
+    /// </summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var isBlobEncrypted = new Cipher { Data = Data }.IsDataBlobEncrypted();
+
+        if (!isBlobEncrypted && string.IsNullOrWhiteSpace(Name))
+        {
+            yield return new ValidationResult(
+                "The Name field is required.", new[] { nameof(Name) });
+        }
+    }
+
+    /// <summary>
+    /// True when this cipher is owned by an organization, and so is encrypted with the organization
+    /// key rather than the acting user's key.
+    /// </summary>
+    public bool IsOrganizationCipher => !string.IsNullOrWhiteSpace(OrganizationId);
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
-        var hasOrgId = !string.IsNullOrWhiteSpace(OrganizationId);
+        var hasOrgId = IsOrganizationCipher;
         var cipher = new CipherDetails
         {
             Type = Type,
@@ -59,39 +124,69 @@ public class CipherRequestModel
     {
         existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
         existingCipher.Favorite = Favorite;
+        existingCipher.ArchivedDate = ArchivedDate;
         ToCipher(existingCipher);
         return existingCipher;
     }
 
-    public Cipher ToCipher(Cipher existingCipher)
+    public Cipher ToCipher(Cipher existingCipher, Guid? userId = null)
     {
-        switch (existingCipher.Type)
+        // If Data field is provided, use it directly
+        if (!string.IsNullOrWhiteSpace(Data))
         {
-            case CipherType.Login:
-                var loginObj = NSL.JObject.FromObject(ToCipherLoginData(),
-                    new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore });
-                // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
-                loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
-                existingCipher.Data = loginObj.ToString(NS.Formatting.None);
-                break;
-            case CipherType.Card:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.Identity:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SecureNote:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            case CipherType.SSHKey:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
-                break;
-            default:
-                throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            existingCipher.Data = Data;
+        }
+        else
+        {
+            // Fallback to structured fields
+            switch (existingCipher.Type)
+            {
+                case CipherType.Login:
+                    var loginData = ToCipherLoginData();
+                    var loginJson = JsonSerializer.Serialize(loginData, JsonHelpers.IgnoreWritingNull);
+                    var loginObj = JsonDocument.Parse(loginJson);
+                    var loginDict = JsonSerializer.Deserialize<Dictionary<string, object>>(loginJson);
+                    loginDict?.Remove(nameof(CipherLoginData.Uri));
+
+                    existingCipher.Data = JsonSerializer.Serialize(loginDict, JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Card:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Identity:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SecureNote:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.SSHKey:
+                    existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.BankAccount:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherBankAccountData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.DriversLicense:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherDriversLicenseData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                case CipherType.Passport:
+                    existingCipher.Data =
+                        JsonSerializer.Serialize(ToCipherPassportData(), JsonHelpers.IgnoreWritingNull);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
+            }
         }
 
+        var userIdKey = userId.HasValue ? userId.ToString().ToUpperInvariant() : null;
         existingCipher.Reprompt = Reprompt;
         existingCipher.Key = Key;
+        existingCipher.Folders = UpdateUserSpecificJsonField(existingCipher.Folders, userIdKey, FolderId);
+        existingCipher.Favorites = UpdateUserSpecificJsonField(existingCipher.Favorites, userIdKey, Favorite);
+        existingCipher.Archives = UpdateUserSpecificJsonField(existingCipher.Archives, userIdKey, ArchivedDate);
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -109,18 +204,25 @@ public class CipherRequestModel
 
         if (hasAttachments2)
         {
-            foreach (var attachment in attachments.Where(a => Attachments2.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                var attachment2 = Attachments2[attachment.Key];
+                if (!Attachments2.TryGetValue(attachment.Key, out var attachment2))
+                {
+                    continue;
+                }
                 attachment.Value.FileName = attachment2.FileName;
                 attachment.Value.Key = attachment2.Key;
             }
         }
         else if (hasAttachments)
         {
-            foreach (var attachment in attachments.Where(a => Attachments.ContainsKey(a.Key)))
+            foreach (var attachment in attachments)
             {
-                attachment.Value.FileName = Attachments[attachment.Key];
+                if (!Attachments.TryGetValue(attachment.Key, out var attachmentForKey))
+                {
+                    continue;
+                }
+                attachment.Value.FileName = attachmentForKey;
                 attachment.Value.Key = null;
             }
         }
@@ -249,6 +351,104 @@ public class CipherRequestModel
             KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
+
+    private CipherBankAccountData ToCipherBankAccountData()
+    {
+        return new CipherBankAccountData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            BankName = BankAccount.BankName,
+            NameOnAccount = BankAccount.NameOnAccount,
+            AccountType = BankAccount.AccountType,
+            AccountNumber = BankAccount.AccountNumber,
+            RoutingNumber = BankAccount.RoutingNumber,
+            BranchNumber = BankAccount.BranchNumber,
+            Pin = BankAccount.Pin,
+            SwiftCode = BankAccount.SwiftCode,
+            Iban = BankAccount.Iban,
+            BankContactPhone = BankAccount.BankContactPhone,
+        };
+    }
+
+    private CipherDriversLicenseData ToCipherDriversLicenseData()
+    {
+        return new CipherDriversLicenseData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            FirstName = DriversLicense.FirstName,
+            MiddleName = DriversLicense.MiddleName,
+            LastName = DriversLicense.LastName,
+            DateOfBirth = DriversLicense.DateOfBirth,
+            LicenseNumber = DriversLicense.LicenseNumber,
+            IssuingCountry = DriversLicense.IssuingCountry,
+            IssuingState = DriversLicense.IssuingState,
+            IssueDate = DriversLicense.IssueDate,
+            IssuingAuthority = DriversLicense.IssuingAuthority,
+            ExpirationDate = DriversLicense.ExpirationDate,
+            LicenseClass = DriversLicense.LicenseClass,
+        };
+    }
+
+    private CipherPassportData ToCipherPassportData()
+    {
+        return new CipherPassportData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+            Surname = Passport.Surname,
+            GivenName = Passport.GivenName,
+            DateOfBirth = Passport.DateOfBirth,
+            Sex = Passport.Sex,
+            BirthPlace = Passport.BirthPlace,
+            Nationality = Passport.Nationality,
+            PassportNumber = Passport.PassportNumber,
+            PassportType = Passport.PassportType,
+            IssuingCountry = Passport.IssuingCountry,
+            IssuingAuthority = Passport.IssuingAuthority,
+            IssueDate = Passport.IssueDate,
+            ExpirationDate = Passport.ExpirationDate,
+            NationalIdentificationNumber = Passport.NationalIdentificationNumber,
+        };
+    }
+
+    /// <summary>
+    /// Updates a JSON string representing a dictionary by adding, updating, or removing a key-value pair
+    /// based on the provided userIdKey and newValue.
+    /// </summary>
+    private static string UpdateUserSpecificJsonField(string existingJson, string userIdKey, object newValue)
+    {
+        if (userIdKey == null)
+        {
+            return existingJson;
+        }
+
+        var jsonDict = string.IsNullOrWhiteSpace(existingJson)
+            ? new Dictionary<string, object>()
+            : JsonSerializer.Deserialize<Dictionary<string, object>>(existingJson) ?? new Dictionary<string, object>();
+
+        var shouldRemove = newValue == null ||
+                          (newValue is string strValue && string.IsNullOrWhiteSpace(strValue)) ||
+                          (newValue is bool boolValue && !boolValue);
+
+        if (shouldRemove)
+        {
+            jsonDict.Remove(userIdKey);
+        }
+        else
+        {
+            jsonDict[userIdKey] = newValue is string str ? str.ToUpperInvariant() : newValue;
+        }
+
+        return jsonDict.Count == 0 ? null : JsonSerializer.Serialize(jsonDict);
+    }
 }
 
 public class CipherWithIdRequestModel : CipherRequestModel
@@ -302,11 +502,23 @@ public class CipherCollectionsRequestModel
     public IEnumerable<string> CollectionIds { get; set; }
 }
 
+public class CipherBulkArchiveRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
+}
+
 public class CipherBulkDeleteRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
     public string OrganizationId { get; set; }
+}
+
+public class CipherBulkUnarchiveRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
 }
 
 public class CipherBulkRestoreRequestModel

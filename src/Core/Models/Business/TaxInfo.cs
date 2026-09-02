@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Models.Business;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Models.Business;
 
 public class TaxInfo
 {
@@ -10,11 +13,5 @@ public class TaxInfo
     public string BillingAddressCity { get; set; }
     public string BillingAddressState { get; set; }
     public string BillingAddressPostalCode { get; set; }
-    public string BillingAddressCountry { get; set; } = "US";
-
-    public bool HasTaxId
-    {
-        get => !string.IsNullOrWhiteSpace(TaxIdNumber) &&
-            !string.IsNullOrWhiteSpace(TaxIdType);
-    }
+    public string BillingAddressCountry { get; set; } = Constants.CountryAbbreviations.UnitedStates;
 }

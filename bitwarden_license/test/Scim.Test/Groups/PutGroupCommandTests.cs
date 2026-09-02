@@ -1,10 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Scim.Context;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -49,7 +47,7 @@ public class PutGroupCommandTests
         Assert.Equal(displayName, group.Name);
 
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default, default);
     }
 
     [Theory]
@@ -61,10 +59,6 @@ public class PutGroupCommandTests
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
-
-        sutProvider.GetDependency<IScimContext>()
-            .RequestScimProvider
-            .Returns(ScimProviderType.Okta);
 
         var inputModel = new ScimGroupRequestModel
         {
@@ -87,7 +81,7 @@ public class PutGroupCommandTests
         Assert.Equal(displayName, group.Name);
 
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))));
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => membersUserIds.Contains(id))), group.RevisionDate);
     }
 
     [Theory]

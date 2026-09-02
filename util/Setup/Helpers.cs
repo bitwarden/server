@@ -1,6 +1,8 @@
-﻿using System.Diagnostics;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -90,14 +92,14 @@ public static class Helpers
         return characters;
     }
 
-    public static string GetValueFromEnvFile(string envFile, string key)
+    public static string GetValueFromEnvFile(Application config, string envFile, string key)
     {
-        if (!File.Exists($"/bitwarden/env/{envFile}.override.env"))
+        if (!File.Exists($"{config.RootDirectory}/env/{envFile}.override.env"))
         {
             return null;
         }
 
-        var lines = File.ReadAllLines($"/bitwarden/env/{envFile}.override.env");
+        var lines = File.ReadAllLines($"{config.RootDirectory}/env/{envFile}.override.env");
         foreach (var line in lines)
         {
             if (line.StartsWith($"{key}="))
@@ -109,35 +111,52 @@ public static class Helpers
         return null;
     }
 
-    public static string Exec(string cmd, bool returnStdout = false)
+    public static string Exec(string cmd, string[] arguments = null, bool returnStdout = false, bool returnStderr = false)
     {
-        var process = new Process
+        var startInfo = new ProcessStartInfo(cmd, arguments ?? [])
         {
-            StartInfo = new ProcessStartInfo
+            RedirectStandardOutput = returnStdout,
+            RedirectStandardError = returnStderr,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+        };
+
+        var process = new Process { StartInfo = startInfo };
+
+        var result = new StringBuilder();
+        // OutputDataReceived and ErrorDataReceived are raised on separate threads, so appends to the
+        // shared StringBuilder must be synchronized. Without this lock, simultaneous stdout/stderr
+        // output corrupts the builder's internal buffer and throws
+        // "System.ArgumentException: Destination is too short", crashing the setup process.
+        var resultLock = new object();
+
+        process.OutputDataReceived += (_, e) =>
+        {
+            if (!returnStdout || e.Data == null) return;
+            lock (resultLock)
             {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
+                result.AppendLine(e.Data);
             }
         };
 
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        process.ErrorDataReceived += (_, e) =>
         {
-            var escapedArgs = cmd.Replace("\"", "\\\"");
-            process.StartInfo.FileName = "/bin/bash";
-            process.StartInfo.Arguments = $"-c \"{escapedArgs}\"";
-        }
-        else
-        {
-            process.StartInfo.FileName = "powershell";
-            process.StartInfo.Arguments = cmd;
-        }
+            if (!returnStderr || e.Data == null) return;
+            lock (resultLock)
+            {
+                result.AppendLine(e.Data);
+            }
+        };
 
         process.Start();
-        var result = returnStdout ? process.StandardOutput.ReadToEnd() : null;
+
+        if (returnStdout) process.BeginOutputReadLine();
+        if (returnStderr) process.BeginErrorReadLine();
+
         process.WaitForExit();
-        return result;
+
+        return result.ToString();
     }
 
     public static string ReadInput(string prompt)

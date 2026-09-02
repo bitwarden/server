@@ -1,7 +1,13 @@
 ﻿using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Import;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
@@ -9,14 +15,26 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfa
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Update;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.OrganizationFeatures.OrganizationCollections;
-using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -33,7 +51,11 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using V1_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
+using V2_RevokeUsersCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.OrganizationFeatures;
 
@@ -49,17 +71,51 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
-        services.AddOrganizationLicenseCommandsQueries();
+        services.AddOrganizationInviteLinkCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
+        services.AddOrganizationDeleteCommands();
+        services.AddOrganizationUpdateCommands();
+        services.AddOrganizationEnableCommands();
+        services.AddOrganizationDisableCommands();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
+        services.AddOrganizationFeatureCommands();
     }
 
-    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
+    private static void AddOrganizationFeatureCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationAutoConfirmEnabledNotificationCommand, OrganizationAutoConfirmEnabledNotificationCommand>();
+    }
+
+    private static void AddOrganizationSignUpCommands(this IServiceCollection services)
+    {
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+        services.AddScoped<IProviderClientOrganizationSignUpCommand, ProviderClientOrganizationSignUpCommand>();
+        services.AddScoped<IResellerClientOrganizationSignUpCommand, ResellerClientOrganizationSignUpCommand>();
+        services.AddScoped<ISelfHostedOrganizationSignUpCommand, SelfHostedOrganizationSignUpCommand>();
+    }
+
+    private static void AddOrganizationDeleteCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
+        services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
+    }
+
+    private static void AddOrganizationUpdateCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationUpdateKeysCommand, OrganizationUpdateKeysCommand>();
+        services.AddScoped<IOrganizationUpdateCommand, OrganizationUpdateCommand>();
+        services.AddScoped<IOrganizationUpdateCollectionManagementCommand, OrganizationUpdateCollectionManagementCommand>();
+    }
+
+    private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
+        services.AddScoped<IOrganizationEnableCommand, OrganizationEnableCommand>();
+
+    private static void AddOrganizationDisableCommands(this IServiceCollection services) =>
+        services.AddScoped<IOrganizationDisableCommand, OrganizationDisableCommand>();
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
     {
@@ -95,11 +151,34 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddOrganizationUserCommands(this IServiceCollection services)
     {
+        services.TryAddScoped<IOrganizationUserValidationService, OrganizationUserValidationService>();
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
+
+        services.AddScoped<V2_UpdateUserCommand.IUpdateOrganizationUserCommand, V2_UpdateUserCommand.UpdateOrganizationUserCommand>();
+        services.AddScoped<V2_UpdateUserCommand.IUpdateOrganizationUserValidator, V2_UpdateUserCommand.UpdateOrganizationUserValidator>();
+        services.AddScoped<IUpdateUserResetPasswordEnrollmentCommand, UpdateUserResetPasswordEnrollmentCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
-        services.AddScoped<IDeleteManagedOrganizationUserAccountCommand, DeleteManagedOrganizationUserAccountCommand>();
+        services.AddScoped<IConfirmOrganizationUserCommand, ConfirmOrganizationUserCommand>();
+        services.AddScoped<ISendOrganizationConfirmationCommand, SendOrganizationConfirmationCommand>();
+        services.AddScoped<IAdminRecoverAccountCommand, AdminRecoverAccountCommand>();
+        services.AddScoped<IAdminRecoverAccountValidator, AdminRecoverAccountValidator>();
+        services.AddScoped<IAutomaticallyConfirmOrganizationUserCommand, AutomaticallyConfirmOrganizationUserCommand>();
+        services.AddScoped<IAutomaticallyConfirmOrganizationUsersValidator, AutomaticallyConfirmOrganizationUsersValidator>();
+        services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersValidator, BulkAutomaticallyConfirmOrganizationUsersValidator>();
+        services.AddScoped<IBulkAutomaticallyConfirmOrganizationUsersCommand, BulkAutomaticallyConfirmOrganizationUsersCommand>();
+
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountCommand, DeleteClaimedOrganizationUserAccountCommand>();
+        services.AddScoped<IDeleteClaimedOrganizationUserAccountValidator, DeleteClaimedOrganizationUserAccountValidator>();
+
+        services.AddScoped<V1_RevokeUsersCommand.IRevokeOrganizationUserCommand, V1_RevokeUsersCommand.RevokeOrganizationUserCommand>();
+
+        services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserCommand, V2_RevokeUsersCommand.RevokeOrganizationUserCommand>();
+        services.AddScoped<V2_RevokeUsersCommand.IRevokeOrganizationUserValidator, V2_RevokeUsersCommand.RevokeOrganizationUsersValidator>();
+
+        services.AddScoped<ISelfRevokeOrganizationUserCommand, SelfRevokeOrganizationUserCommand>();
+        services.AddScoped<ICreateStagedOrganizationUsersCommand, CreateStagedOrganizationUsersCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
@@ -111,6 +190,8 @@ public static class OrganizationServiceCollectionExtensions
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
+        services.AddScoped<ICreateCollectionCommand, CreateCollectionCommand>();
+        services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
         services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
@@ -122,11 +203,22 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
-    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
+    private static void AddOrganizationInviteLinkCommandsQueries(this IServiceCollection services)
     {
-        services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
-        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
-        services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
+        services.TryAddScoped<ICreateOrganizationInviteLinkCommand, CreateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IGetOrganizationInviteLinkQuery, GetOrganizationInviteLinkQuery>();
+        services.TryAddScoped<IGetOrganizationInviteLinkPoliciesQuery, GetOrganizationInviteLinkPoliciesQuery>();
+        services.TryAddScoped<IGetOrganizationInviteLinkStatusQuery, GetOrganizationInviteLinkStatusQuery>();
+        services.TryAddScoped<IValidateOrganizationInviteLinkQuery, ValidateOrganizationInviteLinkQuery>();
+        services.TryAddScoped<IUpdateOrganizationInviteLinkCommand, UpdateOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IUpdateInviteSupportConfirmCommand, UpdateInviteSupportConfirmCommand>();
+        services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IAcceptInviteLinkMembershipValidator, AcceptInviteLinkMembershipValidator>();
+        services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
+        services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
@@ -137,6 +229,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
         services.AddScoped<IOrganizationHasVerifiedDomainsQuery, OrganizationHasVerifiedDomainsQuery>();
+        services.AddScoped<IOrganizationDomainAllowEmailChangeQuery, OrganizationDomainAllowEmailChangeQuery>();
     }
 
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
@@ -148,12 +241,29 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
+        services.TryAddScoped<IAcceptOrganizationMembershipValidator, AcceptOrganizationMembershipValidator>();
+        services.AddScoped<IPushAutoConfirmNotificationCommand, PushAutoConfirmNotificationCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
-        services.AddScoped<IGetOrganizationUsersManagementStatusQuery, GetOrganizationUsersManagementStatusQuery>();
+        services.AddScoped<IGetOrganizationUsersClaimedStatusQuery, GetOrganizationUsersClaimedStatusQuery>();
+        services.AddScoped<IGetPendingAutoConfirmUsersQuery, GetPendingAutoConfirmUsersQuery>();
 
-        services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
+        services.AddScoped<IRestoreOrganizationUserCommand, RestoreOrganizationUserCommand>();
+
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
+
+        services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
+        services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
+        services.AddScoped<IResendOrganizationInviteCommand, ResendOrganizationInviteCommand>();
+        services.AddScoped<IBulkResendOrganizationInvitesCommand, BulkResendOrganizationInvitesCommand>();
+
+        services.AddScoped<IInviteUsersValidator, InviteOrganizationUsersValidator>();
+        services.AddScoped<IInviteUsersOrganizationValidator, InviteUsersOrganizationValidator>();
+        services.AddScoped<IInviteUsersPasswordManagerValidator, InviteUsersPasswordManagerValidator>();
+        services.AddScoped<IInviteUsersEnvironmentValidator, InviteUsersEnvironmentValidator>();
+        services.AddScoped<IInitPendingOrganizationValidator, InitPendingOrganizationValidator>();
+        services.AddScoped<IInitPendingOrganizationCommand, InitPendingOrganizationCommand>();
+        services.AddScoped<IImportOrganizationUsersAndGroupsCommand, ImportOrganizationUsersAndGroupsCommand>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of

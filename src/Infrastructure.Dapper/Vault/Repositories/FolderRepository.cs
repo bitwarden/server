@@ -1,5 +1,8 @@
-﻿using System.Data;
-using Bit.Core.KeyManagement.UserKey;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -45,11 +48,38 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public async Task DeleteManyAsync(IEnumerable<Guid> folderIds, Guid userId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        await using var transaction = await connection.BeginTransactionAsync();
+        try
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Folder_DeleteByIds]",
+                new { Ids = folderIds.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure,
+                transaction: transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Folder> folders)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *

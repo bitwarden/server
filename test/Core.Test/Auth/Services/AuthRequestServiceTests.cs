@@ -7,15 +7,21 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
+using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 #nullable enable
 
@@ -135,7 +141,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var foundAuthRequest = await sutProvider.Sut.GetValidatedAuthRequestAsync(authRequest.Id, authRequest.AccessCode);
 
@@ -222,11 +228,19 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received()
-            .PushAuthRequestAsync(createdAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequest && n.Payload.Id == createdAuthRequest.Id));
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received()
             .CreateAsync(createdAuthRequest);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
     }
 
     /// <summary>
@@ -261,17 +275,30 @@ public class AuthRequestServiceTests
     /// each of them.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task CreateAuthRequestAsync_AdminApproval_CreatesForEachOrganization(
+    public async Task CreateAuthRequestAsync_AdminApproval_CreatesForEachOrganization_SendsEmails(
         SutProvider<AuthRequestService> sutProvider,
         AuthRequestCreateRequestModel createModel,
         User user,
         OrganizationUser organizationUser1,
-        OrganizationUser organizationUser2)
+        OrganizationUserUserDetails admin1,
+        OrganizationUserUserDetails customUser1,
+        OrganizationUser organizationUser2,
+        OrganizationUserUserDetails admin2,
+        OrganizationUserUserDetails admin3,
+        OrganizationUserUserDetails customUser2)
     {
         createModel.Type = AuthRequestType.AdminApproval;
         user.Email = createModel.Email;
         organizationUser1.UserId = user.Id;
         organizationUser2.UserId = user.Id;
+        customUser1.Permissions = CoreHelpers.ClassToJsonData(new Permissions
+        {
+            ManageResetPassword = false,
+        });
+        customUser2.Permissions = CoreHelpers.ClassToJsonData(new Permissions
+        {
+            ManageResetPassword = true,
+        });
 
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(user.Email)
@@ -298,6 +325,35 @@ public class AuthRequestServiceTests
                 organizationUser2,
             });
 
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Admin)
+            .Returns(
+            [
+                admin1,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Custom)
+            .Returns(
+            [
+                customUser1,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser2.OrganizationId, OrganizationUserType.Admin)
+            .Returns(
+            [
+                admin2,
+                admin3,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser2.OrganizationId, OrganizationUserType.Custom)
+            .Returns(
+            [
+                customUser2,
+            ]);
+
         sutProvider.GetDependency<IAuthRequestRepository>()
             .CreateAsync(Arg.Any<AuthRequest>())
             .Returns(c => c.ArgAt<AuthRequest>(0));
@@ -320,7 +376,147 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 1 && emails.Contains(admin1.Email)),
+                organizationUser1.OrganizationId,
+                user.Email,
+                user.Name);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 3 &&
+                                                      emails.Contains(admin2.Email) && emails.Contains(admin3.Email) &&
+                                                      emails.Contains(customUser2.Email)),
+                organizationUser2.OrganizationId,
+                user.Email,
+                user.Name);
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task CreateAuthRequestAsync_AdminApproval_AndNoAdminEmails_ShouldNotSendNotificationEmails(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        OrganizationUser organizationUser1)
+    {
+        createModel.Type = AuthRequestType.AdminApproval;
+        user.Email = createModel.Email;
+        organizationUser1.UserId = user.Id;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(user.Id);
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>
+            {
+                organizationUser1,
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Admin)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Custom)
+            .Returns([]);
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .CreateAsync(Arg.Any<AuthRequest>())
+            .Returns(c => c.ArgAt<AuthRequest>(0));
+
+        var authRequest = await sutProvider.Sut.CreateAuthRequestAsync(createModel);
+
+        Assert.Equal(organizationUser1.OrganizationId, authRequest.OrganizationId);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser1.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Any<AuthRequest>());
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(0)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
+
+        sutProvider.GetDependency<ILogger<AuthRequestService>>()
+            .Received(1)
+            .LogWarning("There are no admin emails to send to.");
+    }
+
+    [Theory]
+    [BitAutoData(AuthRequestType.AdminApproval)]
+    [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
+    [BitAutoData(AuthRequestType.Unlock)]
+    public async Task CreateAuthRequestAsync_AuthenticatedCallerUserIdMismatch_ThrowsBadRequest(
+        AuthRequestType type,
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        Guid authenticatedUserId)
+    {
+        createModel.Type = type;
+        createModel.Email = user.Email;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(authenticatedUserId);
+
+        // Mock this as false so we pin the test failure to the userId mismatch guard rather than to the first
+        // identically-worded "User or known device not found." exception that could fire earlier.
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+
+        // For the AuthRequestType.AdminApproval test case, this assertion pins the test failure to the userId mismatch guard
+        // rather than to the "User does not belong to any organizations." exception, which is also of type BadRequestException.
+        Assert.Equal("User or known device not found.", exception.Message);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
     }
 
     /// <summary>
@@ -367,7 +563,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {
@@ -391,7 +587,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == udpatedAuthRequest.Id));
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
         await sutProvider.GetDependency<IEventService>()
@@ -436,7 +632,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetByIdentifierAsync(device.Identifier, authRequest.UserId)
@@ -470,8 +666,8 @@ public class AuthRequestServiceTests
             .ReplaceAsync(udpatedAuthRequest);
 
         await sutProvider.GetDependency<IPushNotificationService>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<AuthRequestPushNotification>>());
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
 
@@ -491,6 +687,7 @@ public class AuthRequestServiceTests
     [Theory]
     [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
     [BitAutoData(AuthRequestType.Unlock)]
+    [BitAutoData(AuthRequestType.AdminApproval)]
     public async Task UpdateAuthRequestAsync_InvalidUser_ThrowsNotFound(
         AuthRequestType authRequestType,
         SutProvider<AuthRequestService> sutProvider,
@@ -501,7 +698,7 @@ public class AuthRequestServiceTests
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         // The request hasn't been Approved/Disapproved already
         authRequest.Approved = null;
-        // Has an type that needs the UserId property validated
+        // Set a type whose update path validates the UserId property
         authRequest.Type = authRequestType;
 
         // Auth request should not be null
@@ -590,7 +787,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {
@@ -657,7 +854,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {
@@ -681,7 +878,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(authRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == authRequest.Id));
     }
 
     [Theory, BitAutoData]

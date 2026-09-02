@@ -1,4 +1,7 @@
-﻿using Bit.Core.Billing.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Billing.Enums;
 
 namespace Bit.Core.Models.StaticStore;
 
@@ -24,11 +27,15 @@ public abstract record Plan
     public bool Has2fa { get; protected init; }
     public bool HasApi { get; protected init; }
     public bool HasSso { get; protected init; }
+    public bool HasOrganizationDomains { get; protected init; }
     public bool HasKeyConnector { get; protected init; }
     public bool HasScim { get; protected init; }
     public bool HasResetPassword { get; protected init; }
     public bool UsersGetPremium { get; protected init; }
     public bool HasCustomPermissions { get; protected init; }
+    public bool HasMyItems { get; protected init; }
+    public bool HasInviteLinks { get; protected init; }
+    public bool HasRiskInsights { get; protected init; }
     public int UpgradeSortOrder { get; protected init; }
     // TODO: Move to the client
     public int DisplaySortOrder { get; protected init; }
@@ -38,6 +45,8 @@ public abstract record Plan
     public PasswordManagerPlanFeatures PasswordManager { get; protected init; }
     public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
     public bool SupportsSecretsManager => SecretsManager != null;
+
+    public bool AutomaticUserConfirmation { get; init; }
 
     public bool HasNonSeatBasedPasswordManagerPlan() =>
         PasswordManager is { StripePlanId: not null and not "", StripeSeatPlanId: null or "" };
@@ -75,6 +84,7 @@ public abstract record Plan
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
+        [Obsolete("No longer used to retrieve a provider's price ID. Use ProviderPriceAdapter instead.")]
         public string StripeProviderPortalSeatPlanId { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
@@ -90,7 +100,7 @@ public abstract record Plan
         public decimal PremiumAccessOptionPrice { get; init; }
         public short? MaxSeats { get; init; }
         // Storage
-        public short? BaseStorageGb { get; init; }
+        public short BaseStorageGb { get; init; }
         public bool HasAdditionalStorageOption { get; init; }
         public decimal AdditionalStoragePricePerGb { get; init; }
         public string StripeStoragePlanId { get; init; }

@@ -1,4 +1,7 @@
-﻿using System.IO.Compression;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using Sustainsys.Saml2;

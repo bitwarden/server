@@ -1,13 +1,19 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IRevokeOrganizationUserCommandV2 = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2.IRevokeOrganizationUserCommand;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -18,29 +24,28 @@ namespace Bit.Scim.Controllers.v2;
 public class UsersController : Controller
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly IGetUsersListQuery _getUsersListQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
-    private readonly ILogger<UsersController> _logger;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
+    private readonly IRevokeOrganizationUserCommandV2 _revokeOrganizationUserCommandV2;
 
-    public UsersController(
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
+    public UsersController(IOrganizationUserRepository organizationUserRepository,
         IGetUsersListQuery getUsersListQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
-        ILogger<UsersController> logger)
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
+        IRevokeOrganizationUserCommandV2 revokeOrganizationUserCommandV2)
     {
         _organizationUserRepository = organizationUserRepository;
-        _organizationService = organizationService;
         _getUsersListQuery = getUsersListQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
-        _logger = logger;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
+        _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
     }
 
     [HttpGet("{id}")]
@@ -93,11 +98,31 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
+            await _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    organizationId,
+                    [id],
+                    new SystemUser(EventSystemUser.SCIM),
+                    RevocationReason.Manual));
+
+            var errors = results.Select(x => x.Result.Match(
+                y => $"{y.Message} for user {x.Id}",
+                _ => null))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            if (errors.Count != 0)
+            {
+                return new BadRequestObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 400,
+                    Detail = string.Join(", ", errors)
+                });
+            }
         }
 
         // Have to get full details object for response model

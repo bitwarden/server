@@ -1,14 +1,22 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
 public class CreateMspProviderModel : IValidatableObject
 {
+    [StrictEmailAddress]
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
+
+    [Display(Name = "Subscription Discount")]
+    public string DiscountId { get; set; }
 
     [Display(Name = "Teams (Monthly) Seat Minimum")]
     public int TeamsMonthlySeatMinimum { get; set; }
@@ -20,7 +28,8 @@ public class CreateMspProviderModel : IValidatableObject
     {
         return new Provider
         {
-            Type = ProviderType.Msp
+            Type = ProviderType.Msp,
+            DiscountId = DiscountId
         };
     }
 

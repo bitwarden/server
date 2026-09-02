@@ -1,13 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <!-- These opt outs should be removed when all warnings are addressed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
+  </PropertyGroup>
+
   <ItemGroup>
-    <EmbeddedResource Include="DbScripts\**\*.sql" />
-    <EmbeddedResource Include="DbScripts_transition\**\*.sql" />
+    <InternalsVisibleTo Include="Migrator.Test" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="dbup-sqlserver" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <EmbeddedResource Include="DbScripts\**\*.sql" />
+    <EmbeddedResource Include="DbScripts_transition\**\*.sql" />
+    <EmbeddedResource Include="DbScripts_finalization\**\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dbup-sqlserver" Version="[7.2.0]" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="[10.0.10]" />
   </ItemGroup>
 
   <ItemGroup>

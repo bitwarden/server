@@ -10,21 +10,30 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Services;
+using Bit.Core.Test.Billing.Mocks.Plans;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
+using OneOf.Types;
+using Stripe;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
@@ -37,18 +46,20 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserService _userService;
-    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IGetCloudOrganizationLicenseQuery _getCloudOrganizationLicenseQuery;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
-    private readonly IReferenceEventService _referenceEventService;
     private readonly ISubscriberService _subscriberService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationInstallationRepository _organizationInstallationRepository;
+    private readonly IPricingClient _pricingClient;
+    private readonly IReinstateSubscriptionCommand _reinstateSubscriptionCommand;
+    private readonly IGetPendingAnnualUpgradeQuery _getPendingAnnualUpgradeQuery;
 
     private readonly OrganizationsController _sut;
 
@@ -59,20 +70,22 @@ public class OrganizationsControllerTests : IDisposable
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _paymentService = Substitute.For<IPaymentService>();
+        _paymentService = Substitute.For<IStripePaymentService>();
         Substitute.For<IPolicyRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         Substitute.For<ISsoConfigService>();
         _userService = Substitute.For<IUserService>();
-        _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
+        _getCloudOrganizationLicenseQuery = Substitute.For<IGetCloudOrganizationLicenseQuery>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _organizationInstallationRepository = Substitute.For<IOrganizationInstallationRepository>();
+        _pricingClient = Substitute.For<IPricingClient>();
+        _reinstateSubscriptionCommand = Substitute.For<IReinstateSubscriptionCommand>();
+        _getPendingAnnualUpgradeQuery = Substitute.For<IGetPendingAnnualUpgradeQuery>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -81,15 +94,17 @@ public class OrganizationsControllerTests : IDisposable
             _userService,
             _paymentService,
             _currentContext,
-            _cloudGetOrganizationLicenseQuery,
+            _getCloudOrganizationLicenseQuery,
             _globalSettings,
             _licensingService,
             _updateSecretsManagerSubscriptionCommand,
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
-            _referenceEventService,
             _subscriberService,
-            _organizationInstallationRepository);
+            _organizationInstallationRepository,
+            _pricingClient,
+            _reinstateSubscriptionCommand,
+            _getPendingAnnualUpgradeQuery);
     }
 
     public void Dispose()
@@ -118,7 +133,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         var response = await _sut.PostUpgrade(organizationId, model);
@@ -141,7 +156,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -169,7 +184,7 @@ public class OrganizationsControllerTests : IDisposable
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>(), Arg.Any<Guid?>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -244,7 +259,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationUser>(orgUser =>
             orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true));
     }
@@ -283,7 +298,314 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
         await _addSecretsManagerSubscriptionCommand.Received(1)
-            .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task PostReinstate_CallsReinstateCommand(Guid organizationId)
+    {
+        var organization = new Organization { Id = organizationId, GatewaySubscriptionId = "sub_123" };
+
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _reinstateSubscriptionCommand
+            .Run(organization)
+            .Returns(new BillingCommandResult<None>(new None()));
+
+        await _sut.PostReinstate(organizationId);
+
+        await _reinstateSubscriptionCommand.Received(1).Run(organization);
+    }
+
+    [Theory, AutoData]
+    public async Task PostReinstate_AndOrgNotFound_ThrowsNotFoundException(Guid organizationId)
+    {
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostReinstate(organizationId));
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_CloudOrganizationWithMigrationGrace_PopulatesSmServiceAccountsGrace(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 30
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(30, response.SmServiceAccountsGrace);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_CloudOrganizationWithoutGrace_SmServiceAccountsGraceIsZero(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 0
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Equal(0, response.SmServiceAccountsGrace);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SelfHosted_SmServiceAccountsGraceIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        _globalSettings.SelfHosted = true;
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.SmServiceAccountsGrace);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_NoGatewaySubscription_SmServiceAccountsGraceIsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = null;
+        var plan = new EnterprisePlan(isAnnual: true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.SmServiceAccountsGrace);
+        await _paymentService.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_WhenHidingSensitiveData_StillPopulatesSmServiceAccountsGrace(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var plan = new EnterprisePlan(isAnnual: true);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ServiceAccountGrace = 30
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(false); // hideSensitiveData = true
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        // Grace is a non-sensitive count and must survive the hideSensitiveData branch...
+        Assert.Equal(30, response.SmServiceAccountsGrace);
+        // ...while genuinely sensitive data is still hidden.
+        Assert.Null(response.BillingEmail);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_AttachesPendingAnnualUpgrade_WhenQueryReturnsValue(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
+
+        var effectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
+        {
+            Plan = annualPlan,
+            LineItems =
+            [
+                new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(
+                    new SubscriptionSchedulePhaseItem
+                    {
+                        Quantity = 5,
+                        Price = new Price
+                        {
+                            Nickname = "Teams (Annually) Seat",
+                            UnitAmount = 4800,
+                            Recurring = new PriceRecurring { Interval = "year" }
+                        }
+                    })
+            ],
+            EffectiveDate = effectiveDate
+        });
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.NotNull(response.PendingAnnualUpgrade);
+        Assert.Equal(effectiveDate, response.PendingAnnualUpgrade.EffectiveDate);
+        Assert.Equal(PlanType.TeamsAnnually, response.PendingAnnualUpgrade.Plan.Type);
+        Assert.Single(response.PendingAnnualUpgrade.LineItems);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_PendingAnnualUpgradeNull_WhenQueryReturnsNull(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns((PendingAnnualUpgrade)null);
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PendingAnnualUpgrade);
+        await _getPendingAnnualUpgradeQuery.Received(1).Run(organization);
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_HidesPendingAnnualUpgradeLineItems_WhenSensitiveDataHidden(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(false); // -> hideSensitiveData == true
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = "sub_sched_123"
+            }
+        });
+
+        var effectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc);
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
+        {
+            Plan = annualPlan,
+            LineItems =
+            [
+                new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(
+                    new SubscriptionSchedulePhaseItem
+                    {
+                        Quantity = 5,
+                        Price = new Price
+                        {
+                            Nickname = "Teams (Annually) Seat",
+                            UnitAmount = 4800,
+                            Recurring = new PriceRecurring { Interval = "year" }
+                        }
+                    })
+            ],
+            EffectiveDate = effectiveDate
+        });
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.NotNull(response.PendingAnnualUpgrade);
+        Assert.Null(response.PendingAnnualUpgrade.LineItems);              // hidden
+        Assert.Equal(effectiveDate, response.PendingAnnualUpgrade.EffectiveDate); // preserved
+        Assert.Equal(PlanType.TeamsAnnually, response.PendingAnnualUpgrade.Plan.Type); // preserved
+    }
+
+    [Theory, AutoData]
+    public async Task GetSubscription_SkipsPendingAnnualUpgradeQuery_WhenSubscriptionHasNoSchedule(
+        Guid organizationId,
+        Organization organization)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        var monthlyPlan = new TeamsPlan(false);
+        var subscriptionInfo = new SubscriptionInfo
+        {
+            Subscription = new SubscriptionInfo.BillingSubscription(
+                new Subscription { Items = new StripeList<SubscriptionItem> { Data = [] } })
+            {
+                ScheduleId = null
+            }
+        };
+
+        _currentContext.ViewSubscription(organizationId).Returns(true);
+        _currentContext.EditSubscription(organizationId).Returns(true);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(monthlyPlan);
+        _paymentService.GetSubscriptionAsync(organization).Returns(subscriptionInfo);
+        // Stub a value the gate must prevent from ever being requested.
+        _getPendingAnnualUpgradeQuery.Run(organization).Returns(new PendingAnnualUpgrade
+        {
+            Plan = new TeamsPlan(true),
+            LineItems = [],
+            EffectiveDate = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        var response = await _sut.GetSubscription(organizationId);
+
+        Assert.Null(response.PendingAnnualUpgrade);
+        await _getPendingAnnualUpgradeQuery.DidNotReceive().Run(Arg.Any<Organization>());
     }
 }

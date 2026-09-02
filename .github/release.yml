@@ -1,0 +1,34 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: "💙 Community Highlight"
+      labels:
+        - community-pr
+    - title: ":shipit: Feature Development"
+      labels:
+        - t:feature
+        - t:feature-app
+        - t:feature-tool
+        - t:new-feature
+        - t:enhancement
+    - title: "❗ Breaking Changes"
+      labels:
+        - t:breaking-change
+    - title: "🐛 Bug fixes"
+      labels:
+        - t:bugfix
+    - title: "⚙️ Maintenance"
+      labels:
+        - t:tech-debt
+        - t:ci
+        - t:docs
+        - t:misc
+    - title: "📦 Dependency Updates"
+      labels:
+        - major-updates
+        - t:deps
+    - title: "🎨 Other"
+      labels:
+        - "*"

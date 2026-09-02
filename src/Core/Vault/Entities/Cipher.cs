@@ -1,4 +1,8 @@
-﻿using System.Text.Json;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text;
+using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
@@ -22,10 +26,53 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
+    public string Archives { get; set; }
 
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    public bool IsDataBlobEncrypted()
+    {
+        // Blob-encrypted data is a JSON object carrying a top-level "format_version"
+        // key; legacy field-level CipherData JSON never contains it.
+        return HasTopLevelProperty("format_version");
+    }
+
+    private bool HasTopLevelProperty(string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(Data))
+        {
+            return false;
+        }
+
+        try
+        {
+            var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(Data));
+
+            // Probe only the top-level properties rather than materializing the whole document.
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return false;
+            }
+
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                if (reader.ValueTextEquals(propertyName))
+                {
+                    return true;
+                }
+
+                reader.Skip();
+            }
+
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public Dictionary<string, CipherAttachment.MetaData> GetAttachments()

@@ -1,82 +1,149 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
-public class CreateSponsorshipCommand : ICreateSponsorshipCommand
+public class CreateSponsorshipCommand(
+    ICurrentContext currentContext,
+    IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+    IUserService userService,
+    IOrganizationService organizationService,
+    IOrganizationRepository organizationRepository) : ICreateSponsorshipCommand
 {
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    private readonly IUserService _userService;
-
-    public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService)
+    public async Task<OrganizationSponsorship> CreateSponsorshipAsync(
+        Organization sponsoringOrganization,
+        OrganizationUser sponsoringMember,
+        PlanSponsorshipType sponsorshipType,
+        string sponsoredEmail,
+        string friendlyName,
+        bool isAdminInitiated,
+        string notes)
     {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _userService = userService;
-    }
+        var sponsoringUser = await userService.GetUserByIdAsync(sponsoringMember.UserId!.Value);
 
-    public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
-    {
-        var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
-        if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
+        if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, StringComparison.InvariantCultureIgnoreCase))
         {
             throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
         }
 
-        var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductTierType;
-        if (requiredSponsoringProductType == null ||
-            sponsoringOrg == null ||
-            StaticStore.GetPlan(sponsoringOrg.PlanType).ProductTier != requiredSponsoringProductType.Value)
+        var requiredSponsoringProductType = SponsoredPlans.Get(sponsorshipType).SponsoringProductTierType;
+        var sponsoringOrgProductTier = sponsoringOrganization.PlanType.GetProductTier();
+
+        if (sponsoringOrgProductTier != requiredSponsoringProductType)
         {
             throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
         }
 
-        if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
+        if (sponsoringMember.Status != OrganizationUserStatusType.Confirmed)
         {
             throw new BadRequestException("Only confirmed users can sponsor other organizations.");
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
-        if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+        var sponsorships =
+            await organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrganization.Id);
+        var existingSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName == friendlyName);
+        if (existingSponsorship != null)
         {
-            throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            return existingSponsorship;
+        }
+
+        if (isAdminInitiated)
+        {
+            ValidateAdminInitiatedSponsorship(sponsoringOrganization);
         }
 
         var sponsorship = new OrganizationSponsorship
         {
-            SponsoringOrganizationId = sponsoringOrg.Id,
-            SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+            SponsoringOrganizationId = sponsoringOrganization.Id,
+            SponsoringOrganizationUserId = sponsoringMember.Id,
             FriendlyName = friendlyName,
             OfferedToEmail = sponsoredEmail,
             PlanSponsorshipType = sponsorshipType,
+            IsAdminInitiated = isAdminInitiated,
+            Notes = notes
         };
 
-        if (existingOrgSponsorship != null)
+        if (!isAdminInitiated)
         {
-            // Replace existing invalid offer with our new sponsorship offer
-            sponsorship.Id = existingOrgSponsorship.Id;
+            var existingOrgSponsorship = await organizationSponsorshipRepository
+                .GetBySponsoringOrganizationUserIdAsync(sponsoringMember.Id);
+            if (existingOrgSponsorship?.SponsoredOrganizationId != null)
+            {
+                throw new BadRequestException("Can only sponsor one organization per Organization User.");
+            }
+
+            if (existingOrgSponsorship != null)
+            {
+                sponsorship.Id = existingOrgSponsorship.Id;
+            }
+        }
+
+        if (isAdminInitiated && sponsoringOrganization.Seats.HasValue)
+        {
+            var seatCounts = await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(sponsoringOrganization.Id);
+            var availableSeats = sponsoringOrganization.Seats.Value - seatCounts.Total;
+
+            if (availableSeats <= 0)
+            {
+                var newSeatsRequired = 1;
+                var (canScale, failureReason) = await organizationService.CanScaleAsync(sponsoringOrganization, newSeatsRequired);
+                if (!canScale)
+                {
+                    throw new BadRequestException(failureReason);
+                }
+
+                await organizationService.AutoAddSeatsAsync(sponsoringOrganization, newSeatsRequired);
+            }
         }
 
         try
         {
-            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            if (isAdminInitiated)
+            {
+                await organizationSponsorshipRepository.CreateAsync(sponsorship);
+            }
+            else
+            {
+                await organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            }
+
             return sponsorship;
         }
         catch
         {
-            if (sponsorship.Id != default)
+            if (sponsorship.Id != Guid.Empty)
             {
-                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                await organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
             throw;
+        }
+    }
+
+    private void ValidateAdminInitiatedSponsorship(Organization sponsoringOrganization)
+    {
+        var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrganization.Id);
+        OrganizationUserType[] allowedUserTypes =
+        [
+            OrganizationUserType.Admin,
+            OrganizationUserType.Owner
+        ];
+
+        if (!organization.Permissions.ManageUsers && allowedUserTypes.All(x => x != organization.Type))
+        {
+            throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization");
+        }
+
+        if (!sponsoringOrganization.UseAdminSponsoredFamilies)
+        {
+            throw new BadRequestException("Sponsoring organization cannot send admin-initiated sponsorship invitations");
         }
     }
 }

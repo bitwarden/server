@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Web;
 
@@ -40,7 +43,7 @@ public class PayPalIPNTransactionModel
         var merchantGross = Extract(data, "mc_gross");
         if (!string.IsNullOrEmpty(merchantGross))
         {
-            MerchantGross = decimal.Parse(merchantGross);
+            MerchantGross = decimal.Parse(merchantGross, CultureInfo.InvariantCulture);
         }
 
         MerchantCurrency = Extract(data, "mc_currency");

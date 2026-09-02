@@ -1,23 +1,21 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Entities;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -121,7 +119,7 @@ public class ProviderBillingControllerTests
             }
         };
 
-        sutProvider.GetDependency<IStripeAdapter>().InvoiceListAsync(Arg.Is<StripeInvoiceListOptions>(
+        sutProvider.GetDependency<IStripeAdapter>().ListInvoicesAsync(Arg.Is<StripeInvoiceListOptions>(
             options =>
                 options.Customer == provider.GatewayCustomerId)).Returns(invoices);
 
@@ -159,24 +157,19 @@ public class ProviderBillingControllerTests
     #region GenerateClientInvoiceReportAsync
 
     [Theory, BitAutoData]
-    public async Task GenerateClientInvoiceReportAsync_NullReportContent_ServerError(
+    public async Task GenerateClientInvoiceReportAsync_NullReportContent_NotFound(
         Provider provider,
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
         ConfigureStableProviderAdminInputs(provider, sutProvider);
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .ReturnsNull();
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
 
-        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-
-        var response = (JsonHttpResult<ErrorResponseModel>)result;
-
-        Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
-        Assert.Equal("We had a problem generating your invoice CSV. Please contact support.", response.Value.Message);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -189,7 +182,7 @@ public class ProviderBillingControllerTests
 
         var reportContent = "Report"u8.ToArray();
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .Returns(reportContent);
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
@@ -268,7 +261,6 @@ public class ProviderBillingControllerTests
         var subscription = new Subscription
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
-            CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
             Customer = new Customer
             {
                 Address = new Address
@@ -281,15 +273,31 @@ public class ProviderBillingControllerTests
                     State = "NY"
                 },
                 Balance = -100000,
-                Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 10 } } },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
             },
-            Status = "unpaid",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams }
+                    }
+                ]
+            },
+            Status = "unpaid"
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+        stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         var daysInLastMonth = DateTime.DaysInMonth(oneMonthAgo.Year, oneMonthAgo.Month);
@@ -303,7 +311,7 @@ public class ProviderBillingControllerTests
             Attempted = true
         };
 
-        stripeAdapter.InvoiceSearchAsync(Arg.Is<InvoiceSearchOptions>(
+        stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
                 options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
             .Returns([overdueInvoice]);
 
@@ -331,6 +339,18 @@ public class ProviderBillingControllerTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
+        foreach (var providerPlan in providerPlans)
+        {
+            var plan = MockPlans.Get(providerPlan.PlanType);
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
+            var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
+            sutProvider.GetDependency<IStripeAdapter>().GetPriceAsync(priceId)
+                .Returns(new Price
+                {
+                    UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100
+                });
+        }
+
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 
         Assert.IsType<Ok<ProviderSubscriptionResponse>>(result);
@@ -338,11 +358,11 @@ public class ProviderBillingControllerTests
         var response = ((Ok<ProviderSubscriptionResponse>)result).Value;
 
         Assert.Equal(subscription.Status, response.Status);
-        Assert.Equal(subscription.CurrentPeriodEnd, response.CurrentPeriodEndDate);
-        Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
+        Assert.Equal(subscription.GetCurrentPeriodEnd(), response.CurrentPeriodEndDate);
+        Assert.Equal(subscription.Customer!.Discount!.Source?.Coupon?.PercentOff, response.DiscountPercentage);
         Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
         var providerTeamsPlan = response.Plans.FirstOrDefault(plan => plan.PlanName == teamsPlan.Name);
         Assert.NotNull(providerTeamsPlan);
         Assert.Equal(50, providerTeamsPlan.SeatMinimum);
@@ -351,7 +371,7 @@ public class ProviderBillingControllerTests
         Assert.Equal(60 * teamsPlan.PasswordManager.ProviderPortalSeatPrice, providerTeamsPlan.Cost);
         Assert.Equal("Monthly", providerTeamsPlan.Cadence);
 
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var enterprisePlan = MockPlans.Get(PlanType.EnterpriseMonthly);
         var providerEnterprisePlan = response.Plans.FirstOrDefault(plan => plan.PlanName == enterprisePlan.Name);
         Assert.NotNull(providerEnterprisePlan);
         Assert.Equal(100, providerEnterprisePlan.SeatMinimum);
@@ -378,49 +398,116 @@ public class ProviderBillingControllerTests
         Assert.Equal(14, response.Suspension.GracePeriod);
     }
 
-    #endregion
-
-    #region UpdateTaxInformationAsync
-
     [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_NoCountry_BadRequest(
+    public async Task GetSubscriptionAsync_SubscriptionLevelDiscount_Ok(
         Provider provider,
-        TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
-        requestBody.Country = null;
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        var result = await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
+        var now = DateTime.UtcNow;
+        var oneMonthAgo = now.AddMonths(-1);
 
-        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        var daysInThisMonth = DateTime.DaysInMonth(now.Year, now.Month);
 
-        var response = (BadRequest<ErrorResponseModel>)result;
+        var subscription = new Subscription
+        {
+            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            Customer = new Customer
+            {
+                Address = new Address
+                {
+                    Country = "US",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = "Unit 1",
+                    City = "Example Town",
+                    State = "NY"
+                },
+                Balance = -100000,
+                Discount = null, // No customer-level discount
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
+            },
+            Discounts =
+            [
+                new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 15 } } } // Subscription-level discount
+            ],
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Enterprise }
+                    },
+                    new SubscriptionItem
+                    {
+                        CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
+                        Price = new Price { Id = ProviderPriceAdapter.MSP.Active.Teams }
+                    }
+                ]
+            },
+            Status = "active"
+        };
 
-        Assert.Equal("Country and postal code are required to update your tax information.", response.Value.Message);
-    }
+        stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
+            options =>
+                options.Expand.Contains("customer.tax_ids") &&
+                options.Expand.Contains("discounts.source.coupon") &&
+                options.Expand.Contains("test_clock"))).Returns(subscription);
 
-    [Theory, BitAutoData]
-    public async Task UpdateTaxInformation_Ok(
-        Provider provider,
-        TaxInformationRequestBody requestBody,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        ConfigureStableProviderAdminInputs(provider, sutProvider);
+        stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(
+                options => options.Query == $"subscription:'{subscription.Id}' status:'open'"))
+            .Returns([]);
 
-        await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
+        var providerPlans = new List<ProviderPlan>
+        {
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.TeamsMonthly,
+                SeatMinimum = 50,
+                PurchasedSeats = 10,
+                AllocatedSeats = 60
+            },
+            new ()
+            {
+                Id = Guid.NewGuid(),
+                ProviderId = provider.Id,
+                PlanType = PlanType.EnterpriseMonthly,
+                SeatMinimum = 100,
+                PurchasedSeats = 0,
+                AllocatedSeats = 90
+            }
+        };
 
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).UpdateTaxInformation(
-            provider, Arg.Is<TaxInformation>(
-                options =>
-                    options.Country == requestBody.Country &&
-                    options.PostalCode == requestBody.PostalCode &&
-                    options.TaxId == requestBody.TaxId &&
-                    options.Line1 == requestBody.Line1 &&
-                    options.Line2 == requestBody.Line2 &&
-                    options.City == requestBody.City &&
-                    options.State == requestBody.State));
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        foreach (var providerPlan in providerPlans)
+        {
+            var plan = MockPlans.Get(providerPlan.PlanType);
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(plan);
+            var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
+            sutProvider.GetDependency<IStripeAdapter>().GetPriceAsync(priceId)
+                .Returns(new Price
+                {
+                    UnitAmountDecimal = plan.PasswordManager.ProviderPortalSeatPrice * 100
+                });
+        }
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
+
+        Assert.IsType<Ok<ProviderSubscriptionResponse>>(result);
+
+        var response = ((Ok<ProviderSubscriptionResponse>)result).Value;
+
+        Assert.Equal(subscription.Status, response.Status);
+        Assert.Equal(subscription.GetCurrentPeriodEnd(), response.CurrentPeriodEndDate);
+        Assert.Equal(15, response.DiscountPercentage); // Verify subscription-level discount is used
+        Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
     }
 
     #endregion

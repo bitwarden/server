@@ -1,20 +1,22 @@
-﻿using Bit.Api.Tools.Authorization;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
-using Bit.Core.IdentityServer;
+﻿using Bit.Api.AdminConsole.Authorization;
+using Bit.Api.Tools.Authorization;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
+using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace Bit.Api.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSwagger(this IServiceCollection services, GlobalSettings globalSettings)
+    /// <summary>
+    /// Configures the generation of swagger.json OpenAPI spec.
+    /// </summary>
+    public static void AddSwaggerGen(this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment)
     {
         services.AddSwaggerGen(config =>
         {
@@ -28,7 +30,14 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://bitwarden.com"),
                     Email = "support@bitwarden.com"
                 },
-                Description = "The Bitwarden public APIs.",
+                Description = """
+                              This schema documents the endpoints available to the Public API, which provides
+                              organizations tools for managing members, collections, groups, event logs, and policies.
+                              If you are looking for the Vault Management API, refer instead to
+                              [this document](https://bitwarden.com/help/vault-management-api/).
+
+                              **Note:** your authorization must match the server you have selected.
+                              """,
                 License = new OpenApiLicense
                 {
                     Name = "GNU Affero General Public License v3.0",
@@ -36,50 +45,49 @@ public static class ServiceCollectionExtensions
                 }
             });
 
-            config.CustomSchemaIds(type => type.FullName);
-
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
-            config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
+            // Configure Bitwarden cloud servers. These will appear in the swagger.json build artifact
+            // used for our help center. These are overwritten with the local server when running in self-hosted
+            // or dev mode (see Api Startup.cs).
+            foreach (var regionConfig in CloudRegionConfig.All)
             {
-                Type = SecuritySchemeType.OAuth2,
-                Flows = new OpenApiOAuthFlows
-                {
-                    ClientCredentials = new OpenApiOAuthFlow
-                    {
-                        TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
-                        Scopes = new Dictionary<string, string>
-                        {
-                            { ApiScopes.ApiOrganization, "Organization APIs" },
-                        },
-                    }
-                },
-            });
+                config.AddSwaggerServerWithSecurity(
+                    serverId: $"{regionConfig.Region}_server",
+                    serverUrl: regionConfig.ApiUrl,
+                    identityTokenUrl: $"{regionConfig.IdentityUrl}/connect/token",
+                    serverDescription: $"{regionConfig.Region} server");
+            }
 
-            config.AddSecurityRequirement(new OpenApiSecurityRequirement
+            // Security scheme for send access token endpoints (V2). The x-explicit-bearer-token
+            // extension signals the SDK code generator to emit an explicit Bearer token parameter
+            // instead of injecting the user session token via middleware.
+            config.AddSecurityDefinition("send-access-bearer", new OpenApiSecurityScheme
             {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "Send access token obtained from /connect/token using the send_access grant.",
+                Extensions = new Dictionary<string, IOpenApiExtension>
                 {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "oauth2-client-credentials"
-                        },
-                    },
-                    new[] { ApiScopes.ApiOrganization }
+                    { "x-explicit-bearer-token", new JsonNodeExtension(true) }
                 }
             });
 
             config.DescribeAllParametersInCamelCase();
             // config.UseReferencedDefinitionsForEnums();
 
-            config.SchemaFilter<EnumSchemaFilter>();
+            config.InitializeSwaggerFilters(environment);
 
-            var apiFilePath = Path.Combine(AppContext.BaseDirectory, "Api.xml");
-            config.IncludeXmlComments(apiFilePath, true);
-            var coreFilePath = Path.Combine(AppContext.BaseDirectory, "Core.xml");
-            config.IncludeXmlComments(coreFilePath);
+            // Include every assembly documentation file emitted into the output directory (each XML is paired with
+            // its .dll). A project's docs surface in the spec simply by emitting a <DocumentationFile> — no change is
+            // needed here, and commercial-only assemblies (e.g. Pam) are picked up when present.
+            // includeControllerXmlComments is on so controller and Minimal API summaries are read too.
+            foreach (var xmlDocPath in Directory.EnumerateFiles(AppContext.BaseDirectory, "*.xml")
+                         .Where(xmlDocPath => File.Exists(Path.ChangeExtension(xmlDocPath, ".dll"))))
+            {
+                config.IncludeXmlComments(xmlDocPath, includeControllerXmlComments: true);
+            }
         });
     }
 
@@ -101,11 +109,13 @@ public static class ServiceCollectionExtensions
 
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
+        // SecurityTaskAuthorizationHandler must remain scoped. It caches cipher permissions per-request.
+        // Changing to singleton would allow one user's cached permissions to be reused by other users in the same organization.
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
+
+        // Admin Console authorization handlers
+        services.AddAdminConsoleAuthorizationHandlers();
     }
 }

@@ -16,6 +16,8 @@ public record PolicyUpdate
     public PolicyType Type { get; set; }
     public string? Data { get; set; }
     public bool Enabled { get; set; }
+
+    [Obsolete("Please use SavePolicyModel.PerformedBy instead.")]
     public IActingUser? PerformedBy { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()

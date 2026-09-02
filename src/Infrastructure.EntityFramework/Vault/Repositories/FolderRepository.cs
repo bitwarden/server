@@ -1,9 +1,14 @@
-﻿using AutoMapper;
-using Bit.Core.KeyManagement.UserKey;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Text.Json;
+using AutoMapper;
+using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,15 +44,82 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
         }
     }
 
+    public override async Task DeleteAsync(Core.Vault.Entities.Folder folder)
+    {
+        await DeleteManyAsync([folder.Id], folder.UserId);
+    }
+
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public async Task DeleteManyAsync(IEnumerable<Guid> folderIds, Guid userId)
+    {
+        var requestedIds = folderIds.ToList();
+        if (requestedIds.Count == 0)
+        {
+            return;
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var deletingFolders = await GetDbSet(dbContext)
+            .Where(f => f.UserId == userId && requestedIds.Contains(f.Id))
+            .ToListAsync();
+
+        if (deletingFolders.Count == 0)
+        {
+            return;
+        }
+
+        var deletingFolderIds = deletingFolders.Select(f => f.Id).ToHashSet();
+
+        var userKey = userId.ToString();
+        var userCipherDetails = new UserCipherDetailsQuery(userId).Run(dbContext);
+        var filedCiphers = from ucd in userCipherDetails
+                           join c in dbContext.Ciphers.Where(c => c.Folders != null && c.Folders.Contains(userKey))
+                               on ucd.Id equals c.Id
+                           select c;
+
+        await filedCiphers.ForEachAsync(cipher =>
+        {
+            var folders = ReadFolders(cipher.Folders);
+            if (folders == null || !folders.TryGetValue(userId, out var folderId) ||
+                !deletingFolderIds.Contains(folderId))
+            {
+                return;
+            }
+
+            folders.Remove(userId);
+            cipher.Folders = JsonSerializer.Serialize(folders);
+        });
+
+        dbContext.RemoveRange(deletingFolders);
+        await dbContext.UserBumpAccountRevisionDateAsync(userId);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static Dictionary<Guid, Guid> ReadFolders(string foldersJson)
+    {
+        try
+        {
+            return CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(foldersJson);
+        }
+        catch (JsonException)
+        {
+            // Some Folders maps are stored in an invalid format, such as '{ "", "<ValidGuid>" }', and are
+            // treated as unfiled rather than failing the delete for every other cipher in the batch.
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Vault.Entities.Folder> folders)
     {
-        return async (SqlConnection _, SqlTransaction _) =>
+        return async (connection, transaction) =>
         {
             var newFolders = folders.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var userFolders = await GetDbSet(dbContext)
                 .Where(f => f.UserId == userId)
                 .ToListAsync();

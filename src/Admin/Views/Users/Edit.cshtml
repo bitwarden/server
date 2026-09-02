@@ -1,6 +1,7 @@
 ﻿@using Bit.Admin.Enums;
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Services.IFeatureService FeatureService
+@inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject IWebHostEnvironment HostingEnvironment
 @model UserEditModel
 @{
@@ -8,7 +9,7 @@
 
     var canViewUserInformation = AccessControlService.UserHasPermission(Permission.User_UserInformation_View);
     var canViewNewDeviceException = AccessControlService.UserHasPermission(Permission.User_NewDeviceException_Edit) &&
-                                    FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.NewDeviceVerification);
+                                    GlobalSettings.EnableNewDeviceVerification;
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.User_BillingInformation_View);
     var canViewGeneral = AccessControlService.UserHasPermission(Permission.User_GeneralDetails_View);
     var canViewPremium = AccessControlService.UserHasPermission(Permission.User_Premium_View);
@@ -35,11 +36,7 @@
                 // Premium
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
                 document.getElementById('@(nameof(Model.Premium))').checked = true;
-    using Stripe.Entitlements;
                 // Licensing
-    using Bit.Core;
-    using Stripe.Entitlements;
-                using Microsoft.Identity.Client.Extensibility;
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.PremiumExpirationDate))').value =
                     '@Model.OneYearExpirationDate';
@@ -118,7 +115,7 @@
         </dt>
     </dl>
 }
-@if (canViewBillingInformation)
+@if (canViewBillingInformation && Model.BillingInfo != null && Model.BillingHistoryInfo != null)
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",

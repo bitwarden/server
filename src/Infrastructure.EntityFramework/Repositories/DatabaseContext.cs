@@ -1,21 +1,23 @@
 ﻿using Bit.Core;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Dirt.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
+using Bit.Infrastructure.EntityFramework.Pam.Models;
 using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
-using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using DP = Microsoft.AspNetCore.DataProtection;
 
-#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -43,6 +45,10 @@ public class DatabaseContext : DbContext
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
     public DbSet<CollectionGroup> CollectionGroups { get; set; }
     public DbSet<CollectionUser> CollectionUsers { get; set; }
+    public DbSet<AccessRule> AccessRules { get; set; }
+    public DbSet<AccessRequest> AccessRequests { get; set; }
+    public DbSet<AccessLease> AccessLeases { get; set; }
+    public DbSet<AccessDecision> AccessDecisions { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -55,10 +61,15 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
     public DbSet<OrganizationConnection> OrganizationConnections { get; set; }
+    public DbSet<PlayItem> PlayItem { get; set; }
+    public DbSet<OrganizationIntegration> OrganizationIntegrations { get; set; }
+    public DbSet<OrganizationIntegrationConfiguration> OrganizationIntegrationConfigurations { get; set; }
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
+    public DbSet<OrganizationInviteLink> OrganizationInviteLinks { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
     public DbSet<Secret> Secret { get; set; }
+    public DbSet<SecretVersion> SecretVersion { get; set; }
     public DbSet<ServiceAccount> ServiceAccount { get; set; }
     public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
@@ -69,17 +80,25 @@ public class DatabaseContext : DbContext
     public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserSignatureKeyPair> UserSignatureKeyPairs { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
     public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
     public DbSet<ProviderPlan> ProviderPlans { get; set; }
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
+    public DbSet<SubscriptionDiscount> SubscriptionDiscounts { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
+    public DbSet<OrganizationMemberBaseDetail> OrganizationMemberBaseDetails { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
+    public DbSet<OrganizationPlanMigrationCohort> OrganizationPlanMigrationCohorts { get; set; }
+    public DbSet<OrganizationPlanMigrationCohortAssignment> OrganizationPlanMigrationCohortAssignments { get; set; }
+    public DbSet<OrganizationReport> OrganizationReports { get; set; }
+    public DbSet<OrganizationApplication> OrganizationApplications { get; set; }
+    public DbSet<OrganizationDeleteTask> OrganizationDeleteTasks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -95,6 +114,10 @@ public class DatabaseContext : DbContext
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
+        var eAccessRule = builder.Entity<AccessRule>();
+        var eAccessRequest = builder.Entity<AccessRequest>();
+        var eAccessLease = builder.Entity<AccessLease>();
+        var eAccessDecision = builder.Entity<AccessDecision>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -110,6 +133,7 @@ public class DatabaseContext : DbContext
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
+        var eOrganizationMemberBaseDetail = builder.Entity<OrganizationMemberBaseDetail>();
 
         // Shadow property configurations go here
 
@@ -132,6 +156,70 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+        eAccessRule.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRule.HasIndex(p => new { p.OrganizationId, p.Name }).IsUnique();
+        eCollection
+            .HasOne<AccessRule>()
+            .WithMany()
+            .HasForeignKey(c => c.AccessRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Collection.AccessRuleId is excluded from tracked inserts and updates, so an ordinary collection edit cannot
+        // erase or forge a PAM association no matter which repository method saves the entity. This mirrors MSSQL,
+        // where Collection_Create and Collection_Update accept @AccessRuleId and deliberately ignore it.
+        //
+        // Consequence for anything that needs to write this column: it MUST go through ExecuteUpdate (or raw SQL),
+        // which bypasses the change tracker and therefore these behaviours. Assigning the property and calling
+        // SaveChanges silently does nothing. The two writers today are
+        // ICollectionRepository.SetAccessRuleAssociationsAsync and the clear inside AccessRuleRepository.DeleteAsync.
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+        eCollection.Property(c => c.AccessRuleId).Metadata
+            .SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
+
+        // AccessRequest and AccessLease have a circular FK relationship (AccessRequest.ExtensionOfLeaseId ->
+        // AccessLease.Id, AccessLease.AccessRequestId -> AccessRequest.Id). Neither side cascades: Organization
+        // already cascades directly to both tables, and a second cascading path through the other table would create
+        // multiple cascade paths, which SQL Server rejects.
+        eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Status });
+        eAccessRequest.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessRequest.HasIndex(p => p.ExtensionOfLeaseId);
+        eAccessRequest.HasIndex(p => p.RuleId);
+        eAccessRequest
+            .HasOne<AccessRule>()
+            .WithMany()
+            .HasForeignKey(r => r.RuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+        eAccessRequest
+            .HasOne<AccessLease>()
+            .WithMany()
+            .HasForeignKey(r => r.ExtensionOfLeaseId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        eAccessLease.Property(p => p.Id).ValueGeneratedNever();
+        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Status });
+        eAccessLease.HasIndex(p => new { p.NotAfter, p.Status });
+        eAccessLease.HasIndex(p => new { p.CollectionId, p.Status });
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Status });
+        eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
+        eAccessLease
+            .HasOne<AccessRequest>()
+            .WithMany()
+            .HasForeignKey(l => l.AccessRequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        eAccessDecision.Property(p => p.Id).ValueGeneratedNever();
+        eAccessDecision.HasIndex(p => p.AccessRequestId);
+        eAccessDecision
+            .HasOne<AccessRequest>()
+            .WithMany()
+            .HasForeignKey(d => d.AccessRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        eOrganizationMemberBaseDetail.HasNoKey();
+
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
             Constants.DatabaseFieldProtectorPurpose);
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
@@ -152,6 +240,10 @@ public class DatabaseContext : DbContext
         eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
+        eAccessRule.ToTable(nameof(AccessRule));
+        eAccessRequest.ToTable(nameof(AccessRequest));
+        eAccessLease.ToTable(nameof(AccessLease));
+        eAccessDecision.ToTable(nameof(AccessDecision));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

@@ -1,11 +1,12 @@
 ﻿using System.Globalization;
-using Bit.Core.IdentityServer;
+using Azure.Storage.Queues;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.IdentityModel.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Notifications;
 
@@ -61,32 +62,31 @@ public class Startup
         }
         services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
         services.AddSingleton<ConnectionCounter>();
+        services.AddSingleton<HubHelpers>();
 
         // Mvc
         services.AddMvc();
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<HeartbeatHostedService>();
+        services.TryAddKeyedSingleton<QueueClient>("notifications", (sp, _) =>
+            new QueueClient(
+                sp.GetRequiredService<GlobalSettings>().Notifications.ConnectionString,
+                "notifications"));
+        services.AddHostedService<AzureQueueHostedService>();
         if (!globalSettings.SelfHosted)
         {
             // Hosted Services
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                services.AddHostedService<AzureQueueHostedService>();
-            }
         }
     }
 
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings)
     {
-        IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
@@ -126,6 +126,7 @@ public class Startup
                 options.TransportMaxBufferSize = 4096;
             });
             endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
         });
     }
 }

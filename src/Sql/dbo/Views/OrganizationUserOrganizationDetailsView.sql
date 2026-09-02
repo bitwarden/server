@@ -24,7 +24,7 @@ SELECT
     O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     OU.[Key],
     OU.[ResetPasswordKey],
@@ -37,6 +37,7 @@ SELECT
     PO.[ProviderId],
     P.[Name] ProviderName,
     P.[Type] ProviderType,
+    SS.[Enabled] SsoEnabled,
     SS.[Data] SsoConfig,
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
@@ -49,7 +50,19 @@ SELECT
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
-    O.[UseRiskInsights]
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion],
+    O.[UseAdminSponsoredFamilies],
+    O.[UseOrganizationDomains],
+    OS.[IsAdminInitiated],
+    O.[UseAutomaticUserConfirmation],
+    O.[UsePhishingBlocker],
+    O.[UseDisableSmAdsForUsers],
+    O.[UseMyItems],
+    O.[UseInviteLinks],
+    O.[UsePam],
+    OU.[RevocationReason],
+    OU.[AccessPam]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

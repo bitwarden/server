@@ -15,6 +15,6 @@ public class SendTextModel
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Text { get; set; }
+    public string? Text { get; set; }
     public bool Hidden { get; set; }
 }

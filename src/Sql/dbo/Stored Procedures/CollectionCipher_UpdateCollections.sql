@@ -14,10 +14,9 @@ BEGIN
         WHERE
             [Id] = @CipherId
     )
-
-    ;WITH [AvailableCollectionsCTE] AS(
-        SELECT
+    SELECT
             C.[Id]
+            INTO #TempAvailableCollections
         FROM
             [dbo].[Collection] C
         INNER JOIN
@@ -40,38 +39,33 @@ BEGIN
                 CU.[ReadOnly] = 0
                 OR CG.[ReadOnly] = 0
             )
-    ),
-    [CollectionCiphersCTE] AS(
-        SELECT
-            [CollectionId],
-            [CipherId]
-        FROM
-            [dbo].[CollectionCipher]
-        WHERE
-            [CipherId] = @CipherId
+    -- Insert new collection assignments
+    INSERT INTO [dbo].[CollectionCipher] (
+        [CollectionId],
+        [CipherId]
     )
-    MERGE
-        [CollectionCiphersCTE] AS [Target]
-    USING
-        @CollectionIds AS [Source]
-    ON
-        [Target].[CollectionId] = [Source].[Id]
-        AND [Target].[CipherId] = @CipherId
-    WHEN NOT MATCHED BY TARGET
-    AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT VALUES
-        (
-            [Source].[Id],
-            @CipherId
-        )
-    WHEN NOT MATCHED BY SOURCE
-    AND [Target].[CipherId] = @CipherId
-    AND [Target].[CollectionId] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        DELETE
-    ;
+    SELECT
+        [Id],
+        @CipherId
+    FROM @CollectionIds
+    WHERE [Id] IN (SELECT [Id] FROM [#TempAvailableCollections])
+    AND NOT EXISTS (
+        SELECT 1
+        FROM [dbo].[CollectionCipher]
+        WHERE [CollectionId] = [@CollectionIds].[Id]
+        AND [CipherId] = @CipherId
+    );
+
+    -- Delete removed collection assignments
+    DELETE CC
+    FROM [dbo].[CollectionCipher] CC
+    WHERE CC.[CipherId] = @CipherId
+    AND CC.[CollectionId] IN (SELECT [Id] FROM [#TempAvailableCollections])
+    AND CC.[CollectionId] NOT IN (SELECT [Id] FROM @CollectionIds);
 
     IF @OrgId IS NOT NULL
     BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
     END
+    DROP TABLE #TempAvailableCollections;
 END

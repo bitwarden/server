@@ -9,6 +9,7 @@ namespace Bit.Core.Utilities;
 /// Specifies that the class or method that this attribute is applied to requires the specified boolean feature flag
 /// to be enabled. If the feature flag is not enabled, a <see cref="FeatureUnavailableException"/> is thrown
 /// </summary>
+[Obsolete("Use Bitwarden.Server.Sdk.Features.RequireFeatureAttribute instead", DiagnosticId = "BWA0002")]
 public class RequireFeatureAttribute : ActionFilterAttribute
 {
     private readonly string _featureFlagKey;

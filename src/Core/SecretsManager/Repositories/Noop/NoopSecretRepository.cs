@@ -1,4 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
@@ -102,4 +105,6 @@ public class NoopSecretRepository : ISecretRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids) => Task.FromResult<IEnumerable<Secret>>([]);
 }

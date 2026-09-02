@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -61,19 +61,18 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
+    public DatabaseTransactionAction UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var newCreds = credentials.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
-            var userWebauthnCredentials = await GetDbSet(dbContext)
-                .Where(wc => wc.Id == wc.Id)
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
+
+            var newCredIds = newCreds.Select(nwc => nwc.Id).ToList();
+            var validUserWebauthnCredentials = await GetDbSet(dbContext)
+                .Where(wc => wc.UserId == userId && newCredIds.Contains(wc.Id))
                 .ToListAsync();
-            var validUserWebauthnCredentials = userWebauthnCredentials
-                .Where(wc => newCreds.Any(nwc => nwc.Id == wc.Id))
-                .Where(wc => wc.UserId == userId);
 
             foreach (var wc in validUserWebauthnCredentials)
             {

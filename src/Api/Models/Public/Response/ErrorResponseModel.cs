@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Api.Models.Public.Response;
@@ -43,13 +44,14 @@ public class ErrorResponseModel : IResponseModel
     { }
 
     public ErrorResponseModel(string errorKey, string errorValue)
-        : this(errorKey, new string[] { errorValue })
+        : this(errorKey, [errorValue])
     { }
 
     public ErrorResponseModel(string errorKey, IEnumerable<string> errorValues)
         : this(new Dictionary<string, IEnumerable<string>> { { errorKey, errorValues } })
     { }
 
+    [JsonConstructor]
     public ErrorResponseModel(string message, Dictionary<string, IEnumerable<string>> errors)
     {
         Message = message;
@@ -67,10 +69,10 @@ public class ErrorResponseModel : IResponseModel
     /// </summary>
     /// <example>The request model is invalid.</example>
     [Required]
-    public string Message { get; set; }
+    public string Message { get; init; }
     /// <summary>
     /// If multiple errors occurred, they are listed in dictionary. Errors related to a specific
     /// request parameter will include a dictionary key describing that parameter.
     /// </summary>
-    public Dictionary<string, IEnumerable<string>> Errors { get; set; }
+    public Dictionary<string, IEnumerable<string>>? Errors { get; }
 }

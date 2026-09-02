@@ -1,0 +1,78 @@
+﻿using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Context;
+using Bit.Core.Models.Api;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace Bit.Core.Platform.Push.Internal;
+
+/// <summary>
+/// Sends mobile push notifications to the Bitwarden Cloud API, then relayed to Azure Notification Hub.
+/// Used by Self-Hosted environments.
+/// Received by PushController endpoint in Api project.
+/// </summary>
+public class RelayPushEngine : BaseIdentityClientService, IPushEngine
+{
+    private readonly IDeviceRepository _deviceRepository;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+
+    public RelayPushEngine(
+        IHttpClientFactory httpFactory,
+        IDeviceRepository deviceRepository,
+        GlobalSettings globalSettings,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<RelayPushEngine> logger)
+        : base(
+            httpFactory,
+            globalSettings.PushRelayBaseUri,
+            globalSettings.Installation.IdentityUri,
+            ApiScopes.ApiPush,
+            $"installation.{globalSettings.Installation.Id}",
+            globalSettings.Installation.Key,
+            logger)
+    {
+        _deviceRepository = deviceRepository;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task PushAsync<T>(PushNotification<T> pushNotification)
+        where T : class
+    {
+        if (pushNotification.NonMobileOnly == true)
+        {
+            return;
+        }
+
+        var deviceIdentifier = _httpContextAccessor.HttpContext
+            ?.RequestServices.GetService<ICurrentContext>()
+            ?.DeviceIdentifier;
+
+        Guid? deviceId = null;
+
+        if (!string.IsNullOrEmpty(deviceIdentifier))
+        {
+            var device = await _deviceRepository.GetByIdentifierAsync(deviceIdentifier);
+            deviceId = device?.Id;
+        }
+
+        var payload = new PushSendRequestModel<T>
+        {
+            Type = pushNotification.Type,
+            UserId = pushNotification.GetTargetWhen(NotificationTarget.User),
+            OrganizationId = pushNotification.GetTargetWhen(NotificationTarget.Organization),
+            InstallationId = pushNotification.GetTargetWhen(NotificationTarget.Installation),
+            Payload = pushNotification.Payload,
+            Identifier = pushNotification.ExcludeCurrentContext ? deviceIdentifier : null,
+            // We set the device id regardless of if they want to exclude the current context or not
+            DeviceId = deviceId,
+            ClientType = pushNotification.ClientType,
+        };
+
+        await SendAsync(HttpMethod.Post, "push/send", payload);
+    }
+}

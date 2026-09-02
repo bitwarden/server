@@ -21,7 +21,8 @@ public class OrganizationUserCustomization : ICustomization
     {
         fixture.Customize<OrganizationUser>(composer => composer
             .With(o => o.Type, Type)
-            .With(o => o.Status, Status));
+            .With(o => o.Status, Status)
+            .Without(o => o.StatusNew));
     }
 }
 

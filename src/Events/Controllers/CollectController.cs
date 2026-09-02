@@ -1,4 +1,7 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -18,23 +21,21 @@ public class CollectController : Controller
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
-        IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        IOrganizationUserRepository organizationUserRepository
+        )
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
-        _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     [HttpPost]
@@ -44,8 +45,10 @@ public class CollectController : Controller
         {
             return new BadRequestResult();
         }
+
         var cipherEvents = new List<Tuple<Cipher, EventType, DateTime?>>();
         var ciphersCache = new Dictionary<Guid, Cipher>();
+
         foreach (var eventModel in model)
         {
             switch (eventModel.Type)
@@ -54,6 +57,26 @@ public class CollectController : Controller
                 case EventType.User_ClientExportedVault:
                     await _eventService.LogUserEventAsync(_currentContext.UserId.Value, eventModel.Type, eventModel.Date);
                     break;
+
+                case EventType.Organization_ItemOrganization_Accepted:
+                case EventType.Organization_ItemOrganization_Declined:
+                case EventType.OrganizationUser_NotificationBannerActionClicked:
+                    if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var orgUser = await _organizationUserRepository.GetByOrganizationAsync(eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+
+                    if (orgUser == null)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, eventModel.Type, eventModel.Date);
+
+                    continue;
+
                 // Cipher events
                 case EventType.Cipher_ClientAutofilled:
                 case EventType.Cipher_ClientCopiedHiddenField:
@@ -63,21 +86,37 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:
+                case EventType.Cipher_ClientCopiedBankAccountNumber:
+                case EventType.Cipher_ClientCopiedBankAccountPin:
+                case EventType.Cipher_ClientToggledBankAccountNumberVisible:
+                case EventType.Cipher_ClientToggledBankAccountPinVisible:
+                case EventType.Cipher_ClientCopiedLicenseNumber:
+                case EventType.Cipher_ClientToggledLicenseNumberVisible:
+                case EventType.Cipher_ClientCopiedPassportNumber:
+                case EventType.Cipher_ClientToggledPassportNumberVisible:
+                case EventType.Cipher_ClientCopiedSwiftCode:
+                case EventType.Cipher_ClientToggledSwiftCodeVisible:
+                case EventType.Cipher_ClientCopiedIban:
+                case EventType.Cipher_ClientToggledIbanVisible:
+                case EventType.Cipher_ClientCopiedNationalIdentificationNumber:
+                case EventType.Cipher_ClientToggledNationalIdentificationNumberVisible:
                 case EventType.Cipher_ClientViewed:
                     if (!eventModel.CipherId.HasValue)
                     {
                         continue;
                     }
-                    Cipher cipher = null;
-                    if (ciphersCache.ContainsKey(eventModel.CipherId.Value))
+
+                    Cipher cipher;
+                    if (ciphersCache.TryGetValue(eventModel.CipherId.Value, out var cachedCipher))
                     {
-                        cipher = ciphersCache[eventModel.CipherId.Value];
+                        cipher = cachedCipher;
                     }
                     else
                     {
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
                            _currentContext.UserId.Value);
                     }
+
                     if (cipher == null)
                     {
                         // When the user cannot access the cipher directly, check if the organization allows for
@@ -88,32 +127,77 @@ public class CollectController : Controller
                         }
 
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value);
+                        if (cipher == null)
+                        {
+                            continue;
+                        }
+
                         var cipherBelongsToOrg = cipher.OrganizationId == eventModel.OrganizationId;
                         var org = _currentContext.GetOrganization(eventModel.OrganizationId.Value);
 
-                        if (!cipherBelongsToOrg || org == null || cipher == null)
+                        if (!cipherBelongsToOrg || org == null)
                         {
                             continue;
                         }
                     }
-                    if (!ciphersCache.ContainsKey(eventModel.CipherId.Value))
-                    {
-                        ciphersCache.Add(eventModel.CipherId.Value, cipher);
-                    }
+
+                    ciphersCache.TryAdd(eventModel.CipherId.Value, cipher);
                     cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
                     break;
+
                 case EventType.Organization_ClientExportedVault:
+                case EventType.Organization_AutoConfirmEnabled_Admin:
+                case EventType.Organization_AutoConfirmDisabled_Admin:
+                case EventType.Organization_InviteLinkClientCopied:
+                    if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    // Drop the event if the caller is not a member of the target organization.
+                    var orgMembership = await _organizationUserRepository.GetByOrganizationAsync(
+                        eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgMembership == null)
+                    {
+                        continue;
+                    }
+
+                    var organization = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                    if (organization == null)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
+                    break;
+                case EventType.PhishingBlocker_SiteAccessed:
+                case EventType.PhishingBlocker_SiteExited:
+                case EventType.PhishingBlocker_Bypassed:
                     if (!eventModel.OrganizationId.HasValue)
                     {
                         continue;
                     }
-                    var organization = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
-                    await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
+
+                    // Verify the user belongs to this organization
+                    var orgUserContext = await _organizationUserRepository.GetByOrganizationAsync(eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgUserContext == null)
+                    {
+                        continue;
+                    }
+
+                    var organizationForPhishingEvent = await _organizationRepository.GetByIdAsync(eventModel.OrganizationId.Value);
+                    if (organizationForPhishingEvent == null || !organizationForPhishingEvent.UsePhishingBlocker)
+                    {
+                        continue;
+                    }
+
+                    await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type, eventModel.Date);
                     break;
                 default:
                     continue;
             }
         }
+
         if (cipherEvents.Any())
         {
             foreach (var eventsBatch in cipherEvents.Chunk(50))
@@ -121,6 +205,7 @@ public class CollectController : Controller
                 await _eventService.LogCipherEventsAsync(eventsBatch);
             }
         }
+
         return new OkResult();
     }
 }

@@ -1,4 +1,7 @@
-﻿namespace Bit.Core.Billing;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+namespace Bit.Core.Billing;
 
 public class BillingException(
     string response = null,

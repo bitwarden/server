@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +49,21 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
+    public async Task<ICollection<CollectionCipher>> GetManySharedByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var data = await (from cc in dbContext.CollectionCiphers
+                              join c in dbContext.Collections
+                                  on cc.CollectionId equals c.Id
+                              where c.OrganizationId == organizationId
+                                    && c.Type == Core.Enums.CollectionType.SharedCollection
+                              select cc).ToArrayAsync();
+            return data;
+        }
+    }
+
     public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -68,6 +85,53 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetCollectionIdsByCipherIdAsync(Guid cipherId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.CollectionCiphers
+                .Where(cc => cc.CipherId == cipherId)
+                .Select(cc => cc.CollectionId)
+                .ToListAsync();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    {
+        var collectionIdList = collectionIds.ToList();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var directUserIds = from cu in dbContext.CollectionUsers
+                                where collectionIdList.Contains(cu.CollectionId)
+                                join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                select ou.UserId!.Value;
+
+            var groupUserIds = from cg in dbContext.CollectionGroups
+                               where collectionIdList.Contains(cg.CollectionId)
+                               join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
+                               join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                               where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                               select ou.UserId!.Value;
+
+            var orgLevelUserIds = from c in dbContext.Collections
+                                  where collectionIdList.Contains(c.Id)
+                                  join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                  join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                  where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed
+                                      && ou.UserId != null
+                                      && (ou.Type == OrganizationUserType.Owner
+                                          || ou.Type == OrganizationUserType.Admin)
+                                      && o.AllowAdminAccessToAllCollectionItems
+                                  select ou.UserId!.Value;
+
+            return await directUserIds.Union(groupUserIds).Union(orgLevelUserIds).ToListAsync();
         }
     }
 
@@ -130,9 +194,11 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availableCollections = await (from c in dbContext.Collections
-                                              where c.OrganizationId == organizationId
-                                              select c).ToListAsync();
+
+            var availableCollectionIds = await (from c in dbContext.Collections
+                                                where c.OrganizationId == organizationId
+                                                && c.Type != CollectionType.DefaultUserCollection
+                                                select c.Id).ToListAsync();
 
             var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
                                                   where cc.CipherId == cipherId
@@ -140,6 +206,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             foreach (var requestedCollectionId in collectionIds)
             {
+                if (!availableCollectionIds.Contains(requestedCollectionId)) continue;
+
                 var requestedCollectionCipher = currentCollectionCiphers
                     .FirstOrDefault(cc => cc.CollectionId == requestedCollectionId);
 
@@ -153,7 +221,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 }
             }
 
-            dbContext.RemoveRange(currentCollectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId)));
+            dbContext.RemoveRange(currentCollectionCiphers.Where(cc => availableCollectionIds.Contains(cc.CollectionId) && !collectionIds.Contains(cc.CollectionId)));
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
         }

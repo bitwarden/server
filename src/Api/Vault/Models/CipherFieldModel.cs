@@ -1,4 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 
@@ -17,8 +20,10 @@ public class CipherFieldModel
     }
 
     public FieldType Type { get; set; }
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+    [EncryptedString]
     [EncryptedStringLength(5000)]
     public string Value { get; set; }
     public int? LinkedId { get; set; }

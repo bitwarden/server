@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_DeleteById]
+CREATE PROCEDURE [dbo].[OrganizationUser_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -16,6 +16,11 @@ BEGIN
         [dbo].[OrganizationUser]
     WHERE
         [Id] = @Id
+
+    -- Migrate DefaultUserCollection to SharedCollection
+    DECLARE @Ids [dbo].[GuidIdArray]
+    INSERT INTO @Ids (Id) VALUES (@Id)
+    EXEC [dbo].[OrganizationUser_MigrateDefaultCollection] @Ids
 
     IF @OrganizationId IS NOT NULL AND @UserId IS NOT NULL
     BEGIN

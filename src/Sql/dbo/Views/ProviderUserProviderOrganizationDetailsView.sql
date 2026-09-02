@@ -16,12 +16,14 @@ SELECT
     O.[Use2fa],
     O.[UseApi],
     O.[UseResetPassword],
+    O.[UseSecretsManager],
+    O.[UsePasswordManager],
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
-    O.[MaxStorageGb],
+    COALESCE(O.[MaxStorageGbIncreased], O.[MaxStorageGb]) AS [MaxStorageGb],
     O.[Identifier],
     PO.[Key],
     O.[PublicKey],
@@ -36,7 +38,18 @@ SELECT
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
-    P.[Type] ProviderType
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion],
+    O.[UseOrganizationDomains],
+    O.[UseAutomaticUserConfirmation],
+    SS.[Enabled] SsoEnabled,
+    SS.[Data] SsoConfig,
+    O.[UsePhishingBlocker],
+    O.[UseDisableSmAdsForUsers],
+    O.[UseMyItems],
+    O.[UseInviteLinks],
+    O.[UsePam]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
@@ -45,3 +58,5 @@ INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+LEFT JOIN
+    [dbo].[SsoConfig] SS ON SS.[OrganizationId] = O.[Id]

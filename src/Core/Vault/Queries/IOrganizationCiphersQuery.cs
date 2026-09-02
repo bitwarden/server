@@ -37,4 +37,10 @@ public interface IOrganizationCiphersQuery
     /// </remarks>
     public Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetOrganizationCiphersByCollectionIds(
         Guid organizationId, IEnumerable<Guid> collectionIds);
+
+    /// <summary>
+    /// Returns all organization ciphers except those in default user collections.
+    /// </summary>
+    public Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid organizationId);
 }

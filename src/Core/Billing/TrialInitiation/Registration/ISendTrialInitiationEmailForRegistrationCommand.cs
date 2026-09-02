@@ -10,5 +10,7 @@ public interface ISendTrialInitiationEmailForRegistrationCommand
         string? name,
         bool receiveMarketingEmails,
         ProductTierType productTier,
-        IEnumerable<ProductType> products);
+        IEnumerable<ProductType> products,
+        int trialLength,
+        bool paymentOptional = false);
 }

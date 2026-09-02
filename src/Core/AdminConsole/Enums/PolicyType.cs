@@ -7,15 +7,31 @@ public enum PolicyType : byte
     PasswordGenerator = 2,
     SingleOrg = 3,
     RequireSso = 4,
-    PersonalOwnership = 5,
+    OrganizationDataOwnership = 5,
+    // Deprecated: superseded by SendControls (21) when pm-31885-send-controls flag is active.
+    // Do not add [Obsolete] until the flag is retired.
     DisableSend = 6,
+    // Deprecated: superseded by SendControls (21) when pm-31885-send-controls flag is active.
+    // Do not add [Obsolete] until the flag is retired.
     SendOptions = 7,
     ResetPassword = 8,
     MaximumVaultTimeout = 9,
     DisablePersonalVaultExport = 10,
     ActivateAutofill = 11,
     AutomaticAppLogIn = 12,
-    FreeFamiliesSponsorshipPolicy = 13
+    FreeFamiliesSponsorshipPolicy = 13,
+    RemoveUnlockWithPin = 14,
+    RestrictedItemTypesPolicy = 15,
+    UriMatchDefaults = 16,
+    AutotypeDefaultSetting = 17,
+    AutomaticUserConfirmation = 18,
+    BlockClaimedDomainAccountCreation = 19,
+    OrganizationUserNotification = 20,
+    /// <summary>
+    /// Supersedes DisableSend (6) and SendOptions (7) when the pm-31885-send-controls feature flag is active.
+    /// </summary>
+    SendControls = 21,
+    FillAssist = 22,
 }
 
 public static class PolicyTypeExtensions
@@ -33,15 +49,24 @@ public static class PolicyTypeExtensions
             PolicyType.PasswordGenerator => "Password generator",
             PolicyType.SingleOrg => "Single organization",
             PolicyType.RequireSso => "Require single sign-on authentication",
-            PolicyType.PersonalOwnership => "Remove individual vault",
+            PolicyType.OrganizationDataOwnership => "Enforce organization data ownership",
             PolicyType.DisableSend => "Remove Send",
             PolicyType.SendOptions => "Send options",
             PolicyType.ResetPassword => "Account recovery administration",
             PolicyType.MaximumVaultTimeout => "Vault timeout",
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
             PolicyType.ActivateAutofill => "Active auto-fill",
-            PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
-            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship"
+            PolicyType.AutomaticAppLogIn => "Automatic login with SSO",
+            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
+            PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
+            PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
+            PolicyType.UriMatchDefaults => "URI match defaults",
+            PolicyType.AutotypeDefaultSetting => "Autotype default setting",
+            PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
+            PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
+            PolicyType.OrganizationUserNotification => "Vault banner message",
+            PolicyType.SendControls => "Send controls",
+            PolicyType.FillAssist => "Activate fill assist",
         };
     }
 }

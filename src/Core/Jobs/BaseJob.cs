@@ -3,6 +3,8 @@ using Quartz;
 
 namespace Bit.Core.Jobs;
 
+#nullable enable
+
 public abstract class BaseJob : IJob
 {
     protected readonly ILogger _logger;

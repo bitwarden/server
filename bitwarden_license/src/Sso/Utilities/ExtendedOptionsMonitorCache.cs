@@ -1,4 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Sso.Utilities;

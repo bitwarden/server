@@ -1,7 +1,10 @@
-﻿using Bit.Core.Context;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -167,7 +170,7 @@ public class UserStore :
 
     public async Task<bool> GetTwoFactorEnabledAsync(User user, CancellationToken cancellationToken)
     {
-        return await _serviceProvider.GetRequiredService<IUserService>().TwoFactorIsEnabledAsync(user);
+        return await _serviceProvider.GetRequiredService<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user);
     }
 
     public Task SetSecurityStampAsync(User user, string stamp, CancellationToken cancellationToken)

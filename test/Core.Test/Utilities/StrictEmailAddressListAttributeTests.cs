@@ -42,7 +42,7 @@ public class StrictEmailAddressListAttributeTests
     [Theory]
     [InlineData("single@email.com", false)]
     [InlineData(null, false)]
-    public void IsValid_ReturnsTrue_WhenValid(string email, bool valid)
+    public void IsValid_ReturnsTrue_WhenValid(string? email, bool valid)
     {
         var sut = new StrictEmailAddressListAttribute();
 

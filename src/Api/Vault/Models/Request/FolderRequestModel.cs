@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 
@@ -24,6 +27,12 @@ public class FolderRequestModel
         existingFolder.Name = Name;
         return existingFolder;
     }
+}
+
+public class FolderBulkDeleteRequestModel
+{
+    [Required]
+    public required IEnumerable<Guid> Ids { get; set; }
 }
 
 public class FolderWithIdRequestModel : FolderRequestModel

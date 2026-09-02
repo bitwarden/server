@@ -1,0 +1,131 @@
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Services;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Xunit;
+
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Organizations;
+
+[SutProviderCustomize]
+public class OrganizationDeleteCommandTests
+{
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_Success(Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        var cipherService = sutProvider.GetDependency<ICipherService>();
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
+        // The deletion and the events-cleanup task enqueue happen atomically in one repository call.
+        await organizationRepository.Received(1).DeleteAndCreateDeleteTasksAsync(
+            organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
+        await organizationRepository.DidNotReceive().DeleteAsync(organization);
+        await organizationAbilityCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_Fails_KeyConnector(Organization organization, SutProvider<OrganizationDeleteCommand> sutProvider,
+        SsoConfig ssoConfig)
+    {
+        ssoConfig.Enabled = true;
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+        var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+
+        ssoConfigRepository.GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(organization));
+
+        Assert.Contains(new CannotDeleteOrganizationWithKeyConnectorError().Message, exception.Message);
+
+        await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAndCreateDeleteTasksAsync(default, default);
+        await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_CallsSubscriberService(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(organization, cancelImmediately: false);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_HandlesBillingException(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        organization.GatewaySubscriptionId = "sub_123";
+        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
+
+        var billingException = new BillingException();
+        sutProvider.GetDependency<ISubscriberService>()
+            .CancelSubscription(organization, cancelImmediately: false)
+            .ThrowsAsync(billingException);
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task Delete_WithFileSends_DeletesFilesBeforeDbRecords(
+        Organization organization,
+        SutProvider<OrganizationDeleteCommand> sutProvider)
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        var callOrder = new List<string>();
+        sutProvider.GetDependency<ISendFileStorageService>()
+            .DeleteFilesForOrganizationAsync(organization.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Any<IEnumerable<OrganizationDeleteTaskType>>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        await sutProvider.Sut.DeleteAsync(organization);
+
+        await sutProvider.GetDependency<ISendFileStorageService>()
+            .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1).DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
+        Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
+}

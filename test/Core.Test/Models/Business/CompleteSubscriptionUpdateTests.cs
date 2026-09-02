@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Stripe;
 using Xunit;
@@ -17,7 +17,7 @@ public class CompleteSubscriptionUpdateTests
     public void UpgradeItemOptions_TeamsStarterToTeams_ReturnsCorrectOptions(
         Organization organization)
     {
-        var teamsStarterPlan = StaticStore.GetPlan(PlanType.TeamsStarter);
+        var teamsStarterPlan = MockPlans.Get(PlanType.TeamsStarter);
 
         var subscription = new Subscription
         {
@@ -35,7 +35,7 @@ public class CompleteSubscriptionUpdateTests
             }
         };
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         var updatedSubscriptionData = new SubscriptionData
         {
@@ -43,7 +43,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedPasswordManagerSeats = 20
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsStarterPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -66,7 +66,7 @@ public class CompleteSubscriptionUpdateTests
         // 5 purchased, 1 base
         organization.MaxStorageGb = 6;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         var subscription = new Subscription
         {
@@ -102,7 +102,7 @@ public class CompleteSubscriptionUpdateTests
             }
         };
 
-        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var enterpriseMonthlyPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         var updatedSubscriptionData = new SubscriptionData
         {
@@ -114,7 +114,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -173,7 +173,7 @@ public class CompleteSubscriptionUpdateTests
         // 5 purchased, 1 base
         organization.MaxStorageGb = 6;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         var subscription = new Subscription
         {
@@ -209,7 +209,7 @@ public class CompleteSubscriptionUpdateTests
             }
         };
 
-        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var enterpriseMonthlyPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         var updatedSubscriptionData = new SubscriptionData
         {
@@ -221,7 +221,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -277,8 +277,8 @@ public class CompleteSubscriptionUpdateTests
     public void RevertItemOptions_TeamsStarterToTeams_ReturnsCorrectOptions(
         Organization organization)
     {
-        var teamsStarterPlan = StaticStore.GetPlan(PlanType.TeamsStarter);
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+        var teamsStarterPlan = MockPlans.Get(PlanType.TeamsStarter);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
 
         var subscription = new Subscription
         {
@@ -302,7 +302,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedPasswordManagerSeats = 20
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsStarterPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 
@@ -325,8 +325,8 @@ public class CompleteSubscriptionUpdateTests
         // 5 purchased, 1 base
         organization.MaxStorageGb = 6;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
+        var enterpriseMonthlyPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         var subscription = new Subscription
         {
@@ -372,7 +372,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 
@@ -431,8 +431,8 @@ public class CompleteSubscriptionUpdateTests
         // 5 purchased, 1 base
         organization.MaxStorageGb = 6;
 
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+        var teamsMonthlyPlan = MockPlans.Get(PlanType.TeamsMonthly);
+        var enterpriseMonthlyPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
 
         var subscription = new Subscription
         {
@@ -478,7 +478,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 

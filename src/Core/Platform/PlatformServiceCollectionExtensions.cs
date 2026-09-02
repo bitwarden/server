@@ -1,4 +1,6 @@
-﻿using Bit.Core.Platform.Installations;
+﻿#nullable enable
+
+using Bit.Core.Platform.Installations;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Platform;

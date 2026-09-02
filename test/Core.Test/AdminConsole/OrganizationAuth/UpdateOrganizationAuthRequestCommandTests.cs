@@ -6,6 +6,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -91,7 +92,7 @@ public class UpdateOrganizationAuthRequestCommandTests
 
         await sutProvider.Sut.UpdateAsync(configuration.OrganizationId, updates);
         await sutProvider.GetDependency<IAuthRequestRepository>().DidNotReceiveWithAnyArgs().UpdateManyAsync(Arg.Any<IEnumerable<OrganizationAdminAuthRequest>>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushAuthRequestResponseAsync(Arg.Any<AuthRequest>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushAsync(Arg.Any<PushNotification<AuthRequestPushNotification>>());
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendTrustedDeviceAdminApprovalEmailAsync(
             Arg.Any<string>(),
             Arg.Any<DateTime>(),
@@ -134,7 +135,7 @@ public class UpdateOrganizationAuthRequestCommandTests
             organizationUsers[i].UserId = unprocessedAuthRequests[i].UserId;
 
             sutProvider.GetDependency<IUserRepository>().GetByIdAsync(Arg.Is(users[i].Id)).Returns(users[i]);
-        };
+        }
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
 
@@ -165,8 +166,7 @@ public class UpdateOrganizationAuthRequestCommandTests
         foreach (var authRequest in unprocessedAuthRequests)
         {
             await sutProvider.GetDependency<IPushNotificationService>().Received()
-                .PushAuthRequestResponseAsync(Arg.Is<OrganizationAdminAuthRequest>
-                        (ar => ar.Id == authRequest.Id && ar.Approved == true && ar.Key == "key"));
+                .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == authRequest.Id));
 
             await sutProvider.GetDependency<IMailService>().Received().SendTrustedDeviceAdminApprovalEmailAsync(
                 users.FirstOrDefault(x => x.Id == authRequest.UserId).Email,
@@ -205,7 +205,7 @@ public class UpdateOrganizationAuthRequestCommandTests
             update.Approved = false;
             unprocessedAuthRequest.Id = update.Id;
             unprocessedAuthRequests.Add(unprocessedAuthRequest);
-        };
+        }
 
         sutProvider.GetDependency<IGlobalSettings>().PasswordlessAuth.AdminRequestExpiration.Returns(TimeSpan.FromDays(7));
 
@@ -222,7 +222,7 @@ public class UpdateOrganizationAuthRequestCommandTests
         // Assert that because we passed in good data we call a save
         // operation and raise all events
         await sutProvider.GetDependency<IAuthRequestRepository>().ReceivedWithAnyArgs().UpdateManyAsync(Arg.Any<IEnumerable<OrganizationAdminAuthRequest>>());
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushAuthRequestResponseAsync(Arg.Any<AuthRequest>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushAsync(Arg.Any<PushNotification<AuthRequestPushNotification>>());
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendTrustedDeviceAdminApprovalEmailAsync(
             Arg.Any<string>(),
             Arg.Any<DateTime>(),

@@ -10,11 +10,9 @@ public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientTy
 {
     public IQueryable<NotificationStatusDetails> Run(DatabaseContext dbContext)
     {
-        var clientTypes = new[] { ClientType.All };
-        if (clientType != ClientType.All)
-        {
-            clientTypes = [ClientType.All, clientType];
-        }
+        var clientTypes = clientType != ClientType.All
+            ? new List<ClientType> { ClientType.All, clientType }
+            : new List<ClientType> { ClientType.All };
 
         var query = from n in dbContext.Notifications
                     join ou in dbContext.OrganizationUsers.Where(ou => ou.UserId == userId)
@@ -52,6 +50,7 @@ public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientTy
             ClientType = x.n.ClientType,
             UserId = x.n.UserId,
             OrganizationId = x.n.OrganizationId,
+            TaskId = x.n.TaskId,
             Title = x.n.Title,
             Body = x.n.Body,
             CreationDate = x.n.CreationDate,

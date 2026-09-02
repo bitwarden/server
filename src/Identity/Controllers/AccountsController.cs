@@ -1,30 +1,24 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
-using Bit.Core.Auth.Utilities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -34,32 +28,28 @@ namespace Bit.Identity.Controllers;
 [ExceptionHandlerFilter]
 public class AccountsController : Controller
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<AccountsController> _logger;
     private readonly IUserRepository _userRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IFeatureService _featureService;
 
-    private readonly byte[] _defaultKdfHmacKey = null;
-    private static readonly List<UserKdfInformation> _defaultKdfResults =
+    private readonly byte[]? _defaultKdfHmacKey = null;
+    internal static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // We want more weight for this default, so add it again
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // Add some other possible defaults...
         new()
@@ -75,38 +65,38 @@ public class AccountsController : Controller
         new()
         {
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4,
+        },
+        // Mobile-friendly Argon2id default, tuned for iOS memory constraints.
+        new()
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
         }
     ];
 
     public AccountsController(
-        ICurrentContext currentContext,
-        ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IRegisterUserCommand registerUserCommand,
-        ICaptchaValidationService captchaValidationService,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
-        IReferenceEventService referenceEventService,
-        IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        IFeatureService featureService,
         GlobalSettings globalSettings
         )
     {
-        _currentContext = currentContext;
-        _logger = logger;
         _userRepository = userRepository;
         _registerUserCommand = registerUserCommand;
-        _captchaValidationService = captchaValidationService;
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
-        _referenceEventService = referenceEventService;
-        _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _featureService = featureService;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -114,31 +104,13 @@ public class AccountsController : Controller
         }
     }
 
-    [HttpPost("register")]
-    [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
-    {
-        var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        // delaysEnabled false is only for the new registration with email verification process
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
-    }
-
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
-        var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails);
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
 
-        var refEvent = new ReferenceEvent
-        {
-            Type = ReferenceEventType.SignupEmailSubmit,
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration
-        };
-        await _referenceEventService.RaiseEventAsync(refEvent);
+        var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
+            model.ReceiveMarketingEmails, model.FromMarketing, model.OpenOrgInvite);
 
         if (token != null)
         {
@@ -146,6 +118,18 @@ public class AccountsController : Controller
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Mirrors <c>[RequireFeature(FeatureFlagKeys.GenerateInviteLink)]</c> on the other invite-link
+    /// surfaces — throws <see cref="FeatureUnavailableException"/> when the flag is off.
+    /// </summary>
+    private void GuardOpenOrgInviteFeatureEnabled(OpenOrgInviteRequestModel? openOrgInvite)
+    {
+        if (openOrgInvite is not null && !_featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink))
+        {
+            throw new FeatureUnavailableException();
+        }
     }
 
     [HttpPost("register/verification-email-clicked")]
@@ -158,84 +142,88 @@ public class AccountsController : Controller
         var user = await _userRepository.GetByEmailAsync(model.Email);
         var userExists = user != null;
 
-        var refEvent = new ReferenceEvent
-        {
-            Type = ReferenceEventType.SignupEmailClicked,
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration,
-            EmailVerificationTokenValid = tokenValid,
-            UserAlreadyExists = userExists
-        };
-
-        await _referenceEventService.RaiseEventAsync(refEvent);
-
         if (!tokenValid || userExists)
         {
             throw new BadRequestException("Expired link. Please restart registration or try logging in. You may already have an account");
         }
 
         return Ok();
-
-
     }
 
     [HttpPost("register/finish")]
-    public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
+    public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
-        var user = model.ToUser();
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
+
+        var registerFinishData = model.ToData();
+        var user = model.ToUser(registerFinishData.IsV2Encryption());
 
         // Users will either have an emailed token or an email verification token - not both.
-
-        IdentityResult identityResult = null;
-        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+        IdentityResult? identityResult = null;
 
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult =
-                    await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
-                        model.EmailVerificationToken);
+                identityResult = model.OpenOrgInvite is not null
+                    ? await _registerUserCommand.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!,
+                        model.OpenOrgInvite)
+                    : await _registerUserCommand.RegisterUserViaEmailVerificationToken(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!);
+                return ProcessRegistrationResult(identityResult, user);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
-                    model.OrgInviteToken, model.OrganizationUserId);
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(
+                    user,
+                    registerFinishData,
+                    model.OrgInviteToken!,
+                    model.OrganizationUserId);
+                return ProcessRegistrationResult(identityResult, user);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
-                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+                    user,
+                    registerFinishData,
+                    model.OrgSponsoredFreeFamilyPlanToken!);
+                return ProcessRegistrationResult(identityResult, user);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
-                Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
-                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
-                    model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
+                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(
+                    user,
+                    registerFinishData,
+                    model.AcceptEmergencyAccessInviteToken!,
+                    (Guid)model.AcceptEmergencyAccessId!);
+                return ProcessRegistrationResult(identityResult, user);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
-                Debug.Assert(model.ProviderUserId.HasValue);
-                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
-                    model.ProviderInviteToken, model.ProviderUserId.Value);
+                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(
+                    user,
+                    registerFinishData,
+                    model.ProviderInviteToken!,
+                    (Guid)model.ProviderUserId!);
+                return ProcessRegistrationResult(identityResult, user);
 
-                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
+            case RegisterFinishTokenType.SalesAssisted:
+                identityResult = await _registerUserCommand.RegisterUserViaSalesAssistedToken(
+                    user,
+                    registerFinishData,
+                    model.SalesAssistedToken!);
+                return ProcessRegistrationResult(identityResult, user);
 
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
     }
 
-    private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
+    private RegisterFinishResponseModel ProcessRegistrationResult(IdentityResult result, User user)
     {
         if (result.Succeeded)
         {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
+            return new RegisterFinishResponseModel();
         }
 
         foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
@@ -243,23 +231,34 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        if (delaysEnabled)
-        {
-            await Task.Delay(Random.Shared.Next(100, 130));
-        }
         throw new BadRequestException(ModelState);
     }
 
-    // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
     [HttpPost("prelogin")]
-    public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
+    [Obsolete("Migrating to use a more descriptive endpoint that would support different types of prelogins. " +
+              "Use prelogin/password instead. This endpoint has no EOL at the time of writing.")]
+    public async Task<PasswordPreloginResponseModel> PostPrelogin([FromBody] PasswordPreloginRequestModel model)
     {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = GetDefaultKdf(model.Email);
-        }
-        return new PreloginResponseModel(kdfInformation);
+        // Same as PostPasswordPrelogin to maintain compatibility. Do not make changes in this function body,
+        // only make changes in MakePasswordPreloginCall
+        return await MakePasswordPreloginCall(model);
+    }
+
+    // There are two functions done this way because the open api docs that get generated in our build pipeline
+    // cannot handle two of the same post attributes on the same function call. That is why there is a
+    // PostPrelogin and the more appropriate PostPasswordPrelogin.
+    [HttpPost("prelogin/password")]
+    public async Task<PasswordPreloginResponseModel> PostPasswordPrelogin([FromBody] PasswordPreloginRequestModel model)
+    {
+        // Same as PostPrelogin to maintain backwards compatibility. Do not make changes in this function body,
+        // only make changes in MakePasswordPreloginCall
+        return await MakePasswordPreloginCall(model);
+    }
+
+    private async Task<PasswordPreloginResponseModel> MakePasswordPreloginCall(PasswordPreloginRequestModel model)
+    {
+        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email) ?? GetDefaultKdf(model.Email);
+        return new PasswordPreloginResponseModel(kdfInformation, kdfInformation.MasterPasswordSalt);
     }
 
     [HttpGet("webauthn/assertion-options")]
@@ -279,23 +278,24 @@ public class AccountsController : Controller
 
     private UserKdfInformation GetDefaultKdf(string email)
     {
-        if (_defaultKdfHmacKey == null)
+        // Always normalize email before use so casing differences in the request do not affect the response.
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var kdfIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail, _defaultKdfResults.Count);
+        // PM-31702: In the future we may need to generate a deterministic random salt, for the time being we will use email and null.
+        var saltOptions = new string?[] { normalizedEmail, null };
+        // we add the suffix ":salt" so the calculated index is independent of the kdfIndex calculation.
+        var saltIndex = EnumerationProtectionHelpers.GetIndexForInputHash(_defaultKdfHmacKey, normalizedEmail + ":salt", saltOptions.Length);
+
+        // deep copy to avoid thread issues with the static list
+        var result = new UserKdfInformation()
         {
-            return _defaultKdfResults[0];
-        }
-        else
-        {
-            // Compute the HMAC hash of the email
-            var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
-            using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
-            var hmacHash = hmac.ComputeHash(hmacMessage);
-            // Convert the hash to a number
-            var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
-            var hashFirst8Bytes = hashHex.Substring(0, 16);
-            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
-            // Find the default KDF value for this hash number
-            var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
-            return _defaultKdfResults[hashIndex];
-        }
+            Kdf = _defaultKdfResults[kdfIndex].Kdf,
+            KdfIterations = _defaultKdfResults[kdfIndex].KdfIterations,
+            KdfMemory = _defaultKdfResults[kdfIndex].KdfMemory,
+            KdfParallelism = _defaultKdfResults[kdfIndex].KdfParallelism,
+            MasterPasswordSalt = saltOptions[saltIndex]
+        };
+
+        return result;
     }
 }

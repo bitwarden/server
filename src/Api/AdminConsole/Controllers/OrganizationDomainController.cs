@@ -2,13 +2,11 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,9 +46,20 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
-        await ValidateOrganizationAccessAsync(orgId);
+        // The Send Policy edit dialog will call this endpoint to read all claimed domains
+        // The validation used elsewhere in this controller gates on ManageSso policy alone
+        if (!await _currentContext.ManageSso(orgId) && !await _currentContext.ManagePolicies(orgId))
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
 
         var domains = await _getOrganizationDomainByOrganizationIdQuery
             .GetDomainsByOrganizationIdAsync(orgId);
@@ -107,7 +116,6 @@ public class OrganizationDomainController : Controller
     }
 
     [HttpDelete("{orgId}/domain/{id}")]
-    [HttpPost("{orgId}/domain/{id}/remove")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -121,23 +129,15 @@ public class OrganizationDomainController : Controller
         await _deleteOrganizationDomainCommand.DeleteAsync(domain);
     }
 
-    [AllowAnonymous]
-    [HttpPost("domain/sso/details")] // must be post to accept email cleanly
-    public async Task<OrganizationDomainSsoDetailsResponseModel> GetOrgDomainSsoDetails(
-        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
+    [HttpPost("{orgId}/domain/{id}/remove")]
+    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
+    public async Task PostRemoveDomain(Guid orgId, Guid id)
     {
-        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
-        if (ssoResult is null)
-        {
-            throw new NotFoundException("Claimed org domain not found");
-        }
-
-        return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
+        await RemoveDomain(orgId, id);
     }
 
     [AllowAnonymous]
     [HttpPost("domain/sso/verified")]
-    [RequireFeature(FeatureFlagKeys.VerifiedSsoDomainEndpoint)]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
         [FromBody] OrganizationDomainSsoDetailsRequestModel model)
     {

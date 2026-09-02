@@ -1,8 +1,12 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Providers.Models;
+using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Models.BitStripe;
@@ -20,6 +24,7 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderBillingController(
     ICurrentContext currentContext,
     ILogger<BaseProviderController> logger,
+    IPricingClient pricingClient,
     IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
@@ -27,6 +32,7 @@ public class ProviderBillingController(
     IStripeAdapter stripeAdapter,
     IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
     {
@@ -37,7 +43,7 @@ public class ProviderBillingController(
             return result;
         }
 
-        var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
+        var invoices = await stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
         {
             Customer = provider.GatewayCustomerId
         });
@@ -47,6 +53,7 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("invoices/{invoiceId}")]
     public async Task<IResult> GenerateClientInvoiceReportAsync([FromRoute] Guid providerId, string invoiceId)
     {
@@ -57,11 +64,11 @@ public class ProviderBillingController(
             return result;
         }
 
-        var reportContent = await providerBillingService.GenerateClientInvoiceReport(invoiceId);
+        var reportContent = await providerBillingService.GenerateClientInvoiceReport(provider.Id, invoiceId);
 
         if (reportContent == null)
         {
-            return Error.ServerError("We had a problem generating your invoice CSV. Please contact support.");
+            return Error.NotFound();
         }
 
         return TypedResults.File(
@@ -69,6 +76,7 @@ public class ProviderBillingController(
             "text/csv");
     }
 
+    // TODO: Migrate to Query / ProviderBillingVNextController
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
@@ -79,54 +87,52 @@ public class ProviderBillingController(
             return result;
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.tax_ids", "test_clock"] });
+        var subscription = await stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId,
+            new SubscriptionGetOptions
+            {
+                // `customer.discount.source.coupon` (4 levels — Stripe's cap) and
+                // `discounts.source.coupon` (3 levels) are needed because Discount.Source
+                // is expandable, not inline, after the 2025-09-30.clover Discount refactor.
+                // Without them, ProviderSubscriptionResponse's PercentOff read comes back null.
+                Expand = ["customer.tax_ids", "customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
+            });
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        var configuredProviderPlans = await Task.WhenAll(providerPlans.Select(async providerPlan =>
+        {
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
+            var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, plan.Type);
+            var price = await stripeAdapter.GetPriceAsync(priceId);
+
+            var unitAmount = price.UnitAmountDecimal.HasValue
+                ? price.UnitAmountDecimal.Value / 100M
+                : plan.PasswordManager.ProviderPortalSeatPrice;
+
+            return new ConfiguredProviderPlan(
+                providerPlan.Id,
+                providerPlan.ProviderId,
+                plan,
+                unitAmount,
+                providerPlan.SeatMinimum ?? 0,
+                providerPlan.PurchasedSeats ?? 0,
+                providerPlan.AllocatedSeats ?? 0);
+        }));
 
         var taxInformation = GetTaxInformation(subscription.Customer);
 
         var subscriptionSuspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
 
+        var paymentSource = await subscriberService.GetPaymentSource(provider);
+
         var response = ProviderSubscriptionResponse.From(
             subscription,
-            providerPlans,
+            configuredProviderPlans,
             taxInformation,
             subscriptionSuspension,
-            provider);
+            provider,
+            paymentSource);
 
         return TypedResults.Ok(response);
-    }
-
-    [HttpPut("tax-information")]
-    public async Task<IResult> UpdateTaxInformationAsync(
-        [FromRoute] Guid providerId,
-        [FromBody] TaxInformationRequestBody requestBody)
-    {
-        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
-
-        if (provider == null)
-        {
-            return result;
-        }
-
-        if (requestBody is not { Country: not null, PostalCode: not null })
-        {
-            return Error.BadRequest("Country and postal code are required to update your tax information.");
-        }
-
-        var taxInformation = new TaxInformation(
-            requestBody.Country,
-            requestBody.PostalCode,
-            requestBody.TaxId,
-            requestBody.TaxIdType,
-            requestBody.Line1,
-            requestBody.Line2,
-            requestBody.City,
-            requestBody.State);
-
-        await subscriberService.UpdateTaxInformation(provider, taxInformation);
-
-        return TypedResults.Ok();
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿#nullable enable
+
+using System.Text;
 using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Utilities;

@@ -1,4 +1,7 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
+
+using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -6,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Auth.Models.Response;
@@ -90,6 +94,13 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
 
 public class EmergencyAccessTakeoverResponseModel : ResponseModel
 {
+    /// <summary>
+    /// Creates a new instance of the <see cref="EmergencyAccessTakeoverResponseModel"/> class.
+    /// </summary>
+    /// <param name="emergencyAccess">Consumed for the Encrypted Key value</param>
+    /// <param name="grantor">consumed for the KDF configuration</param>
+    /// <param name="obj">name of the object</param>
+    /// <exception cref="ArgumentNullException">emergencyAccess cannot be null</exception>
     public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
     {
         if (emergencyAccess == null)
@@ -102,6 +113,7 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
         KdfIterations = grantor.KdfIterations;
         KdfMemory = grantor.KdfMemory;
         KdfParallelism = grantor.KdfParallelism;
+        Salt = grantor.GetMasterPasswordSalt();
     }
 
     public int KdfIterations { get; private set; }
@@ -109,6 +121,7 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
     public int? KdfParallelism { get; private set; }
     public KdfType Kdf { get; private set; }
     public string KeyEncrypted { get; private set; }
+    public string Salt { get; private set; }
 }
 
 public class EmergencyAccessViewResponseModel : ResponseModel
@@ -116,11 +129,21 @@ public class EmergencyAccessViewResponseModel : ResponseModel
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
-        IEnumerable<CipherDetails> ciphers)
+        IEnumerable<CipherDetails> ciphers,
+        User user,
+        FullCipherAccess fullCipherAccess)
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
-        Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+        // Emergency access only retrieves personal ciphers, which are never leasing-gated, so full data
+        // is released (organizationAbility is not needed for personal ciphers).
+        Ciphers = ciphers.Select(cipher =>
+            new FullCipherResponseModel(
+                fullCipherAccess,
+                cipher,
+                user,
+                null,
+                globalSettings));
     }
 
     public string KeyEncrypted { get; set; }

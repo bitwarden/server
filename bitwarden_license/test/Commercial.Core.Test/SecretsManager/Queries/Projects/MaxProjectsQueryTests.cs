@@ -1,9 +1,12 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.Projects;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -17,35 +20,30 @@ public class MaxProjectsQueryTests
 {
     [Theory]
     [BitAutoData]
+    public async Task GetByOrgIdAsync_SelfHosted_ReturnsNulls(SutProvider<MaxProjectsQuery> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+
+        var (max, overMax) = await sutProvider.Sut.GetByOrgIdAsync(organizationId, 1);
+
+        Assert.Null(max);
+        Assert.Null(overMax);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetByOrgIdAsync_OrganizationIsNull_ThrowsNotFound(SutProvider<MaxProjectsQuery> sutProvider,
         Guid organizationId)
     {
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(default).ReturnsNull();
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetByOrgIdAsync(organizationId, 1));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs()
             .GetProjectCountByOrganizationIdAsync(organizationId);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.FamiliesAnnually2019)]
-    [BitAutoData(PlanType.Custom)]
-    [BitAutoData(PlanType.FamiliesAnnually)]
-    public async Task GetByOrgIdAsync_SmPlanIsNull_ThrowsBadRequest(PlanType planType,
-        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
-    {
-        organization.PlanType = planType;
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetByOrgIdAsync(organization.Id, 1));
-
-        await sutProvider.GetDependency<IProjectRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .GetProjectCountByOrganizationIdAsync(organization.Id);
     }
 
     [Theory]
@@ -65,8 +63,13 @@ public class MaxProjectsQueryTests
     public async Task GetByOrgIdAsync_SmNoneFreePlans_ReturnsNull(PlanType planType,
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+
         organization.PlanType = planType;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var (limit, overLimit) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id, 1);
 
@@ -109,6 +112,9 @@ public class MaxProjectsQueryTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IProjectRepository>().GetProjectCountByOrganizationIdAsync(organization.Id)
             .Returns(projects);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
 
         var (max, overMax) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id, projectsToAdd);
 

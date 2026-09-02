@@ -8,7 +8,7 @@
 
     <script>
         (() => {
-            togglePlanFeatures('@((byte)Model.PlanType)');
+            togglePlanFeatures('@((byte)Model.PlanType!)');
         })();
     </script>
 }
@@ -19,8 +19,8 @@
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ms-auto d-flex">
-        <form asp-controller="Providers" asp-action="Edit" asp-route-id="@Model.Provider.Id"
-              onsubmit="return confirm('Are you sure you want to cancel?')">
+        <form asp-controller="Providers" asp-action="Cancel" asp-route-id="@Model.Provider.Id"
+            onsubmit="return confirm('Are you sure you want to cancel?')">
             <button class="btn btn-outline-secondary" type="submit">Cancel</button>
         </form>
     </div>

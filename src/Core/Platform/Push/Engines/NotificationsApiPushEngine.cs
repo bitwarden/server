@@ -1,0 +1,60 @@
+﻿using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Models;
+using Bit.Core.Services;
+using Bit.Core.Settings;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace Bit.Core.Platform.Push.Internal;
+
+/// <summary>
+/// Sends non-mobile push notifications to the Azure Queue Api, later received by Notifications Api.
+/// Used by Cloud-Hosted environments.
+/// Received by AzureQueueHostedService message receiver in Notifications project.
+/// </summary>
+public class NotificationsApiPushEngine : BaseIdentityClientService, IPushEngine
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public NotificationsApiPushEngine(
+        IHttpClientFactory httpFactory,
+        GlobalSettings globalSettings,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<NotificationsApiPushEngine> logger)
+        : base(
+            httpFactory,
+            globalSettings.BaseServiceUri.InternalNotifications,
+            globalSettings.BaseServiceUri.InternalIdentity,
+            "internal",
+            $"internal.{globalSettings.ProjectName}",
+            globalSettings.InternalIdentityKey,
+            logger)
+    {
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
+    {
+        var contextId = GetContextIdentifier(excludeCurrentContext);
+        var request = new PushNotificationData<T>(type, payload, contextId);
+        await SendAsync(HttpMethod.Post, "send", request);
+    }
+
+    private string? GetContextIdentifier(bool excludeCurrentContext)
+    {
+        if (!excludeCurrentContext)
+        {
+            return null;
+        }
+
+        var currentContext =
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        return currentContext?.DeviceIdentifier;
+    }
+
+    public async Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
+    {
+        await SendMessageAsync(pushNotification.Type, pushNotification.Payload, pushNotification.ExcludeCurrentContext);
+    }
+}

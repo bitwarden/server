@@ -10,7 +10,9 @@
     @EncryptedUserKey VARCHAR(MAX) = NULL,
     @EncryptedPublicKey VARCHAR(MAX) = NULL,
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
-    @Active BIT = 1
+    @Active BIT = 1,
+    @LastActivityDate DATETIME2(7) = NULL,
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +30,9 @@ BEGIN
         [EncryptedUserKey],
         [EncryptedPublicKey],
         [EncryptedPrivateKey],
-        [Active]
+        [Active],
+        [LastActivityDate],
+        [ClientVersion]
     )
     VALUES
     (
@@ -43,6 +47,8 @@ BEGIN
         @EncryptedUserKey,
         @EncryptedPublicKey,
         @EncryptedPrivateKey,
-        @Active
+        @Active,
+        @LastActivityDate,
+        @ClientVersion
     )
 END

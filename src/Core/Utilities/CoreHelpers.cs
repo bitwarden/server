@@ -1,4 +1,7 @@
-﻿using System.Globalization;
+﻿#nullable enable
+
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -13,12 +16,12 @@ using Azure.Storage.Queues.Models;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Identity;
 using Bit.Core.Settings;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using MimeKit;
 
@@ -38,43 +41,16 @@ public static class CoreHelpers
     };
 
     /// <summary>
-    /// Generate sequential Guid for Sql Server.
-    /// ref: https://github.com/nhibernate/nhibernate-core/blob/master/src/NHibernate/Id/GuidCombGenerator.cs
-    /// </summary>
-    /// <returns>A comb Guid.</returns>
-    public static Guid GenerateComb()
-        => GenerateComb(Guid.NewGuid(), DateTime.UtcNow);
-
-    /// <summary>
-    /// Implementation of <see cref="GenerateComb()" /> with input parameters to remove randomness.
-    /// This should NOT be used outside of testing.
+    /// Generate a sequential Guid for Sql Server. This prevents SQL Server index fragmentation by incorporating timestamp
+    /// information for sequential ordering. This should be preferred to <see cref="Guid.NewGuid"/> for any database IDs.
     /// </summary>
     /// <remarks>
-    /// You probably don't want to use this method and instead want to use <see cref="GenerateComb()" /> with no parameters
+    /// Delegates to <see cref="CombGuid"/>, which is the shared implementation in the Data project.
     /// </remarks>
-    internal static Guid GenerateComb(Guid startingGuid, DateTime time)
-    {
-        var guidArray = startingGuid.ToByteArray();
-
-        // Get the days and milliseconds which will be used to build the byte string
-        var days = new TimeSpan(time.Ticks - _baseDateTicks);
-        var msecs = time.TimeOfDay;
-
-        // Convert to a byte array
-        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333
-        var daysArray = BitConverter.GetBytes(days.Days);
-        var msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
-
-        // Reverse the bytes to match SQL Servers ordering
-        Array.Reverse(daysArray);
-        Array.Reverse(msecsArray);
-
-        // Copy the bytes into the guid
-        Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
-        Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
-
-        return new Guid(guidArray);
-    }
+    /// <returns>A comb Guid.</returns>
+    [Obsolete("Use Bit.Core.Utilities.CombGuid.Generate() instead.")]
+    public static Guid GenerateComb()
+        => CombGuid.Generate();
 
     internal static DateTime DateFromComb(Guid combGuid)
     {
@@ -116,11 +92,11 @@ public static class CoreHelpers
         return Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
     }
 
-    public static X509Certificate2 GetCertificate(string thumbprint)
+    public static X509Certificate2? GetCertificate(string thumbprint)
     {
         thumbprint = CleanCertificateThumbprint(thumbprint);
 
-        X509Certificate2 cert = null;
+        X509Certificate2? cert = null;
         var certStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
         certStore.Open(OpenFlags.ReadOnly);
         var certCollection = certStore.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
@@ -135,17 +111,17 @@ public static class CoreHelpers
 
     public static X509Certificate2 GetCertificate(string file, string password)
     {
-        return new X509Certificate2(file, password);
+        return LoadCertificateByContentType(File.ReadAllBytes(file), password);
     }
 
     public async static Task<X509Certificate2> GetEmbeddedCertificateAsync(string file, string password)
     {
         var assembly = typeof(CoreHelpers).GetTypeInfo().Assembly;
-        using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}"))
+        using (var s = assembly.GetManifestResourceStream($"Bit.Core.{file}")!)
         using (var ms = new MemoryStream())
         {
             await s.CopyToAsync(ms);
-            return new X509Certificate2(ms.ToArray(), password);
+            return LoadCertificateByContentType(ms.ToArray(), password);
         }
     }
 
@@ -153,14 +129,14 @@ public static class CoreHelpers
     {
         var assembly = Assembly.GetCallingAssembly();
         var resourceName = assembly.GetManifestResourceNames().Single(n => n.EndsWith(file));
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        using (var stream = assembly.GetManifestResourceStream(resourceName)!)
         using (var reader = new StreamReader(stream))
         {
             return reader.ReadToEnd();
         }
     }
 
-    public async static Task<X509Certificate2> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
+    public async static Task<X509Certificate2?> GetBlobCertificateAsync(string connectionString, string container, string file, string password)
     {
         try
         {
@@ -170,7 +146,7 @@ public static class CoreHelpers
 
             using var memStream = new MemoryStream();
             await blobRef.DownloadToAsync(memStream).ConfigureAwait(false);
-            return new X509Certificate2(memStream.ToArray(), password);
+            return LoadCertificateByContentType(memStream.ToArray(), password);
         }
         catch (RequestFailedException ex)
         when (ex.ErrorCode == BlobErrorCode.ContainerNotFound || ex.ErrorCode == BlobErrorCode.BlobNotFound)
@@ -182,6 +158,13 @@ public static class CoreHelpers
             return null;
         }
     }
+
+    private static X509Certificate2 LoadCertificateByContentType(byte[] data, string password) =>
+        X509Certificate2.GetCertContentType(data) switch
+        {
+            X509ContentType.Pkcs12 => X509CertificateLoader.LoadPkcs12(data, password),
+            _ => X509CertificateLoader.LoadCertificate(data),
+        };
 
     public static long ToEpocMilliseconds(DateTime date)
     {
@@ -233,7 +216,7 @@ public static class CoreHelpers
             throw new ArgumentOutOfRangeException(nameof(length), "length cannot be less than zero.");
         }
 
-        if ((characters?.Length ?? 0) == 0)
+        if (string.IsNullOrEmpty(characters))
         {
             throw new ArgumentOutOfRangeException(nameof(characters), "characters invalid.");
         }
@@ -346,10 +329,10 @@ public static class CoreHelpers
     /// </summary>
     public static T CloneObject<T>(T obj)
     {
-        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj));
+        return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(obj))!;
     }
 
-    public static bool SettingHasValue(string setting)
+    public static bool SettingHasValue([NotNullWhen(true)] string? setting)
     {
         var normalizedSetting = setting?.ToLowerInvariant();
         return !string.IsNullOrWhiteSpace(normalizedSetting) && !normalizedSetting.Equals("secret") &&
@@ -448,7 +431,8 @@ public static class CoreHelpers
         return output;
     }
 
-    public static string PunyEncode(string text)
+    [return: NotNullIfNotNull(nameof(text))]
+    public static string? PunyEncode(string? text)
     {
         if (text == "")
         {
@@ -473,21 +457,21 @@ public static class CoreHelpers
         }
     }
 
-    public static string FormatLicenseSignatureValue(object val)
+    public static string? FormatLicenseSignatureValue(object val)
     {
         if (val == null)
         {
             return string.Empty;
         }
 
-        if (val.GetType() == typeof(DateTime))
+        if (val is DateTime dateTimeVal)
         {
-            return ToEpocSeconds((DateTime)val).ToString();
+            return ToEpocSeconds(dateTimeVal).ToString();
         }
 
-        if (val.GetType() == typeof(bool))
+        if (val is bool boolVal)
         {
-            return val.ToString().ToLowerInvariant();
+            return boolVal.ToString().ToLowerInvariant();
         }
 
         if (val is PlanType planType)
@@ -508,7 +492,27 @@ public static class CoreHelpers
         return val.ToString();
     }
 
-    public static string SanitizeForEmail(string value, bool htmlEncode = true)
+    /// <summary>
+    /// Keeps a display value from being auto-linked by mail clients (e.g. Gmail turning
+    /// "Client.Org" into a hyperlink) by inserting a zero-width non-joiner after each "."
+    /// and "@". The visible text is unchanged, unlike <see cref="SanitizeForEmail"/> which
+    /// rewrites it to "[dot]"/"[at]".
+    /// </summary>
+    public static string PreventEmailAutoLinking(string value)
+    {
+        const string zeroWidthNonJoiner = "\u200C";
+        return value
+            .Replace(".", $".{zeroWidthNonJoiner}")
+            .Replace("@", $"@{zeroWidthNonJoiner}");
+    }
+
+    /// <summary>
+    /// Sanitizes a value for display in an email by neutralizing anything that looks like an
+    /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
+    /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
+    /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
+    /// </summary>
+    public static string SanitizeForEmail(string value)
     {
         var cleanedValue = value.Replace("@", "[at]");
         var regexOptions = RegexOptions.CultureInvariant |
@@ -521,7 +525,7 @@ public static class CoreHelpers
             cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
                 string.Empty, regexOptions);
         }
-        return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
+        return cleanedValue;
     }
 
     public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -567,14 +571,6 @@ public static class CoreHelpers
     public static string CustomProviderName(TwoFactorProviderType type)
     {
         return string.Concat("Custom_", type.ToString());
-    }
-
-    // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-    public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
-        Guid orgUserId, IGlobalSettings globalSettings)
-    {
-        return TokenIsValid("OrganizationUserInvite", protector, token, userEmail, orgUserId,
-            globalSettings.OrganizationInviteExpirationHours);
     }
 
     public static bool TokenIsValid(string firstTokenPart, IDataProtector protector, string token, string userEmail,
@@ -625,7 +621,7 @@ public static class CoreHelpers
         return subName;
     }
 
-    public static string GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
+    public static string? GetIpAddress(this Microsoft.AspNetCore.Http.HttpContext httpContext,
         GlobalSettings globalSettings)
     {
         if (httpContext == null)
@@ -633,9 +629,9 @@ public static class CoreHelpers
             return null;
         }
 
-        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealConnectingIp))
+        if (!globalSettings.SelfHosted && httpContext.Request.Headers.TryGetValue(RealConnectingIp, out var realConnectingIp))
         {
-            return httpContext.Request.Headers[RealConnectingIp].ToString();
+            return realConnectingIp.ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -648,17 +644,19 @@ public static class CoreHelpers
             origin == globalSettings.BaseServiceUri.Vault ||
             // Safari extension origin
             origin == "file://" ||
+            // Desktop application custom file protocol
+            origin == "bw-desktop-file://bundle" ||
             // Product website
             (!globalSettings.SelfHosted && origin == "https://bitwarden.com");
     }
 
-    public static X509Certificate2 GetIdentityServerCertificate(GlobalSettings globalSettings)
+    public static X509Certificate2? GetIdentityServerCertificate(GlobalSettings globalSettings)
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
@@ -679,6 +677,11 @@ public static class CoreHelpers
     public static Dictionary<string, object> AdjustIdentityServerConfig(Dictionary<string, object> configDict,
         string publicServiceUri, string internalServiceUri)
     {
+        // Remove metadata for endpoints/features we don't support
+        configDict.Remove("revocation_endpoint_auth_methods_supported");
+        configDict.Remove("introspection_endpoint_auth_methods_supported");
+        configDict.Remove("backchannel_authentication_request_signing_alg_values_supported");
+
         var dictReplace = new Dictionary<string, object>();
         foreach (var item in configDict)
         {
@@ -708,6 +711,7 @@ public static class CoreHelpers
             new(Claims.Premium, isPremium ? "true" : "false"),
             new(JwtClaimTypes.Email, user.Email),
             new(JwtClaimTypes.EmailVerified, user.EmailVerified ? "true" : "false"),
+            // TODO: [https://bitwarden.atlassian.net/browse/PM-22171] Remove this since it is already added from the persisted grant
             new(Claims.SecurityStamp, user.SecurityStamp),
         };
 
@@ -768,6 +772,12 @@ public static class CoreHelpers
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
                     }
                 }
+
+                // Privileged Access Manager
+                foreach (var org in group.Where(o => o.AccessPam))
+                {
+                    claims.Add(new KeyValuePair<string, string>(Claims.PamAccess, org.Id.ToString()));
+                }
             }
         }
 
@@ -804,14 +814,16 @@ public static class CoreHelpers
     /// <param name="jsonData">The JSON data</param>
     /// <typeparam name="T">The type to deserialize into</typeparam>
     /// <returns></returns>
-    public static T LoadClassFromJsonData<T>(string jsonData) where T : new()
+    public static T LoadClassFromJsonData<T>(string? jsonData) where T : new()
     {
         if (string.IsNullOrWhiteSpace(jsonData))
         {
             return new T();
         }
 
+#nullable disable // TODO: Remove this and fix any callee warnings.
         return System.Text.Json.JsonSerializer.Deserialize<T>(jsonData, _jsonSerializerOptions);
+#nullable enable
     }
 
     public static string ClassToJsonData<T>(T data)
@@ -829,7 +841,7 @@ public static class CoreHelpers
         return list;
     }
 
-    public static string DecodeMessageText(this QueueMessage message)
+    public static string? DecodeMessageText(this QueueMessage message)
     {
         var text = message?.MessageText;
         if (string.IsNullOrWhiteSpace(text))
@@ -852,7 +864,7 @@ public static class CoreHelpers
             Encoding.UTF8.GetBytes(input1), Encoding.UTF8.GetBytes(input2));
     }
 
-    public static string ObfuscateEmail(string email)
+    public static string? ObfuscateEmail(string email)
     {
         if (email == null)
         {
@@ -886,7 +898,7 @@ public static class CoreHelpers
 
     }
 
-    public static string GetEmailDomain(string email)
+    public static string? GetEmailDomain(string email)
     {
         if (!string.IsNullOrWhiteSpace(email))
         {
@@ -906,7 +918,7 @@ public static class CoreHelpers
         return _whiteSpaceRegex.Replace(input, newValue);
     }
 
-    public static string RedactEmailAddress(string email)
+    public static string? RedactEmailAddress(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
         {

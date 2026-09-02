@@ -1,7 +1,11 @@
-﻿namespace Bit.Core.Models.Mail;
+﻿// FIXME: Update this file to be null safe and then delete the line below
+#nullable disable
 
-public class OrganizationServiceAccountsMaxReachedViewModel
+namespace Bit.Core.Models.Mail;
+
+public class OrganizationServiceAccountsMaxReachedViewModel : BaseMailModel
 {
-    public Guid OrganizationId { get; set; }
     public int MaxServiceAccountsCount { get; set; }
+    public string VaultSubscriptionUrl { get; set; }
+    public string OrganizationName { get; set; }
 }
