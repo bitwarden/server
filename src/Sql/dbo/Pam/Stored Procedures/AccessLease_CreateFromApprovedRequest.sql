@@ -73,10 +73,16 @@ BEGIN
         RETURN
     END
 
-    -- Activation of an approved request: mints the lease that authorizes access, spanning the request's
-    -- approved window. The preconditions are restated here as defence in depth -- the claim above already holds the
-    -- row, so they cannot have changed -- and zero rows inserted still means a precondition no longer held.
-    -- [IX_AccessLease_AccessRequestId] (unique) remains the backstop.
+    -- Activation of an approved request: mints the lease that authorizes access, running from @Now (this activation)
+    -- to the request's approved end. [NotBefore] is deliberately @Now and NOT AR.[NotBefore] -- a lease records when
+    -- access actually began, and is never backdated to the window start; the [NotBefore] <= @Now precondition below
+    -- makes the request's window start a bound on when activation is allowed, not the lease's start. The end stays
+    -- AR.[NotAfter]: activating late shortens the lease rather than sliding its end out.
+    --
+    -- @Now rather than the caller's lease copy, matching how every other column here is taken from the request
+    -- rather than trusted from the caller. The preconditions are restated here as defence in depth -- the claim
+    -- above already holds the row, so they cannot have changed -- and zero rows inserted still means a precondition
+    -- no longer held. [IX_AccessLease_AccessRequestId] (unique) remains the backstop.
     INSERT INTO [dbo].[AccessLease]
     (
         [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
@@ -84,7 +90,7 @@ BEGIN
     )
     SELECT
         @AccessLeaseId, AR.[Id], AR.[OrganizationId], AR.[CollectionId], AR.[CipherId], AR.[RequesterId],
-        0 /* None (no early end) */, AR.[NotBefore], AR.[NotAfter], NULL, NULL, @Now
+        0 /* None (no early end) */, @Now, AR.[NotAfter], NULL, NULL, @Now
     FROM [dbo].[AccessRequest] AR
     WHERE
         AR.[Id] = @AccessRequestId
