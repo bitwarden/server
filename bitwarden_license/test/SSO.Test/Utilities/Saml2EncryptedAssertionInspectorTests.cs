@@ -1,60 +1,70 @@
 ﻿using System.Xml;
 using Bit.Sso.Utilities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Sustainsys.Saml2;
+using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.SSO.Test.Utilities;
 
 public class Saml2EncryptedAssertionInspectorTests
 {
+    private const string Scheme = "test-scheme";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaepMgf1P = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
     private const string Aes256Cbc = "http://www.w3.org/2001/04/xmlenc#aes256-cbc";
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_PlaintextAssertion_ReturnsEmptyList()
+    public void InspectKeyEncryptionAlgorithms_PlaintextAssertion_LogsNoEntry()
     {
         var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        // An empty list reports that the envelope carries no encrypted assertion.
-        Assert.Empty(algorithms);
+        // An envelope with no encrypted assertion names no algorithm, so no entry is logged.
+        Assert.Empty(logger.Collector.GetSnapshot());
     }
 
     [Theory]
-    [InlineData(RsaPkcs1)]
     [InlineData(RsaOaepMgf1P)]
     [InlineData(RsaOaep)]
-    public void InspectKeyEncryptionAlgorithms_NestedEncryptedKeyWithKnownAlgorithm_ReturnsAlgorithm(string algorithm)
+    public void InspectKeyEncryptionAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_LogsNoEntry(string algorithm)
     {
-        var envelope = BuildEnvelope(
-            "<saml:EncryptedAssertion>" +
-            "<xenc:EncryptedData>" +
-            "<ds:KeyInfo>" +
-            "<xenc:EncryptedKey>" +
-            $"<xenc:EncryptionMethod Algorithm=\"{algorithm}\" />" +
-            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
-            "</xenc:EncryptedKey>" +
-            "</ds:KeyInfo>" +
-            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
-            "</xenc:EncryptedData>" +
-            "</saml:EncryptedAssertion>");
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal(algorithm, Assert.Single(algorithms));
+        Assert.Empty(logger.Collector.GetSnapshot());
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EncryptedKeyBesideEncryptedData_ReturnsAlgorithm()
+    public void InspectKeyEncryptionAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_LogsEntry()
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
+        var (context, logger) = BuildContext();
+
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Information, record.Level);
+        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
+        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+    }
+
+    [Fact]
+    public void InspectKeyEncryptionAlgorithms_EncryptedKeyBesideEncryptedData_LogsEntry()
     {
         // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData.
         // An xenc:ReferenceList links the key to the data.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey Id=\"_key\">" +
-            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
             "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
             "<xenc:ReferenceList><xenc:DataReference URI=\"#_data\" /></xenc:ReferenceList>" +
             "</xenc:EncryptedKey>" +
@@ -62,18 +72,20 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal(RsaOaepMgf1P, Assert.Single(algorithms));
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_DataAndKeyEncryptionMethods_ReturnsKeyEncryptionAlgorithm()
+    public void InspectKeyEncryptionAlgorithms_DataAndKeyEncryptionMethods_LogsKeyEncryptionAlgorithm()
     {
         // xenc:EncryptedData names the data encryption algorithm, such as aes256-cbc.
         // xenc:EncryptedKey names the key encryption algorithm.
-        // The inspector must return the key encryption algorithm.
+        // The inspector must log the key encryption algorithm, not the data encryption algorithm.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -87,10 +99,12 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        var algorithm = Assert.Single(algorithms);
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        var algorithm = GetStructuredValue(record, "KeyEncryptionAlgorithm");
         Assert.Equal(RsaPkcs1, algorithm);
         Assert.NotEqual(Aes256Cbc, algorithm);
     }
@@ -100,7 +114,7 @@ public class Saml2EncryptedAssertionInspectorTests
     /// IdPs will generally send the algorithm with the assertion request, so this is an edge case.
     /// </summary>
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_NoEncryptedKey_ReturnsNullEntry()
+    public void InspectKeyEncryptionAlgorithms_NoEncryptedKey_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -108,45 +122,50 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        // The list holds one entry, because the envelope holds an encrypted assertion.
-        // The entry is null, because the assertion names no algorithm.
-        Assert.Null(Assert.Single(algorithms));
+        // One entry is logged, because the assertion names no algorithm and a missing algorithm is unaccepted.
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_ReturnsNullEntry()
+    public void InspectKeyEncryptionAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Null(Assert.Single(algorithms));
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EmptyAlgorithmAttribute_ReturnsNullEntry()
+    public void InspectKeyEncryptionAlgorithms_EmptyAlgorithmAttribute_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"\" /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Null(Assert.Single(algorithms));
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Theory]
     [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
     [InlineData("urn:example:unknown-algorithm")]
     [InlineData("rsa-1_5\nlevel=something-else")]
-    public void InspectKeyEncryptionAlgorithms_AlgorithmOutsideKnownValues_ReturnsUnrecognized(string algorithm)
+    public void InspectKeyEncryptionAlgorithms_AlgorithmOutsideKnownValues_LogsUnrecognizedEntry(string algorithm)
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -154,66 +173,81 @@ public class Saml2EncryptedAssertionInspectorTests
             $"<xenc:EncryptionMethod Algorithm=\"{EscapeAttributeValue(algorithm)}\" />" +
             "</xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal("unrecognized", Assert.Single(algorithms));
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal("unrecognized", GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_DifferentAlgorithmsInTwoAssertions_ReturnsBothInOrder()
+    public void InspectKeyEncryptionAlgorithms_TwoAssertionsWithDifferentUnacceptedAlgorithms_LogsTwoEntriesInOrder()
     {
         // A federation proxy can aggregate assertions from two identity providers.
         // Each assertion then holds its own key, and the two keys can use different algorithms.
         var envelope = BuildEnvelope(
-            BuildEncryptedAssertion(RsaPkcs1) +
-            BuildEncryptedAssertion(RsaOaepMgf1P));
+            BuildNestedEncryptedAssertion(RsaPkcs1) +
+            BuildNestedEncryptedAssertion("urn:example:unknown-algorithm"));
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal(new string?[] { RsaPkcs1, RsaOaepMgf1P }, algorithms);
+        var records = logger.Collector.GetSnapshot();
+        Assert.Equal(2, records.Count);
+        Assert.Equal(RsaPkcs1, GetStructuredValue(records[0], "KeyEncryptionAlgorithm"));
+        Assert.Equal("unrecognized", GetStructuredValue(records[1], "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_SameAlgorithmInTwoAssertions_ReturnsOneEntry()
+    public void InspectKeyEncryptionAlgorithms_SameUnacceptedAlgorithmInTwoAssertions_LogsOneEntry()
     {
+        // Two assertions can share one unaccepted algorithm, such as after a federation proxy
+        // aggregates assertions from two identity providers with the same configuration.
+        // The inspector must log one entry, not one entry for each assertion.
         var envelope = BuildEnvelope(
-            BuildEncryptedAssertion(RsaPkcs1) +
-            BuildEncryptedAssertion(RsaPkcs1));
+            BuildNestedEncryptedAssertion(RsaPkcs1) +
+            BuildNestedEncryptedAssertion(RsaPkcs1));
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal(RsaPkcs1, Assert.Single(algorithms));
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_NullAndKnownAlgorithmsInThreeAssertions_ReturnsTwoEntries()
+    public void InspectKeyEncryptionAlgorithms_NullAndAcceptedAlgorithmsInThreeAssertions_LogsOneNullEntry()
     {
         // The first and the third assertion name no algorithm. Both resolve to null, and null deduplicates.
-        // Null stays a distinct value from the algorithm of the second assertion.
+        // The second assertion uses an accepted algorithm, so it logs no entry.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>" +
-            BuildEncryptedAssertion(RsaOaep) +
+            BuildNestedEncryptedAssertion(RsaOaep) +
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
+        var (context, logger) = BuildContext();
 
-        var algorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
+        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
 
-        Assert.Equal(new string?[] { null, RsaOaep }, algorithms);
+        var record = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
-    private static string BuildEncryptedAssertion(string algorithm) =>
+    private static string BuildNestedEncryptedAssertion(string algorithm) =>
         "<saml:EncryptedAssertion>" +
+        "<xenc:EncryptedData>" +
+        "<ds:KeyInfo>" +
         "<xenc:EncryptedKey>" +
-        $"<xenc:EncryptionMethod Algorithm=\"{algorithm}\" />" +
+        $"<xenc:EncryptionMethod Algorithm=\"{EscapeAttributeValue(algorithm)}\" />" +
         "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
         "</xenc:EncryptedKey>" +
-        "<xenc:EncryptedData>" +
+        "</ds:KeyInfo>" +
         "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
         "</xenc:EncryptedData>" +
         "</saml:EncryptedAssertion>";
@@ -233,6 +267,18 @@ public class Saml2EncryptedAssertionInspectorTests
         return document.DocumentElement!;
     }
 
+    private static (DefaultHttpContext Context, FakeLogger<Saml2Options> Logger) BuildContext()
+    {
+        var logger = new FakeLogger<Saml2Options>();
+        var services = new ServiceCollection();
+        services.AddSingleton<ILogger<Saml2Options>>(logger);
+        var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        return (context, logger);
+    }
+
     private static string EscapeAttributeValue(string value) =>
         value.Replace("&", "&amp;").Replace("<", "&lt;").Replace("\"", "&quot;").Replace("\n", "&#10;");
+
+    private static string? GetStructuredValue(FakeLogRecord record, string key) =>
+        Assert.Single(record.StructuredState!, entry => entry.Key == key).Value;
 }

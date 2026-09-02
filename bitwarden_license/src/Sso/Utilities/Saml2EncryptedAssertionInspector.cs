@@ -1,5 +1,6 @@
 ﻿using System.Xml;
 using Sustainsys.Saml2;
+using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.Sso.Utilities;
 
@@ -14,42 +15,46 @@ public static class Saml2EncryptedAssertionInspector
 
     /// <summary>
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
-    /// A SAML response can hold more than one assertion, and each encrypted assertion holds its own key.
+    /// Logs when an unaccepted algorithm in in use.
     /// </summary>
-    /// <param name="envelope">The root element of a SAML response or request.</param>
-    /// <returns>
-    /// An empty list when the envelope holds no <c>saml:EncryptedAssertion</c> element.
-    /// Otherwise, a list with one entry for each distinct value.
-    /// An entry holds the algorithm URI when it is a known URI.
-    /// An entry holds <c>"unrecognized"</c> when an assertion names an algorithm outside the allow list.
-    /// An entry holds null when an assertion names no algorithm.
-    /// </returns>
+    /// <param name="envelope">The root element of a SAML response or request.</param> 
+    /// <param name="scheme">The scheme provided in the request.</param>
+    /// <param name="context">The current request context.</param>
     /// <remarks>
+    /// A SAML response can hold more than one assertion, and each encrypted assertion holds its own key.
+    /// Each assertion must be checked.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
     /// </remarks>
-    public static IReadOnlyList<string?> InspectKeyEncryptionAlgorithms(XmlElement envelope)
+    public static void InspectKeyEncryptionAlgorithms(XmlElement envelope, string scheme, HttpContext context)
     {
-        // Both Sustainsys and downstream gates respect first children EncryptedAssertion nodes only.
+        // Only the first-child nodes are relevant. We don't need a recursive check.
         var encryptedAssertions = envelope.ChildNodes
             .OfType<XmlElement>()
             .Where(e => e.LocalName == "EncryptedAssertion"
-                 && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
 
-        var algorithms = new List<string?>();
-        foreach (XmlElement encryptedAssertion in encryptedAssertions)
+        var algorithms = encryptedAssertions
+            .Select(ReadKeyEncryptionAlgorithm);
+
+        var unacceptedAlgorithms = algorithms
+            .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
+            .Distinct();
+
+        if (!unacceptedAlgorithms.Any())
         {
-            var algorithm = ReadKeyEncryptionAlgorithm(encryptedAssertion);
-
-            // A repeated value adds no information to a log, so each distinct value gets one entry.
-            // Contains compares null to null, so an assertion with no algorithm deduplicates like any other.
-            if (!algorithms.Contains(algorithm))
-            {
-                algorithms.Add(algorithm);
-            }
+            return;
         }
 
-        return algorithms;
+        var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
+
+        foreach (var unacceptedAlgorithm in unacceptedAlgorithms)
+        {
+            logger.LogInformation(
+                "Unsupported SAML key encryption. Scheme: {Scheme}," +
+                "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
+                scheme, unacceptedAlgorithm);
+        }
     }
 
     private static string? ReadKeyEncryptionAlgorithm(XmlElement encryptedAssertion)
@@ -67,7 +72,6 @@ public static class Saml2EncryptedAssertionInspector
         // Read only the first one. The indexer restricts the read to a direct child.
         //
         // GetAttribute returns an empty string for a missing attribute.
-        // The Attributes indexer returns null for a missing attribute, and then throws.
         var rawAlgorithm = encryptedKey?["EncryptionMethod", XencNamespace]?.GetAttribute("Algorithm");
 
         if (string.IsNullOrEmpty(rawAlgorithm))
