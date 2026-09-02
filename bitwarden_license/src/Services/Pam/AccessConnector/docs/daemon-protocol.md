@@ -192,11 +192,11 @@ working. Both return **404** for an unknown attempt id.
 
 ## Endpoint reference
 
-| Method and route                          | Purpose                                        |
-| ----------------------------------------- | ---------------------------------------------- |
-| `GET access-connectors/rotation/jobs`                | Poll for claimable work; doubles as heartbeat. |
-| `POST access-connectors/rotation/jobs/{id}/claim`           | Claim a job and open an attempt.               |
-| `GET access-connectors/rotation/attempts/{id}/cipher`       | Read the claimed attempt's vault item.         |
-| `PUT access-connectors/rotation/attempts/{id}/cipher`       | Write the rotated secret back.                 |
-| `POST access-connectors/rotation/attempts/{id}/success`     | Report a successful rotation.                  |
-| `POST access-connectors/rotation/attempts/{id}/failure`     | Report a failed rotation.                      |
+| Method and route                                        | Purpose                                        |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| `GET access-connectors/rotation/jobs`                   | Poll for claimable work; doubles as heartbeat. |
+| `POST access-connectors/rotation/jobs/{id}/claim`       | Claim a job and open an attempt.               |
+| `GET access-connectors/rotation/attempts/{id}/cipher`   | Read the claimed attempt's vault item.         |
+| `PUT access-connectors/rotation/attempts/{id}/cipher`   | Write the rotated secret back.                 |
+| `POST access-connectors/rotation/attempts/{id}/success` | Report a successful rotation.                  |
+| `POST access-connectors/rotation/attempts/{id}/failure` | Report a failed rotation.                      |
