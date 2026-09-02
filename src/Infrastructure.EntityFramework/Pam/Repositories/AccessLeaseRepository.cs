@@ -276,7 +276,11 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             leaseEntity.CipherId = request.CipherId;
             leaseEntity.RequesterId = request.RequesterId;
             leaseEntity.Action = AccessLeaseAction.None;
-            leaseEntity.NotBefore = request.NotBefore;
+            // The lease runs from this activation, never backdated to the request's window start -- mirroring
+            // [AccessLease_CreateFromApprovedRequest], which likewise inserts @Now here and not AR.[NotBefore]. The
+            // window start gates *whether* activation may proceed (the claim above requires NotBefore <= now); it is
+            // not the lease's start. The end is still the request's: a late activation shortens the lease.
+            leaseEntity.NotBefore = now;
             leaseEntity.NotAfter = request.NotAfter;
             leaseEntity.RevokedDate = null;
             leaseEntity.RevokedBy = null;
