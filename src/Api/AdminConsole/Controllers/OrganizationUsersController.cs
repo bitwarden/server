@@ -361,7 +361,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     /// </remarks>
     [HttpPost("send-invite")]
     [Authorize<ManageUsersRequirement>]
-    [RequireFeature(FeatureFlagKeys.PM34423StagedStatus)]
     public async Task<IResult> SendInviteToStagedUsers(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
