@@ -92,23 +92,7 @@ public static class Saml2OptionsExtensions
 
         try
         {
-            var keyEncryptionAlgorithms = Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope);
-
-            // An empty list represents an envelope with no encrypted assertions.
-            if (keyEncryptionAlgorithms.Count > 0)
-            {
-                var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
-                foreach (var keyEncryptionAlgorithm in keyEncryptionAlgorithms)
-                {
-                    if (!Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(keyEncryptionAlgorithm))
-                    {
-                        logger.LogInformation(
-                            "Unsupported SAML key encryption. Scheme: {Scheme}," +
-                            "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
-                            scheme, keyEncryptionAlgorithm);
-                    }
-                }
-            }
+            Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, scheme, context);
         }
         catch (Exception)
         {
