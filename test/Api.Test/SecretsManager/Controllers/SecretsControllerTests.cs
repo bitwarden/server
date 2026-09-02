@@ -293,6 +293,84 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_CreatesVersionWithPreviousValueAndRevisionDate(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Secret updatedSecret, Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+        data.Value = "new-value";
+
+        // CreationDate is deliberately different from RevisionDate. The snapshot records when the
+        // archived value was last set, not when the secret was first created.
+        currentSecret.Value = "previous-value";
+        currentSecret.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        currentSecret.RevisionDate = new DateTime(2026, 6, 15, 12, 30, 0, DateTimeKind.Utc);
+
+        // Captured up front because ToSecret mutates the entity in place during the request.
+        var expectedValue = currentSecret.Value;
+        var expectedVersionDate = currentSecret.RevisionDate;
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType
+            .Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+
+        // Intentionally not data.ToSecret(currentSecret): that would mutate currentSecret during
+        // arrange and overwrite the very values this test asserts on.
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(updatedSecret);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        var createdVersions = sutProvider.GetDependency<ISecretVersionRepository>()
+            .ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == nameof(ISecretVersionRepository.CreateAsync))
+            .Select(c => (SecretVersion)c.GetArguments()[0])
+            .ToList();
+
+        var version = Assert.Single(createdVersions);
+        Assert.Equal(currentSecret.Id, version.SecretId);
+        Assert.Equal(expectedValue, version.Value);
+        Assert.Equal(expectedVersionDate, version.VersionDate);
+        Assert.Equal(userId, version.EditorServiceAccountId);
+        Assert.Null(version.EditorOrganizationUserId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueNotChanged_DoesNotCreateVersion(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Secret updatedSecret, Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = false;
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType
+            .Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(updatedSecret);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<SecretVersion>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task BulkDelete_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
         var ids = data.Select(s => s.Id).ToList();

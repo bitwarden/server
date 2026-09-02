@@ -21,25 +21,19 @@ public class SecretVersionsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IUserRepository _userRepository;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IOrganizationUserRepository organizationUserRepository,
-        IServiceAccountRepository serviceAccountRepository,
-        IUserRepository userRepository)
+        IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
-        _serviceAccountRepository = serviceAccountRepository;
-        _userRepository = userRepository;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -57,7 +51,7 @@ public class SecretVersionsController : Controller
         {
             // Already verified Secrets Manager access above
             var versionList = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-            var responseList = await Task.WhenAll(versionList.Select(v => ResolveVersionWithEditorName(v, secret.OrganizationId)));
+            var responseList = versionList.Select(v => new SecretVersionResponseModel(v));
             return new ListResponseModel<SecretVersionResponseModel>(responseList);
         }
 
@@ -77,7 +71,7 @@ public class SecretVersionsController : Controller
         }
 
         var versions = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-        var responses = await Task.WhenAll(versions.Select(v => ResolveVersionWithEditorName(v, secret.OrganizationId)));
+        var responses = versions.Select(v => new SecretVersionResponseModel(v));
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
     }
@@ -102,7 +96,7 @@ public class SecretVersionsController : Controller
             _currentContext.IdentityClientType == IdentityClientType.Organization)
         {
             // Already verified Secrets Manager access above
-            return await ResolveVersionWithEditorName(secretVersion, secret.OrganizationId);
+            return new SecretVersionResponseModel(secretVersion);
         }
 
         var userId = _userService.GetProperUserId(User);
@@ -120,7 +114,7 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        return await ResolveVersionWithEditorName(secretVersion, secret.OrganizationId);
+        return new SecretVersionResponseModel(secretVersion);
     }
 
     [HttpPost("secret-versions/get-by-ids")]
@@ -205,8 +199,10 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // Store the current value before restoration
+        // Store the current value and the date it was set before restoration. The
+        // snapshot represents the value as it was, so it keeps the old revision date.
         var currentValue = secret.Value;
+        var currentRevisionDate = secret.RevisionDate;
 
         // For service accounts and organization API, skip user-level access checks
         if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
@@ -221,7 +217,7 @@ public class SecretVersionsController : Controller
                     {
                         SecretId = secretId,
                         Value = currentValue!,
-                        VersionDate = DateTime.UtcNow,
+                        VersionDate = currentRevisionDate,
                         EditorServiceAccountId = editorUserId.Value
                     };
 
@@ -264,7 +260,7 @@ public class SecretVersionsController : Controller
             {
                 SecretId = secretId,
                 Value = currentValue!,
-                VersionDate = DateTime.UtcNow,
+                VersionDate = currentRevisionDate,
                 EditorOrganizationUserId = orgUser.Id
             };
 
@@ -339,33 +335,5 @@ public class SecretVersionsController : Controller
         await _secretVersionRepository.DeleteManyByIdAsync(ids);
 
         return Ok();
-    }
-
-    private async Task<SecretVersionResponseModel> ResolveVersionWithEditorName(Bit.Core.SecretsManager.Entities.SecretVersion secretVersion, Guid organizationId)
-    {
-        var response = new SecretVersionResponseModel(secretVersion);
-
-        if (secretVersion.EditorServiceAccountId.HasValue)
-        {
-            var serviceAccount = await _serviceAccountRepository.GetByIdAsync(secretVersion.EditorServiceAccountId.Value);
-            if (serviceAccount != null)
-            {
-                response.EditorName = serviceAccount.Name;
-            }
-        }
-        else if (secretVersion.EditorOrganizationUserId.HasValue)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(secretVersion.EditorOrganizationUserId.Value);
-            if (orgUser?.UserId.HasValue == true)
-            {
-                var user = await _userRepository.GetByIdAsync(orgUser.UserId.Value);
-                if (user != null)
-                {
-                    response.EditorName = user.Name;
-                }
-            }
-        }
-
-        return response;
     }
 }

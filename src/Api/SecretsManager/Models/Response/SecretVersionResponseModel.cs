@@ -13,7 +13,6 @@ public class SecretVersionResponseModel : ResponseModel
     public DateTime VersionDate { get; set; }
     public Guid? EditorServiceAccountId { get; set; }
     public Guid? EditorOrganizationUserId { get; set; }
-    public string? EditorName { get; set; }
 
     public SecretVersionResponseModel() : base(_objectName) { }
 

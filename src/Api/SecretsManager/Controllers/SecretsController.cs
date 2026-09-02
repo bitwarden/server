@@ -177,7 +177,11 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var originalSecret = secret;
+        // ToSecret mutates the entity in place, so capture the pre-update value and
+        // revision date before they are overwritten.
+        var originalValue = secret.Value;
+        var originalRevisionDate = secret.RevisionDate;
+
         var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -229,8 +233,8 @@ public class SecretsController : Controller
             var secretVersion = new SecretVersion
             {
                 SecretId = id,
-                Value = originalSecret.Value,
-                VersionDate = originalSecret.CreationDate,
+                Value = originalValue,
+                VersionDate = originalRevisionDate,
                 EditorServiceAccountId = editorServiceAccountId,
                 EditorOrganizationUserId = editorOrganizationUserId
             };

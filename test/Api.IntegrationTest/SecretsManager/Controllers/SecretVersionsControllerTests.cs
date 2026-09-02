@@ -286,4 +286,47 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         Assert.Equal("Version2", versions[1].Value);
         Assert.Equal("Version1", versions[2].Value);
     }
+
+    [Fact]
+    public async Task CreateVersion_PrunesToTenMostRecentVersions()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString
+        });
+
+        // CreateAsync keeps only the ten most recent versions, so the two oldest of these twelve
+        // should be pruned as the later ones are written.
+        var baseDate = DateTime.UtcNow.AddDays(-20);
+        for (var i = 0; i < 12; i++)
+        {
+            await _secretVersionRepository.CreateAsync(new SecretVersion
+            {
+                SecretId = secret.Id,
+                Value = $"Version{i:D2}",
+                VersionDate = baseDate.AddDays(i)
+            });
+        }
+
+        var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<SecretVersionResponseModel>>();
+
+        Assert.NotNull(result);
+        var versions = result.Data.ToList();
+        Assert.Equal(10, versions.Count);
+
+        // Newest first, with the two oldest dropped rather than the two newest.
+        Assert.Equal("Version11", versions[0].Value);
+        Assert.Equal("Version02", versions[9].Value);
+        Assert.DoesNotContain(versions, v => v.Value == "Version00");
+        Assert.DoesNotContain(versions, v => v.Value == "Version01");
+    }
 }

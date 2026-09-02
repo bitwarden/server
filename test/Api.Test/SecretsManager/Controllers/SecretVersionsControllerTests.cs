@@ -304,4 +304,128 @@ public class SecretVersionsControllerTests
         await sutProvider.GetDependency<ISecretVersionRepository>().Received(1)
             .DeleteManyByIdAsync(Arg.Is<IEnumerable<Guid>>(x => x.SequenceEqual(ids)));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreVersion_CreatesSnapshotOfCurrentValueWithItsRevisionDate(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        SecretVersion version,
+        RestoreSecretVersionRequestModel request,
+        Guid userId,
+        OrganizationUser organizationUser)
+    {
+        version.SecretId = secret.Id;
+        request.VersionId = version.Id;
+
+        // The snapshot records the value being replaced, stamped with the date that value was set.
+        // Stamping it with the restore time would collide with the secret's new revision date.
+        secret.Value = "current-value";
+        secret.RevisionDate = new DateTime(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        version.Value = "restored-value";
+
+        // Captured up front: the controller mutates the secret before we assert.
+        var expectedValue = secret.Value;
+        var expectedVersionDate = secret.RevisionDate;
+
+        organizationUser.OrganizationId = secret.OrganizationId;
+        organizationUser.UserId = userId;
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
+            .ReturnsForAnyArgs((true, true));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(secret.OrganizationId, userId).Returns(organizationUser);
+        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+
+        await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
+
+        var snapshots = sutProvider.GetDependency<ISecretVersionRepository>()
+            .ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == nameof(ISecretVersionRepository.CreateAsync))
+            .Select(c => (SecretVersion)c.GetArguments()[0])
+            .ToList();
+
+        var snapshot = Assert.Single(snapshots);
+        Assert.Equal(secret.Id, snapshot.SecretId);
+        Assert.Equal(expectedValue, snapshot.Value);
+        Assert.Equal(expectedVersionDate, snapshot.VersionDate);
+        Assert.Equal(organizationUser.Id, snapshot.EditorOrganizationUserId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreVersion_ValueUnchanged_DoesNotCreateSnapshot(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        SecretVersion version,
+        RestoreSecretVersionRequestModel request,
+        Guid userId,
+        OrganizationUser organizationUser)
+    {
+        version.SecretId = secret.Id;
+        request.VersionId = version.Id;
+
+        // Restoring the value the secret already holds should not add a duplicate history entry.
+        secret.Value = "same-value";
+        version.Value = "same-value";
+
+        organizationUser.OrganizationId = secret.OrganizationId;
+        organizationUser.UserId = userId;
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
+            .ReturnsForAnyArgs((true, true));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(secret.OrganizationId, userId).Returns(organizationUser);
+        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+
+        await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<SecretVersion>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetManyByIds_EmptyIds_Throws(SutProvider<SecretVersionsController> sutProvider)
+    {
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetManyByIdsAsync(new List<Guid>()));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetManyByIds_Success(
+        SutProvider<SecretVersionsController> sutProvider,
+        List<SecretVersion> versions,
+        Secret secret,
+        Guid userId)
+    {
+        var ids = versions.Select(v => v.Id).ToList();
+        foreach (var version in versions)
+        {
+            version.SecretId = secret.Id;
+        }
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(ids).Returns(versions);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Secret> { secret });
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var result = await sutProvider.Sut.GetManyByIdsAsync(ids);
+
+        Assert.Equal(versions.Count, result.Data.Count());
+        Assert.Equal(ids.OrderBy(i => i), result.Data.Select(d => d.Id).OrderBy(i => i));
+    }
 }
