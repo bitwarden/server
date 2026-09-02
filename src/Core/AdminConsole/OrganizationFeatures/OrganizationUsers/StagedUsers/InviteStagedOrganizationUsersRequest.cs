@@ -3,7 +3,7 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 
 /// <summary>
-/// Request to invite staged organization members without changing their access.
+/// Request to invite staged organization members with the access they were provisioned with.
 /// </summary>
 /// <remarks>
 /// Backs the members-grid row action. Configuring role, collections, groups, or Secrets Manager access goes

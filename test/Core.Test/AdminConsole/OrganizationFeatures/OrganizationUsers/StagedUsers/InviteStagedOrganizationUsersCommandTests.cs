@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -74,6 +75,35 @@ public class InviteStagedOrganizationUsersCommandTests
             OrganizationUserIds = organizationUsers.Select(organizationUser => organizationUser.Id).ToList(),
             PerformedBy = performedBy
         };
+    }
+
+    /// <summary>
+    /// Extends <see cref="Arrange"/> with the stubs a batch needs when every member carries Secrets Manager
+    /// access and the subscription has to grow to fit them.
+    /// </summary>
+    private static InviteStagedOrganizationUsersRequest ArrangeWithSecretsManager(
+        SutProvider<InviteStagedOrganizationUsersCommand> sutProvider,
+        Organization organization,
+        ICollection<OrganizationUser> organizationUsers,
+        Guid performedBy,
+        int? seats = 20,
+        int occupiedSeats = 1)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.SmSeats = 5;
+        organization.MaxAutoscaleSeats = 100;
+
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats, occupiedSeats,
+            useSecretsManager: true, membersAccessSecretsManager: true);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, organizationUsers.Count)
+            .Returns(organizationUsers.Count);
+
+        return request;
     }
 
     [Theory, BitAutoData]
@@ -444,6 +474,293 @@ public class InviteStagedOrganizationUsersCommandTests
         await AssertNothingHappenedAsync(sutProvider);
     }
 
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenSecretsManagerSeatsCannotBeValidated_BuysNoPasswordManagerSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        // 10 seats, 9 occupied, so all but one of the batch needs a new seat.
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .ValidateUpdateAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ThrowsAsync(new BadRequestException("Secrets Manager seat limit has been reached."));
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<SecretsManagerSeatExpansionFailed>(result.AsError);
+        Assert.Equal("Secrets Manager seat limit has been reached.", result.AsError.Message);
+
+        // The whole point of the dry run: nothing is charged, so there is nothing to hand back.
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(default!, default);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default!);
+        await AssertNothingHappenedAsync(sutProvider);
+    }
+
+    /// <summary>
+    /// The subscription rejects more Secrets Manager seats than Password Manager seats, so validating against
+    /// the organization's current seat total would fail a batch that the autoscale below makes room for.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task RunAsync_ValidatesSecretsManagerSeatsAgainstThePostAutoscaleSeatTotal(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        int? seatsSeenByValidation = null;
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .When(command => command.ValidateUpdateAsync(Arg.Any<SecretsManagerSubscriptionUpdate>()))
+            .Do(callInfo => seatsSeenByValidation =
+                callInfo.Arg<SecretsManagerSubscriptionUpdate>().Organization.Seats);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(10 + organizationUsers.Count - 1, seatsSeenByValidation);
+
+        // The projection is scratch state. AutoAddSeatsAsync adds its own adjustment on top of Seats, so
+        // leaving it in place would buy the batch twice over.
+        Assert.Equal(10, organization.Seats);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AutoAddSeatsAsync(organization, organizationUsers.Count - 1);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenSecretsManagerUpdateFailsAfterAutoscaling_ReleasesThePasswordManagerSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        // Validation passes, so this stands in for a late failure at the gateway.
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ThrowsAsync(new GatewayException("Stripe rejected the subscription change."));
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<SecretsManagerSeatExpansionFailed>(result.AsError);
+
+        // Nobody was invited, so the organization must not keep paying for the seats it just bought.
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+        Assert.All(organizationUsers, organizationUser =>
+            Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
+    }
+
+    /// <summary>
+    /// The admin needs to see why the invitation failed. A rollback that fails on top of it is an operations
+    /// problem, reported through logs rather than by replacing the original error.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenReleasingSeatsFails_StillReturnsTheSecretsManagerError(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ThrowsAsync(new BadRequestException("Secrets Manager seat limit has been reached."));
+        sutProvider.GetDependency<IOrganizationService>()
+            .AdjustSeatsAsync(organization.Id, Arg.Any<int>())
+            .ThrowsAsync(new GatewayException("Stripe is unreachable."));
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.Equal("Secrets Manager seat limit has been reached.", result.AsError.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenNoSecretsManagerSeatsAreNeeded_SkipsValidation(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, organizationUsers.Count)
+            .Returns(0);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateUpdateAsync(default!);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenSendingInvitesFails_ReleasesBothSubscriptionsAndRethrows(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        // The real command writes the new total onto the entity, so mirror that to prove the rollback restores
+        // the seat count captured beforehand rather than the grown one.
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .When(command => command.UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>()))
+            .Do(callInfo => organization.SmSeats = callInfo.Arg<SecretsManagerSubscriptionUpdate>().SmSeats);
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        // Secrets Manager first, so its seat count never exceeds Password Manager's part way through.
+        Received.InOrder(() =>
+        {
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                    update.SmSeats == 5 && !update.Autoscaling));
+            sutProvider.GetDependency<IOrganizationService>()
+                .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+        });
+
+        Assert.All(organizationUsers, organizationUser =>
+            Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenSendingInvitesFailsWithoutSecretsManager_ReleasesOnlyPasswordManagerSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+        // Nothing was bought there, so there is nothing to give back.
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default!);
+    }
+
+    /// <summary>
+    /// The send failure is what the admin needs to see. A rollback that fails on top of it is an operations
+    /// problem, reported through logs rather than by replacing the original exception.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenReleasingSecretsManagerSeatsFails_StillRethrowsTheSendFailure(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update => !update.Autoscaling))
+            .ThrowsAsync(new GatewayException("Stripe is unreachable."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
+
+        // A failed Secrets Manager release must not stop the Password Manager seats coming back.
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenSendingInvitesSucceeds_KeepsBothSubscriptions(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceive()
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update => !update.Autoscaling));
+    }
+
+    /// <summary>
+    /// The discount entitles the whole organization, so promotion must grant it the way the invite, invite-link,
+    /// and import paths do rather than honouring whatever was provisioned onto the row.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenOrganizationHasSecretsManagerStandalone_GrantsAccessAndBuysThoseSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.SmSeats = 5;
+        // Provisioned without Secrets Manager access; the discount grants it anyway.
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy,
+            useSecretsManager: true, membersAccessSecretsManager: false);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(organization.PlanType)
+            .Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IStripePaymentService>()
+            .HasSecretsManagerStandalone(organization)
+            .Returns(true);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, organizationUsers.Count)
+            .Returns(organizationUsers.Count);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        Assert.All(organizationUsers, organizationUser => Assert.True(organizationUser.AccessSecretsManager));
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                update.SmSeats == 5 + organizationUsers.Count && update.Autoscaling));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_WhenOrganizationHasNoSecretsManagerStandalone_LeavesProvisionedAccessAlone(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy);
+        sutProvider.GetDependency<IStripePaymentService>()
+            .HasSecretsManagerStandalone(organization)
+            .Returns(false);
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.True(result.IsSuccess);
+        // The discount grants access, it never revokes what was provisioned.
+        Assert.All(organizationUsers, organizationUser => Assert.True(organizationUser.AccessSecretsManager));
+    }
+
     /// <summary>Asserts the request succeeded overall but reported <typeparamref name="TError"/> for one member.</summary>
     private static void AssertSkipped<TError>(
         CommandResult<ICollection<BulkCommandResult>> result, Guid skippedId) where TError : Error
@@ -476,5 +793,8 @@ public class InviteStagedOrganizationUsersCommandTests
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventsAsync(default(IEnumerable<(OrganizationUser, EventType, DateTime?)>)!);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AdjustSeatsAsync(default, default);
     }
 }
