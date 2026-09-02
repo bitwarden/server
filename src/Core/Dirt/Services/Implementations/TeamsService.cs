@@ -2,16 +2,20 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Web;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Models.Data.Teams;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Teams;
 using Microsoft.Bot.Connector;
 using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 using TeamInfo = Bit.Core.Dirt.Models.Data.Teams.TeamInfo;
 
 namespace Bit.Core.Dirt.Services.Implementations;
@@ -20,6 +24,8 @@ public class TeamsService(
     IHttpClientFactory httpClientFactory,
     IOrganizationIntegrationRepository integrationRepository,
     GlobalSettings globalSettings,
+    [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
+    TimeProvider timeProvider,
     ILogger<TeamsService> logger) : ActivityHandler, ITeamsService
 {
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
@@ -150,6 +156,34 @@ public class TeamsService(
         await base.OnInstallationUpdateAddAsync(turnContext, cancellationToken);
     }
 
+    protected override async Task OnInstallationUpdateRemoveAsync(
+        ITurnContext<IInstallationUpdateActivity> turnContext,
+        CancellationToken cancellationToken)
+    {
+        await DisconnectFromActivityAsync(turnContext.Activity);
+
+        await base.OnInstallationUpdateRemoveAsync(turnContext, cancellationToken);
+    }
+
+    protected override async Task OnConversationUpdateActivityAsync(
+        ITurnContext<IConversationUpdateActivity> turnContext,
+        CancellationToken cancellationToken)
+    {
+        // Inspected here rather than in OnMembersRemovedAsync because ActivityHandler only dispatches that
+        // override when a member other than the bot was removed, which excludes the case we care about.
+        var botId = turnContext.Activity.Recipient?.Id;
+        var membersRemoved = turnContext.Activity.MembersRemoved;
+
+        if (!string.IsNullOrWhiteSpace(botId) &&
+            membersRemoved is not null &&
+            membersRemoved.Any(member => member.Id == botId))
+        {
+            await DisconnectFromActivityAsync(turnContext.Activity);
+        }
+
+        await base.OnConversationUpdateActivityAsync(turnContext, cancellationToken);
+    }
+
     internal async Task HandleIncomingAppInstallAsync(
         string conversationId,
         Uri serviceUrl,
@@ -160,13 +194,8 @@ public class TeamsService(
             tenantId: tenantId,
             teamId: teamId);
 
-        if (integration?.Configuration is null)
-        {
-            return;
-        }
-
-        var teamsConfig = JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration);
-        if (teamsConfig is null || teamsConfig.IsCompleted)
+        var teamsConfig = TeamsIntegration.FromConfiguration(integration?.Configuration);
+        if (integration is null || teamsConfig is null || teamsConfig.IsCompleted)
         {
             return;
         }
@@ -174,9 +203,67 @@ public class TeamsService(
         integration.Configuration = JsonSerializer.Serialize(teamsConfig with
         {
             ChannelId = conversationId,
-            ServiceUrl = serviceUrl
+            ServiceUrl = serviceUrl,
+            DisconnectedDate = null
         });
 
         await integrationRepository.UpsertAsync(integration);
+        await InvalidateConfigurationCacheAsync(integration.OrganizationId);
+    }
+
+    internal async Task HandleAppRemovalAsync(string teamId, string tenantId)
+    {
+        var integration = await integrationRepository.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+            tenantId: tenantId,
+            teamId: teamId);
+
+        var teamsConfig = TeamsIntegration.FromConfiguration(integration?.Configuration);
+        if (integration is null || teamsConfig is null || teamsConfig.NeedsReconnection)
+        {
+            logger.LogInformation(
+                "Teams app removal received with no matching connected integration; nothing to disconnect");
+            return;
+        }
+
+        // The tenant and team list are kept so re-installing the app reconnects without a new OAuth flow.
+        integration.Configuration = JsonSerializer.Serialize(teamsConfig with
+        {
+            ChannelId = null,
+            ServiceUrl = null,
+            DisconnectedDate = timeProvider.GetUtcNow().UtcDateTime
+        });
+
+        await integrationRepository.UpsertAsync(integration);
+        await InvalidateConfigurationCacheAsync(integration.OrganizationId);
+
+        logger.LogInformation(
+            "Teams integration {IntegrationId} marked as needing reconnection after app removal",
+            integration.Id);
+    }
+
+    private async Task DisconnectFromActivityAsync(IActivity activity)
+    {
+        var teamId = activity.TeamsGetTeamInfo()?.AadGroupId;
+        var tenantId = activity.Conversation?.TenantId;
+
+        if (string.IsNullOrWhiteSpace(teamId) || string.IsNullOrWhiteSpace(tenantId))
+        {
+            logger.LogWarning("Teams removal activity received without a team or tenant id; ignoring");
+            return;
+        }
+
+        await HandleAppRemovalAsync(teamId: teamId, tenantId: tenantId);
+    }
+
+    /// <summary>
+    /// Drops the cached configuration details so a connect or disconnect takes effect on the event dispatch
+    /// path immediately, rather than after the entry's one-day TTL.
+    /// </summary>
+    private async Task InvalidateConfigurationCacheAsync(Guid organizationId)
+    {
+        await cache.RemoveByTagAsync(
+            EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+                organizationId: organizationId,
+                integrationType: IntegrationType.Teams));
     }
 }

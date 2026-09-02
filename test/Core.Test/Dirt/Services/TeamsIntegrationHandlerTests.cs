@@ -27,6 +27,25 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
+    public async Task HandleAsync_DisconnectedConfiguration_ReturnsNonRetryableFailureWithoutSending(
+        IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(null, null);
+
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.False(result.Retryable);
+        Assert.Equal(IntegrationFailureCategory.ConfigurationError, result.Category);
+
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceive().SendMessageToChannelAsync(
+            Arg.Any<Uri>(),
+            Arg.Any<string>(),
+            Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
     public async Task HandleAsync_SuccessfulRequest_ReturnsSuccess(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();

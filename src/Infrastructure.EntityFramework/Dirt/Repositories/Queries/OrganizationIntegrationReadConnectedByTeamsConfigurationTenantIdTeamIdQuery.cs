@@ -5,12 +5,12 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories.Queries;
 
-public class OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery : IQuery<OrganizationIntegration>
+public class OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery : IQuery<OrganizationIntegration>
 {
     private readonly string _tenantId;
     private readonly string _teamId;
 
-    public OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery(string tenantId, string teamId)
+    public OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery(string tenantId, string teamId)
     {
         _tenantId = tenantId;
         _teamId = teamId;
@@ -18,19 +18,18 @@ public class OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery 
 
     public IQueryable<OrganizationIntegration> Run(DatabaseContext dbContext)
     {
-        // The ChannelId / ServiceUrl conditions mirror the IS NULL filters in the MSSQL procedure of the same name:
-        // an app install callback must only ever be able to complete an integration that is not already connected.
-        // A set value serializes with an opening quote; an unset one serializes as null, so the quote is the test.
-        // Disconnected integrations have both cleared and so remain eligible, which is what allows a re-install to
-        // reconnect without a fresh OAuth flow.
+        // Matches the JSON path filters in the MSSQL procedure of the same name. A set ChannelId / ServiceUrl
+        // serializes with an opening quote, whereas an unset one serializes as null, which is what separates a
+        // connected integration from one that is still awaiting (or has lost) its app install.
         var query =
             from oi in dbContext.OrganizationIntegrations
             where oi.Type == IntegrationType.Teams &&
                   oi.Configuration != null &&
                   oi.Configuration.Contains($"\"TenantId\":\"{_tenantId}\"") &&
                   oi.Configuration.Contains($"\"id\":\"{_teamId}\"") &&
-                  !oi.Configuration.Contains("\"ChannelId\":\"") &&
-                  !oi.Configuration.Contains("\"ServiceUrl\":\"")
+                  oi.Configuration.Contains("\"ChannelId\":\"") &&
+                  oi.Configuration.Contains("\"ServiceUrl\":\"") &&
+                  !oi.Configuration.Contains("\"DisconnectedDate\":\"")
             select new OrganizationIntegration()
             {
                 Id = oi.Id,

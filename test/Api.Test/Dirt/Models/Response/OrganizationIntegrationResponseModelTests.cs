@@ -102,6 +102,49 @@ public class OrganizationIntegrationResponseModelTests
     }
 
     [Theory, BitAutoData]
+    public void Status_Teams_WithDisconnectedConfig_ReturnsNeedsReconnection(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [new TeamInfo() { DisplayName = "Team", Id = "TeamId", TenantId = "tenant" }],
+            DisconnectedDate: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+        ));
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.NeedsReconnection, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Teams_DisconnectedWithChannelStillSet_ReturnsNeedsReconnection(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [new TeamInfo() { DisplayName = "Team", Id = "TeamId", TenantId = "tenant" }],
+            ServiceUrl: new Uri("https://example.com"),
+            ChannelId: "channelId",
+            DisconnectedDate: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+        ));
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.NeedsReconnection, model.Status);
+    }
+
+    [Theory, BitAutoData]
+    public void Status_Teams_MalformedConfig_ReturnsInvalid(OrganizationIntegration oi)
+    {
+        oi.Type = IntegrationType.Teams;
+        oi.Configuration = "{not-valid-json";
+
+        var model = new OrganizationIntegrationResponseModel(oi);
+
+        Assert.Equal(OrganizationIntegrationStatus.Invalid, model.Status);
+    }
+
+    [Theory, BitAutoData]
     public void Status_Webhook_AlwaysCompleted(OrganizationIntegration oi)
     {
         oi.Type = IntegrationType.Webhook;

@@ -35,7 +35,26 @@ public class OrganizationIntegrationRepository :
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery(tenantId: tenantId, teamId: teamId);
-            return await query.Run(dbContext).SingleOrDefaultAsync();
+
+            // FirstOrDefault rather than SingleOrDefault to match the procedure's SELECT TOP 1: two organizations
+            // can each connect the same Teams team, and that must not surface as an exception.
+            return await query.Run(dbContext).FirstOrDefaultAsync();
+        }
+    }
+
+    public async Task<OrganizationIntegration?> GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+        string tenantId,
+        string teamId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery(
+                tenantId: tenantId,
+                teamId: teamId);
+
+            // FirstOrDefault to match the procedure's SELECT TOP 1, as above.
+            return await query.Run(dbContext).FirstOrDefaultAsync();
         }
     }
 }

@@ -43,4 +43,19 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
             return result;
         }
     }
+
+    public async Task<OrganizationIntegration?> GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+        string tenantId,
+        string teamId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryFirstOrDefaultAsync<OrganizationIntegration>(
+                "[dbo].[OrganizationIntegration_ReadConnectedByTeamsConfigurationTenantIdTeamId]",
+                new { TenantId = tenantId, TeamId = teamId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
 }

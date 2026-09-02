@@ -4,16 +4,25 @@ using System.Net;
 using System.Text.Json;
 using System.Web;
 using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Models.Data.Teams;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services.Implementations;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Adapters;
+using Microsoft.Bot.Schema;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
+using BotTeamInfo = Microsoft.Bot.Schema.Teams.TeamInfo;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
+using TeamsChannelData = Microsoft.Bot.Schema.Teams.TeamsChannelData;
 
 namespace Bit.Core.Test.Dirt.Services;
 
@@ -29,6 +38,8 @@ public class TeamsServiceTests
         _httpClient = _handler.ToHttpClient();
     }
 
+    private static readonly DateTimeOffset _now = new(2026, 9, 2, 12, 0, 0, TimeSpan.Zero);
+
     private SutProvider<TeamsService> GetSutProvider()
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
@@ -41,6 +52,7 @@ public class TeamsServiceTests
         return new SutProvider<TeamsService>()
             .SetDependency(clientFactory)
             .SetDependency(globalSettings)
+            .SetDependency<TimeProvider>(new FakeTimeProvider(_now))
             .Create();
     }
 
@@ -218,6 +230,264 @@ public class TeamsServiceTests
         Assert.NotNull(configuration.ServiceUrl);
         Assert.Equal(serviceUrl, configuration.ServiceUrl);
         Assert.Equal(conversationId, configuration.ChannelId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleIncomingAppInstall_PreviouslyDisconnected_ReconnectsAndClearsDisconnectedDate(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        var serviceUrl = new Uri("https://localhost");
+        var disconnectedConfiguration = new TeamsIntegration(
+            TenantId: tenantId,
+            Teams: [new TeamInfo() { Id = teamId, DisplayName = "test team", TenantId = tenantId }],
+            DisconnectedDate: _now.UtcDateTime.AddDays(-3)
+        );
+        integration.Configuration = JsonSerializer.Serialize(disconnectedConfiguration);
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByTeamsConfigurationTenantIdTeamId(tenantId, teamId)
+            .Returns(integration);
+
+        OrganizationIntegration? capturedIntegration = null;
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .UpsertAsync(Arg.Do<OrganizationIntegration>(x => capturedIntegration = x));
+
+        await sutProvider.Sut.HandleIncomingAppInstallAsync(
+            conversationId: "new-conversation",
+            serviceUrl: serviceUrl,
+            teamId: teamId,
+            tenantId: tenantId
+        );
+
+        Assert.NotNull(capturedIntegration);
+        var configuration = TeamsIntegration.FromConfiguration(capturedIntegration.Configuration);
+        Assert.NotNull(configuration);
+        Assert.Null(configuration.DisconnectedDate);
+        Assert.False(configuration.NeedsReconnection);
+        Assert.True(configuration.IsCompleted);
+        Assert.Equal("new-conversation", configuration.ChannelId);
+        Assert.Equal(serviceUrl, configuration.ServiceUrl);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAppRemoval_Success_ClearsChannelAndMarksDisconnected(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        var connectedConfiguration = new TeamsIntegration(
+            TenantId: tenantId,
+            Teams: [new TeamInfo() { Id = teamId, DisplayName = "test team", TenantId = tenantId }],
+            ChannelId: "channel-id",
+            ServiceUrl: new Uri("https://smba.example.com")
+        );
+        integration.Configuration = JsonSerializer.Serialize(connectedConfiguration);
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns(integration);
+
+        OrganizationIntegration? capturedIntegration = null;
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .UpsertAsync(Arg.Do<OrganizationIntegration>(x => capturedIntegration = x));
+
+        await sutProvider.Sut.HandleAppRemovalAsync(teamId: teamId, tenantId: tenantId);
+
+        Assert.NotNull(capturedIntegration);
+        var configuration = TeamsIntegration.FromConfiguration(capturedIntegration.Configuration);
+        Assert.NotNull(configuration);
+        Assert.Null(configuration.ChannelId);
+        Assert.Null(configuration.ServiceUrl);
+        Assert.Equal(_now.UtcDateTime, configuration.DisconnectedDate);
+        Assert.True(configuration.NeedsReconnection);
+        Assert.False(configuration.IsCompleted);
+
+        // Tenant and team list are retained so a re-install can reconnect without a new OAuth flow.
+        Assert.Equal(tenantId, configuration.TenantId);
+        Assert.Equal(teamId, Assert.Single(configuration.Teams).Id);
+
+        await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveByTagAsync(
+            EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+                integration.OrganizationId,
+                IntegrationType.Teams),
+            Arg.Any<FusionCacheEntryOptions?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAppRemoval_NoConnectedIntegrationMatched_DoesNothing()
+    {
+        var sutProvider = GetSutProvider();
+
+        await sutProvider.Sut.HandleAppRemovalAsync(teamId: "teamId", tenantId: "tenantId");
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId");
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAppRemoval_AlreadyDisconnected_DoesNothing(OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        integration.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: tenantId,
+            Teams: [new TeamInfo() { Id = teamId, DisplayName = "test team", TenantId = tenantId }],
+            DisconnectedDate: _now.UtcDateTime.AddDays(-1)
+        ));
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns(integration);
+
+        await sutProvider.Sut.HandleAppRemovalAsync(teamId: teamId, tenantId: tenantId);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAppRemoval_MalformedConfiguration_DoesNothing(OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        integration.Configuration = "{not-valid-json";
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId")
+            .Returns(integration);
+
+        await sutProvider.Sut.HandleAppRemovalAsync(teamId: "teamId", tenantId: "tenantId");
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnTurn_InstallationUpdateRemove_DisconnectsIntegration(OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        ArrangeConnectedIntegration(sutProvider, integration, tenantId, teamId);
+
+        var activity = BuildTeamsActivity(ActivityTypes.InstallationUpdate, tenantId, teamId);
+        activity.Action = "remove";
+
+        await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnTurn_InstallationUpdateAdd_DoesNotDisconnect(OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        ArrangeConnectedIntegration(sutProvider, integration, tenantId, teamId);
+
+        var activity = BuildTeamsActivity(ActivityTypes.InstallationUpdate, tenantId, teamId);
+        activity.Action = "add";
+
+        await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnTurn_ConversationUpdateWithBotRemoved_DisconnectsIntegration(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        ArrangeConnectedIntegration(sutProvider, integration, tenantId, teamId);
+
+        var activity = BuildTeamsActivity(ActivityTypes.ConversationUpdate, tenantId, teamId);
+        activity.MembersRemoved = [new ChannelAccount { Id = _botId }];
+
+        await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .UpsertAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnTurn_ConversationUpdateWithOnlyOtherMembersRemoved_DoesNotDisconnect(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        ArrangeConnectedIntegration(sutProvider, integration, tenantId, teamId);
+
+        var activity = BuildTeamsActivity(ActivityTypes.ConversationUpdate, tenantId, teamId);
+        activity.MembersRemoved = [new ChannelAccount { Id = "some-departing-user" }];
+
+        await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnTurn_ConversationUpdateMissingTeamInfo_DoesNotDisconnect(
+        OrganizationIntegration integration)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        ArrangeConnectedIntegration(sutProvider, integration, tenantId, teamId);
+
+        var activity = BuildTeamsActivity(ActivityTypes.ConversationUpdate, tenantId, teamId);
+        activity.ChannelData = null;
+        activity.MembersRemoved = [new ChannelAccount { Id = _botId }];
+
+        await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    private const string _botId = "28:bitwarden-bot";
+
+    private static Activity BuildTeamsActivity(string type, string tenantId, string teamId) =>
+        new()
+        {
+            Type = type,
+            ChannelId = "msteams",
+            ServiceUrl = "https://smba.example.com",
+            Recipient = new ChannelAccount { Id = _botId },
+            From = new ChannelAccount { Id = "29:some-user" },
+            Conversation = new ConversationAccount { Id = "channel-id", TenantId = tenantId },
+            ChannelData = new TeamsChannelData { Team = new BotTeamInfo { Id = teamId, AadGroupId = teamId } }
+        };
+
+    private static void ArrangeConnectedIntegration(
+        SutProvider<TeamsService> sutProvider,
+        OrganizationIntegration integration,
+        string tenantId,
+        string teamId)
+    {
+        integration.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: tenantId,
+            Teams: [new TeamInfo() { Id = teamId, DisplayName = "test team", TenantId = tenantId }],
+            ChannelId: "channel-id",
+            ServiceUrl: new Uri("https://smba.example.com")
+        ));
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns(integration);
     }
 
     [Fact]

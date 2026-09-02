@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Text.Json;
 using Bit.Api.Dirt.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
@@ -228,12 +229,12 @@ public class TeamsIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_StateHasNonEmptyIntegration_ThrowsNotFound(
+    public async Task CreateAsync_StateHasConnectedIntegration_ThrowsNotFound(
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
         integration.Type = IntegrationType.Teams;
-        integration.Configuration = "{}";
+        integration.Configuration = ConnectedConfiguration();
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -360,13 +361,13 @@ public class TeamsIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task RedirectAsync_IntegrationAlreadyExistsWithConfig_ThrowsBadRequest(
+    public async Task RedirectAsync_IntegrationAlreadyConnected_ThrowsBadRequest(
         SutProvider<TeamsIntegrationController> sutProvider,
         Guid organizationId,
         OrganizationIntegration integration)
     {
         integration.OrganizationId = organizationId;
-        integration.Configuration = "{}";
+        integration.Configuration = ConnectedConfiguration();
         integration.Type = IntegrationType.Teams;
         var expectedUrl = "https://localhost/";
 
@@ -384,6 +385,55 @@ public class TeamsIntegrationControllerTests
 
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
     }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_IntegrationNeedsReconnection_ReusesRecordAndRedirects(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        Guid organizationId,
+        OrganizationIntegration integration)
+    {
+        integration.OrganizationId = organizationId;
+        integration.Configuration = DisconnectedConfiguration();
+        integration.Type = IntegrationType.Teams;
+        var expectedUrl = "https://localhost/";
+
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
+            .Returns(expectedUrl);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(organizationId)
+            .Returns([integration]);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(expectedUrl);
+
+        var response = await sutProvider.Sut.RedirectAsync(organizationId);
+
+        Assert.IsType<RedirectResult>(response);
+
+        // The existing record is re-used rather than a second one being created for the organization.
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
+            .CreateAsync(Arg.Any<OrganizationIntegration>());
+    }
+
+    private static string ConnectedConfiguration() =>
+        JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [new TeamInfo { Id = "team", DisplayName = "Team", TenantId = "tenant" }],
+            ChannelId: "channel-id",
+            ServiceUrl: new Uri("https://smba.example.com")
+        ));
+
+    private static string DisconnectedConfiguration() =>
+        JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [new TeamInfo { Id = "team", DisplayName = "Team", TenantId = "tenant" }],
+            DisconnectedDate: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+        ));
 
     [Theory, BitAutoData]
     public async Task RedirectAsync_TeamsServiceReturnsEmpty_ThrowsNotFound(

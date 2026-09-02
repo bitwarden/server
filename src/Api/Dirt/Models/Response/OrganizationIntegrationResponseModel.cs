@@ -37,15 +37,7 @@ public class OrganizationIntegrationResponseModel : ResponseModel
             ? OrganizationIntegrationStatus.Initiated
             : OrganizationIntegrationStatus.Completed,
 
-        // If present and the configuration is null, OAuth has been initiated, and we are
-        // waiting on the return OAuth call. If Configuration is not null and IsCompleted is true,
-        // then we've received the app install bot callback, and it's Completed. Otherwise,
-        // it is In Progress while we await the app install bot callback.
-        IntegrationType.Teams => string.IsNullOrWhiteSpace(Configuration)
-            ? OrganizationIntegrationStatus.Initiated
-            : (JsonSerializer.Deserialize<TeamsIntegration>(Configuration)?.IsCompleted ?? false)
-                ? OrganizationIntegrationStatus.Completed
-                : OrganizationIntegrationStatus.InProgress,
+        IntegrationType.Teams => TeamsStatus(Configuration),
 
         // HEC and Datadog should only be allowed to be created non-null.
         // If they are null, they are Invalid
@@ -56,4 +48,34 @@ public class OrganizationIntegrationResponseModel : ResponseModel
             ? OrganizationIntegrationStatus.Invalid
             : OrganizationIntegrationStatus.Completed,
     };
+
+    /// <summary>
+    /// Teams is configured over two round trips — an OAuth flow followed by an app install callback — and can
+    /// later lose its channel if the app is removed, so it carries more states than the other integrations.
+    /// </summary>
+    private static OrganizationIntegrationStatus TeamsStatus(string? configuration)
+    {
+        // OAuth has been initiated and we are waiting on the return OAuth call.
+        if (string.IsNullOrWhiteSpace(configuration))
+        {
+            return OrganizationIntegrationStatus.Initiated;
+        }
+
+        var teamsIntegration = TeamsIntegration.FromConfiguration(configuration);
+        if (teamsIntegration is null)
+        {
+            return OrganizationIntegrationStatus.Invalid;
+        }
+
+        // Checked ahead of IsCompleted so a disconnected integration can never report as healthy.
+        if (teamsIntegration.NeedsReconnection)
+        {
+            return OrganizationIntegrationStatus.NeedsReconnection;
+        }
+
+        // Completed once the app install callback has supplied a channel; In Progress until then.
+        return teamsIntegration.IsCompleted
+            ? OrganizationIntegrationStatus.Completed
+            : OrganizationIntegrationStatus.InProgress;
+    }
 }
