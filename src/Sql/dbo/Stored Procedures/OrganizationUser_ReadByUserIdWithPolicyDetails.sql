@@ -14,7 +14,7 @@ BEGIN
 
     ;WITH OrgUsers AS
     (
-        -- All users except invited (Status <> 0): direct UserId match
+        -- All users except invited and staged: direct UserId match
         SELECT
             OU.[Id],
             OU.[OrganizationId],
@@ -24,7 +24,7 @@ BEGIN
         FROM
             [dbo].[OrganizationUserView] OU
         WHERE
-            OU.[Status] <> 0
+            OU.[Status] IN (-1, 1, 2)
             AND OU.[UserId] = @UserId
 
         UNION ALL

@@ -6,10 +6,12 @@ public record OrganizationWarnings
     public InactiveSubscriptionWarning? InactiveSubscription { get; set; }
     public ResellerRenewalWarning? ResellerRenewal { get; set; }
     public TaxIdWarning? TaxId { get; set; }
+    public ScheduledPriceIncreaseWarning? ScheduledPriceIncrease { get; set; }
 
     public record FreeTrialWarning
     {
         public int RemainingTrialDays { get; set; }
+        public bool IsSalesAssisted { get; set; }
     }
 
     public record InactiveSubscriptionWarning
@@ -44,5 +46,12 @@ public record OrganizationWarnings
     public record TaxIdWarning
     {
         public required string Type { get; set; }
+    }
+
+    public record ScheduledPriceIncreaseWarning
+    {
+        public required decimal SeatPrice { get; set; }
+        public required DateTime EffectiveDate { get; set; }
+        public required string Cadence { get; set; }
     }
 }

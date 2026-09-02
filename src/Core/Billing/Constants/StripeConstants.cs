@@ -12,6 +12,12 @@ public static class StripeConstants
         public const string UnrecognizedLocation = "unrecognized_location";
     }
 
+    public static class BillingMode
+    {
+        public const string Classic = "classic";
+        public const string Flexible = "flexible";
+    }
+
     public static class BillingReasons
     {
         public const string AutomaticPendingInvoiceItemInvoice = "automatic_pending_invoice_item_invoice";
@@ -24,6 +30,13 @@ public static class StripeConstants
     {
         public const string ChargeAutomatically = "charge_automatically";
         public const string SendInvoice = "send_invoice";
+    }
+
+    public static class CouponDurations
+    {
+        public const string Once = "once";
+        public const string Repeating = "repeating";
+        public const string Forever = "forever";
     }
 
     public static class CouponIDs
@@ -82,10 +95,12 @@ public static class StripeConstants
 
     public static class MetadataKeys
     {
+        public const string AnnualUpgrade = "annual_upgrade";
         public const string BraintreeCustomerId = "btCustomerId";
         public const string BraintreeTransactionId = "btTransactionId";
         public const string CancellationOrigin = "cancellation_origin";
         public const string InvoiceApproved = "invoice_approved";
+        public const string IsAddOn = "isAddOn";
         public const string OrganizationId = "organizationId";
         public const string PayPalTransactionId = "btPayPalTransactionId";
         public const string ProviderId = "providerId";
@@ -97,11 +112,37 @@ public static class StripeConstants
         public const string OriginatingAppVersion = "originatingAppVersion";
         public const string TrialInitiationPath = "trialInitiationPath";
         public const string CancelledDuringDeferredPriceIncrease = "cancelled_during_deferred_price_increase";
+        public const string MigrationCohortId = "migration_cohort_id";
+        public const string MigrationCohortName = "migration_cohort_name";
+        public const string MigrationGraceServiceAccounts = "migration_grace_service_accounts";
+        public const string CancellingUserId = "cancellingUserId";
+        public const string PurchasableReference = "purchasable_reference";
+    }
+
+    /// <summary>
+    /// The stable, plan-agnostic values carried in <see cref="MetadataKeys.PurchasableReference"/>.
+    /// </summary>
+    public static class PurchasableReferences
+    {
+        public const string PasswordManagerSeat = "pm-seat";
+        public const string PasswordManagerStorage = "pm-storage";
+        public const string SecretsManagerSeat = "sm-seat";
+        public const string SecretsManagerServiceAccount = "sm-service-account";
     }
 
     public static class CancellationOrigins
     {
         public const string UnpaidSubscription = "unpaid_subscription";
+    }
+
+    /// <summary>
+    /// The values carried in <see cref="MetadataKeys.TrialInitiationPath"/>.
+    /// </summary>
+    public static class TrialInitiationPaths
+    {
+        public const string MarketingInitiated = "marketing-initiated";
+        public const string ProductInitiated = "product-initiated";
+        public const string SalesAssisted = "sales-assisted";
     }
 
     public static class PaymentBehavior
@@ -186,6 +227,13 @@ public static class StripeConstants
         public const string Scheduled = "scheduled";
     }
 
+    public static class TestClockStatus
+    {
+        public const string Advancing = "advancing";
+        public const string InternalFailure = "internal_failure";
+        public const string Ready = "ready";
+    }
+
     public static class ValidateTaxLocationTiming
     {
         public const string Deferred = "deferred";
@@ -241,6 +289,8 @@ public static class StripeConstants
         {
             public const string Ios = "ios";
             public const string Android = "android";
+            public const string Browser = "browser";
+            public const string Desktop = "desktop";
         }
     }
 

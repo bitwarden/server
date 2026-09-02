@@ -2,9 +2,13 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Billing.Enums;
@@ -24,6 +28,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using NSubstitute;
+using OneOf.Types;
 using Xunit;
 using EmergencyAccessEntity = Bit.Core.Auth.Entities.EmergencyAccess;
 
@@ -347,7 +352,7 @@ public class RegisterUserCommandTests
 
         await sutProvider.GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), registerFinishData);
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified && u.ApiKey != null), registerFinishData);
 
         if (addUserReferenceData)
         {
@@ -702,6 +707,653 @@ public class RegisterUserCommandTests
     }
 
     // -----------------------------------------------------------------------------------------------
+    // RegisterUserViaEmailVerificationTokenAndOpenOrgInvite tests
+    // -----------------------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_ValidLink_PassesExcludeOrgId(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials,
+        Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_InvalidCode_ThrowsBadRequest(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, Guid organizationId, Guid code)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new InviteLinkNotFound()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite));
+        Assert.Equal("Invalid or expired organization invite link.", exception.Message);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_LinksDisabled_ThrowsBadRequest(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, Guid organizationId, Guid code)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new InviteLinkNotAvailable()));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite));
+        Assert.Equal("Invalid or expired organization invite link.", exception.Message);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_LinksEnabled_UnblocksClaimedDomain(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials,
+        Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = "user@claimed-domain.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // Excluded-org path returns false; unfiltered path would return true.
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("claimed-domain.com", (Guid?)null)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("claimed-domain.com", organizationId)
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_OpenRegistrationDisabled_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials,
+        Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // The DisableUserRegistration self-hosted admin toggle targets open self-registration.
+        // Possession of a valid open-org invite is the authorization for this path, so this method
+        // must proceed with the toggle on — fedramp deployments rely on this combination.
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user, registerFinishData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_InvalidToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials, Guid organizationId, Guid code)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        // Token unprotect yields a tokenable bound to a different email.
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable("wrongEmail@test.com", user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite));
+        Assert.Equal("Invalid email verification token.", exception.Message);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_TwoFactorPolicyEnabled_SeedsEmail2FaBeforeCreate(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        user.TwoFactorProviders = null;
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        // Capture the User state at CreateUserAsync time so we can assert 2FA was seeded BEFORE create.
+        string? twoFactorProvidersAtCreate = null;
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(Arg.Do<User>(u => twoFactorProvidersAtCreate = u.TwoFactorProviders), registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .Received(1)
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+
+        var expectedTwoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        };
+        var expectedSerialized = JsonHelpers.LegacySerialize(expectedTwoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
+        Assert.Equal(expectedSerialized, twoFactorProvidersAtCreate);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_TwoFactorPolicyDisabled_DoesNotTouch2FA(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        user.TwoFactorProviders = null;
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        string? twoFactorProvidersAtCreate = "sentinel";
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(Arg.Do<User>(u => twoFactorProvidersAtCreate = u.TwoFactorProviders), registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .Received(1)
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+
+        sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .SetTwoFactorProvider(default, default);
+
+        Assert.Null(twoFactorProvidersAtCreate);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_Succeeds_SendsOrgAwareWelcomeEmail(
+        PlanType planType,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        Organization organization, string emailVerificationToken, bool receiveMarketingMaterials, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        organization.PlanType = planType;
+        organization.Name = "Open Invite Org";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(organization.Id);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationUserWelcomeEmailAsync(user, organization.Name);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    [BitAutoData(PlanType.Free)]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_Succeeds_FreeOrFamiliesOrg_SendsFamiliesWelcomeEmail(
+        PlanType planType,
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        Organization organization, string emailVerificationToken, bool receiveMarketingMaterials, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        organization.PlanType = planType;
+        organization.Name = "Families Org";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(user, organization.Name);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_DomainBlockFires_ShortCircuitsBeforePolicyCheck(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, Guid organizationId, Guid code)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // The excluded-org filter still returns true — some OTHER org has claimed the domain.
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com", organizationId)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_ComplexHappyPath_TwoFactorPolicyAndOrgAwareWelcomeEmail_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        Organization organization, string emailVerificationToken, bool receiveMarketingMaterials, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+        user.TwoFactorProviders = null;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.Name = "Enterprise Open Invite Org";
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organization.Id, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organization.Id, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        string? twoFactorProvidersAtCreate = null;
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(Arg.Do<User>(u => twoFactorProvidersAtCreate = u.TwoFactorProviders), registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // 2FA seeded before create, in the expected shape.
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+        var expectedTwoFactorProviders = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new TwoFactorProvider
+            {
+                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
+                Enabled = true
+            }
+        };
+        var expectedSerialized = JsonHelpers.LegacySerialize(expectedTwoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
+        Assert.Equal(expectedSerialized, twoFactorProvidersAtCreate);
+
+        // Org-aware welcome email dispatched on success.
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .GetByIdAsync(organization.Id);
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationUserWelcomeEmailAsync(user, organization.Name);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_ClaimedDomainBypassedAnd2FaPolicyEnabled_SeedsEmail2Fa(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken, bool receiveMarketingMaterials, Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, true)] PolicyStatus policy)
+    {
+        // Arrange — an email on a domain claimed by the invite's own org, plus Require-2FA policy on
+        // that same org. Both fixes must fire together: the domain-block exclusion allows the user
+        // to register at all, and the 2FA policy check must still seed Email 2FA before create.
+        user.Email = "user@claimed.example.com";
+        user.TwoFactorProviders = null;
+        var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
+
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
+
+        // Domain is globally claimed; only the invite's org exclusion unblocks it. If the code
+        // failed to pass the excludeOrgId, this test would trip the block and throw.
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Is<Guid?>(g => g == null))
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId)
+            .Returns(false);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        string? twoFactorProvidersAtCreate = null;
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(Arg.Do<User>(u => twoFactorProvidersAtCreate = u.TwoFactorProviders), registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        // Domain check ran with the invite's org as the exclusion — proves the bypass path was taken.
+        await sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), organizationId);
+
+        // 2FA policy consulted and Email 2FA seeded before create.
+        await sutProvider.GetDependency<IPolicyQuery>()
+            .Received(1)
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication);
+        sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
+        Assert.NotNull(twoFactorProvidersAtCreate);
+    }
+
+    // -----------------------------------------------------------------------------------------------
     // RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken tests
     // -----------------------------------------------------------------------------------------------
 
@@ -1027,6 +1679,233 @@ public class RegisterUserCommandTests
         var result = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.RegisterUserViaProviderInviteToken(user, registerFinishData, base64EncodedProviderInvToken, providerUserId));
         Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // RegisterUserViaSalesAssistedToken tests
+    // -----------------------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.Name == name && u.EmailVerified && u.ApiKey != null), registerFinishData);
+    }
+
+    // Keystone regression test: this path MUST bypass the open-registration check. When
+    // DisableUserRegistration=true, ValidateOpenRegistrationAllowed() will throw
+    // unconditionally. A passing result here is the executable proof that the call is absent.
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_WithDisabledUserRegistration_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .DisableUserRegistration = true;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        // Act
+        var result = await sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified && u.ApiKey != null), registerFinishData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_EmailMismatch_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = "different@example.com",
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Invalid token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_ExpiredToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken, string name)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        var tokenable = new SalesAssistedRegistrationTokenable
+        {
+            Email = user.Email,
+            Name = name,
+            ExpirationDate = DateTime.UtcNow.AddDays(-1)
+        };
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = tokenable;
+                return true;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Expired token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_MalformedToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken)
+    {
+        // Arrange
+        user.Email = $"test+{Guid.NewGuid()}@example.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>())
+            .Returns(false);
+
+        // TryUnprotect fails (returns false) for a malformed/empty token.
+        sutProvider.GetDependency<IDataProtectorTokenFactory<SalesAssistedRegistrationTokenable>>()
+            .TryUnprotect(salesAssistedToken, out Arg.Any<SalesAssistedRegistrationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = null;
+                return false;
+            });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("Invalid token.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegisterUserViaSalesAssistedToken_BlockedDomain_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
+        string salesAssistedToken)
+    {
+        // Arrange
+        user.Email = "user@blocked-domain.com";
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync("blocked-domain.com")
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.RegisterUserViaSalesAssistedToken(user, registerFinishData, salesAssistedToken));
+        Assert.Equal("This email address is claimed by an organization using Bitwarden.", exception.Message);
+
+        await sutProvider.GetDependency<IUserService>()
+            .DidNotReceive()
+            .CreateUserAsync(Arg.Any<User>(), Arg.Any<RegisterFinishData>());
     }
 
     // -----------------------------------------------------------------------------------------------

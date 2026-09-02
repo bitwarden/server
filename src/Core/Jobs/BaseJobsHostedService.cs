@@ -142,6 +142,21 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Immediately fires an already-scheduled job on the running scheduler, outside its normal
+    /// trigger cadence. The job executes with its registered identity, so job-level attributes
+    /// like <see cref="DisallowConcurrentExecutionAttribute"/> still apply.
+    /// </summary>
+    public virtual async Task TriggerJobNowAsync<T>(CancellationToken cancellationToken = default) where T : class, IJob
+    {
+        if (_scheduler is null)
+        {
+            throw new InvalidOperationException("Scheduler has not been started; cannot trigger job.");
+        }
+
+        await _scheduler.TriggerJob(new JobKey(typeof(T).FullName!), cancellationToken);
+    }
+
     public virtual async Task StopAsync(CancellationToken cancellationToken)
     {
         if (_scheduler is not null)

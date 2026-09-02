@@ -36,21 +36,23 @@ Need to create test data?
 
 **Modern pattern for composable fixture-based and generated seeding.**
 
-**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep[] → RecipeExecutor → SeederContext → BulkCommitter
+**Flow**: Preset JSON or Options → RecipeOrchestrator → RecipeBuilder → IStep/IAsyncStep[] → RecipeExecutor → SeederContext → BulkCommitter → IPostCommitStep[]
 
 **Key actors**:
 
 - **RecipeBuilder**: Fluent API with dependency validation
-- **IStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.)
+- **IStep / IAsyncStep**: Isolated units of work (CreateOrganizationStep, CreateUsersStep, etc.). Use `IAsyncStep` for steps that do real I/O. A step additionally marked `IPostCommitStep` is deferred until after the bulk commit, so it observes committed rows — but sees cleared entity lists, since only the `EntityRegistry` and the context's scalar properties survive the commit.
 - **SeederContext**: Shared mutable state bag (NOT thread-safe)
-- **RecipeExecutor**: Executes steps sequentially, captures statistics, commits via BulkCommitter
+- **RecipeExecutor**: Awaits steps sequentially, captures statistics, commits via BulkCommitter, then runs any post-commit steps
 - **RecipeOrchestrator**: Orchestrates recipe building and execution (from presets or options)
-- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`) into a single record. Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`.
+- **SeederDependencies** (`Options/`): Bundles infrastructure services (`DatabaseContext`, `IMapper`, `IPasswordHasher<User>`, `IManglerService`, `ILicensingService`, `IAttachmentStorageService`, `ISeederLicenseSigner`, `ILoggerFactory`) into a single record, plus two optional `init` properties — `Progress` and `Func<IStripeBillingInitializer>? BillingInitializer` (a factory, so the billing DI graph is only built by commands that opt in). Recipes and the Orchestrator accept this instead of loose parameters. The CLI utility builds it via `SeederServiceFactory.Create().ToDependencies()`. Add new optional services as `init` properties rather than growing the positional list.
+
+**Why two step interfaces, not one async contract?** Deliberate — don't unify. Collapsing to one `Task ExecuteAsync(SeederContext)` costs: rewrite every step class in `Steps/` plus the step test doubles in `test/SeederApi.IntegrationTest/`; force every `.Execute(context)` site in `test/SeederApi.IntegrationTest/Steps/` to `await`, their test methods to `async`; and `TreatWarningsAsErrors` is on repo-wide (`Directory.Build.props`), so CS1998 makes `async` without `await` a build error — every sync step needs `return Task.CompletedTask`. Permanent trap. The split costs less: two-arm union in `OrderedStep`, `object`-typed `Inner`, one duplicated `RecipeBuilder` registration. Diverges from `IScene`/`IQuery` — single `Task`-returning, no sync twin.
 
 **Fixture/preset separation**: Fixtures (organizations, rosters, ciphers) are independent and never reference each other. The preset is the only layer that composes fixtures and defines cross-cutting relationships (folder assignments, favorites). See `Seeds/docs/architecture.md`.
 
-**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
-**Phase order (individual presets)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
+**Phase order (org presets)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual presets)**: IndividualUser → SelfHostUserLicense (conditional) → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Individual user presets** use the Pipeline with `CreateIndividualUserStep` (no org, no groups, no collections). These presets live in `Seeds/fixtures/presets/individual/` and are identified by having a `"user"` key instead of `"organization"`. They support `folderNames`, `folderAssignments`, and `favoriteAssignments` for fixture-driven personal vault organization. See `Seeds/docs/presets.md` for the catalog.
 
@@ -58,7 +60,7 @@ See `Pipeline/` folder for implementation.
 
 ## Parallelism
 
-Steps execute sequentially (phase order preserved by RecipeExecutor). Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
+Steps execute sequentially (phase order preserved by RecipeExecutor). Async steps are awaited one at a time and MUST NOT be batched with `Task.WhenAll` — `SeederContext` is not thread-safe and each step reads state written by the ones before it. Within a step, `CreateUsersStep` and `GeneratePersonalCiphersStep` use `Parallel.For` internally for CPU-bound Rust FFI work (key generation, encryption).
 
 **Thread-safety requirements:**
 
@@ -71,7 +73,7 @@ Steps execute sequentially (phase order preserved by RecipeExecutor). Within a s
 When measuring step-level performance changes, use paired worktrees:
 
 - Create `server-PM-XXXXX/perf-baseline` and `server-PM-XXXXX/perf-optimized` worktrees
-- Both worktrees get `Stopwatch` timing in `RecipeExecutor.Execute()` (the baseline measurement)
+- Both worktrees get `Stopwatch` timing in `RecipeExecutor.ExecuteAsync()` (the baseline measurement)
 - Only the optimized worktree gets actual code changes
 - Run presets with `--mangle` flag to avoid DB collisions between runs
 - Compare per-step timings across 3+ runs each, discard the first run (JIT warmup)
@@ -94,18 +96,28 @@ Steps accept an optional `DensityProfile` that controls relationship patterns be
 
 **Preset JSON**: Add an optional `"density": { ... }` block. See `Seeds/schemas/preset.schema.json` for the full schema.
 
-**Presets**: Organized into `features/`, `qa/`, `scale/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
+**Presets**: Organized into `dev/`, `features/`, `qa/`, `scale/`, `individual/`, `validation/` folders under `Seeds/fixtures/presets/`. See `Seeds/docs/presets.md` for the full catalog.
 
 **Verification**: SQL queries for validating density algorithms are in `Seeds/docs/verification.md`.
+
+## Regression Testing
+
+Changes to `Factories/`, `Steps/`, `Scenes/`, or `Recipes/` need more than the unit suite — it covers none of the CLI, the SeederApi, or a real database. `Seeds/docs/regression.md` maps each changed path to the preset that reaches it and the assertion that proves it, and records the known non-regressions worth not chasing. Claude drives the CLI, API, and SQL; the developer smoke-tests the web vault.
+
+## Data/ File Organization
+
+New files under `Data/` belong in the matching subfolder (`Distributions/`, `Enums/`, `Generators/`, `Static/`) — never loose at the top level. See `Data/README.md` for what each subfolder holds. If a new file's concern doesn't fit an existing subfolder, that's a signal to create one, not to drop it loose.
+
+**Two Enums homes, by concern:** `Data/Enums/` (namespace `Bit.Seeder.Data.Enums`) holds the generation-config surface (`CompanyType`, `PasswordStrength`, distribution shapes, etc. — "Enums are the API"). Crypto-taxonomy enums that describe how seeded vault data is encrypted (`CipherEncryptionType`, `AttachmentSchemeType`) live in the top-level `Enums/` folder (namespace `Bit.Seeder.Enums`), one enum per file.
 
 ## The Recipe Contract
 
 Recipes follow strict rules:
 
 1. A Recipe SHALL accept `SeederDependencies` as its single constructor parameter
-2. A Recipe SHALL have exactly one public method named `Seed()`
+2. A Recipe SHALL have exactly one public entry point — `Seed()` when synchronous, `SeedAsync()` when it returns `Task`/`Task<T>`. Pipeline-backed Recipes (`OrganizationRecipe`, `IndividualUserRecipe`) are async; the direct-to-database Recipes (`CollectionsRecipe`, `GroupsRecipe`, `OrganizationDomainRecipe`, `OrganizationWithUsersRecipe`) remain synchronous.
 3. A Recipe MUST produce one cohesive result
-4. A Recipe MAY have overloaded `Seed()` methods with different parameters
+4. A Recipe MAY overload that entry point with different parameters
 5. A Recipe SHALL use private helper methods for internal steps
 6. A Recipe SHALL use BulkCopy for performance when creating multiple entities
 7. A Recipe SHALL compose Factories for individual entity creation
@@ -143,6 +155,19 @@ The Rust shim (`util/RustSdk/rust/`) depends only on `bitwarden_crypto`. It does
 
 Before modifying encryption integration, run `RustSdkCipherTests` to validate roundtrip encryption.
 
+## Encryption Schemes (crypto taxonomy)
+
+Seeded data spans two orthogonal encryption axes, named with Bitwarden's canonical vocabulary (defined in `Enums/CipherEncryptionType.cs` and `Enums/AttachmentSchemeType.cs`):
+
+- **Cipher encryption** (`cipherEncryption`): `userKey` (no cipher key; `Cipher.Key` null) or `cipherKey` (per-cipher key wrapped by the vault key).
+- **Attachment scheme version** (`attachmentVersion`): `v0` (no attachment key), `v1` (attachment key wrapped by the vault key), `v2` (attachment key wrapped by the cipher key).
+
+**Invariant:** a cipher and its attachments use the same strategy — `v2` requires a `cipherKey` host. `Steps/CreateCipherAttachmentsStep.cs` and `Seeds/schemas/cipher.schema.json` both enforce this; keep them in sync.
+
+**Wire mapping:** `AttachmentSchemeType.{V0,V1,V2}` casts to `u32 {0,1,2}` and is matched verbatim in `util/RustSdk/rust/src/attachment.rs`. The value *is* the version number — do not reintroduce an offset.
+
+**Do not conflate with account Encryption V1/V2.** Attachment `v0/v1/v2` is key-wrapping only. Everything the seeder emits is Encryption-V1 type-2 `EncString` (AES-256-CBC-HMAC); no COSE/type-7 path exists. A future V2/COSE capability is a **separate** axis (a new enum), never a new attachment version.
+
 ## Deterministic Data Generation
 
 Same domain = same seed = reproducible data:
@@ -150,6 +175,18 @@ Same domain = same seed = reproducible data:
 ```csharp
 var seed = options.Seed ?? DeriveStableSeed(options.Domain);
 ```
+
+## Fixture Contract Sync
+
+`Models/SeedModels.cs`, `Seeds/schemas/*.schema.json`, and `Seeds/docs/fixtures.md` describe one contract from three angles — the deserialization target, the editor validation, and the human documentation. A field present in only some of them is silently ignored or silently undocumented: `roster.schema.json` documented a per-user `email` for months while `SeedRosterUser` had no property to carry it.
+
+**Whenever you add, rename, or remove a fixture field:**
+
+- Add the property to the matching `SeedModels.cs` record _and_ the schema, then wire it through the step that consumes it — a schema-only field parses and is dropped on the floor
+- Update the field's bullet in `Seeds/docs/fixtures.md`, and soften any sibling line the new field makes conditional (an override makes "the Seeder builds emails as X" only true by default)
+- Give identifier-bearing strings `"minLength": 1` in the schema, and treat whitespace as absent in the step so it falls back to the derived value rather than committing an unusable row
+- Add a row to `Seeds/docs/regression.md` when the field changes what a real seed writes to the database — the unit suite proves the parse, not the seed
+- Fixture org domains MUST be `.example` (RFC 2606) — never `.test`, `.local`, or a real TLD. `Seeds/docs/fixtures.md` holds the full naming table
 
 ## Scenarios
 
@@ -178,6 +215,10 @@ Developer-facing documentation in `Seeds/docs/scenarios/`. Each file maps an eng
 **These settings alter access control behavior.** When seeding scenarios that test member vs. admin permissions, collection creation/deletion policies, or item-level access, set them explicitly in the preset rather than relying on defaults.
 
 **Configurable in presets and CLI.** Use the JSON preset `organization` block (e.g. `"limitCollectionCreation": true`) or the CLI flags: `--limit-collection-creation`, `--limit-collection-deletion`, `--limit-item-deletion`, `--allow-admin-collection-access`.
+
+## Dependency Isolation
+
+**Never require a change to shared/production code (e.g. `src/SharedWeb`, `src/Core`) to satisfy a Seeder-only DI need.** The Seeder's DI graph must stay fully self-contained, even at the cost of some duplication — e.g. `util/SeederUtility/Configuration/ServiceCollectionExtension.cs` deliberately re-registers `IStripeAdapter`/`IBraintreeGateway` rather than extracting a shared helper into `SharedWeb`. A local, harmless duplicate always wins over refactoring code that ships to production.
 
 ## Security Reminders
 

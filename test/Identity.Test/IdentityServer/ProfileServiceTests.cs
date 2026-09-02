@@ -430,10 +430,104 @@ public class ProfileServiceTests
     }
 
     /// <summary>
-    /// Evaluates the happy path for the core session invalidation mechanism.
-    /// Critical events (e.g., password change) update the security stamp, and any subsequent request through
-    /// this service should expose the stamp as invalid. A found user and matching security stamp
-    /// prove out an active session.
+    /// Provider claims are membership-derived and, like organization claims, are rebuilt fresh on every token
+    /// issuance. A provider claim carried on the existing subject (e.g. from the refresh-token flow) is not
+    /// re-issued, so a refreshed token reflects the user's current provider membership.
+    /// </summary>
+    /// <seealso cref="Bit.Core.Context.ICurrentContext.ProviderMembershipAsync" />
+    [Theory]
+    [BitAutoData(BitwardenClient.Web)]
+    [BitAutoData(BitwardenClient.Browser)]
+    [BitAutoData(BitwardenClient.Cli)]
+    [BitAutoData(BitwardenClient.Desktop)]
+    [BitAutoData(BitwardenClient.Mobile)]
+    [BitAutoData(BitwardenClient.DirectoryConnector)]
+    public async Task GetProfileDataAsync_FiltersOutProviderClaimsFromExisting(
+        string client,
+        [AuthFixtures.ProfileDataRequestContext]
+        ProfileDataRequestContext context,
+        User user)
+    {
+        context.Client.ClientId = client;
+        user.Id = Guid.Parse(context.Subject.FindFirst("sub").Value);
+
+        var existingClaims = new[]
+        {
+            new Claim(Claims.ProviderAdmin, Guid.NewGuid().ToString()),
+            new Claim(Claims.ProviderServiceUser, Guid.NewGuid().ToString()), new Claim("email", "test@example.com"),
+            new Claim("name", "Test User")
+        };
+        context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
+
+        _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
+        _licensingService.ValidateUserPremiumAsync(user).Returns(false);
+        _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)
+            .Returns(new List<CurrentContextOrganization>());
+        _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id)
+            .Returns(new List<CurrentContextProvider>());
+
+        await _sut.GetProfileDataAsync(context);
+
+        Assert.DoesNotContain(context.IssuedClaims, issuedClaim => issuedClaim.Type.StartsWith("provider"));
+        Assert.Contains(context.IssuedClaims, issuedClaim => issuedClaim.Type == "email");
+        Assert.Contains(context.IssuedClaims, issuedClaim => issuedClaim.Type == "name");
+    }
+
+    /// <summary>
+    /// When a provider user's role changes (e.g. from ProviderAdmin to ServiceUser), the freshly issued token
+    /// reflects only their current role. A provider claim for the prior role carried on the existing subject is not
+    /// re-issued alongside the newly built claim, so the refreshed token matches current provider membership.
+    /// </summary>
+    /// <seealso cref="Bit.Core.Context.ICurrentContext.ProviderMembershipAsync" />
+    [Theory]
+    [BitAutoData(BitwardenClient.Web)]
+    [BitAutoData(BitwardenClient.Browser)]
+    [BitAutoData(BitwardenClient.Cli)]
+    [BitAutoData(BitwardenClient.Desktop)]
+    [BitAutoData(BitwardenClient.Mobile)]
+    [BitAutoData(BitwardenClient.DirectoryConnector)]
+    public async Task GetProfileDataAsync_ProviderRoleChange_ReflectsCurrentRole(
+        string client,
+        [AuthFixtures.ProfileDataRequestContext]
+        ProfileDataRequestContext context,
+        User user)
+    {
+        context.Client.ClientId = client;
+        user.Id = Guid.Parse(context.Subject.FindFirst("sub").Value);
+
+        var providerId = Guid.NewGuid();
+        var existingClaims = new[]
+        {
+            // The user was previously a ProviderAdmin for this provider.
+            new Claim(Claims.ProviderAdmin, providerId.ToString())
+        };
+        context.Subject = new ClaimsPrincipal(new ClaimsIdentity(existingClaims));
+
+        // The user has since been demoted to ServiceUser for the same provider.
+        var providerMemberships = new List<CurrentContextProvider>
+        {
+            new() { Id = providerId, Type = ProviderUserType.ServiceUser }
+        };
+
+        _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
+        _licensingService.ValidateUserPremiumAsync(user).Returns(false);
+        _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id)
+            .Returns(new List<CurrentContextOrganization>());
+        _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id)
+            .Returns(providerMemberships);
+
+        await _sut.GetProfileDataAsync(context);
+
+        Assert.DoesNotContain(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.ProviderAdmin && issuedClaim.Value == providerId.ToString());
+        Assert.Contains(context.IssuedClaims,
+            issuedClaim => issuedClaim.Type == Claims.ProviderServiceUser && issuedClaim.Value == providerId.ToString());
+    }
+
+    /// <summary>
+    /// Evaluates the happy path for refresh-token validation via the security stamp.
+    /// Certain account changes (e.g., password change) update the security stamp, so a request whose stamp no
+    /// longer matches is treated as inactive. A found user and matching security stamp prove out an active session.
     /// </summary>
     [Theory]
     [BitAutoData(BitwardenClient.Web)]
@@ -464,9 +558,9 @@ public class ProfileServiceTests
     }
 
     /// <summary>
-    /// Critical events (e.g., password change) update the security stamp, and any subsequent request through
-    /// this service should expose the stamp as invalid.
-    /// See also examples for stamp invalidation (non-exhaustive):
+    /// Certain account changes (e.g., password change) update the security stamp, so a request whose stamp no
+    /// longer matches the user's current stamp is treated as inactive.
+    /// See also examples that update the security stamp (non-exhaustive):
     /// </summary>
     /// <seealso cref="Bit.Core.KeyManagement.UserKey.Implementations.RotateUserAccountKeysCommand.PasswordChangeAndRotateUserAccountKeys"/>
     /// <seealso cref="Bit.Core.Services.UserService.ChangePasswordAsync"/>

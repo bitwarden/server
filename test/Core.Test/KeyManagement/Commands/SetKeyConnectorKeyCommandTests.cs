@@ -50,6 +50,9 @@ public class SetKeyConnectorKeyCommandTests
         var mockUpdateUserData = Substitute.For<UpdateUserData>();
         userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
             .Returns(mockUpdateUserData);
+        var mockSetUserKeyId = Substitute.For<UpdateUserData>();
+        userRepository.SetUserKeyId(user.Id, data.ContainedKeyId!)
+            .Returns(mockSetUserKeyId);
 
         // Act
         await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
@@ -74,7 +77,9 @@ public class SetKeyConnectorKeyCommandTests
                     data.SecurityStateData!.SecurityState == expectedAccountKeysData.SecurityStateData!.SecurityState &&
                     data.SecurityStateData.SecurityVersion == expectedAccountKeysData.SecurityStateData.SecurityVersion),
                 Arg.Is<IEnumerable<UpdateUserData>>(actions =>
-                    actions.Count() == 1 && actions.First() == mockUpdateUserData));
+                    actions.Count() == 2 &&
+                    actions.First() == mockUpdateUserData &&
+                    actions.Last() == mockSetUserKeyId));
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -83,6 +88,59 @@ public class SetKeyConnectorKeyCommandTests
         await sutProvider.GetDependency<IAcceptOrgUserCommand>()
             .Received(1)
             .AcceptOrgUserByOrgSsoIdAsync(data.OrgIdentifier, user, sutProvider.GetDependency<IUserService>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetKeyConnectorKeyForUserAsync_NoKeyIdSupplied_DoesNotSetUserKeyId(
+        User user,
+        KeyConnectorKeysData data,
+        SutProvider<SetKeyConnectorKeyCommand> sutProvider)
+    {
+        // Set up valid V2 encryption data
+        if (data.AccountKeys!.SignatureKeyPair != null)
+        {
+            data.AccountKeys.SignatureKeyPair.SignatureAlgorithm = "ed25519";
+        }
+
+        // Arrange - a client that predates the key id field sends none
+        data = new KeyConnectorKeysData
+        {
+            KeyConnectorKeyWrappedUserKey = data.KeyConnectorKeyWrappedUserKey,
+            AccountKeys = data.AccountKeys,
+            OrgIdentifier = data.OrgIdentifier,
+            ContainedKeyId = null
+        };
+
+        user.UsesKeyConnector = false;
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var httpContext = Substitute.For<HttpContext>();
+        httpContext.User.Returns(new ClaimsPrincipal());
+        currentContext.HttpContext.Returns(httpContext);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), user, Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
+
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var mockUpdateUserData = Substitute.For<UpdateUserData>();
+        userRepository.SetKeyConnectorUserKey(user.Id, data.KeyConnectorKeyWrappedUserKey!)
+            .Returns(mockUpdateUserData);
+
+        // Act
+        await sutProvider.Sut.SetKeyConnectorKeyForUserAsync(user, data);
+
+        // Assert
+        userRepository
+            .DidNotReceive()
+            .SetUserKeyId(Arg.Any<Guid>(), Arg.Any<KeyId>());
+
+        await userRepository
+            .Received(1)
+            .SetV2AccountCryptographicStateAsync(
+                user.Id,
+                Arg.Any<UserAccountKeysData>(),
+                Arg.Is<IEnumerable<UpdateUserData>>(actions =>
+                    actions.Count() == 1 && actions.First() == mockUpdateUserData));
     }
 
     [Theory, BitAutoData]

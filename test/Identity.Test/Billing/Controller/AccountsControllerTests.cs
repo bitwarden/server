@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Identity.Billing.Controller;
@@ -135,7 +136,7 @@ public class AccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostTrialInitiationSendVerificationEmailAsync_TrialLengthNull_DefaultsToSeven(
+    public async Task PostTrialInitiationSendVerificationEmailAsync_TrialLengthNull_DefaultsToDefaultTrialLength(
         string email,
         string name,
         bool receiveMarketingEmails,
@@ -156,7 +157,8 @@ public class AccountsControllerTests
         };
 
         _sendTrialInitiationEmailForRegistrationCommand
-            .Handle(email, name, receiveMarketingEmails, productTier, products, 7, false)
+            .Handle(email, name, receiveMarketingEmails, productTier, products,
+                TrialInitiationConstants.DefaultTrialLengthDays, false)
             .Returns(token);
 
         // Act
@@ -167,7 +169,8 @@ public class AccountsControllerTests
         Assert.Equal(200, okResult.StatusCode);
 
         await _sendTrialInitiationEmailForRegistrationCommand.Received(1)
-            .Handle(email, name, receiveMarketingEmails, productTier, products, 7, false);
+            .Handle(email, name, receiveMarketingEmails, productTier, products,
+                TrialInitiationConstants.DefaultTrialLengthDays, false);
     }
 
     [Theory]

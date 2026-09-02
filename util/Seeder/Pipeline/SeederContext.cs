@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.RustSDK;
@@ -7,7 +8,7 @@ using Bit.Seeder.Data;
 namespace Bit.Seeder.Pipeline;
 
 /// <summary>
-/// Shared mutable state bag passed through every <see cref="IStep"/> in a pipeline run.
+/// Shared mutable state bag passed through every <see cref="IStep"/> and <see cref="IAsyncStep"/> in a pipeline run.
 /// WARNING: This class is NOT thread-safe. Each pipeline execution must use its own context instance.
 /// Do not share a context instance between concurrent pipeline runs.
 /// </summary>
@@ -20,9 +21,10 @@ namespace Bit.Seeder.Pipeline;
 /// <strong>Context Lifecycle:</strong>
 /// <list type="number">
 /// <item><description>Create fresh context for each pipeline run</description></item>
-/// <item><description>Pass to RecipeExecutor.Execute()</description></item>
+/// <item><description>Pass to RecipeExecutor.ExecuteAsync()</description></item>
 /// <item><description>Steps mutate context progressively</description></item>
 /// <item><description>BulkCommitter flushes entity lists to database</description></item>
+/// <item><description>Steps marked <see cref="IPostCommitStep"/> run against the committed rows</description></item>
 /// <item><description>Return org ID from context</description></item>
 /// <item><description>Discard context (do not reuse)</description></item>
 /// </list>
@@ -48,6 +50,8 @@ public sealed class SeederContext(IServiceProvider services)
 
     internal string? Domain { get; set; }
 
+    internal string? SsoIdentifier { get; set; }
+
     internal User? Owner { get; set; }
 
     internal OrganizationUser? OwnerOrgUser { get; set; }
@@ -55,6 +59,10 @@ public sealed class SeederContext(IServiceProvider services)
     internal OrganizationApiKey? OrganizationApiKey { get; set; }
 
     internal List<Organization> Organizations { get; } = [];
+
+    internal List<OrganizationDomain> OrganizationDomains { get; } = [];
+
+    internal List<SsoConfig> SsoConfigs { get; } = [];
 
     internal List<User> Users { get; } = [];
 

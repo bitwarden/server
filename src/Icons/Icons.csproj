@@ -10,7 +10,7 @@
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Icons' " />
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="[1.4.0]" />
+    <PackageReference Include="AngleSharp" Version="[1.5.2]" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,8 +18,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Libraries\GlobalSettingsBridge\GlobalSettingsBridge.csproj" />
+    <ProjectReference Include="..\Libraries\SerilogFileLogging\SerilogFileLogging.csproj" />
+    <ProjectReference Include="..\Libraries\SsrfProtection\SsrfProtection.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Icons.Test" />
   </ItemGroup>
 
 </Project>

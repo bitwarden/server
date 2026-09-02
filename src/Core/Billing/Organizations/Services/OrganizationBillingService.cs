@@ -7,7 +7,6 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -36,6 +35,12 @@ public class OrganizationBillingService(
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
+    // Must match `InitiationPath.SalesAssistedTrialFromAdminPortal` in the clients repo.
+    private const string _salesAssistedTrialInitiationPath = "Sales assisted trial from admin portal";
+
+    // Matched as a substring of the client's `InitiationPath` marketing-trial values.
+    private const string _marketingTrialInitiationPathSegment = "trial from marketing website";
+
     public async Task Finalize(OrganizationSale sale)
     {
         var (organization, customerSetup, subscriptionSetup, owner) = sale;
@@ -49,7 +54,7 @@ public class OrganizationBillingService(
 
         var customer = string.IsNullOrEmpty(organization.GatewayCustomerId) && customerSetup != null
             ? await CreateCustomerAsync(organization, customerSetup, subscriptionSetup.PlanType)
-            : await GetCustomerWhileEnsuringCorrectTaxExemptionAsync(organization, subscriptionSetup);
+            : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
 
         var subscription = await CreateSubscriptionAsync(organization, customer, subscriptionSetup, coupons);
 
@@ -259,12 +264,6 @@ public class OrganizationBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
 
-            if (planType.GetProductTier() is not ProductTierType.Free and not ProductTierType.Families &&
-                !TaxHelpers.IsDirectTaxCountry(customerSetup.TaxInformation.Country))
-            {
-                customerCreateOptions.TaxExempt = StripeConstants.TaxExempt.Reverse;
-            }
-
             if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
             {
                 var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
@@ -453,21 +452,34 @@ public class OrganizationBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = coupons.Count > 0 ? coupons.Select(c => new SubscriptionDiscountOptions { Coupon = c }).ToList() : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organization.Id.ToString(),
-                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
-                                          subscriptionSetup.InitiationPath.Contains("trial from marketing website")
-                    ? "marketing-initiated"
-                    : "product-initiated"
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.TrialInitiationPath] = subscriptionSetup.InitiationPath switch
+                {
+                    var path when !string.IsNullOrEmpty(path) && path.Contains(_marketingTrialInitiationPathSegment)
+                        => StripeConstants.TrialInitiationPaths.MarketingInitiated,
+                    _salesAssistedTrialInitiationPath
+                        => StripeConstants.TrialInitiationPaths.SalesAssisted,
+                    _ => StripeConstants.TrialInitiationPaths.ProductInitiated
+                }
             },
             OffSession = true,
-            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial
+                ? 0
+                : subscriptionSetup.TrialLength ?? plan.TrialPeriodDays
         };
+
+        if (coupons.Count > 0)
+        {
+            subscriptionCreateOptions.Discounts = coupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
+        }
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 
@@ -496,36 +508,6 @@ public class OrganizationBillingService(
 
         return subscription;
     }
-
-    private async Task<Customer> GetCustomerWhileEnsuringCorrectTaxExemptionAsync(
-        Organization organization,
-        SubscriptionSetup subscriptionSetup)
-    {
-        var customer = await subscriberService.GetCustomerOrThrow(organization,
-            new CustomerGetOptions { Expand = ["tax", "tax_ids"] });
-
-        if (subscriptionSetup.PlanType.GetProductTier() is
-            not (ProductTierType.Teams or
-            ProductTierType.TeamsStarter or
-            ProductTierType.Enterprise))
-        {
-            return customer;
-        }
-
-        List<string> expansions = ["tax", "tax_ids"];
-        var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(customer.Address?.Country, customer.TaxExempt);
-        customer = customer switch
-        {
-            { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                when determinedTaxExemptStatus != customerTaxExemptStatus =>
-                await stripeAdapter.UpdateCustomerAsync(customer.Id,
-                    new CustomerUpdateOptions { Expand = expansions, TaxExempt = determinedTaxExemptStatus }),
-            _ => customer
-        };
-
-        return customer;
-    }
-
 
     #endregion
 }

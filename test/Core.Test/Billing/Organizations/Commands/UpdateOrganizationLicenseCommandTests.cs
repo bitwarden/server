@@ -170,7 +170,8 @@ public class UpdateOrganizationLicenseCommandTests
             new(OrganizationLicenseConstants.LimitCollectionCreationDeletion, "true"),
             new(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems, "true"),
             new(OrganizationLicenseConstants.UseMyItems, "true"),
-            new(OrganizationLicenseConstants.UseInviteLinks, "true")
+            new(OrganizationLicenseConstants.UseInviteLinks, "true"),
+            new(OrganizationLicenseConstants.UsePam, "true")
         };
         var claimsPrincipal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -239,7 +240,8 @@ public class UpdateOrganizationLicenseCommandTests
                     org.UseDisableSmAdsForUsers == true &&
                     org.UsePhishingBlocker == true &&
                     org.UseMyItems &&
-                    org.UseInviteLinks));
+                    org.UseInviteLinks &&
+                    org.UsePam));
         }
         finally
         {

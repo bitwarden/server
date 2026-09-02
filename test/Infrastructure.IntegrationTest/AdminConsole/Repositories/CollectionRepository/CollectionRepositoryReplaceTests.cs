@@ -2,6 +2,8 @@
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Pam.Entities;
+using Bit.Pam.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.CollectionRepository;
@@ -195,5 +197,148 @@ public class CollectionRepositoryReplaceTests
         Assert.Equal(2, users.Length);
         Assert.Single(users, u => u.Id == orgUser1.Id && u.Manage && !u.HidePasswords && u.ReadOnly);
         Assert.Single(users, u => u.Id == orgUser2.Id && !u.Manage && u.HidePasswords && !u.ReadOnly);
+    }
+
+    /// <summary>
+    /// <see cref="ICollectionRepository.ReplaceAsync"/> is the standard collection-edit path and knows nothing about
+    /// PAM, so it must leave <see cref="Collection.AccessRuleId"/> exactly as it found it. The MSSQL implementation
+    /// picks one of four stored procedures depending on which of <c>groups</c>/<c>users</c> are supplied, and all four
+    /// funnel into <c>Collection_Update</c> — so every branch of that matrix is exercised here.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_WithGovernedCollection_PreservesAccessRuleId(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var rule = await accessRuleRepository.CreateAsync(new AccessRule
+        {
+            OrganizationId = organization.Id,
+            Name = $"Replace {Guid.NewGuid()}",
+            Conditions = """{"kind":"human_approval"}""",
+        });
+
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, rule.Id, [collection.Id], []);
+
+        var governed = await collectionRepository.GetByIdAsync(collection.Id);
+        Assert.NotNull(governed);
+        Assert.Equal(rule.Id, governed.AccessRuleId);
+
+        CollectionAccessSelection[] groups = [new() { Id = group.Id, Manage = true }];
+        CollectionAccessSelection[] users = [new() { Id = orgUser.Id, Manage = true }];
+
+        // Act & Assert: each branch of ReplaceAsync's group/user matrix must preserve the association.
+        foreach (var (withGroups, withUsers, branch) in new (CollectionAccessSelection[]?, CollectionAccessSelection[]?, string)[]
+        {
+            (null, null, "no groups or users"),
+            (groups, null, "groups only"),
+            (null, users, "users only"),
+            (groups, users, "groups and users"),
+        })
+        {
+            governed.Name = $"Updated for {branch}";
+            await collectionRepository.ReplaceAsync(governed, withGroups, withUsers);
+
+            var actual = await collectionRepository.GetByIdAsync(collection.Id);
+            Assert.NotNull(actual);
+            Assert.Equal(rule.Id, actual.AccessRuleId);
+
+            // Guard against a vacuous pass: the update must actually have been applied.
+            Assert.Equal($"Updated for {branch}", actual.Name);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="Collection.AccessRuleId"/> has a single writer,
+    /// <see cref="ICollectionRepository.SetAccessRuleAssociationsAsync"/>. Every other write path ignores the
+    /// property, which is what makes an accidental erasure structurally impossible rather than merely fixed — so a
+    /// caller that mutates it and submits a whole-entity update must not move the stored value in either direction.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_WithMutatedAccessRuleId_IgnoresIt(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var rule = await accessRuleRepository.CreateAsync(new AccessRule
+        {
+            OrganizationId = organization.Id,
+            Name = $"Ignored {Guid.NewGuid()}",
+            Conditions = """{"kind":"human_approval"}""",
+        });
+
+        var ungoverned = await collectionRepository.CreateTestCollectionAsync(organization);
+        var governed = await collectionRepository.CreateTestCollectionAsync(organization);
+        await collectionRepository.SetAccessRuleAssociationsAsync(
+            organization.Id, rule.Id, [governed.Id], []);
+
+        // Act: try to forge an association on the ungoverned collection...
+        var forged = await collectionRepository.GetByIdAsync(ungoverned.Id);
+        Assert.NotNull(forged);
+        forged.AccessRuleId = rule.Id;
+        await collectionRepository.ReplaceAsync(forged, null, null);
+
+        // ...and to erase the real one on the governed collection.
+        var erased = await collectionRepository.GetByIdAsync(governed.Id);
+        Assert.NotNull(erased);
+        erased.AccessRuleId = null;
+        await collectionRepository.ReplaceAsync(erased, null, null);
+
+        // Assert: neither write reached the database.
+        var actualUngoverned = await collectionRepository.GetByIdAsync(ungoverned.Id);
+        Assert.NotNull(actualUngoverned);
+        Assert.Null(actualUngoverned.AccessRuleId);
+
+        var actualGoverned = await collectionRepository.GetByIdAsync(governed.Id);
+        Assert.NotNull(actualGoverned);
+        Assert.Equal(rule.Id, actualGoverned.AccessRuleId);
+    }
+
+    /// <summary>
+    /// The same single-writer rule on the create path: a brand-new collection is always ungoverned, so an
+    /// <see cref="Collection.AccessRuleId"/> set before <see cref="ICollectionRepository.CreateAsync"/> is ignored.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithAccessRuleId_IgnoresIt(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRuleRepository accessRuleRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var rule = await accessRuleRepository.CreateAsync(new AccessRule
+        {
+            OrganizationId = organization.Id,
+            Name = $"Create {Guid.NewGuid()}",
+            Conditions = """{"kind":"human_approval"}""",
+        });
+
+        var collection = new Collection
+        {
+            Name = "Forged At Creation",
+            OrganizationId = organization.Id,
+            AccessRuleId = rule.Id,
+        };
+
+        // Act
+        await collectionRepository.CreateAsync(collection, null, null);
+
+        // Assert
+        var actual = await collectionRepository.GetByIdAsync(collection.Id);
+        Assert.NotNull(actual);
+        Assert.Null(actual.AccessRuleId);
     }
 }

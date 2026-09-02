@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 
 namespace Bit.Core.KeyManagement.UserKey;
 
@@ -41,13 +40,13 @@ public interface IRotateUserAccountKeysCommand
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is null.</exception>
     /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> is not a TDE user with no master password.</exception>
     Task TdeRotateUserAccountKeysAsync(User user, TdeRotateUserAccountKeysData model);
-}
 
-/// <summary>
-/// A type used to implement updates to the database for key rotations. Each domain that requires an update of encrypted
-/// data during a key rotation should use this to implement its own database call. The user repository loops through
-/// these during a key rotation.
-/// <para>Note: connection and transaction are only used for Dapper. They won't be available in EF</para>
-/// </summary>
-public delegate Task UpdateEncryptedDataForKeyRotation(SqlConnection connection = null,
-    SqlTransaction transaction = null);
+    /// <summary>
+    /// For a Key Connector user, rotates the user key and updates all encrypted data.
+    /// </summary>
+    /// <param name="user">The target user fetched from the database.</param>
+    /// <param name="model">Rotation data including the new key connector wrapped user key. All encrypted data must be included or the request will be rejected.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="user"/> is null.</exception>
+    /// <exception cref="BadRequestException">Thrown when <paramref name="user"/> is not a key connector user.</exception>
+    Task KeyConnectorRotateUserAccountKeysAsync(User user, KeyConnectorRotateUserAccountKeysData model);
+}

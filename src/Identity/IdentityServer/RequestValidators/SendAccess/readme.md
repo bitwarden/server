@@ -19,11 +19,11 @@ Send access tokens contain custom claims specific to the Send the Send grant typ
 
 ## Authentication methods
 
-### `NeverAuthenticate`
+### `SendInaccessible`
 
-For a Send to be in this state two things can be true:
-1. The Send has been modified and no longer allows access.
-2. The Send does not exist.
+The Send cannot be accessed. This covers a Send that exists but is disabled, expired, past its
+deletion date, or has exhausted its max access count, as well as a `send_id` with no matching
+Send. All of these return `invalid_grant` with `send_id_invalid`.
 
 ### `NotAuthenticated`
 

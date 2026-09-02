@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Utilities;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
 namespace Bit.Core.Entities;
 
@@ -16,6 +17,7 @@ public class PlayItem : ITableObject<Guid>
     public required string PlayId { get; init; }
     public Guid? UserId { get; init; }
     public Guid? OrganizationId { get; init; }
+    public Guid? ProviderId { get; init; }
     public DateTime CreationDate { get; init; }
 
     /// <summary>
@@ -54,6 +56,22 @@ public class PlayItem : ITableObject<Guid>
         {
             PlayId = playId,
             OrganizationId = organization.Id,
+            CreationDate = DateTime.UtcNow
+        };
+    }
+
+    /// <summary>
+    /// Creates a new PlayItem record associated with a Provider.
+    /// </summary>
+    /// <param name="provider">The provider entity created during the play.</param>
+    /// <param name="playId">The play identifier from the x-play-id header.</param>
+    /// <returns>A new PlayItem instance tracking the provider.</returns>
+    public static PlayItem Create(Provider provider, string playId)
+    {
+        return new PlayItem
+        {
+            PlayId = playId,
+            ProviderId = provider.Id,
             CreationDate = DateTime.UtcNow
         };
     }

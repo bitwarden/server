@@ -12,7 +12,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -28,7 +27,6 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -67,7 +65,7 @@ public class SubscriberService(
         ];
 
         // Build once from survey — null when survey is absent (system-initiated cancellation)
-        var cancellationDetails = offboardingSurveyResponse != null
+        var cancellationDetails = offboardingSurveyResponse is not null
             ? new SubscriptionCancellationDetailsOptions
             {
                 Comment = offboardingSurveyResponse.Feedback,
@@ -77,21 +75,16 @@ public class SubscriberService(
             }
             : null;
 
-        var cancellingUserMetadata = offboardingSurveyResponse != null
+        var cancellingUserMetadata = offboardingSurveyResponse is not null
             ? new Dictionary<string, string>
             {
-                { "cancellingUserId", offboardingSurveyResponse.UserId.ToString() }
+                { MetadataKeys.CancellingUserId, offboardingSurveyResponse.UserId.ToString() }
             }
             : null;
 
-        if (cancelImmediately)
-        {
-            await CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata);
-        }
-        else
-        {
-            await CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata);
-        }
+        await (cancelImmediately
+            ? CancelSubscriptionImmediatelyAsync(subscription, cancellationDetails, cancellingUserMetadata)
+            : CancelSubscriptionAtPeriodEndAsync(subscription, cancellationDetails, cancellingUserMetadata));
     }
 
     public async Task<string> CreateBraintreeCustomer(
@@ -233,13 +226,10 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+        if (activeSchedule != null)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
-            if (activeSchedule != null)
-            {
-                await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
-            }
+            await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
         }
 
         if (cancellingUserMetadata != null && subscription.Metadata.ContainsKey(MetadataKeys.OrganizationId))
@@ -265,26 +255,27 @@ public class SubscriberService(
         {
             CancelAtPeriodEnd = true,
             CancellationDetails = cancellationDetails,
-            Metadata = cancellingUserMetadata
         };
-
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        // Only set metadata if provided to prevent clearing existing metadata on the subscription.
+        if (cancellingUserMetadata != null)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            updateOptions.Metadata = cancellingUserMetadata;
+        }
 
-            if (activeSchedule is { Phases.Count: > 0 })
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+
+        if (activeSchedule is { Phases.Count: > 0 })
+        {
+            logger.LogInformation(
+                "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
+                GetType().Name, activeSchedule.Id, subscription.Id);
+
+            await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+
+            updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
             {
-                logger.LogInformation(
-                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
-                    GetType().Name, activeSchedule.Id, subscription.Id);
-
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
-
-                updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
-                {
-                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
-                };
-            }
+                [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+            };
         }
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
@@ -557,7 +548,8 @@ public class SubscriberService(
 
     public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
     {
-        var subscription = await GetSubscription(subscriber);
+        var subscription = await GetSubscription(subscriber,
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon"] });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||
@@ -577,6 +569,8 @@ public class SubscriberService(
                 [MetadataKeys.CancellationOrigin] = string.Empty
             }
         });
+
+        await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
         logger.LogInformation(
             "Cleared pending unpaid-lifecycle cancellation for subscription ({SubscriptionId}) after subscriber re-enable",
@@ -601,6 +595,8 @@ public class SubscriberService(
         }
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {

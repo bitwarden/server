@@ -1,4 +1,8 @@
 ﻿using System.Globalization;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.SeederApi.Extensions;
 using Bit.SeederApi.Utilities;
@@ -28,14 +32,22 @@ public class Startup
 
         services.AddCustomDataProtectionServices(Environment, globalSettings);
 
+        services.AddDistributedCache(globalSettings);
+
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
+        services.AddSecretsManagerEfRepositories();
         services.AddTestPlayIdTracking(globalSettings);
         services.AddManglerService(globalSettings);
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         services.AddScoped<IPasswordHasher<Core.Entities.User>, PasswordHasher<Core.Entities.User>>();
+
+        services.AddLicenseServices();
+        services.TryAddSingleton<IMailService, NoopMailService>();
+        services.AddPush(globalSettings);
+        services.TryAddSingleton<ILicensingService, LicensingService>();
 
         services.AddSeederApiServices();
         services.AddScenes();
@@ -83,6 +95,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
+            endpoints.MapVersionEndpoint();
         });
     }
 }

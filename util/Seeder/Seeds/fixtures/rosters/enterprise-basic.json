@@ -1,21 +1,87 @@
 {
   "$schema": "../../schemas/roster.schema.json",
   "users": [
-    { "firstName": "Enterprise", "lastName": "Owner", "role": "owner" },
-    { "firstName": "Enterprise", "lastName": "Admin", "role": "admin" },
-    { "firstName": "Enterprise", "lastName": "User", "role": "user" },
-    { "firstName": "Enterprise", "lastName": "Custom", "role": "custom" },
-    { "firstName": "Enterprise", "lastName": "Custom-Two", "role": "custom" }
+    { "firstName": "Dana", "lastName": "Whitfield", "role": "owner" },
+    { "firstName": "Marcus", "lastName": "Chen", "role": "admin" },
+    { "firstName": "Priya", "lastName": "Nair", "role": "admin" },
+    { "firstName": "Sofia", "lastName": "Ramirez", "role": "admin" },
+    { "firstName": "Trevor", "lastName": "Boyd", "role": "custom" },
+    { "firstName": "Alicia", "lastName": "Gomez", "role": "custom" },
+    { "firstName": "Nathan", "lastName": "Brooks", "role": "user" },
+    { "firstName": "Grace", "lastName": "Sullivan", "role": "user" },
+    { "firstName": "Derek", "lastName": "Olsen", "role": "user" },
+    { "firstName": "Hannah", "lastName": "Weiss", "role": "user" },
+    { "firstName": "Olivia", "lastName": "Bennett", "role": "user" },
+    { "firstName": "Ethan", "lastName": "Ward", "role": "user" },
+    { "firstName": "Maya", "lastName": "Patel", "role": "user" },
+    { "firstName": "Liam", "lastName": "Foster", "role": "user" },
+    { "firstName": "Ava", "lastName": "Nguyen", "role": "user" },
+    { "firstName": "Noah", "lastName": "Reyes", "role": "user" },
+    { "firstName": "Isabella", "lastName": "Rossi", "role": "user" },
+    { "firstName": "Julian", "lastName": "Marsh", "role": "user" },
+    { "firstName": "Chloe", "lastName": "Adams", "role": "user" },
+    { "firstName": "Benjamin", "lastName": "Cole", "role": "user" },
+    { "firstName": "Zoe", "lastName": "Carter", "role": "user" },
+    { "firstName": "Owen", "lastName": "Fitzgerald", "role": "user" },
+    { "firstName": "Lucas", "lastName": "Moreau", "role": "user" },
+    { "firstName": "Emma", "lastName": "Donovan", "role": "user" },
+    { "firstName": "Caleb", "lastName": "Hughes", "role": "user" }
   ],
   "groups": [
     {
       "name": "All Members",
       "members": [
-        "enterprise.owner",
-        "enterprise.admin",
-        "enterprise.user",
-        "enterprise.custom",
-        "enterprise.custom-two"
+        "dana.whitfield",
+        "marcus.chen",
+        "priya.nair",
+        "sofia.ramirez",
+        "trevor.boyd",
+        "alicia.gomez",
+        "nathan.brooks",
+        "grace.sullivan",
+        "derek.olsen",
+        "hannah.weiss",
+        "olivia.bennett",
+        "ethan.ward",
+        "maya.patel",
+        "liam.foster",
+        "ava.nguyen",
+        "noah.reyes",
+        "isabella.rossi",
+        "julian.marsh",
+        "chloe.adams",
+        "benjamin.cole",
+        "zoe.carter",
+        "owen.fitzgerald",
+        "lucas.moreau",
+        "emma.donovan",
+        "caleb.hughes"
+      ]
+    },
+    {
+      "name": "Finance",
+      "members": [
+        "trevor.boyd",
+        "nathan.brooks",
+        "grace.sullivan",
+        "derek.olsen",
+        "hannah.weiss"
+      ]
+    },
+    {
+      "name": "Human Resources",
+      "members": ["sofia.ramirez", "olivia.bennett", "ethan.ward", "maya.patel"]
+    },
+    {
+      "name": "Information Technology",
+      "members": [
+        "marcus.chen",
+        "priya.nair",
+        "alicia.gomez",
+        "liam.foster",
+        "ava.nguyen",
+        "noah.reyes",
+        "isabella.rossi"
       ]
     }
   ],
@@ -23,7 +89,7 @@
     {
       "name": "Default collection",
       "groups": [{ "group": "All Members" }],
-      "users": [{ "user": "enterprise.owner", "manage": true }]
+      "users": [{ "user": "dana.whitfield", "manage": true }]
     },
     { "name": "Collection-20360", "groups": [{ "group": "All Members" }] },
     { "name": "Collection-20356", "groups": [{ "group": "All Members" }] },
@@ -69,6 +135,25 @@
       "groups": [{ "group": "All Members" }]
     },
     { "name": "Collection-3392572", "groups": [{ "group": "All Members" }] },
-    { "name": "Collection-3171087", "groups": [{ "group": "All Members" }] }
+    { "name": "Collection-3171087", "groups": [{ "group": "All Members" }] },
+    {
+      "name": "Finance",
+      "groups": [{ "group": "Finance", "manage": true }],
+      "users": [{ "user": "dana.whitfield", "manage": true }]
+    },
+    {
+      "name": "Human Resources",
+      "groups": [{ "group": "Human Resources", "manage": true }],
+      "users": [{ "user": "dana.whitfield", "manage": true }]
+    },
+    {
+      "name": "Information Technology",
+      "groups": [{ "group": "Information Technology", "manage": true }],
+      "users": [{ "user": "dana.whitfield", "manage": true }]
+    },
+    {
+      "name": "Company-Wide",
+      "groups": [{ "group": "All Members" }]
+    }
   ]
 }

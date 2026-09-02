@@ -91,6 +91,11 @@ public class AuthRequestsController(
     [HttpPost("admin-request")]
     public async Task<AuthRequestResponseModel> PostAdminRequest([FromBody] AuthRequestCreateRequestModel model)
     {
+        if (model.Type != AuthRequestType.AdminApproval)
+        {
+            throw new BadRequestException("Invalid AuthRequestType. Expected AdminApproval.");
+        }
+
         var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
         var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
         return r;

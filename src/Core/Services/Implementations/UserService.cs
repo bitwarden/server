@@ -5,6 +5,8 @@ using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -20,6 +22,7 @@ using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -62,7 +65,6 @@ public class UserService : UserManager<User>, IUserService
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IFeatureService _featureService;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IDistributedCache _distributedCache;
@@ -96,7 +98,6 @@ public class UserService : UserManager<User>, IUserService
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IFeatureService featureService,
         IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IDistributedCache distributedCache,
@@ -134,7 +135,6 @@ public class UserService : UserManager<User>, IUserService
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _featureService = featureService;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _distributedCache = distributedCache;
@@ -223,6 +223,11 @@ public class UserService : UserManager<User>, IUserService
 
     public override async Task<IdentityResult> DeleteAsync(User user)
     {
+        if (await IsClaimedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
+        }
+
         // Check if user is the only owner of any organizations.
         var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
         if (onlyOwnerCount > 0)
@@ -239,7 +244,10 @@ public class UserService : UserManager<User>, IUserService
                     if (orgCount <= 1)
                     {
                         await _sendFileStorageService.DeleteFilesForUserAsync(user.Id);
-                        await _organizationRepository.DeleteAsync(org);
+                        // This is a right-to-erasure flow, so the organization's event logs have to
+                        // be purged from storage too, not just its database rows.
+                        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+                            org, [OrganizationDeleteTaskType.EventsCleanup]);
                         deletedOrg = true;
                     }
                 }
@@ -249,7 +257,7 @@ public class UserService : UserManager<User>, IUserService
             {
                 return IdentityResult.Failed(new IdentityError
                 {
-                    Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
+                    Description = new SoleOwnerError().Message,
                 });
             }
         }
@@ -267,17 +275,10 @@ public class UserService : UserManager<User>, IUserService
         {
             try
             {
-                if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                {
-                    await _subscriberService.CancelSubscription(
-                        user,
-                        cancelImmediately: false,
-                        offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
-                }
-                else
-                {
-                    await CancelPremiumAsync(user);
-                }
+                await _subscriberService.CancelSubscription(
+                    user,
+                    cancelImmediately: false,
+                    offboardingSurveyResponse: new OffboardingSurveyResponse { UserId = user.Id });
             }
             catch (GatewayException) { }
             catch (BillingException) { }
@@ -335,8 +336,16 @@ public class UserService : UserManager<User>, IUserService
         var result = await CreateAsync(user, registerFinishData.MasterPasswordAuthenticationHash);
         if (result.Succeeded)
         {
-            var setRegisterFinishUserDataTask = _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData);
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, [setRegisterFinishUserDataTask]);
+            var updateUserDataActions = new List<UpdateUserData>
+            {
+                _userRepository.UpdateMasterPasswordUnlockData(user.Id, registerFinishData)
+            };
+            if (registerFinishData.UserKeyId is not null)
+            {
+                updateUserDataActions.Add(_userRepository.SetUserKeyId(user.Id, registerFinishData.UserKeyId));
+            }
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, registerFinishData.UserAccountKeysData, updateUserDataActions);
         }
         return result;
     }
@@ -497,6 +506,7 @@ public class UserService : UserManager<User>, IUserService
         });
     }
 
+    [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -547,29 +557,6 @@ public class UserService : UserManager<User>, IUserService
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
-
-        return IdentityResult.Success;
-    }
-
-    public async Task<IdentityResult> ConvertToKeyConnectorAsync(User user, string keyConnectorKeyWrappedUserKey = null)
-    {
-        var identityResult = CheckCanUseKeyConnector(user);
-        if (identityResult != null)
-        {
-            return identityResult;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.MasterPassword = null;
-        user.UsesKeyConnector = true;
-
-        if (!string.IsNullOrWhiteSpace(keyConnectorKeyWrappedUserKey))
-        {
-            user.Key = keyConnectorKeyWrappedUserKey;
-        }
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
         return IdentityResult.Success;
     }
@@ -673,6 +660,7 @@ public class UserService : UserManager<User>, IUserService
         return IdentityResult.Success;
     }
 
+    [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
     public async Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint)
     {
         if (!user.ForcePasswordReset)
@@ -819,18 +807,6 @@ public class UserService : UserManager<User>, IUserService
         await SaveUserAsync(user);
     }
 
-    //TODO: Remove with the deletion of PM32645_DeferPriceMigrationToRenewal feature flag
-    public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
-    {
-        var eop = endOfPeriod.GetValueOrDefault(true);
-        if (!endOfPeriod.HasValue && user.PremiumExpirationDate.HasValue &&
-            user.PremiumExpirationDate.Value < DateTime.UtcNow)
-        {
-            eop = false;
-        }
-        await _paymentService.CancelSubscriptionAsync(user, eop);
-    }
-
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -843,7 +819,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = true;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -860,7 +838,9 @@ public class UserService : UserManager<User>, IUserService
         {
             user.Premium = false;
             user.PremiumExpirationDate = expirationDate;
-            user.RevisionDate = DateTime.UtcNow;
+            // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+            // premium change even when the one-time push notification is missed.
+            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
             await _userRepository.ReplaceAsync(user);
         }
     }
@@ -1010,6 +990,7 @@ public class UserService : UserManager<User>, IUserService
         return user.Key == null && user.MasterPassword != null && user.PrivateKey != null;
     }
 
+    [Obsolete("Use MasterPasswordService.PrepareSetInitialMasterPasswordAsync or PrepareUpdateExistingMasterPasswordAsync instead. To be removed in PM-33141.")]
     private async Task<IdentityResult> ValidatePasswordInternal(User user, string password)
     {
         var errors = new List<IdentityError>();
@@ -1089,6 +1070,8 @@ public class UserService : UserManager<User>, IUserService
         await Task.WhenAll(revokeOrgUserTasks);
     }
 
+    // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
+    [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     public async Task RotateApiKeyAsync(User user)
     {
         user.ApiKey = CoreHelpers.SecureRandomString(30);
@@ -1114,31 +1097,19 @@ public class UserService : UserManager<User>, IUserService
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false)
+    public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        bool isVerified;
         if (user.HasMasterPassword())
         {
             // If the user has a master password the secret is most likely going to be a hash
             // of their password, but in certain scenarios, like when the user has logged into their
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
-            isVerified = await CheckPasswordAsync(user, secret) ||
-                await VerifyOTPAsync(user, secret);
-        }
-        else if (isSettingMFA)
-        {
-            // this is temporary to allow users to view their MFA settings without invalidating email TOTP
-            // Will be removed with PM-9925
-            isVerified = true;
-        }
-        else
-        {
-            // If they don't have a password at all they can only do OTP
-            isVerified = await VerifyOTPAsync(user, secret);
+            return await CheckPasswordAsync(user, secret) || await VerifyOTPAsync(user, secret);
         }
 
-        return isVerified;
+        // If they don't have a password at all they can only do OTP
+        return await VerifyOTPAsync(user, secret);
     }
 
     public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)

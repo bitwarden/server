@@ -1,0 +1,3 @@
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
+
+public record AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(Guid OrganizationId);

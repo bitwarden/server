@@ -88,6 +88,11 @@ public class SendRequestModel
     public SendTextModel? Text { get; set; }
 
     /// <summary>
+    /// Contains secret Send data
+    /// </summary>
+    public SendDataModel? Data { get; set; }
+
+    /// <summary>
     /// Base64-encoded byte array of a password hash that grants access to the send.
     /// Mutually exclusive with <see cref="Emails"/>.
     /// </summary>
@@ -152,6 +157,9 @@ public class SendRequestModel
     public Send UpdateSend(Send existingSend, ISendAuthorizationService sendAuthorizationService)
     {
         existingSend = ToSendBase(existingSend, sendAuthorizationService);
+        // We can switch off of the existing Send's Type because in the create case
+        // (ToSend, above) this is set to the value from the request and in the update
+        // case we prevent changing it from the existing Type via a controller check
         switch (existingSend.Type)
         {
             case SendType.File:
@@ -164,6 +172,9 @@ public class SendRequestModel
                 break;
             case SendType.Text:
                 existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
+                break;
+            case SendType.Item:
+                existingSend.Data = JsonSerializer.Serialize(ToSendItemData(), JsonHelpers.IgnoreWritingNull);
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -256,6 +267,10 @@ public class SendRequestModel
         if (AuthType != null)
         {
             existingSend.AuthType = AuthType;
+            if (Type == SendType.Item && AuthType != Core.Tools.Enums.AuthType.Email)
+            {
+                throw new BadRequestException("Item-type Sends require email verification");
+            }
             switch (AuthType)
             {
                 case Core.Tools.Enums.AuthType.Email:
@@ -313,6 +328,13 @@ public class SendRequestModel
     {
         var text = Text ?? throw new ArgumentNullException(nameof(Text), "Text is required for text sends.");
         return new SendTextData(Name ?? string.Empty, Notes, text.Text, text.Hidden);
+    }
+
+    // Only called from the SendType.Item branch of UpdateSend, Data is required by client and not null
+    private SendItemData ToSendItemData()
+    {
+        var data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for item sends.");
+        return new SendItemData(Name ?? string.Empty, Notes, data.EncryptionVersion, data.Data);
     }
 }
 

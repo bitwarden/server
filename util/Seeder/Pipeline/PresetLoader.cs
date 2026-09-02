@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Factories;
@@ -20,8 +21,16 @@ internal static class PresetLoader
     /// <param name="presetName">Preset name without extension (e.g., "dunder-mifflin-full")</param>
     /// <param name="reader">Service for reading embedded seed JSON files</param>
     /// <param name="services">The service collection to register steps in</param>
+    /// <param name="stripeBilling">
+    /// When set, adds real Stripe test-environment billing. Organization presets only — individual presets
+    /// ignore it, and the CLI rejects the combination before reaching here (premium billing is a later task).
+    /// </param>
     /// <exception cref="InvalidOperationException">Thrown when preset lacks organization configuration</exception>
-    internal static void RegisterRecipe(string presetName, ISeedReader reader, IServiceCollection services)
+    internal static void RegisterRecipe(
+        string presetName,
+        ISeedReader reader,
+        IServiceCollection services,
+        StripeBillingOptions? stripeBilling = null)
     {
         var preset = reader.Read<SeedPreset>($"presets.{presetName}");
         PresetValidator.Validate(preset, presetName);
@@ -32,7 +41,7 @@ internal static class PresetLoader
         }
         else
         {
-            BuildRecipe(presetName, preset, reader, services);
+            BuildRecipe(presetName, preset, reader, services, stripeBilling);
         }
     }
 
@@ -64,6 +73,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UsePersonalVaultCiphers(preset.Ciphers.Fixture);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: true);
         }
         else if (preset.Ciphers is { Count: > 0 })
         {
@@ -87,9 +97,14 @@ internal static class PresetLoader
     /// Builds a recipe from preset configuration, resolving fixtures and generation counts.
     /// </summary>
     /// <remarks>
-    /// Resolution order: Org → OrgApiKey → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+    /// Resolution order: Org → OrgApiKey → ClaimedDomains → Roster → Owner (if no roster owner) → Generator → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
     /// </remarks>
-    private static void BuildRecipe(string presetName, SeedPreset preset, ISeedReader reader, IServiceCollection services)
+    private static void BuildRecipe(
+        string presetName,
+        SeedPreset preset,
+        ISeedReader reader,
+        IServiceCollection services,
+        StripeBillingOptions? stripeBilling)
     {
         var builder = services.AddRecipe(presetName);
         var org = preset.Organization!;
@@ -116,6 +131,21 @@ internal static class PresetLoader
         }
 
         builder.AddOrganizationApiKey();
+
+        if (org.ClaimedDomains is { Count: > 0 })
+        {
+            builder.WithOrganizationDomain(org.ClaimedDomains);
+        }
+
+        if (preset.Sso is not null)
+        {
+            builder.WithSso(
+                preset.Sso.Identifier
+                    ?? throw new InvalidOperationException(
+                        $"Preset '{presetName}' has an 'sso' block without an 'identifier'."),
+                preset.Sso.Provider,
+                ParseMemberDecryptionType(preset.Sso.EncryptionType));
+        }
 
         if (preset.Roster?.Fixture is not null)
         {
@@ -165,6 +195,7 @@ internal static class PresetLoader
         if (preset.Ciphers?.Fixture is not null)
         {
             builder.UseCiphers(preset.Ciphers.Fixture, skipCollectionAssignment: hasCollectionAssignments);
+            builder.UseCipherAttachments(preset.Ciphers.Fixture, personal: false);
         }
         else if (preset.Ciphers is not null && preset.Ciphers.Count > 0)
         {
@@ -195,6 +226,11 @@ internal static class PresetLoader
             builder.AddPersonalCiphers(0, density: density);
         }
 
+        if (stripeBilling is not null)
+        {
+            builder.WithStripeBilling(stripeBilling);
+        }
+
         builder.Validate();
     }
 
@@ -206,6 +242,16 @@ internal static class PresetLoader
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
     };
+
+    private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
+        encryptionType?.ToLowerInvariant() switch
+        {
+            null or "" or "masterpassword" => MemberDecryptionType.MasterPassword,
+            "trusteddevices" or "trusteddeviceencryption" => MemberDecryptionType.TrustedDeviceEncryption,
+            "keyconnector" => MemberDecryptionType.KeyConnector,
+            _ => throw new InvalidOperationException(
+                $"Unknown SSO encryptionType '{encryptionType}'. Valid values: masterPassword, trustedDevices, keyConnector."),
+        };
 
     private static DensityProfile? ParseDensity(SeedPresetDensity? preset)
     {
@@ -235,6 +281,11 @@ internal static class PresetLoader
             CipherTypeDistribution = ParseCipherTypes(preset.CipherTypes),
             PersonalCipherDistribution = ParsePersonalCipherDistribution(preset.PersonalCiphers?.Shape),
             FolderDistribution = ParseFolderDistribution(preset.Folders?.Shape),
+            ArchivedCipherRate = preset.CipherAssignment?.ArchivedRate ?? 0,
+            DeletedCipherRate = preset.CipherAssignment?.DeletedRate ?? 0,
+            ArchivedAndDeletedOverlapRate = preset.CipherAssignment?.ArchivedAndDeletedOverlapRate ?? 0,
+            MaxArchivedCiphers = preset.CipherAssignment?.MaxArchivedCiphers ?? 50,
+            MaxDeletedCiphers = preset.CipherAssignment?.MaxDeletedCiphers ?? 25,
         };
     }
 

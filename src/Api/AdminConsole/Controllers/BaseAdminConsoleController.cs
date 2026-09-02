@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Models.Api;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,7 @@ public abstract class BaseAdminConsoleController : Controller
     private static IResult MapError(CommandError error) =>
         error switch
         {
+            IValidationError validationError => TypedResults.BitwardenValidationProblem(validationError),
             BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
             NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
             ConflictError conflict => TypedResults.Json(

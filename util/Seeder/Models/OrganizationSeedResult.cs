@@ -11,7 +11,10 @@ public record OrganizationSeedResult(
     int UsersCount,
     int GroupsCount,
     int CollectionsCount,
-    int CiphersCount)
+    int CiphersCount,
+    string? SsoIdentifier,
+    string? GatewayCustomerId = null,
+    string? GatewaySubscriptionId = null)
 {
     internal static OrganizationSeedResult From(PipelineExecutionResult result) =>
         new(result.OrganizationId!.Value,
@@ -21,5 +24,8 @@ public record OrganizationSeedResult(
             result.UsersCount,
             result.GroupsCount,
             result.CollectionsCount,
-            result.CiphersCount);
+            result.CiphersCount,
+            result.SsoIdentifier,
+            result.GatewayCustomerId,
+            result.GatewaySubscriptionId);
 }

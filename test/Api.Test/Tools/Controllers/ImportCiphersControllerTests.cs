@@ -32,7 +32,9 @@ public class ImportCiphersControllerTests
     {
         CiphersLimit = 40000,
         CollectionRelationshipsLimit = 80000,
-        CollectionsLimit = 2000
+        CollectionsLimit = 2000,
+        FoldersLimit = 2000,
+        FolderRelationshipsLimit = 80000
     };
 
     /*************************
@@ -142,7 +144,9 @@ public class ImportCiphersControllerTests
             {
                 CiphersLimit = 4,
                 CollectionRelationshipsLimit = 8,
-                CollectionsLimit = 2
+                CollectionsLimit = 2,
+                FoldersLimit = 2,
+                FolderRelationshipsLimit = 8
             };
 
         var userService = sutProvider.GetDependency<Bit.Core.Services.IUserService>();
@@ -228,7 +232,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -246,11 +252,6 @@ public class ImportCiphersControllerTests
             .SelfHosted = false;
         sutProvider.GetDependency<GlobalSettings>()
             .ImportCiphersLimitation = _organizationCiphersLimitations;
-
-        var importCiphersLimitation = new GlobalSettings.ImportCiphersLimitationSettings();
-        importCiphersLimitation.CiphersLimit = 40000;
-        importCiphersLimitation.CollectionRelationshipsLimit = 80000;
-        importCiphersLimitation.CollectionsLimit = 2000;
 
         sutProvider.GetDependency<Bit.Core.Services.IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
@@ -300,7 +301,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -503,7 +506,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -584,7 +589,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -658,7 +665,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -734,7 +743,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     [Theory, BitAutoData]
@@ -804,7 +815,9 @@ public class ImportCiphersControllerTests
                 Arg.Any<List<Collection>>(),
                 Arg.Any<List<CipherDetails>>(),
                 Arg.Any<IEnumerable<KeyValuePair<int, int>>>(),
-                Arg.Any<Guid>());
+                Arg.Any<Guid>(),
+                Arg.Any<List<Folder>>(),
+                Arg.Any<IEnumerable<KeyValuePair<int, int>>>());
     }
 
     private static void SetupUserService(SutProvider<ImportCiphersController> sutProvider, User user)

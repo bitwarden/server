@@ -52,10 +52,14 @@ public class RegistrationEmailVerificationTokenableTests
     [Fact]
     public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
     {
+        var before = DateTime.UtcNow;
         var token = new RegistrationEmailVerificationTokenable();
-        var expectedExpiration = DateTime.UtcNow + SsoEmail2faSessionTokenable.GetTokenLifetime();
+        var after = DateTime.UtcNow;
 
-        Assert.True(expectedExpiration - token.ExpirationDate < _timeTolerance);
+        Assert.InRange(
+            token.ExpirationDate,
+            before + RegistrationEmailVerificationTokenable.GetTokenLifetime(),
+            after + RegistrationEmailVerificationTokenable.GetTokenLifetime());
     }
 
     /// <summary>
@@ -94,6 +98,36 @@ public class RegistrationEmailVerificationTokenableTests
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.True(token.Valid);
+    }
+
+    /// <summary>
+    /// Tests the validity of the token when the token is expired.
+    /// </summary>
+    [Theory, AutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    /// <summary>
+    /// TokenIsValid(string) is a data-only check; expiration is the caller's
+    /// responsibility via the Valid property (or the static ValidateToken
+    /// helper). This documents that contract.
+    /// </summary>
+    [Theory, AutoData]
+    public void TokenIsValid_ExpiredToken_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
+    {
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.True(token.TokenIsValid(email));
     }
 
     /// <summary>

@@ -20,6 +20,9 @@
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
     var canEditBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_Edit);
     var canLaunchGateway = AccessControlService.UserHasPermission(Permission.Org_Billing_LaunchGateway);
+    var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
+    var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
+    var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
 }
 
 <form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
@@ -44,11 +47,12 @@
                         <label class="form-label">Client Owner Email</label>
                         @if (!string.IsNullOrWhiteSpace(Model.Owners))
                         {
-                            <input type="text" class="form-control" asp-for="Owners" readonly>
+                            <input type="email" class="form-control" asp-for="Owners" readonly>
                         }
                         else
                         {
-                            <input type="text" class="form-control" asp-for="Owners" required>
+                            <input type="email" class="form-control" asp-for="Owners" required>
+                            <span asp-validation-for="Owners" class="invalid-feedback"></span>
                         }
                         <div class="form-text mt-0">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</div>
                     </div>
@@ -60,6 +64,53 @@
             <div class="form-check mb-3">
                 <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
                 <label class="form-check-label" asp-for="Enabled"></label>
+            </div>
+        }
+
+        @if (canViewMigrationCohortAssignment && Model.Organization != null && Model.AvailableMigrationCohorts != null)
+        {
+            var migrationCohortDisabled = !canEditPlan || Model.MigrationCohortLocked;
+            <div class="row">
+                <div class="col-sm">
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="MigrationCohortId"></label>
+                        @{
+                            var cohortItems = new List<SelectListItem>
+                            {
+                                new() { Value = string.Empty, Text = "(Not assigned)", Selected = !Model.MigrationCohortId.HasValue }
+                            };
+                            cohortItems.AddRange(Model.AvailableMigrationCohorts.Select(c =>
+                            {
+                                var isSelected = Model.MigrationCohortId == c.Id;
+                                var label = c.IsActive ? c.Name : $"{c.Name} (inactive)";
+                                if (isSelected && Model.MigrationCohortMismatch)
+                                {
+                                    label += " (plan mismatch)";
+                                }
+                                return new SelectListItem { Value = c.Id.ToString(), Text = label, Selected = isSelected };
+                            }));
+                            if (Model.MigrationCohortOrphaned && Model.MigrationCohortId.HasValue)
+                            {
+                                cohortItems.Add(new SelectListItem
+                                {
+                                    Value = Model.MigrationCohortId.Value.ToString(),
+                                    Text = "(assigned cohort no longer exists)",
+                                    Selected = true
+                                });
+                            }
+                        }
+                        <select class="form-select" asp-for="MigrationCohortId" asp-items="cohortItems" disabled="@(migrationCohortDisabled ? "disabled" : null)"></select>
+                        @if (migrationCohortDisabled)
+                        {
+                            @* Disabled controls aren't POSTed; a hidden input round-trips the value so the lock guard isn't tripped on unrelated edits. *@
+                            <input type="hidden" asp-for="MigrationCohortId" />
+                            @if (Model.MigrationCohortLocked)
+                            {
+                                <div class="form-text mt-0">@Model.MigrationCohortLockReason</div>
+                            }
+                        }
+                    </div>
+                </div>
             </div>
         }
     }
@@ -169,37 +220,51 @@
                     <label class="form-check-label" asp-for="UseInviteLinks"></label>
                 </div>
             </div>
-            <div class="col-3">
-                <h3>Password Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseTotp"></label>
+            <div class="col-8">
+                <div class="row">
+                    <div class="col-6">
+                        <h3>Password Manager</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseTotp"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UsersGetPremium"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseMyItems" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseMyItems"></label>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <h3>Secrets Manager</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseSecretsManager"></label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseDisableSmAdsForUsers" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseDisableSmAdsForUsers"></label>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UsersGetPremium"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseMyItems" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseMyItems"></label>
-                </div>
-            </div>
-            <div class="col-3">
-                <h3>Secrets Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseSecretsManager"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseDisableSmAdsForUsers" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseDisableSmAdsForUsers"></label>
-                </div>
-            </div>
-            <div class="col-2">
-                <h3>Access Intelligence</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseRiskInsights" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseRiskInsights"></label>
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <h3>Access Intelligence</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UseRiskInsights" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UseRiskInsights"></label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h3>Privileged Access Management</h3>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" asp-for="UsePam" disabled='@(canEditPlan ? null : "disabled")'>
+                            <label class="form-check-label" asp-for="UsePam"></label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

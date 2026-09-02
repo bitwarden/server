@@ -26,7 +26,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["login", "card", "identity", "secureNote", "sshKey"]
+          "enum": ["login", "card", "identity", "secureNote", "sshKey", "bankAccount", "driversLicense", "passport"]
         },
         "name": {
           "type": "string"
@@ -46,6 +46,15 @@
         "sshKey": {
           "$ref": "#/$defs/sshKey"
         },
+        "bankAccount": {
+          "$ref": "#/$defs/bankAccount"
+        },
+        "driversLicense": {
+          "$ref": "#/$defs/driversLicense"
+        },
+        "passport": {
+          "$ref": "#/$defs/passport"
+        },
         "reprompt": {
           "type": "integer",
           "enum": [0, 1],
@@ -63,11 +72,27 @@
             "$ref": "#/$defs/field"
           }
         },
-        "passwordHistory": {
+        "cipherEncryption": {
+          "type": "string",
+          "enum": ["userKey", "cipherKey"],
+          "default": "userKey",
+          "description": "How the cipher is encrypted. \"userKey\"=no cipher key; \"cipherKey\"=per-cipher key wrapped by the vault key. Must be \"cipherKey\" for any v2 attachment."
+        },
+        "attachments": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/passwordHistory"
+            "$ref": "#/$defs/attachment"
           }
+        },
+        "archived": {
+          "type": "boolean",
+          "default": false,
+          "description": "Seed this cipher as archived (attributed to the vault owner). Archive is per-user state."
+        },
+        "deleted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Seed this cipher as soft-deleted (global DeletedDate)."
         }
       },
       "allOf": [
@@ -86,6 +111,73 @@
         {
           "if": { "properties": { "type": { "const": "sshKey" } } },
           "then": { "required": ["sshKey"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "bankAccount" } } },
+          "then": { "required": ["bankAccount"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "driversLicense" } } },
+          "then": { "required": ["driversLicense"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "passport" } } },
+          "then": { "required": ["passport"] }
+        },
+        {
+          "if": {
+            "required": ["attachments"],
+            "properties": {
+              "attachments": {
+                "contains": {
+                  "required": ["attachmentVersion"],
+                  "properties": { "attachmentVersion": { "const": "v2" } }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": ["cipherEncryption"],
+            "properties": { "cipherEncryption": { "const": "cipherKey" } }
+          }
+        },
+        {
+          "if": {
+            "required": ["attachments"],
+            "properties": {
+              "attachments": {
+                "contains": {
+                  "required": ["attachmentVersion"],
+                  "properties": { "attachmentVersion": { "const": "v1" } }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": ["cipherEncryption"],
+              "properties": { "cipherEncryption": { "const": "cipherKey" } }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["attachments"],
+            "properties": {
+              "attachments": {
+                "contains": {
+                  "required": ["attachmentVersion"],
+                  "properties": { "attachmentVersion": { "const": "v0" } }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": ["cipherEncryption"],
+              "properties": { "cipherEncryption": { "const": "cipherKey" } }
+            }
+          }
         }
       ]
     },
@@ -96,8 +188,14 @@
         "username": { "type": "string" },
         "password": { "type": "string" },
         "totp": { "type": "string" },
-        "passwordRevisionDate": { "type": "string", "description": "ISO date when the password was last changed." },
-        "autofillOnPageLoad": { "type": "boolean", "description": "Auto-populate credential on page load." },
+        "passwordRevisionDate": {
+          "type": "string",
+          "description": "ISO date when the password was last changed."
+        },
+        "autofillOnPageLoad": {
+          "type": "boolean",
+          "description": "Auto-populate credential on page load."
+        },
         "uris": {
           "type": "array",
           "items": {
@@ -108,6 +206,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/fido2Credential"
+          }
+        },
+        "passwordHistory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/passwordHistory"
           }
         }
       }
@@ -163,6 +267,58 @@
         "licenseNumber": { "type": "string" }
       }
     },
+    "bankAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bankName": { "type": "string" },
+        "nameOnAccount": { "type": "string" },
+        "accountType": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "routingNumber": { "type": "string" },
+        "branchNumber": { "type": "string" },
+        "pin": { "type": "string" },
+        "swiftCode": { "type": "string" },
+        "iban": { "type": "string" },
+        "bankContactPhone": { "type": "string" }
+      }
+    },
+    "driversLicense": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "firstName": { "type": "string" },
+        "middleName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "licenseNumber": { "type": "string" },
+        "issuingCountry": { "type": "string" },
+        "issuingState": { "type": "string" },
+        "issueDate": { "type": "string" },
+        "issuingAuthority": { "type": "string" },
+        "expirationDate": { "type": "string" },
+        "licenseClass": { "type": "string" }
+      }
+    },
+    "passport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "surname": { "type": "string" },
+        "givenName": { "type": "string" },
+        "dateOfBirth": { "type": "string" },
+        "sex": { "type": "string" },
+        "birthPlace": { "type": "string" },
+        "nationality": { "type": "string" },
+        "passportNumber": { "type": "string" },
+        "passportType": { "type": "string" },
+        "issuingCountry": { "type": "string" },
+        "issuingAuthority": { "type": "string" },
+        "issueDate": { "type": "string" },
+        "expirationDate": { "type": "string" },
+        "nationalIdentificationNumber": { "type": "string" }
+      }
+    },
     "field": {
       "type": "object",
       "additionalProperties": false,
@@ -180,6 +336,26 @@
         }
       }
     },
+    "attachment": {
+      "type": "object",
+      "required": ["file", "attachmentVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Bundled attachment body under Seeds/attachments (e.g. 'mock-seeder-data-bank-statement-1.pdf')."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Display filename stored (encrypted). Defaults to 'file'."
+        },
+        "attachmentVersion": {
+          "type": "string",
+          "enum": ["v0", "v1", "v2"],
+          "description": "v0=no attachment key (user-key cipher only), v1=key wrapped by vault key (user-key cipher only), v2=key wrapped by cipher key (requires cipherEncryption=cipherKey)."
+        }
+      }
+    },
     "sshKey": {
       "type": "object",
       "additionalProperties": false,
@@ -192,27 +368,32 @@
     "passwordHistory": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["password"],
       "properties": {
         "password": { "type": "string" },
-        "lastUsedDate": { "type": "string", "description": "ISO date when password was last used." }
+        "lastUsedDate": {
+          "type": "string",
+          "description": "ISO date when password was last used."
+        }
       }
     },
     "fido2Credential": {
       "type": "object",
+      "description": "A discoverable passkey. Key material (credential id, private key, counter, user handle) is synthesized at seed time; only the relying-party and user identifiers are taken from the fixture.",
       "additionalProperties": false,
       "properties": {
-        "credentialId": { "type": "string" },
-        "keyType": { "type": "string", "default": "public-key" },
-        "keyAlgorithm": { "type": "string", "default": "ECDSA" },
-        "keyCurve": { "type": "string", "default": "P-256" },
-        "keyValue": { "type": "string" },
-        "rpId": { "type": "string" },
-        "rpName": { "type": "string" },
-        "userHandle": { "type": "string" },
-        "userName": { "type": "string" },
-        "userDisplayName": { "type": "string" },
-        "counter": { "type": "integer" },
-        "discoverable": { "type": "boolean", "default": false }
+        "rpId": {
+          "type": "string",
+          "description": "Relying party ID (e.g. 'example.com'). Defaults to 'example.com'."
+        },
+        "rpName": {
+          "type": "string",
+          "description": "Relying party display name. Defaults to rpId."
+        },
+        "userName": {
+          "type": "string",
+          "description": "Account username for the passkey. Defaults to the login username."
+        }
       }
     }
   }

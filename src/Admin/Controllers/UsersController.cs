@@ -5,6 +5,8 @@ using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -13,6 +15,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.Controllers;
 
@@ -109,8 +112,35 @@ public class UsersController : Controller
         }
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
-        var billingInfo = await _paymentService.GetBillingAsync(user);
-        var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        BillingInfo? billingInfo = null;
+        BillingHistoryInfo? billingHistoryInfo = null;
+        try
+        {
+            billingInfo = await _paymentService.GetBillingAsync(user);
+            billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
+        }
+        catch (StripeException ex) when (ex.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
+        {
+            billingInfo = null;
+            billingHistoryInfo = null;
+            _logger.LogError(ex,
+                "Billing information for user {UserId} could not be loaded because the Stripe customer was not found. It may have been deleted.",
+                user.Id);
+            TempData["Warning"] =
+                "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the user and set a valid Gateway Customer ID.";
+        }
+        catch (Exception ex)
+        {
+            billingInfo = null;
+            billingHistoryInfo = null;
+            _logger.LogError(ex,
+                "Failed to load billing information for user {UserId}.",
+                user.Id);
+            TempData["Error"] =
+                "Billing information could not be loaded. You can still edit the user or try reloading the page. " +
+                "Contact support if the problem persists.";
+        }
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await _userService.IsClaimedByAnyOrganizationAsync(user.Id);
         var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);

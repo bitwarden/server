@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -181,80 +180,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         try
         {
-            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(targetOrganizationUserIds);
-
-            var organizationUsersToDelete = await dbContext.OrganizationUsers
-                .Where(ou => targetOrganizationUserIds.Contains(ou.Id))
-                .Include(ou => ou.User)
-                .ToListAsync();
-
-            var collectionUsers = await dbContext.CollectionUsers
-                .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
-                .ToListAsync();
-
-            var collectionIds = collectionUsers.Select(cu => cu.CollectionId).Distinct().ToList();
-
-            var collections = await dbContext.Collections
-                .Where(c => collectionIds.Contains(c.Id))
-                .ToListAsync();
-
-            var collectionsToUpdate = collections
-                .Where(c => c.Type == CollectionType.DefaultUserCollection)
-                .ToList();
-
-            var collectionUserLookup = collectionUsers.ToLookup(cu => cu.CollectionId);
-
-            foreach (var collection in collectionsToUpdate)
-            {
-                var collectionUser = collectionUserLookup[collection.Id].FirstOrDefault();
-                if (collectionUser != null)
-                {
-                    var orgUser = organizationUsersToDelete.FirstOrDefault(ou => ou.Id == collectionUser.OrganizationUserId);
-
-                    if (orgUser?.User != null)
-                    {
-                        if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail))
-                        {
-                            var emailToUse = !string.IsNullOrEmpty(orgUser.Email)
-                                ? orgUser.Email
-                                : orgUser.User.Email;
-
-                            if (!string.IsNullOrEmpty(emailToUse))
-                            {
-                                collection.DefaultUserCollectionEmail = emailToUse;
-                            }
-                        }
-                        collection.Type = CollectionType.SharedCollection;
-                    }
-                }
-            }
-
-            await dbContext.CollectionUsers
-                .Where(cu => targetOrganizationUserIds.Contains(cu.OrganizationUserId))
-                .ExecuteDeleteAsync();
-
-            await dbContext.GroupUsers
-                .Where(gu => targetOrganizationUserIds.Contains(gu.OrganizationUserId))
-                .ExecuteDeleteAsync();
-
-            await dbContext.UserProjectAccessPolicy
-                .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-                .ExecuteDeleteAsync();
-
-            await dbContext.UserServiceAccountAccessPolicy
-                .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-                .ExecuteDeleteAsync();
-
-            await dbContext.UserSecretAccessPolicy
-                .Where(ap => targetOrganizationUserIds.Contains(ap.OrganizationUserId!.Value))
-                .ExecuteDeleteAsync();
-
-            await dbContext.OrganizationSponsorships
-                .Where(os => targetOrganizationUserIds.Contains(os.SponsoringOrganizationUserId))
-                .ExecuteDeleteAsync();
-
-            await dbContext.OrganizationUsers
-                .Where(ou => targetOrganizationUserIds.Contains(ou.Id)).ExecuteDeleteAsync();
+            await DeleteManyOrganizationUsersAndRelatedDataAsync(dbContext, targetOrganizationUserIds);
 
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -540,8 +466,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         ResetPasswordKey = ou.ResetPasswordKey,
                         UsesKeyConnector = ou.User != null && ou.User.UsesKeyConnector,
                         AccessSecretsManager = ou.AccessSecretsManager,
+                        AccessPam = ou.AccessPam,
                         HasMasterPassword = ou.User != null && !string.IsNullOrWhiteSpace(ou.User.MasterPassword),
                         RevocationReason = ou.RevocationReason,
+                        CreationDate = ou.CreationDate,
 
                         // Project directly from navigation properties with conditional loading
                         Groups = includeGroups
@@ -805,7 +733,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Select(e => new OrganizationUserUserDetails()
                 {
                     Id = e.Id,
-                    Email = e.Email ?? e.User.Email
+                    Email = e.Email ?? e.User.Email,
+                    UserId = e.UserId ?? e.User.Id
                 });
             return await query.ToListAsync();
         }
@@ -821,43 +750,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         await RestoreManyAsync([id], status);
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var providerOrganizations = from pu in dbContext.ProviderUsers
-                                        where pu.UserId == userId
-                                        join po in dbContext.ProviderOrganizations
-                                            on pu.ProviderId equals po.ProviderId
-                                        select po;
-
-            var query = from p in dbContext.Policies
-                        join ou in dbContext.OrganizationUsers
-                            on p.OrganizationId equals ou.OrganizationId
-                        let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where p.Type == policyType &&
-                            (ou.UserId == userId || ou.Email == email)
-                        select new OrganizationUserPolicyDetails
-                        {
-                            OrganizationUserId = ou.Id,
-                            OrganizationId = p.OrganizationId,
-                            PolicyType = p.Type,
-                            PolicyEnabled = p.Enabled,
-                            PolicyData = p.Data,
-                            OrganizationUserType = ou.Type,
-                            OrganizationUserStatus = ou.Status,
-                            OrganizationUserPermissionsData = ou.Permissions,
-                            IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
-                        };
-            return await query.ToListAsync();
-        }
-    }
-
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
+        return await GetCountFromQuery(query);
+    }
+
+    public async Task<int> GetOccupiedPamSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        var query = new OrganizationUserReadOccupiedPamSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
     }
 
@@ -882,14 +783,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var newOrganizationUsers = resetPasswordKeys.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
 
             // Get user organization users
             var userOrganizationUsers = await GetDbSet(dbContext)
@@ -906,6 +807,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 var updateOrganizationUser =
                     newOrganizationUsers.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
                 organizationUser.ResetPasswordKey = updateOrganizationUser.ResetPasswordKey;
+                organizationUser.V2UpgradeToken = updateOrganizationUser.V2UpgradeToken;
             }
 
             await dbContext.SaveChangesAsync();
@@ -929,10 +831,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+        // Ordering of property updates here is important, see: https://github.com/dotnet/efcore/issues/35361
+        // Potentially fixed in EF 10, and covered by integration tests
+        await dbContext.OrganizationUsers
+            .Where(x => organizationUserIds.Contains(x.Id) && x.Status != OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
+                .SetProperty(x => x.RevocationReason, reason)
                 .SetProperty(x => x.Status, OrganizationUserStatusType.Revoked)
-                .SetProperty(x => x.RevocationReason, reason));
+                .SetProperty(x => x.StatusNew, x => (OrganizationUserStatusTypeNew?)(short)x.Status));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
@@ -947,6 +853,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Where(x => organizationUserIds.Contains(x.Id) && x.Status == OrganizationUserStatusType.Revoked)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.StatusNew, (OrganizationUserStatusTypeNew?)null)
                 .SetProperty(x => x.RevocationReason, (RevocationReason?)null));
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
@@ -1045,6 +952,41 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     }
 
+    public async Task<ICollection<Guid>> ConfirmManyOrganizationUsersAsync(
+        IReadOnlyCollection<AcceptedOrganizationUserToConfirm> usersToConfirm)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        using var dbContext = GetDatabaseContext(scope);
+
+        var orgUserIds = usersToConfirm.Select(u => u.OrganizationUserId).ToList();
+        var keyByOrgUserId = usersToConfirm.ToDictionary(u => u.OrganizationUserId, u => u.Key);
+
+        var rowsToUpdate = await dbContext.OrganizationUsers
+            .Where(ou => orgUserIds.Contains(ou.Id) && ou.Status == OrganizationUserStatusType.Accepted)
+            .ToListAsync();
+
+        if (rowsToUpdate.Count == 0)
+        {
+            return [];
+        }
+
+        var revisionDate = DateTime.UtcNow;
+        foreach (var ou in rowsToUpdate)
+        {
+            ou.Status = OrganizationUserStatusType.Confirmed;
+            ou.Key = keyByOrgUserId[ou.Id];
+            ou.RevisionDate = revisionDate;
+        }
+
+        await dbContext.SaveChangesAsync();
+
+        var confirmedIds = rowsToUpdate.Select(o => o.Id).ToList();
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(confirmedIds);
+        await dbContext.SaveChangesAsync();
+
+        return confirmedIds;
+    }
+
 #nullable enable
 
     public async Task<OrganizationUserUserDetails?> GetDetailsByOrganizationIdUserIdAsync(Guid organizationId, Guid userId)
@@ -1081,6 +1023,138 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.SaveChangesAsync();
         };
     }
+
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyPendingAutoConfirmAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where ou.OrganizationId == organizationId &&
+                            ou.Status == OrganizationUserStatusType.Accepted &&
+                            ou.Type == OrganizationUserType.User &&
+                            ou.UserId != null
+                        select ou;
+            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+        }
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateStatusAndKeyById(Guid id,
+        OrganizationUserStatusType status, string? key, DateTime revisionDate)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
+
+            await dbContext.OrganizationUsers
+                .Where(ou => ou.Id == id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(ou => ou.Status, status)
+                    .SetProperty(ou => ou.Key, key)
+                    .SetProperty(ou => ou.RevisionDate, revisionDate));
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction DeleteManyByIds(IEnumerable<Guid> ids)
+    {
+        return async (connection, transaction) =>
+        {
+            var idsList = ids.ToList();
+            if (idsList.Count == 0)
+            {
+                return;
+            }
+
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
+
+            await DeleteManyOrganizationUsersAndRelatedDataAsync(dbContext, idsList);
+        };
+    }
+
+    private static async Task DeleteManyOrganizationUsersAndRelatedDataAsync(
+        DatabaseContext dbContext, List<Guid> organizationUserIds)
+    {
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
+
+        var organizationUsersToDelete = await dbContext.OrganizationUsers
+            .Where(ou => organizationUserIds.Contains(ou.Id))
+            .Include(ou => ou.User)
+            .ToListAsync();
+
+        var collectionUsers = await dbContext.CollectionUsers
+            .Where(cu => organizationUserIds.Contains(cu.OrganizationUserId))
+            .ToListAsync();
+
+        var collectionIds = collectionUsers.Select(cu => cu.CollectionId).Distinct().ToList();
+
+        var collections = await dbContext.Collections
+            .Where(c => collectionIds.Contains(c.Id))
+            .ToListAsync();
+
+        var collectionsToUpdate = collections
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .ToList();
+
+        var collectionUserLookup = collectionUsers.ToLookup(cu => cu.CollectionId);
+
+        foreach (var collection in collectionsToUpdate)
+        {
+            var collectionUser = collectionUserLookup[collection.Id].FirstOrDefault();
+            if (collectionUser != null)
+            {
+                var orgUser = organizationUsersToDelete.FirstOrDefault(ou => ou.Id == collectionUser.OrganizationUserId);
+
+                if (orgUser?.User != null)
+                {
+                    if (string.IsNullOrEmpty(collection.DefaultUserCollectionEmail))
+                    {
+                        var emailToUse = !string.IsNullOrEmpty(orgUser.Email)
+                            ? orgUser.Email
+                            : orgUser.User.Email;
+
+                        if (!string.IsNullOrEmpty(emailToUse))
+                        {
+                            collection.DefaultUserCollectionEmail = emailToUse;
+                        }
+                    }
+                    collection.Type = CollectionType.SharedCollection;
+                }
+            }
+        }
+
+        await dbContext.CollectionUsers
+            .Where(cu => organizationUserIds.Contains(cu.OrganizationUserId))
+            .ExecuteDeleteAsync();
+
+        await dbContext.GroupUsers
+            .Where(gu => organizationUserIds.Contains(gu.OrganizationUserId))
+            .ExecuteDeleteAsync();
+
+        await dbContext.UserProjectAccessPolicy
+            .Where(ap => organizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+
+        await dbContext.UserServiceAccountAccessPolicy
+            .Where(ap => organizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+
+        await dbContext.UserSecretAccessPolicy
+            .Where(ap => organizationUserIds.Contains(ap.OrganizationUserId!.Value))
+            .ExecuteDeleteAsync();
+
+        await dbContext.OrganizationSponsorships
+            .Where(os => organizationUserIds.Contains(os.SponsoringOrganizationUserId))
+            .ExecuteDeleteAsync();
+
+        await dbContext.OrganizationUsers
+            .Where(ou => organizationUserIds.Contains(ou.Id))
+            .ExecuteDeleteAsync();
+    }
+
 #nullable disable
 
 

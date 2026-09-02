@@ -24,6 +24,7 @@ SELECT
     [UseDisableSmAdsForUsers],
     [UsePhishingBlocker],
     [UseMyItems],
-    [UseInviteLinks]
+    [UseInviteLinks],
+    [UsePam]
 FROM
     [dbo].[Organization]

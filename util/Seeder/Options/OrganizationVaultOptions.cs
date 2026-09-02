@@ -21,6 +21,11 @@ public class OrganizationVaultOptions
     public required string Domain { get; init; }
 
     /// <summary>
+    /// Claimed (verified) domains to seed for the organization. Each becomes a verified <see cref="Bit.Core.Entities.OrganizationDomain"/> row.
+    /// </summary>
+    public IReadOnlyList<string> ClaimedDomains { get; init; } = [];
+
+    /// <summary>
     /// Number of member users to create.
     /// </summary>
     public required int Users { get; init; }
@@ -101,6 +106,12 @@ public class OrganizationVaultOptions
     public string? Password { get; init; }
 
     /// <summary>
+    /// Override email for the organization owner. When null, defaults to <c>owner@&lt;Domain&gt;</c>.
+    /// Passed through the mangler, so <c>--mangle</c> applies a unique prefix when enabled.
+    /// </summary>
+    public string? OwnerEmail { get; init; }
+
+    /// <summary>
     /// Billing plan type for the organization.
     /// </summary>
     public PlanType PlanType { get; init; } = PlanType.EnterpriseAnnually;
@@ -110,6 +121,12 @@ public class OrganizationVaultOptions
     /// Use 600,000 for production-realistic e2e testing.
     /// </summary>
     public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// When set, creates a real Stripe test-environment customer and subscription for the organization.
+    /// Null (the default) means the seed makes no Stripe calls at all.
+    /// </summary>
+    public StripeBillingOptions? StripeBilling { get; init; }
 
     /// <summary>
     /// Optional overrides for collection management settings applied on top of the organization's initial values.

@@ -9,7 +9,7 @@ public abstract record Error(string Message);
 /// An <see cref="Error"/> type that maps to a NotFoundResult at the api layer.
 /// </summary>
 /// <param name="Message"></param>
-public abstract record NotFoundError(string Message) : Error(Message);
+public abstract record NotFoundError(string Message = "Resource not found.") : Error(Message);
 
 public abstract record BadRequestError(string Message) : Error(Message);
 public abstract record ConflictError(string Message) : Error(Message);

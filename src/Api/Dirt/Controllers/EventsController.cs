@@ -127,6 +127,27 @@ public class EventsController : Controller
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
+    [HttpGet("~/organizations/{orgId:guid}/sends/{id:guid}/events")]
+    public async Task<ListResponseModel<EventResponseModel>> GetSend(Guid orgId, Guid id,
+        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    {
+        if (orgId == Guid.Empty || id == Guid.Empty)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.AccessEventLogs(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var dateRange = ApiHelpers.GetDateRange(start, end);
+        var result = await _eventRepository.GetManyBySendAsync(orgId, id, dateRange.Item1, dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken });
+        var responses = result.Data.Select(e => new EventResponseModel(e));
+        return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
+    }
+
     [HttpGet("~/organization/{orgId}/secrets/{id}/events")]
     public async Task<ListResponseModel<EventResponseModel>> GetSecrets(
         Guid id, Guid orgId,

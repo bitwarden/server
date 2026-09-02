@@ -163,10 +163,7 @@ public class ProviderEventServiceTests
             Discounts = [
                 new Discount
                 {
-                    Coupon = new Coupon
-                    {
-                        PercentOff = 35
-                    }
+                    Source = new DiscountSource { Coupon = new Coupon { PercentOff = 35 } }
                 }
             ]
         };

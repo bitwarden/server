@@ -1,0 +1,68 @@
+@using Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts
+@using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects
+@using Bit.Core.Enums
+@model Bit.Admin.Billing.Models.OrganizationPlanMigrationCohorts.CohortFormModel
+@{
+    ViewData["Title"] = "New cohort";
+}
+
+<div class="mx-auto" style="max-width: 768px;">
+    <h1>New cohort</h1>
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+<form method="post" asp-action="Create" id="cohort-form">
+    <div class="mb-3">
+        <label asp-for="MigrationPathSelection" class="form-label">Migration path</label>
+        <select asp-for="MigrationPathSelection" class="form-select">
+            <option value="" disabled selected hidden>-- Select --</option>
+            <option value="@CohortFormModel.NoMigrationPath">None (Churn-only cohort)</option>
+            @foreach (var path in MigrationPaths.All)
+            {
+                <option value="@((byte)path.Id)">
+                    @($"{path.FromPlan.GetDisplayName()} → {path.ToPlan.GetDisplayName()}")
+                </option>
+            }
+        </select>
+        <span asp-validation-for="MigrationPathSelection" class="text-danger"></span>
+        <div class="form-text">
+            Pick a source → target plan pair to make this a <strong>Migration</strong> cohort,
+            or <strong>None</strong> to define a <strong>Churn-only</strong> population
+            (no migration scheduled; only the churn save-offer applies).
+        </div>
+    </div>
+
+    <partial name="_CohortFormFields" model="Model" />
+
+    <div class="form-text mt-4">
+        Note: New cohorts are disabled by default. Enable from the cohort's edit page once assignments are loaded.
+    </div>
+
+    <div class="d-flex mt-3">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+</form>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const NO_PATH = '@CohortFormModel.NoMigrationPath';
+            const proactiveRow = document.getElementById('proactive-coupon-row');
+            const churnOptionalLabel = document.getElementById('churn-optional-label');
+            const select = document.getElementById('@(nameof(Model.MigrationPathSelection))');
+
+            const applyVisibility = (value) => {
+                const isChurnOnly = value === NO_PATH;
+                proactiveRow.hidden = isChurnOnly;
+                churnOptionalLabel.hidden = isChurnOnly;
+                if (isChurnOnly) {
+                    proactiveRow.querySelector('input').value = '';
+                }
+            };
+
+            select.addEventListener('change', (e) => applyVisibility(e.target.value));
+        })();
+    </script>
+}

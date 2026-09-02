@@ -8,6 +8,9 @@ namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class EmergencyAccessRepositoriesTests
 {
+    private const string _staleKeyEncrypted = "4.stale-emergency-access-key";
+    private const string _rotatedKeyEncrypted = "4.rotated-emergency-access-key";
+
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesRevisionDate(IUserRepository userRepository,
       IEmergencyAccessRepository emergencyAccessRepository)
@@ -700,4 +703,180 @@ public class EmergencyAccessRepositoriesTests
         // Assert
         Assert.DoesNotContain(results, r => r.Id == ea.Id);
     }
+
+    [Theory, DatabaseData]
+    public async Task UpdateStatusAndKeyEncryptedById_AllApplicableStatuses_SetsStatusAndClearsKey(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        var grantorUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Test Grantor",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var granteeUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Test Grantee",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var statuses = new[]
+        {
+            EmergencyAccessStatusType.Confirmed,
+            EmergencyAccessStatusType.RecoveryInitiated,
+            EmergencyAccessStatusType.RecoveryApproved,
+        };
+
+        var emergencyAccesses = new List<EmergencyAccess>();
+        foreach (var status in statuses)
+        {
+            emergencyAccesses.Add(await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+            {
+                GrantorId = grantorUser.Id,
+                GranteeId = granteeUser.Id,
+                KeyEncrypted = "old-encrypted-key",
+                Status = status,
+                Type = EmergencyAccessType.View,
+                WaitTimeDays = 10,
+                CreationDate = DateTime.UtcNow,
+                RevisionDate = DateTime.UtcNow,
+            }));
+        }
+
+        var actions = emergencyAccesses
+            .Select(ea => emergencyAccessRepository.UpdateStatusAndKeyEncryptedById(
+                ea.Id, EmergencyAccessStatusType.Accepted, null, DateTime.UtcNow))
+            .ToList();
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database, actions, serviceProvider);
+
+        foreach (var ea in emergencyAccesses)
+        {
+            var updated = await emergencyAccessRepository.GetByIdAsync(ea.Id);
+            Assert.NotNull(updated);
+            Assert.Equal(EmergencyAccessStatusType.Accepted, updated.Status);
+            Assert.Null(updated.KeyEncrypted);
+        }
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_PersistsKeyEncrypted(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var emergencyAccess =
+            await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+        emergencyAccess.KeyEncrypted = _rotatedKeyEncrypted;
+
+        // Act
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), serviceProvider);
+
+        // Assert
+        var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_rotatedKeyEncrypted, updated.KeyEncrypted);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithModifiedNonKeyFields_UpdatesKeyEncryptedOnly(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var emergencyAccess = await emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            KeyEncrypted = _staleKeyEncrypted,
+            Status = EmergencyAccessStatusType.Confirmed,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+        });
+
+        // A key rotation only re-encrypts the key, so everything else the caller sends is ignored
+        emergencyAccess.KeyEncrypted = _rotatedKeyEncrypted;
+        emergencyAccess.Status = EmergencyAccessStatusType.RecoveryApproved;
+        emergencyAccess.Type = EmergencyAccessType.Takeover;
+        emergencyAccess.WaitTimeDays = 1;
+
+        // Act
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [emergencyAccess]), serviceProvider);
+
+        // Assert
+        var updated = await emergencyAccessRepository.GetByIdAsync(emergencyAccess.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(_rotatedKeyEncrypted, updated.KeyEncrypted);
+        Assert.Equal(EmergencyAccessStatusType.Confirmed, updated.Status);
+        Assert.Equal(EmergencyAccessType.View, updated.Type);
+        Assert.Equal(10, updated.WaitTimeDays);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateForKeyRotation_WithGrantMissingFromPayload_LeavesItUnchanged(
+        IUserRepository userRepository,
+        IEmergencyAccessRepository emergencyAccessRepository,
+        Database database,
+        IServiceProvider serviceProvider)
+    {
+        // Arrange - the grantor has two grants, both holding a key from an earlier rotation
+        var grantor = await CreateUserAsync(userRepository, "grantor");
+        var grantee = await CreateUserAsync(userRepository, "grantee");
+
+        var rotated = await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+        var omitted = await CreateConfirmedEmergencyAccessAsync(emergencyAccessRepository, grantor, grantee);
+
+        // Act - only one of the two grants is submitted for rotation
+        rotated.KeyEncrypted = _rotatedKeyEncrypted;
+        await DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            emergencyAccessRepository.UpdateForKeyRotation(grantor.Id, [rotated]), serviceProvider);
+
+        // Assert
+        var updatedRotated = await emergencyAccessRepository.GetByIdAsync(rotated.Id);
+        Assert.NotNull(updatedRotated);
+        Assert.Equal(_rotatedKeyEncrypted, updatedRotated.KeyEncrypted);
+
+        var updatedOmitted = await emergencyAccessRepository.GetByIdAsync(omitted.Id);
+        Assert.NotNull(updatedOmitted);
+        Assert.Equal(_staleKeyEncrypted, updatedOmitted.KeyEncrypted);
+    }
+
+    private static Task<User> CreateUserAsync(IUserRepository userRepository, string identifier)
+        => userRepository.CreateAsync(new User
+        {
+            Name = $"Test {identifier}",
+            Email = $"test+{identifier}{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+    private static Task<EmergencyAccess> CreateConfirmedEmergencyAccessAsync(
+        IEmergencyAccessRepository emergencyAccessRepository, User grantor, User grantee)
+        => emergencyAccessRepository.CreateAsync(new EmergencyAccess
+        {
+            GrantorId = grantor.Id,
+            GranteeId = grantee.Id,
+            KeyEncrypted = _staleKeyEncrypted,
+            Status = EmergencyAccessStatusType.Confirmed,
+            Type = EmergencyAccessType.View,
+            WaitTimeDays = 10,
+        });
 }

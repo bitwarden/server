@@ -1,6 +1,5 @@
-﻿using System.Globalization;
-using System.Text;
-using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+﻿using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,40 +7,36 @@ namespace Bit.Core.Auth.UserFeatures.Devices;
 
 public class DeviceLastActivityCacheService : IDeviceLastActivityCacheService
 {
-    // TTL is 48h rather than 24h to ensure the entry outlives the full following calendar day
-    // regardless of bump time. A bump at 11:59 PM with a 24h TTL would expire mid-day tomorrow,
-    // creating a race window where a cache miss could trigger a redundant DB write on the same day.
-    // The date comparison in HasBeenBumpedTodayAsync is the real guard; TTL is housekeeping only.
-    private static readonly DistributedCacheEntryOptions _cacheOptions = new()
-    {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(48)
-    };
+    // Sentinel value — the cache acts as a presence check; the bytes themselves are never read.
+    // IDistributedCache.SetAsync requires a non-null byte[], so we use a one-byte non-empty value
+    // to stay safely non-empty across every backend (Cosmos, Redis, SQL/EF, in-memory).
+    private static readonly byte[] _sentinel = [1];
 
     private readonly IDistributedCache _cache;
-    private readonly TimeProvider _timeProvider;
+    private readonly DistributedCacheEntryOptions _cacheOptions;
 
     public DeviceLastActivityCacheService(
         // "persistent" is a well-known keyed service registered by AddDistributedCache(globalSettings).
         // Backed by Cosmos DB in cloud; falls back to SQL Server/EF cache in self-hosted.
         [FromKeyedServices("persistent")] IDistributedCache cache,
-        TimeProvider timeProvider)
+        IGlobalSettings globalSettings)
     {
         _cache = cache;
-        _timeProvider = timeProvider;
+        _cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(globalSettings.DeviceLastActivityCacheTtlHours)
+        };
     }
 
-    public async Task<bool> HasBeenBumpedTodayAsync(Guid userId, string identifier)
+    public async Task<bool> IsUpToDateAsync(Guid userId, string identifier)
     {
         var bytes = await _cache.GetAsync(CacheKey(userId, identifier));
-        if (bytes == null) return false;
-        var cached = Encoding.UTF8.GetString(bytes);
-        return cached == _timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return bytes != null;
     }
 
-    public async Task RecordBumpAsync(Guid userId, string identifier)
+    public async Task RecordUpdateAsync(Guid userId, string identifier)
     {
-        var value = Encoding.UTF8.GetBytes(_timeProvider.GetUtcNow().UtcDateTime.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
-        await _cache.SetAsync(CacheKey(userId, identifier), value, _cacheOptions);
+        await _cache.SetAsync(CacheKey(userId, identifier), _sentinel, _cacheOptions);
     }
 
     private static string CacheKey(Guid userId, string identifier) => $"device:last-activity:{userId}:{identifier}";

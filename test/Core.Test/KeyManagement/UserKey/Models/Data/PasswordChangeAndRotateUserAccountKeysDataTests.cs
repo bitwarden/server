@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -12,6 +13,8 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
     private const string _mockOldMasterKeyAuthenticationHash = "hash";
     private const string _mockMasterPasswordAuthenticationHash = "mockAuthenticationHash";
     private const string _mockMasterKeyWrappedUserKey = "mockMasterKeyWrappedUserKey";
+    private const string _mockKeyId = "0123456789abcdef0123456789abcdef";
+    private const string _mockOtherKeyId = "fedcba9876543210fedcba9876543210";
 
     private static KdfSettings ValidKdf
     {
@@ -170,5 +173,66 @@ public class PasswordChangeAndRotateUserAccountKeysDataTests
         };
 
         Assert.Throws<InvalidOperationException>(() => model.ValidateForUser(user));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdMatchesNewUserKeyId_DoesNotThrow(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateModelWithKeyIds(user.Email, _mockKeyId, _mockKeyId);
+
+        model.ValidateForUser(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdDoesNotMatchNewUserKeyId_ThrowsBadRequestException(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateModelWithKeyIds(user.Email, _mockKeyId, _mockOtherKeyId);
+
+        Assert.Throws<BadRequestException>(() => model.ValidateForUser(user));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_UnlockKeyIdWithoutNewUserKeyId_ThrowsBadRequestException(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateModelWithKeyIds(user.Email, _mockKeyId, null);
+
+        Assert.Throws<BadRequestException>(() => model.ValidateForUser(user));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void ValidateForUser_NewUserKeyIdWithoutUnlockKeyId_ThrowsBadRequestException(User user)
+    {
+        SetupValidUser(user);
+        var model = CreateModelWithKeyIds(user.Email, null, _mockKeyId);
+
+        Assert.Throws<BadRequestException>(() => model.ValidateForUser(user));
+    }
+
+    private static PasswordChangeAndRotateUserAccountKeysData CreateModelWithKeyIds(string salt,
+        string? containedKeyId, string? newUserKeyId)
+    {
+        var validModel = CreateValidModel(salt, ValidKdf);
+        validModel.BaseData.NewUserKeyId = KeyId.FromHexEncodedString(newUserKeyId);
+
+        return new PasswordChangeAndRotateUserAccountKeysData
+        {
+            OldMasterKeyAuthenticationHash = validModel.OldMasterKeyAuthenticationHash,
+            MasterPasswordAuthenticationData = validModel.MasterPasswordAuthenticationData,
+            MasterPasswordUnlockData = new MasterPasswordUnlockData
+            {
+                Kdf = ValidKdf,
+                MasterKeyWrappedUserKey = _mockMasterKeyWrappedUserKey,
+                Salt = salt,
+                ContainedKeyId = KeyId.FromHexEncodedString(containedKeyId)
+            },
+            BaseData = validModel.BaseData
+        };
     }
 }

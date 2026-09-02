@@ -74,4 +74,98 @@ public class CollectionCipherRepositoryTests
         Assert.Equal(sharedCollection.Id, result.First().CollectionId);
         Assert.DoesNotContain(result, cc => cc.CollectionId == defaultUserCollection.Id);
     }
+
+    [Theory, DatabaseData]
+    public async Task GetUserIdsByCollectionIdsAsync_IncludesOrganizationLevelUsers(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        ICipherRepository cipherRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        // Arrange
+        var ownerUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Owner User",
+            Email = $"owner+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var adminUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Admin User",
+            Email = $"admin+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var regularUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Regular User",
+            Email = $"regular+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Enterprise",
+            BillingEmail = "billing@example.com",
+            AllowAdminAccessToAllCollectionItems = true,
+        });
+
+        _ = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = ownerUser.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        _ = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = adminUser.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Admin,
+        });
+
+        _ = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = regularUser.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            OrganizationId = organization.Id,
+        });
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = "",
+        });
+
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            organization.Id,
+            new[] { cipher.Id },
+            new[] { collection.Id });
+
+        // Act
+        var result = await collectionCipherRepository.GetUserIdsByCollectionIdsAsync(new[] { collection.Id });
+
+        // Assert
+        Assert.Contains(ownerUser.Id, result);
+        Assert.Contains(adminUser.Id, result);
+        Assert.DoesNotContain(regularUser.Id, result);
+    }
 }

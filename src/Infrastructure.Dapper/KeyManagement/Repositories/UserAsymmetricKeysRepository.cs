@@ -2,6 +2,7 @@
 using System.Data;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
@@ -21,16 +22,33 @@ public class UserAsymmetricKeysRepository : BaseRepository, IUserAsymmetricKeysR
     {
     }
 
-    public async Task RegenerateUserAsymmetricKeysAsync(UserAsymmetricKeys userAsymmetricKeys)
+    public async Task RegenerateUserAsymmetricKeysAsync(UserAsymmetricKeys userAsymmetricKeys,
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         await using var connection = new SqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            await connection.ExecuteAsync("[dbo].[UserAsymmetricKeys_Regenerate]",
+                new
+                {
+                    userAsymmetricKeys.UserId,
+                    userAsymmetricKeys.PublicKey,
+                    PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey
+                }, transaction: transaction, commandType: CommandType.StoredProcedure);
 
-        await connection.ExecuteAsync("[dbo].[UserAsymmetricKeys_Regenerate]",
-            new
+            foreach (var action in updateDataActions)
             {
-                userAsymmetricKeys.UserId,
-                userAsymmetricKeys.PublicKey,
-                PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey
-            }, commandType: CommandType.StoredProcedure);
+                await action(connection, transaction);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

@@ -5,14 +5,17 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Stripe;
 using Xunit;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 namespace Bit.Core.Test.Billing.Organizations.Commands;
 
@@ -21,6 +24,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
     private readonly IOrganizationBillingService _organizationBillingService = Substitute.For<IOrganizationBillingService>();
     private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
+    private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
+    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand = Substitute.For<IUpdateOrganizationSubscriptionCommand>();
     private readonly UpgradeOrganizationPlanVNextCommand _command;
 
@@ -31,6 +36,8 @@ public class UpgradeOrganizationPlanVNextCommandTests
             _organizationBillingService,
             _organizationService,
             _pricingClient,
+            _priceIncreaseScheduler,
+            _stripeAdapter,
             _updateOrganizationSubscriptionCommand);
     }
 
@@ -99,6 +106,9 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.Type, organization.PlanType);
         Assert.Equal(targetPlan.PasswordManager.BaseStorageGb, organization.MaxStorageGb);
         Assert.Null(organization.SmServiceAccounts);
+        Assert.False(targetPlan.HasRiskInsights);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
+        Assert.False(organization.UseRiskInsights);
     }
 
     [Fact]
@@ -184,6 +194,71 @@ public class UpgradeOrganizationPlanVNextCommandTests
         await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization, null);
         Assert.Equal(targetPlan.Name, organization.Plan);
         Assert.Equal(targetPlan.Type, organization.PlanType);
+    }
+
+    // Regression (PM-40866): a Teams 2019 org at/under its 5 included seats has only the base bundle
+    // line, so the base line is repointed to the Enterprise seat price at the org's seat count with no
+    // overage removal
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Run_Teams2019ToEnterprise_AtBaseSeats_ChangesBasePriceWithoutRemovingOverage(bool isAnnual)
+    {
+        var currentPlan = MockPlans.Get(isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019);
+        var targetPlan = MockPlans.Get(isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly);
+        var organization = CreateOrganization(
+            isAnnual ? PlanType.TeamsAnnually2019 : PlanType.TeamsMonthly2019, seats: 5);
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _updateOrganizationSubscriptionCommand.Received(1).Run(
+            organization,
+            Arg.Is<OrganizationSubscriptionChangeSet>(cs =>
+                cs.Changes.Any(c => c.IsT1
+                    && c.AsT1.CurrentPriceId == currentPlan.PasswordManager.StripePlanId
+                    && c.AsT1.UpdatedPriceId == targetPlan.PasswordManager.StripeSeatPlanId
+                    && c.AsT1.Quantity == organization.Seats)
+                && cs.Changes.All(c => !c.IsT2)));
+    }
+
+    // Regression (PM-40866): a Teams 2019 org above its 5 included seats carries a per-seat overage line
+    // on top of the base bundle. The upgrade must collapse both onto one Enterprise seat line - repoint
+    // the base line to the Enterprise seat price at the org's seat count, AND remove the overage line so
+    // it doesn't linger next to the new line and double-bill.
+    [Fact]
+    public async Task Run_Teams2019ToEnterprise_AboveBaseSeats_RemovesOverage()
+    {
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2019);           // base + overage, BaseSeats = 5
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        var organization = CreateOrganization(PlanType.TeamsAnnually2019, seats: 10);   // 10 > 5 => has an overage line
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        // Capture the change set handed to the update command so we can assert on its individual changes.
+        OrganizationSubscriptionChangeSet changeSet = null;
+        BillingCommandResult<Subscription> success = new Subscription();
+        _updateOrganizationSubscriptionCommand
+            .Run(Arg.Any<Organization>(), Arg.Do<OrganizationSubscriptionChangeSet>(cs => changeSet = cs))
+            .Returns(success);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        Assert.NotNull(changeSet);
+
+        // ChangeItemPrice (the T1 case of the OrganizationSubscriptionChange union): the base bundle line
+        // is repointed to the Enterprise seat price, quantity set to the org's total seats.
+        var priceChange = Assert.Single(changeSet.Changes.Where(c => c.IsT1)).AsT1;
+        Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);   // from: base bundle
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId); // to: Enterprise seat
+        Assert.Equal(organization.Seats, priceChange.Quantity);
+
+        // RemoveItem (the T2 case): the current plan's per-seat overage line is dropped, so it collapses
+        // into the single Enterprise seat line instead of remaining as a separate charge.
+        var removal = Assert.Single(changeSet.Changes.Where(c => c.IsT2)).AsT2;
+        Assert.Equal(currentPlan.PasswordManager.StripeSeatPlanId, removal.PriceId);
     }
 
     [Fact]
@@ -287,6 +362,9 @@ public class UpgradeOrganizationPlanVNextCommandTests
         Assert.Equal(targetPlan.AutomaticUserConfirmation, organization.UseAutomaticUserConfirmation);
         Assert.Equal(targetPlan.HasMyItems, organization.UseMyItems);
         Assert.Equal(targetPlan.HasInviteLinks, organization.UseInviteLinks);
+        Assert.Equal(targetPlan.HasRiskInsights, organization.UseRiskInsights);
+        Assert.True(targetPlan.HasRiskInsights);
+        Assert.True(organization.UseRiskInsights);
     }
 
     [Fact]
@@ -343,6 +421,152 @@ public class UpgradeOrganizationPlanVNextCommandTests
         // Result is mapped through — BadRequest becomes T1
         Assert.True(result.IsT1);
         await _organizationService.DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_TrackAOrg_ReleasesScheduleWithOrganizationId()
+    {
+        // Track A: a 2020-era source plan upgrading to a current plan. Tiers ascend
+        // (Teams sort order 3 -> Enterprise sort order 4) so the upgrade is accepted.
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    // PM-37510 (T11): a voluntary paid upgrade forfeits SM service-account grace by clearing the
+    // metadata key (empty string removes it in Stripe). Subsequent billing math then reads grace 0.
+    [Fact]
+    public async Task Run_PaidUpgrade_ForfeitsGraceMetadata()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
+            organization.GatewaySubscriptionId!,
+            Arg.Is<SubscriptionUpdateOptions>(options =>
+                options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == string.Empty));
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_CommandFailure_DoesNotForfeitGraceMetadata()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        BillingCommandResult<Subscription> failureResult = new BadRequest("Stripe error");
+        _updateOrganizationSubscriptionCommand
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>())
+            .Returns(failureResult);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT1);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_TwentyTwentyToTwentyTwenty_ReleasesScheduleWithOrganizationId()
+    {
+        // 2020-era source upgrading to a 2020-era target across ascending tiers
+        // (Teams 2020 sort order 3 -> Enterprise 2020 sort order 4).
+        var organization = CreateOrganization(PlanType.TeamsAnnually2020);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually2020);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_UpgradeFromFree_DoesNotReleaseSchedule()
+    {
+        var organization = CreateOrganization(
+            PlanType.Free,
+            gatewaySubscriptionId: null,
+            seats: 2);
+        var currentPlan = MockPlans.Get(PlanType.Free);
+        var targetPlan = MockPlans.Get(PlanType.TeamsAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs()
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_NonTrackAOrg_StillReleasesScheduleWithOrganizationId()
+    {
+        // Non-Track-A: a current (non-2020) source plan still releases on upgrade.
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+        SetupSubscriptionCommandSuccess();
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        Assert.True(result.IsT0);
+        await _priceIncreaseScheduler.Received(1).Release(
+            organization.GatewayCustomerId!,
+            organization.GatewaySubscriptionId!,
+            organization.Id);
+    }
+
+    [Fact]
+    public async Task Run_PaidUpgrade_ReleaseThrows_AbortsUpgrade()
+    {
+        var organization = CreateOrganization(PlanType.TeamsAnnually);
+        var currentPlan = MockPlans.Get(PlanType.TeamsAnnually);
+        var targetPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(currentPlan);
+
+        _priceIncreaseScheduler
+            .Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>())
+            .ThrowsAsync(new InvalidOperationException("release failed"));
+
+        var result = await _command.Run(organization, targetPlan, null);
+
+        // HandleAsync converts the thrown exception into an Unhandled error result.
+        Assert.True(result.IsT3);
+        await _updateOrganizationSubscriptionCommand.DidNotReceiveWithAnyArgs()
+            .Run(Arg.Any<Organization>(), Arg.Any<OrganizationSubscriptionChangeSet>());
+        await _organizationService.DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>(), Arg.Any<EventType?>());
     }
 
     private void SetupSubscriptionCommandSuccess()

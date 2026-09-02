@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../../'))" />
+
+  <PropertyGroup>
+    <!-- Pinned for libraries to avoid packages.lock.json churn when a service version bump happens. -->
+    <Version>0.0.1</Version>
+  </PropertyGroup>
+</Project>

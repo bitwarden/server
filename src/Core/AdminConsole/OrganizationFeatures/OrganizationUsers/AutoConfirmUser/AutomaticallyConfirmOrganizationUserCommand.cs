@@ -164,11 +164,11 @@ public class AutomaticallyConfirmOrganizationUserCommand(IOrganizationUserReposi
     {
         return new AutomaticallyConfirmOrganizationUserValidationRequest
         {
-            OrganizationUserId = request.OrganizationUserId,
-            OrganizationId = request.OrganizationId,
             Key = request.Key,
             DefaultUserCollectionName = request.DefaultUserCollectionName,
             PerformedBy = request.PerformedBy,
+            OrganizationUserId = request.OrganizationUserId,
+            OrganizationId = request.OrganizationId,
             OrganizationUser = await organizationUserRepository.GetByIdAsync(request.OrganizationUserId),
             Organization = await organizationRepository.GetByIdAsync(request.OrganizationId)
         };

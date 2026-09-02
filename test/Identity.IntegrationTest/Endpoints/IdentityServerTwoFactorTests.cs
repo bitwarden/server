@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -10,7 +10,9 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -286,6 +288,13 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
         });
 
+        // Bypass the FusionCache-backed org abilities lookup. The above IDistributedCache substitution would cause a deserialization error.
+        localFactory.SubstituteService<IOrganizationAbilityCacheService>(svc =>
+        {
+            svc.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+                .Returns(new Dictionary<Guid, OrganizationAbility>());
+        });
+
         // Create Test User
         var challenge = new string('c', 50);
         var ssoConfigData = new SsoConfigurationData
@@ -384,7 +393,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Email = testEmail,
                 MasterPasswordHash = _testPassword,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
@@ -410,6 +419,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         SsoConfigurationData ssoConfigurationData,
         string challenge,
         string testEmail,
+        Guid? orgId = null,
         string orgTwoFactor = null,
         string userTwoFactor = null,
         Permissions permissions = null)
@@ -438,7 +448,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
                 Email = testEmail,
                 MasterPasswordHash = _testPassword,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = Bit.Test.Common.Constants.TestEncryptionConstants.PublicKey,
@@ -458,6 +468,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
         var organization = await organizationRepository.CreateAsync(new Organization
         {
+            Id = orgId ?? Guid.NewGuid(),
             Name = "Test Org",
             BillingEmail = "billing-email@example.com",
             Plan = "Enterprise",

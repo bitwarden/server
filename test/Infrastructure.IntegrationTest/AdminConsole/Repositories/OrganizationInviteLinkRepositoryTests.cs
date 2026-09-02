@@ -22,8 +22,33 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.Equal(link.Code, result.Code);
         Assert.Equal(link.OrganizationId, result.OrganizationId);
         Assert.Equal(link.AllowedDomains, result.AllowedDomains);
-        Assert.Equal(link.EncryptedInviteKey, result.EncryptedInviteKey);
-        Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
+        Assert.Equal(link.Invite, result.Invite);
+        Assert.Equal(link.SupportsConfirmation, result.SupportsConfirmation);
+    }
+
+    [Theory, DatabaseData]
+    public async Task CreateAsync_RoundTrip_CodeIsUnprotected(
+        IOrganizationInviteLinkRepository repository,
+        IOrganizationRepository organizationRepository)
+    {
+        var originalCode = Guid.NewGuid().ToString();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+
+        await repository.CreateAsync(new OrganizationInviteLink
+        {
+            Code = originalCode,
+            OrganizationId = organization.Id,
+            AllowedDomains = "[\"example.com\"]",
+            Invite = "invite-blob",
+            SupportsConfirmation = true,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+
+        var result = await repository.GetByOrganizationIdAsync(organization.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(originalCode, result.Code);
     }
 
     [Theory, DatabaseData]
@@ -39,62 +64,6 @@ public class OrganizationInviteLinkRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task CreateAsync_DuplicateCode_Throws(
-        IOrganizationInviteLinkRepository repository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization1 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org1");
-        var organization2 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org2");
-
-        var sharedCode = Guid.NewGuid();
-
-        await repository.CreateAsync(new OrganizationInviteLink
-        {
-            Code = sharedCode,
-            OrganizationId = organization1.Id,
-            AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = "key-1",
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-        });
-
-        await Assert.ThrowsAnyAsync<Exception>(() => repository.CreateAsync(new OrganizationInviteLink
-        {
-            Code = sharedCode,
-            OrganizationId = organization2.Id,
-            AllowedDomains = "[\"example.com\"]",
-            EncryptedInviteKey = "key-2",
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-        }));
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetByCodeAsync_ReturnsLink(
-        IOrganizationInviteLinkRepository repository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var link = await repository.CreateTestOrganizationInviteLinkAsync(organization);
-
-        var result = await repository.GetByCodeAsync(link.Code);
-
-        Assert.NotNull(result);
-        Assert.Equal(link.Id, result.Id);
-        Assert.Equal(link.Code, result.Code);
-        Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetByCodeAsync_NonExistentCode_ReturnsNull(
-        IOrganizationInviteLinkRepository repository)
-    {
-        var result = await repository.GetByCodeAsync(Guid.NewGuid());
-
-        Assert.Null(result);
-    }
-
-    [Theory, DatabaseData]
     public async Task GetByOrganizationIdAsync_ReturnsLink(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
@@ -107,7 +76,7 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.NotNull(result);
         Assert.Equal(link.Id, result.Id);
         Assert.Equal(link.OrganizationId, result.OrganizationId);
-        Assert.Equal(link.EncryptedOrgKey, result.EncryptedOrgKey);
+        Assert.Equal(link.Invite, result.Invite);
     }
 
     [Theory, DatabaseData]
@@ -128,7 +97,7 @@ public class OrganizationInviteLinkRepositoryTests
         var link = await repository.CreateTestOrganizationInviteLinkAsync(organization);
 
         link.AllowedDomains = "[\"updated.com\",\"new.org\"]";
-        link.EncryptedOrgKey = "updated-encrypted-org-key";
+        link.Invite = "updated-invite-blob";
         link.RevisionDate = DateTime.UtcNow;
         await repository.ReplaceAsync(link);
 
@@ -136,7 +105,7 @@ public class OrganizationInviteLinkRepositoryTests
 
         Assert.NotNull(result);
         Assert.Equal("[\"updated.com\",\"new.org\"]", result.AllowedDomains);
-        Assert.Equal("updated-encrypted-org-key", result.EncryptedOrgKey);
+        Assert.Equal("updated-invite-blob", result.Invite);
     }
 
     [Theory, DatabaseData]
@@ -163,10 +132,11 @@ public class OrganizationInviteLinkRepositoryTests
 
         var newLink = new OrganizationInviteLink
         {
-            Code = Guid.NewGuid(),
+            Code = Guid.NewGuid().ToString(),
             OrganizationId = organization.Id,
             AllowedDomains = oldLink.AllowedDomains,
-            EncryptedInviteKey = "new-encrypted-key",
+            Invite = "new-invite-blob",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };
@@ -179,11 +149,11 @@ public class OrganizationInviteLinkRepositoryTests
         Assert.NotNull(current);
         Assert.Equal(newLink.Id, current.Id);
         Assert.Equal(newLink.Code, current.Code);
-        Assert.Equal(newLink.EncryptedInviteKey, current.EncryptedInviteKey);
+        Assert.Equal(newLink.Invite, current.Invite);
     }
 
     [Theory, DatabaseData]
-    public async Task RefreshAsync_WhenInsertViolatesUniqueCode_RollsBackDelete(
+    public async Task RefreshAsync_WhenInsertViolatesUniqueOrganizationId_RollsBackDelete(
         IOrganizationInviteLinkRepository repository,
         IOrganizationRepository organizationRepository)
     {
@@ -191,14 +161,15 @@ public class OrganizationInviteLinkRepositoryTests
         var org2 = await organizationRepository.CreateTestOrganizationAsync(identifier: "org2");
 
         var org1Link = await repository.CreateTestOrganizationInviteLinkAsync(org1);
-        var org2Link = await repository.CreateTestOrganizationInviteLinkAsync(org2);
+        await repository.CreateTestOrganizationInviteLinkAsync(org2);
 
         var conflictingLink = new OrganizationInviteLink
         {
-            Code = org2Link.Code,
-            OrganizationId = org1.Id,
+            Code = Guid.NewGuid().ToString(),
+            OrganizationId = org2.Id,
             AllowedDomains = org1Link.AllowedDomains,
-            EncryptedInviteKey = "new-encrypted-key",
+            Invite = "new-invite-blob",
+            SupportsConfirmation = true,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
         };

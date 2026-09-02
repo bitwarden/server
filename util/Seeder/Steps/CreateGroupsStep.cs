@@ -13,17 +13,23 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
     {
         var orgId = context.RequireOrgId();
         var hardenedOrgUserIds = context.Registry.HardenedOrgUserIds;
+        var progress = context.GetProgress();
 
         var groups = new List<Group>(count);
         var groupIds = new List<Guid>(count);
         var groupUsers = new List<GroupUser>(hardenedOrgUserIds.Count);
+
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingGroups, count));
+        var ticker = new ProgressTicker(progress, SeederPhases.CreatingGroups, count);
 
         for (var i = 0; i < count; i++)
         {
             var group = GroupSeeder.Create(orgId, $"Group {i + 1}");
             groups.Add(group);
             groupIds.Add(group.Id);
+            ticker.Tick();
         }
+        ticker.Flush();
 
         context.Groups.AddRange(groups);
 
@@ -62,6 +68,8 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
         }
 
         context.GroupUsers.AddRange(groupUsers);
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingGroups));
     }
 
     internal int[] ComputeUsersPerGroup(int groupCount, int userCount)

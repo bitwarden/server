@@ -34,6 +34,7 @@ public record EnterprisePlan : Plan
         HasCustomPermissions = true;
         HasMyItems = true;
         HasInviteLinks = true;
+        HasRiskInsights = true;
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;

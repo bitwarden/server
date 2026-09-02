@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,7 +27,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly TimeProvider _timeProvider;
 
     public const string UserNotFoundErrorMessage = "User not found.";
-    public const string UsersInvalidErrorMessage = "Users invalid.";
+    public static readonly string UsersInvalidErrorMessage = new UsersInvalid().Message;
     public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
     public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can remove other owners.";
     public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
@@ -203,7 +204,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (!filteredUsers.Any())
         {
-            throw new BadRequestException(UsersInvalidErrorMessage);
+            throw new BadRequestException(new UsersInvalid().Message);
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))

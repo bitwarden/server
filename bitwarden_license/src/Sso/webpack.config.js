@@ -47,6 +47,15 @@ module.exports = {
       },
     ],
   },
+  resolve: {
+    alias: {
+      // jQuery 4 ships an exports map that sends bundlers to the ESM build,
+      // which doesn't match the path used by expose-loader's `test`. Force
+      // webpack to resolve "jquery" to the CJS build so the expose-loader
+      // rule fires and window.$ / window.jQuery are set for inline scripts.
+      jquery: require.resolve("jquery"),
+    },
+  },
   plugins: [
     new MiniCssExtractPlugin({
       filename: "[name].css",

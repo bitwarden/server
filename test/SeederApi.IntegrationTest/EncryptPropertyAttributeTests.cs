@@ -15,11 +15,15 @@ public sealed class EncryptPropertyAttributeTests
         // 3 login (username, password, totp)
         // 2 loginUri[*] (uri, uriChecksum)
         // 12 Fido2Credential (everything but discoverable)
+        // 1 passwordHistory[*].password
         // 6 card
         // 18 identity
         // 3 sshKey
+        // 10 bankAccount
+        // 11 driversLicense
+        // 13 passport
         // 2 fields[*] (name, value)
-        Assert.Equal(48, paths.Length);
+        Assert.Equal(83, paths.Length);
     }
 
     [Fact]
@@ -86,6 +90,68 @@ public sealed class EncryptPropertyAttributeTests
         Assert.Contains("sshKey.privateKey", paths);
         Assert.Contains("sshKey.publicKey", paths);
         Assert.Contains("sshKey.fingerprint", paths);
+    }
+
+    [Fact]
+    public void GetFieldPaths_CipherViewDto_BankAccount()
+    {
+        var paths = ToSet<CipherViewDto>();
+
+        var expected = new[]
+        {
+            "bankAccount.bankName", "bankAccount.nameOnAccount", "bankAccount.accountType",
+            "bankAccount.accountNumber", "bankAccount.routingNumber", "bankAccount.branchNumber",
+            "bankAccount.pin", "bankAccount.swiftCode", "bankAccount.iban", "bankAccount.bankContactPhone"
+        };
+
+        foreach (var path in expected)
+        {
+            Assert.Contains(path, paths);
+        }
+
+        Assert.Equal(10, expected.Length);
+    }
+
+    [Fact]
+    public void GetFieldPaths_CipherViewDto_DriversLicense()
+    {
+        var paths = ToSet<CipherViewDto>();
+
+        var expected = new[]
+        {
+            "driversLicense.firstName", "driversLicense.middleName", "driversLicense.lastName",
+            "driversLicense.dateOfBirth", "driversLicense.licenseNumber", "driversLicense.issuingCountry",
+            "driversLicense.issuingState", "driversLicense.issueDate", "driversLicense.issuingAuthority",
+            "driversLicense.expirationDate", "driversLicense.licenseClass"
+        };
+
+        foreach (var path in expected)
+        {
+            Assert.Contains(path, paths);
+        }
+
+        Assert.Equal(11, expected.Length);
+    }
+
+    [Fact]
+    public void GetFieldPaths_CipherViewDto_Passport()
+    {
+        var paths = ToSet<CipherViewDto>();
+
+        var expected = new[]
+        {
+            "passport.surname", "passport.givenName", "passport.dateOfBirth", "passport.sex",
+            "passport.birthPlace", "passport.nationality", "passport.passportNumber", "passport.passportType",
+            "passport.issuingCountry", "passport.issuingAuthority", "passport.issueDate",
+            "passport.expirationDate", "passport.nationalIdentificationNumber"
+        };
+
+        foreach (var path in expected)
+        {
+            Assert.Contains(path, paths);
+        }
+
+        Assert.Equal(13, expected.Length);
     }
 
     [Fact]

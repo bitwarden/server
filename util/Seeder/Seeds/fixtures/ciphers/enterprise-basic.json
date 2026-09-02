@@ -3,177 +3,653 @@
   "items": [
     {
       "type": "login",
-      "name": "Cipher-997761-2",
+      "name": "Concur Travel & Expense",
+      "notes": "Shared Finance login for expense submission. EXAMPLE fake seeder data.",
       "login": {
-        "username": "test",
-        "password": "123"
+        "username": "ap@verdant.example",
+        "password": "Fake-Concur-Pass-24",
+        "totp": "JBSWY3DPEHPK3PXP",
+        "uris": [{ "uri": "https://concursolutions.com", "match": "host" }]
+      },
+      "fields": [{ "name": "Account ID", "value": "VH-88213", "type": "text" }],
+      "attachments": [
+        {
+          "file": "mock-seeder-data-expense-report-3.pdf",
+          "fileName": "q3-expense-report.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Bill.com — Accounts Payable",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "payables@verdant.example",
+        "password": "Fake-BillDotCom-91",
+        "uris": [{ "uri": "https://bill.com" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-1793363",
-      "login": {
-        "username": "test",
-        "password": "123"
-      }
-    },
-    {
-      "type": "login",
-      "name": "Cipher-1867254-1",
+      "name": "ADP Workforce Now — Payroll",
+      "notes": "Payroll administration. Master-password reprompt on. EXAMPLE fake seeder data.",
       "reprompt": 1,
       "login": {
-        "username": "1867254 Username"
+        "username": "payroll.admin@verdant.example",
+        "password": "Fake-ADP-Pass-77",
+        "totp": "KRSXG5CTMVRXEZLU",
+        "uris": [{ "uri": "https://workforcenow.adp.com", "match": "host" }]
+      }
+    },
+    {
+      "type": "bankAccount",
+      "name": "Operating Account — First National Bank",
+      "notes": "Primary operating account. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "bankAccount": {
+        "bankName": "First National Bank",
+        "nameOnAccount": "Verdant Health, Inc.",
+        "accountType": "Checking",
+        "accountNumber": "000123456789",
+        "routingNumber": "110000000",
+        "swiftCode": "FNBAUS33",
+        "bankContactPhone": "555-0142"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "operating-statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "bankAccount",
+      "name": "Payroll Account — First National Bank",
+      "notes": "EXAMPLE fake seeder data.",
+      "bankAccount": {
+        "bankName": "First National Bank",
+        "nameOnAccount": "Verdant Health, Inc.",
+        "accountType": "Checking",
+        "accountNumber": "000987654321",
+        "routingNumber": "110000000",
+        "swiftCode": "FNBAUS33"
+      }
+    },
+    {
+      "type": "card",
+      "name": "Corporate Amex — Finance",
+      "notes": "Finance department corporate card. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "card": {
+        "cardholderName": "Verdant Health Finance",
+        "brand": "Amex",
+        "number": "371449635398431",
+        "expMonth": "08",
+        "expYear": "2029",
+        "code": "1234"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "amex-statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "QuickBooks Online",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "books@verdant.example",
+        "password": "Fake-QBO-Pass-33",
+        "uris": [{ "uri": "https://quickbooks.intuit.com" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-997761-1",
+      "name": "Stripe Dashboard",
+      "notes": "Payment processing. EXAMPLE fake seeder data.",
       "login": {
-        "username": "test",
-        "password": "123"
+        "username": "billing@verdant.example",
+        "password": "Fake-Stripe-Pass-55",
+        "totp": "MFRGGZDFMZTWQ2LK",
+        "uris": [{ "uri": "https://dashboard.stripe.com", "match": "host" }]
+      },
+      "fields": [
+        {
+          "name": "Restricted API Key",
+          "value": "rk_test_EXAMPLEfakevalue",
+          "type": "hidden"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Workday HCM",
+      "notes": "HR core system. EXAMPLE fake seeder data.",
+      "login": {
+        "username": "hr.admin@verdant.example",
+        "password": "Fake-Workday-Pass-12",
+        "totp": "NBSWY3DPEB3W64TM",
+        "uris": [{ "uri": "https://wd5.myworkday.com", "match": "host" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-19620",
+      "name": "BambooHR",
+      "notes": "EXAMPLE fake seeder data.",
       "login": {
-        "username": "19620 Username"
+        "username": "people@verdant.example",
+        "password": "Fake-Bamboo-Pass-64",
+        "uris": [{ "uri": "https://verdanthealth.bamboohr.com" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-1793362",
+      "name": "Greenhouse Recruiting",
+      "notes": "EXAMPLE fake seeder data.",
       "login": {
-        "username": "test",
-        "password": "123"
+        "username": "recruiting@verdant.example",
+        "password": "Fake-Greenhouse-Pass-08"
+      }
+    },
+    {
+      "type": "identity",
+      "name": "Employee Record — Dana Whitfield (CEO)",
+      "notes": "Sensitive employee record. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Dana",
+        "lastName": "Whitfield",
+        "company": "Verdant Health, Inc.",
+        "email": "dana.whitfield@verdant.example",
+        "phone": "555-0110",
+        "ssn": "000-00-0000",
+        "address1": "500 Health Plaza",
+        "city": "Austin",
+        "state": "TX",
+        "postalCode": "78701",
+        "country": "US"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-contract-5.pdf",
+          "fileName": "employment-agreement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "identity",
+      "name": "Contractor Onboarding — Availa Consulting",
+      "notes": "Vendor onboarding record. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Jordan",
+        "lastName": "Availa",
+        "company": "Availa Consulting LLC",
+        "email": "jordan@availa.example",
+        "phone": "555-0188",
+        "city": "Denver",
+        "state": "CO",
+        "country": "US"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-vendor-w9-7.txt",
+          "fileName": "availa-w9.txt",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "passport",
+      "name": "Executive Travel Passport — D. Whitfield",
+      "notes": "Held for executive business travel. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "passport": {
+        "surname": "Whitfield",
+        "givenName": "Dana",
+        "dateOfBirth": "1979-04-12",
+        "sex": "F",
+        "nationality": "United States",
+        "passportNumber": "X1234567",
+        "passportType": "P",
+        "issuingCountry": "United States",
+        "issuingAuthority": "U.S. Department of State",
+        "issueDate": "2019-06-01",
+        "expirationDate": "2029-05-31"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-passport-scan-2.pdf",
+          "fileName": "passport-scan.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "driversLicense",
+      "name": "Fleet Driver License — Operations",
+      "notes": "On file for company-vehicle drivers. EXAMPLE fake seeder data.",
+      "driversLicense": {
+        "firstName": "Marcus",
+        "lastName": "Chen",
+        "dateOfBirth": "1988-11-03",
+        "licenseNumber": "TX-DL-99120",
+        "issuingCountry": "United States",
+        "issuingState": "TX",
+        "issueDate": "2022-02-01",
+        "issuingAuthority": "Texas DPS",
+        "expirationDate": "2030-02-01",
+        "licenseClass": "C"
       }
     },
     {
       "type": "secureNote",
-      "name": "test item"
+      "name": "Benefits — Open Enrollment Notes",
+      "notes": "Carrier contacts and enrollment checklist. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-insurance-card-4.pdf",
+          "fileName": "group-insurance-card.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
     },
     {
       "type": "login",
-      "name": "Cipher-317432",
+      "name": "Okta Admin Console",
+      "notes": "Identity provider admin. Master-password reprompt on. EXAMPLE fake seeder data.",
+      "reprompt": 1,
       "login": {
-        "username": "test",
-        "password": "123"
+        "username": "it.admin@verdant.example",
+        "password": "Fake-Okta-Admin-19",
+        "totp": "OZXW2ZLOMRXW6ZDF",
+        "uris": [{ "uri": "https://verdant-admin.okta.com", "match": "host" }]
+      },
+      "fields": [
+        {
+          "name": "Recovery phrase",
+          "value": "example-fake-recovery-phrase",
+          "type": "hidden"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "AWS Root Account",
+      "notes": "Break-glass root credentials. Master-password reprompt on. EXAMPLE fake seeder data.",
+      "reprompt": 1,
+      "login": {
+        "username": "aws-root@verdant.example",
+        "password": "Fake-AWS-Root-88",
+        "totp": "PBSWY3DPEHPK3PXQ",
+        "passwordHistory": [
+          {
+            "password": "Fake-AWS-Root-Prev-01",
+            "lastUsedDate": "2025-11-02T10:00:00Z"
+          }
+        ]
+      },
+      "fields": [
+        { "name": "Account #", "value": "1234-5678-9012", "type": "text" },
+        {
+          "name": "Access Key ID",
+          "value": "AKIAEXAMPLEFAKEKEY",
+          "type": "hidden"
+        }
+      ],
+      "attachments": [
+        {
+          "file": "mock-seeder-data-recovery-codes-1.txt",
+          "fileName": "root-mfa-backup-codes.txt",
+          "attachmentVersion": "v0"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "GitHub Enterprise — verdant-health",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "ops@verdant.example",
+        "password": "Fake-GH-Pass-42",
+        "totp": "QFRGGZDFMZTWQ2LL",
+        "uris": [{ "uri": "https://github.com", "match": "host" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-1867254-2",
+      "name": "Cloudflare Dashboard",
+      "notes": "EXAMPLE fake seeder data.",
       "login": {
-        "username": "1867254 Username"
+        "username": "netops@verdant.example",
+        "password": "Fake-CF-Pass-71",
+        "uris": [{ "uri": "https://dash.cloudflare.com" }]
       }
     },
     {
       "type": "login",
-      "name": "Cipher-842054",
+      "name": "Datadog Monitoring",
+      "notes": "EXAMPLE fake seeder data.",
       "login": {
-        "username": "User-842054",
-        "password": "Password-842054"
+        "username": "observability@verdant.example",
+        "password": "Fake-DD-Pass-30"
       }
     },
     {
       "type": "login",
-      "name": "Cipher-1892038",
-      "login": {}
+      "name": "PagerDuty",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "oncall@verdant.example",
+        "password": "Fake-PD-Pass-15"
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-1892039",
-      "login": {}
+      "name": "Jamf Pro — MDM",
+      "notes": "Mobile device management. EXAMPLE fake seeder data.",
+      "login": {
+        "username": "mdm@verdant.example",
+        "password": "Fake-Jamf-Pass-60",
+        "uris": [{ "uri": "https://verdanthealth.jamfcloud.com" }]
+      }
+    },
+    {
+      "type": "sshKey",
+      "name": "Production Bastion Host Key",
+      "notes": "SSH key for the production bastion. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyBastionNotRealForSeeding seeder@verdant.example",
+        "keyFingerprint": "SHA256:ExampleFakeBastionFingerprintForSeedingOnly"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-ssh-public-key-6.txt",
+          "fileName": "bastion_ed25519.pub",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "sshKey",
+      "name": "CI/CD Deploy Key",
+      "notes": "Deploy key used by the build pipeline. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyDeployNotRealForSeeding ci@verdant.example",
+        "keyFingerprint": "SHA256:ExampleFakeDeployFingerprintForSeedingOnly"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-ssh-public-key-6.txt",
+          "fileName": "deploy_ed25519.pub",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "Server Room Wi-Fi + Door Codes",
+      "notes": "Physical infrastructure access notes. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "serverroom-wifi.txt",
+          "attachmentVersion": "v1"
+        }
+      ]
     },
     {
       "type": "login",
-      "name": "Cipher-1892047-No-Access",
-      "login": {}
+      "name": "Terraform Cloud",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "infra@verdant.example",
+        "password": "Fake-TFC-Pass-09",
+        "uris": [{ "uri": "https://app.terraform.io" }]
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-1892047-View",
-      "login": {}
+      "name": "Google Workspace Admin",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "admin@verdant.example",
+        "password": "Fake-GW-Pass-51",
+        "totp": "RFRGGZDFMZTWQ2LM",
+        "uris": [{ "uri": "https://admin.google.com", "match": "host" }]
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-1892047-Manage",
-      "login": {}
+      "name": "Slack Workspace",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "workspace@verdant.example",
+        "password": "Fake-Slack-Pass-44",
+        "uris": [{ "uri": "https://verdanthealth.slack.com" }]
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-2532597",
-      "login": {}
+      "name": "Zoom Company Account",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "meetings@verdant.example",
+        "password": "Fake-Zoom-Pass-83",
+        "uris": [{ "uri": "https://zoom.us" }]
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-1793366",
-      "login": {}
+      "name": "Salesforce CRM",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "crm@verdant.example",
+        "password": "Fake-SFDC-Pass-66",
+        "totp": "SFRGGZDFMZTWQ2LN",
+        "uris": [
+          {
+            "uri": "https://verdanthealth.lightning.force.com",
+            "match": "host"
+          }
+        ]
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-3925830",
-      "login": {}
+      "name": "Zendesk Support",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "support@verdant.example",
+        "password": "Fake-Zendesk-Pass-72"
+      }
     },
     {
       "type": "login",
-      "name": "Cipher-3925831",
-      "login": {}
+      "name": "DocuSign",
+      "notes": "EXAMPLE fake seeder data.",
+      "login": {
+        "username": "esign@verdant.example",
+        "password": "Fake-DocuSign-Pass-38"
+      }
+    },
+    {
+      "type": "login",
+      "name": "LinkedIn — Verdant Health Page",
+      "notes": "Company social account. EXAMPLE fake seeder data.",
+      "login": {
+        "username": "social@verdant.example",
+        "password": "Fake-LI-Pass-90",
+        "uris": [{ "uri": "https://linkedin.com" }]
+      },
+      "fields": [
+        {
+          "name": "Backup email",
+          "value": "social-backup@verdant.example",
+          "type": "text"
+        }
+      ]
     },
     {
       "type": "card",
-      "name": "Cipher-ClientEventLog-Card",
+      "name": "Company Visa — Travel & Facilities",
+      "notes": "Shared travel card. EXAMPLE fake seeder data.",
       "card": {
-        "cardholderName": "QA Testing",
+        "cardholderName": "Verdant Health",
         "brand": "Visa",
-        "number": "4242424242424242",
-        "expMonth": "1",
-        "expYear": "2111",
+        "number": "4111111111111111",
+        "expMonth": "03",
+        "expYear": "2028",
         "code": "123"
       }
     },
     {
+      "type": "secureNote",
+      "name": "Guest Wi-Fi Credentials",
+      "notes": "Guest network SSID and rotating passphrase. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "guest-wifi.txt",
+          "attachmentVersion": "v0"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "IT Security Policy",
+      "notes": "Acceptable-use and incident-response summary. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-security-policy-5.txt",
+          "fileName": "security-policy.txt",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
       "type": "login",
-      "name": "Cipher-ClientEventLog-Login",
-      "fields": [
-        { "name": "Hidden-Field", "value": "hiddenfield", "type": "hidden" }
+      "name": "Legacy VPN — Cisco AnyConnect",
+      "notes": "Superseded by Cloudflare Access. EXAMPLE fake seeder data.",
+      "login": {
+        "username": "vpn@verdant.example",
+        "password": "Fake-VPN-Old-01"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-todo-4.txt",
+          "fileName": "vpn-decommission-todo.txt",
+          "attachmentVersion": "v0"
+        }
       ],
-      "login": {
-        "username": "username",
-        "password": "password",
-        "totp": "testing123"
-      }
+      "archived": true
     },
     {
       "type": "login",
-      "name": "Cipher-5172094",
+      "name": "Paychex — Former Payroll Provider",
+      "notes": "Retained for records; migrated to ADP. EXAMPLE fake seeder data.",
       "login": {
-        "username": "username",
-        "password": "password",
-        "totp": "testing123"
-      }
+        "username": "payroll-legacy@verdant.example",
+        "password": "Fake-Paychex-Old-02"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-expense-report-3.pdf",
+          "fileName": "final-payroll-report.pdf",
+          "attachmentVersion": "v1"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "secureNote",
+      "name": "Prior Office Lease & Facilities Docs",
+      "notes": "Previous HQ lease, kept for reference. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-contract-5.pdf",
+          "fileName": "prior-lease.pdf",
+          "attachmentVersion": "v1"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "identity",
+      "name": "Former Vendor — Acme Supplies (W-9)",
+      "notes": "Terminated vendor; record retained. EXAMPLE fake seeder data.",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Acme",
+        "lastName": "Supplies",
+        "company": "Acme Supplies Co.",
+        "email": "ap@acme.example",
+        "country": "US"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-vendor-w9-7.txt",
+          "fileName": "acme-w9.txt",
+          "attachmentVersion": "v2"
+        }
+      ],
+      "archived": true
     },
     {
       "type": "login",
-      "name": "Cipher-3392572",
+      "name": "Decommissioned Jenkins",
+      "notes": "Replaced by GitHub Actions. EXAMPLE fake seeder data.",
       "login": {
-        "username": "Cipher-3392572",
-        "password": "abc",
-        "uris": [
-          { "uri": "https://coinbase.com" }
-        ]
-      }
+        "username": "ci-old@verdant.example",
+        "password": "Fake-Jenkins-Old-03"
+      },
+      "deleted": true
     },
     {
       "type": "login",
-      "name": "Cipher-3171087",
+      "name": "Cancelled T-Mobile Business",
+      "notes": "Account closed. EXAMPLE fake seeder data.",
       "login": {
-        "username": "Cipher-3171087",
-        "password": "abc",
-        "uris": [
-          { "uri": "webtests.dev" }
-        ]
-      }
+        "username": "telecom@verdant.example",
+        "password": "Fake-TMO-Old-04"
+      },
+      "deleted": true
+    },
+    {
+      "type": "secureNote",
+      "name": "Old Server Room Wi-Fi",
+      "notes": "Rotated out. EXAMPLE fake seeder data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "old-serverroom-wifi.txt",
+          "attachmentVersion": "v0"
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "type": "bankAccount",
+      "name": "Closed Money Market Account",
+      "notes": "Account closed 2025. EXAMPLE fake seeder data.",
+      "bankAccount": {
+        "bankName": "First National Bank",
+        "nameOnAccount": "Verdant Health, Inc.",
+        "accountType": "Savings",
+        "accountNumber": "000555000111",
+        "routingNumber": "110000000"
+      },
+      "deleted": true
     }
   ]
 }

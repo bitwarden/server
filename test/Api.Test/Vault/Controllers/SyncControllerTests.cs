@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using AutoFixture;
+using Bit.Api.Test.Vault.AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
@@ -18,11 +19,13 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -37,6 +40,9 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(SyncController))]
 [SutProviderCustomize]
+// Bypasses PAM credential leasing so these leasing-agnostic tests keep asserting full-data responses;
+// the leasing tests re-stub the gate after building the SUT.
+[CipherLeaseGateBypassCustomize]
 public class SyncControllerTests
 {
     [Theory]
@@ -436,7 +442,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -446,6 +452,103 @@ public class SyncControllerTests
         var result = await sutProvider.Sut.Get();
 
         Assert.Contains(result.Ciphers, c => c.Type == CipherType.BankAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCiphers_FilteredForClientsThatCannotRenderThem(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var (gated, visible) = SetupLeasingSync(user, sutProvider);
+        // A mobile client would show a partial cipher as an empty item, and saving it back would
+        // clobber the withheld fields — so it must not receive it at all.
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCiphers_DeliveredPartialToTheWebVault(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var (gated, visible) = SetupLeasingSync(user, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.Get();
+
+        var gatedResponse = Assert.Single(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Null(gatedResponse.Data);
+        Assert.NotNull(gatedResponse.PartialData);
+        Assert.NotNull(Assert.Single(result.Ciphers, c => c.Id == visible.Id).Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_NoDeviceType_FiltersGatedCiphers(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var (gated, visible) = SetupLeasingSync(user, sutProvider);
+        // Fails safe: an unidentified caller is treated as unable to render the shape.
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+    }
+
+    /// <summary>
+    /// Arranges a sync over two ciphers where only <c>visible</c> is authorized for full data, i.e.
+    /// <c>gated</c> is leasing-gated. Returns (gated, visible).
+    /// </summary>
+    private static (CipherDetails Gated, CipherDetails Visible) SetupLeasingSync(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+
+        sutProvider.GetDependency<IUserAccountKeysQuery>().Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+
+        var gated = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+            UserId = user.Id,
+        };
+        var visible = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted"}""",
+            UserId = user.Id,
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+            .Returns(new List<CipherDetails> { gated, visible });
+
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadManyAsync(user.Id, Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IEnumerable<CollectionDetails>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(FullCipherAccess.ForCipher(visible.Id));
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user).Returns(false);
+
+        return (gated, visible);
     }
 
     [Theory]
@@ -477,7 +580,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -518,7 +621,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -559,7 +662,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -602,7 +705,7 @@ public class SyncControllerTests
             .ClientVersion.Returns((Version?)null);
 
         // QA override disabled
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -613,86 +716,6 @@ public class SyncControllerTests
 
         Assert.DoesNotContain(result.Ciphers, c => c.Type == CipherType.SSHKey);
         Assert.Contains(result.Ciphers, c => c.Type == CipherType.Login);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_PoliciesInAcceptedState_FlagEnabled_CallsNewRepositoryMethods(
-        User user,
-        ICollection<Policy> policiesAccepted,
-        ICollection<OrganizationUserOrganizationDetails> organizationsAccepted,
-        SutProvider<SyncController> sutProvider)
-    {
-        user.EquivalentDomains = null;
-        user.ExcludedGlobalEquivalentDomains = null;
-
-        var userService = sutProvider.GetDependency<IUserService>();
-        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
-
-        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
-        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
-            SignatureKeyPairData = null,
-        });
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(true);
-
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
-        policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id).Returns(policiesAccepted);
-
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id).Returns(organizationsAccepted);
-
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user).Returns(false);
-        userService.HasPremiumFromOrganization(user).Returns(false);
-
-        var result = await sutProvider.Sut.Get();
-
-        Assert.IsType<SyncResponseModel>(result);
-        await policyRepository.Received(1).GetManyConfirmedAcceptedByUserIdAsync(user.Id);
-        await organizationUserRepository.Received(1).GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
-        Assert.NotNull(result.PoliciesNew);
-        Assert.NotNull(result.OrganizationsNew);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Get_PoliciesInAcceptedState_FlagDisabled_DoesNotCallNewRepositoryMethods(
-        User user,
-        SutProvider<SyncController> sutProvider)
-    {
-        user.EquivalentDomains = null;
-        user.ExcludedGlobalEquivalentDomains = null;
-
-        var userService = sutProvider.GetDependency<IUserService>();
-        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
-
-        var userAccountKeysQuery = sutProvider.GetDependency<IUserAccountKeysQuery>();
-        userAccountKeysQuery.Run(user).Returns(new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
-            SignatureKeyPairData = null,
-        });
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState).Returns(false);
-
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user).Returns(false);
-        userService.HasPremiumFromOrganization(user).Returns(false);
-
-        var result = await sutProvider.Sut.Get();
-
-        Assert.IsType<SyncResponseModel>(result);
-        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        await policyRepository.DidNotReceive().GetManyConfirmedAcceptedByUserIdAsync(Arg.Any<Guid>());
-        await organizationUserRepository.DidNotReceive().GetManyConfirmedAcceptedDetailsByUserAsync(Arg.Any<Guid>());
-        Assert.Null(result.PoliciesNew);
-        Assert.Null(result.OrganizationsNew);
     }
 
     private async Task AssertMethodsCalledAsync(IUserService userService,
@@ -772,7 +795,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -812,7 +835,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -852,7 +875,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -892,7 +915,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -933,7 +956,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -973,7 +996,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version(Constants.PM32009NewItemTypeMinimumVersion));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -1013,7 +1036,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns(new Version("2025.1.0"));
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -1053,7 +1076,7 @@ public class SyncControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .ClientVersion.Returns((Version?)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()

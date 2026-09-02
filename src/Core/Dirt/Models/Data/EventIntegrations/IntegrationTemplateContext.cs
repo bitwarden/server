@@ -12,7 +12,7 @@ public class IntegrationTemplateContext(EventMessage eventMessage)
 
     public string DomainName => Event.DomainName;
     public string IpAddress => Event.IpAddress;
-    public DeviceType? DeviceType => Event.DeviceType;
+    public string? DeviceType => Event.DeviceType?.GetDisplayName();
     public int? DeviceTypeId => Event.DeviceType is not null ? (int)Event.DeviceType : null;
     public Guid? ActingUserId => Event.ActingUserId;
     public Guid? OrganizationUserId => Event.OrganizationUserId;

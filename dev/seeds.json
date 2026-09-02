@@ -6,7 +6,7 @@
       "subscription": "free",
       "firstName": "Jane",
       "lastName": "Doe",
-      "email": "jane@bw.test"
+      "email": "jane@bw.example"
     }
   },
   {
@@ -16,14 +16,14 @@
       "subscription": "premium",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@bw.test"
+      "email": "john@bw.example"
     }
   },
   {
-    "label": "Enterprise Basic (qa.enterprise-basic preset)",
+    "label": "Dev Playground (dev.playground preset)",
     "command": "preset",
     "args": {
-      "name": "qa.enterprise-basic"
+      "name": "dev.playground"
     }
   }
 ]

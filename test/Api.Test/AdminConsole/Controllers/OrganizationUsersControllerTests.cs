@@ -3,11 +3,11 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Models.Request.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -24,7 +24,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
@@ -32,15 +31,14 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
+using V1_RestoreUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -48,6 +46,103 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationUsersControllerTests
 {
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_GrantsAccessToMembersWithoutIt(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.All(u => u.AccessPam)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_SkipsMembersOfOtherOrganizationsAndThoseWithAccess(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, OrganizationUser targetUser,
+        OrganizationUser alreadyEnabledUser, OrganizationUser otherOrgUser,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = true;
+        targetUser.OrganizationId = alreadyEnabledUser.OrganizationId = orgId;
+        targetUser.AccessPam = false;
+        alreadyEnabledUser.AccessPam = true;
+        otherOrgUser.AccessPam = false;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids)
+            .Returns([targetUser, alreadyEnabledUser, otherOrgUser]);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        await sutProvider.Sut.BulkEnablePamAsync(orgId, model);
+
+        Assert.False(otherOrgUser.AccessPam);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
+                users.Count() == 1 && users.Single().Id == targetUser.Id && users.Single().AccessPam));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenOrganizationDoesNotUsePam_Throws(Guid orgId,
+        OrganizationUserBulkRequestModel model, Organization organization, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organization.UsePam = false;
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = false;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
+
+        Assert.Equal(new V2_UpdateUserCommand.PamNotEnabled().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task BulkEnablePam_WhenNoMembersNeedAccess_Throws(Guid orgId,
+        OrganizationUserBulkRequestModel model, List<OrganizationUser> orgUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.OrganizationId = orgId;
+            orgUser.AccessPam = true;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(model.Ids).Returns(orgUsers);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.BulkEnablePamAsync(orgId, model));
+
+        Assert.Equal(new V1_RestoreUserCommand.UsersInvalid().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceManyAsync(default);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task PutResetPasswordEnrollment_InvitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
@@ -244,12 +339,10 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Invite_Success(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+    public async Task Invite_Success(Guid orgId, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
@@ -257,9 +350,9 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        await sutProvider.Sut.Invite(organizationAbility.Id, model);
+        await sutProvider.Sut.Invite(orgId, model);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(organizationAbility.Id,
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUsersAsync(orgId,
             userId, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(invites =>
                 invites.Count() == 1 &&
                 invites.First().Item1.Emails.SequenceEqual(model.Emails) &&
@@ -269,12 +362,10 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(OrganizationAbility organizationAbility, OrganizationUserInviteRequestModel model,
+    public async Task Invite_NotAuthorizedToGiveAccessToCollections_Throws(Guid orgId, OrganizationUserInviteRequestModel model,
         Guid userId, SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationAbility.Id).Returns(true);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 Arg.Any<IEnumerable<Collection>>(),
@@ -282,7 +373,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(organizationAbility.Id, model));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Invite(orgId, model));
     }
 
     [Theory, BitAutoData]
@@ -307,18 +398,17 @@ public class OrganizationUsersControllerTests
         var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
-        Assert.True(response.ManagedByOrganization);
         Assert.True(response.ClaimedByOrganization);
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetMany_ReturnsUsers(
-        ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
+        ICollection<OrganizationUserUserDetails> organizationUsers, Guid orgId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        GetMany_Setup(organizationAbility, organizationUsers, sutProvider);
-        var response = await sutProvider.Sut.GetAll(organizationAbility.Id, false, false);
+        GetMany_Setup(orgId, organizationUsers, sutProvider);
+        var response = await sutProvider.Sut.GetAll(orgId, false, false);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
@@ -331,9 +421,15 @@ public class OrganizationUsersControllerTests
         ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        var organizationUsers = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
+        foreach (var organizationUser in organizationUsers)
+        {
+            MockCanRecoverAccount(sutProvider, organizationUser, true);
+        }
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(organizationUsers.Select(ou => ou.Id))))
             .Returns(resetPasswordDetails);
 
         var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
@@ -353,6 +449,76 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetAccountRecoveryDetails_OmitsUsersTheCallerCannotRecover(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange: the caller may recover the first user but not the rest
+        var organizationUsers = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
+        foreach (var organizationUser in organizationUsers)
+        {
+            MockCanRecoverAccount(sutProvider, organizationUser, organizationUser == organizationUsers[0]);
+        }
+
+        // Act
+        await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert: only the authorized user's id reaches the query that returns key material
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { organizationUsers[0].Id })));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_WhenNoUsersAuthorized_ReturnsEmptyWithoutQueryingDetails(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        var organizationUsers = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
+        foreach (var organizationUser in organizationUsers)
+        {
+            MockCanRecoverAccount(sutProvider, organizationUser, false);
+        }
+
+        // Act
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.Empty(response.Data);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_OmitsUsersFromAnotherOrganization(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange: every user is authorized, but they belong to a different organization than the route
+        var organizationUsers = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
+        foreach (var organizationUser in organizationUsers)
+        {
+            organizationUser.OrganizationId = Guid.NewGuid();
+            MockCanRecoverAccount(sutProvider, organizationUser, true);
+        }
+
+        // Act
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.Empty(response.Data);
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(default, default, default(IEnumerable<IAuthorizationRequirement>));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetResetPasswordDetails_WhenOrganizationUserNotFound_ThrowsNotFound(
         Guid orgId, Guid orgUserId,
         SutProvider<OrganizationUsersController> sutProvider)
@@ -361,7 +527,8 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -371,12 +538,13 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        organizationUser.OrganizationId = Guid.NewGuid(); // Different org ID
+        organizationUser.OrganizationId = Guid.NewGuid(); // Different from the bound org
         organizationUser.UserId = Guid.NewGuid();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -391,7 +559,8 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId));
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetResetPasswordDetails(orgUserId, new Organization { Id = orgId }));
     }
 
     [Theory]
@@ -401,14 +570,15 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        organizationUser.OrganizationId = orgId;
+        org.Id = orgId;
+        organizationUser.OrganizationId = org.Id;
         organizationUser.UserId = user.Id;
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(org);
+        MockCanRecoverAccount(sutProvider, organizationUser, true);
 
-        // Act
-        var response = await sutProvider.Sut.GetResetPasswordDetails(orgId, orgUserId);
+        // Act — org is passed directly via [BindOrganization]; the repository is no longer called
+        var response = await sutProvider.Sut.GetResetPasswordDetails(orgUserId, org);
 
         // Assert
         Assert.Equal(organizationUser.Id, response.OrganizationUserId);
@@ -416,6 +586,54 @@ public class OrganizationUsersControllerTests
         Assert.Equal(user.KdfIterations, response.KdfIterations);
         Assert.Equal(org.PrivateKey, response.EncryptedPrivateKey);
         Assert.Equal(user.MasterPasswordSalt, response.MasterPasswordSalt);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetResetPasswordDetails_WhenCallerCannotRecoverTargetUser_ThrowsNotFound(
+        Guid orgId, Guid orgUserId, OrganizationUser organizationUser, User user, Organization org,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange: the caller passes the ManageAccountRecovery check but is not permitted to recover
+        // this particular user, e.g. an Admin targeting an Owner, or anyone targeting a Provider member.
+        org.Id = orgId;
+        organizationUser.OrganizationId = org.Id;
+        organizationUser.UserId = user.Id;
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
+        MockCanRecoverAccount(sutProvider, organizationUser, false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetResetPasswordDetails(orgUserId, org));
+
+        // The target user's key material must not be read at all
+        await sutProvider.GetDependency<IUserService>().DidNotReceiveWithAnyArgs().GetUserByIdAsync(default(Guid));
+    }
+
+    private static void MockCanRecoverAccount(SutProvider<OrganizationUsersController> sutProvider,
+        OrganizationUser organizationUser, bool authorized)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                organizationUser,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
+            .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+    }
+
+    private static List<OrganizationUser> MockAccountRecoveryCandidates(
+        SutProvider<OrganizationUsersController> sutProvider, Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel)
+    {
+        var organizationUsers = bulkRequestModel.Ids
+            .Select(id => new OrganizationUser { Id = id, OrganizationId = organizationId, UserId = Guid.NewGuid() })
+            .ToList();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(bulkRequestModel.Ids)
+            .Returns(organizationUsers);
+
+        return organizationUsers;
     }
 
     [Theory]
@@ -442,7 +660,7 @@ public class OrganizationUsersControllerTests
             sutProvider.Sut.BulkDeleteAccount(orgId, model));
     }
 
-    private void GetMany_Setup(OrganizationAbility organizationAbility,
+    private void GetMany_Setup(Guid orgId,
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -450,10 +668,6 @@ public class OrganizationUsersControllerTests
         {
             orgUser.Permissions = null;
         }
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
-            .Returns(organizationAbility);
-
-        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>().GetOrganizationUserUserDetails(Arg.Any<OrganizationUserUserDetailsQueryRequest>()).Returns(organizationUsers);
 
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
             user: Arg.Any<ClaimsPrincipal>(),
@@ -462,7 +676,7 @@ public class OrganizationUsersControllerTests
             .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(organizationAbility.Id, Arg.Any<bool>(), Arg.Any<bool>())
+            .GetManyDetailsByOrganizationAsync(orgId, Arg.Any<bool>(), Arg.Any<bool>())
             .Returns(organizationUsers);
     }
 
@@ -508,7 +722,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
+    public async Task RecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -520,14 +734,14 @@ public class OrganizationUsersControllerTests
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Failed());
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountSucceeds_ReturnsOk(
+    public async Task RecoverAccount_WhenRecoverAccountSucceeds_ReturnsNoContent(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -538,73 +752,18 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(false);
         sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Success);
+            .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(new None());
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
-
-        Assert.IsType<Ok>(result);
-        await sutProvider.GetDependency<IAdminRecoverAccountCommand>().Received(1)
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutRecoverAccount_FlagOff_WhenRecoverAccountFails_ReturnsBadRequest(
-        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                organizationUser,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
-            .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(false);
-        sutProvider.GetDependency<IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUser>(), Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Microsoft.AspNetCore.Identity.IdentityResult.Failed(new Microsoft.AspNetCore.Identity.IdentityError { Description = "Error message" }));
-
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
-
-        Assert.IsType<BadRequest<ModelStateDictionary>>(result);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutRecoverAccount_FlagOn_WhenRecoverAccountSucceeds_ReturnsNoContent(
-        Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
-        SutProvider<OrganizationUsersController> sutProvider)
-    {
-        organizationUser.OrganizationId = orgId;
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                organizationUser,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
-            .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
-        sutProvider.GetDependency<Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.RecoverAccountRequest>())
-            .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(new OneOf.Types.None()));
-
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<NoContent>(result);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task PutRecoverAccount_FlagOn_WhenRecoverAccountFails_ReturnsBadRequest(
+    public async Task RecoverAccount_WhenRecoverAccountFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -615,15 +774,11 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AdminResetTwoFactor)
-            .Returns(true);
-        sutProvider.GetDependency<Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.IAdminRecoverAccountCommand>()
-            .RecoverAccountAsync(Arg.Any<Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.RecoverAccountRequest>())
-            .Returns(new Bit.Core.AdminConsole.Utilities.v2.Results.CommandResult(
-                new Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery.v2.PasswordUpdateFailedError("Error message")));
+        sutProvider.GetDependency<IAdminRecoverAccountCommand>()
+            .RecoverAccountAsync(Arg.Any<RecoverAccountRequest>())
+            .Returns(new PasswordUpdateFailedError("Error message"));
 
-        var result = await sutProvider.Sut.PutRecoverAccount(orgId, orgUserId, model, organizationUser);
+        var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
         Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
@@ -817,5 +972,195 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IBulkResendOrganizationInvitesCommand>()
             .Received(1)
             .BulkResendInvitesAsync(organizationId, userId, bulkRequestModel.Ids);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WithValidInput_ReturnsOk(
+        User user,
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult(new None()));
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmInviteLink(model);
+
+        // Assert
+        Assert.IsType<Ok>(result);
+        await sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .Received(1)
+            .ConfirmAsync(Arg.Is<ConfirmOrganizationInviteLinkRequest>(r =>
+                r.Code == model.Code &&
+                r.User == user &&
+                r.OrgUserKey == model.OrgUserKey &&
+                r.ResetPasswordKey == model.ResetPasswordKey &&
+                r.DefaultUserCollectionName == model.DefaultUserCollectionName));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WhenCommandReturnsError_ReturnsBadRequest(
+        User user,
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IConfirmOrganizationInviteLinkCommand>()
+            .ConfirmAsync(Arg.Any<ConfirmOrganizationInviteLinkRequest>())
+            .Returns(new CommandResult(new EmailDomainNotAllowed(string.Empty)));
+
+        // Act
+        var result = await sutProvider.Sut.ConfirmInviteLink(model);
+
+        // Assert
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ConfirmInviteLink_WhenUserNotFound_Throws(
+        ConfirmOrganizationInviteLinkRequestModel model,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns((User?)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.ConfirmInviteLink(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_ReturnsNoContentOnSuccess(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId);
+
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .Received(1)
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_PassesRequestedEmailToRequest(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId);
+        model.Email = "new@claimed.example.com";
+
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        Assert.NotNull(captured);
+        Assert.Equal("new@claimed.example.com", captured.NewEmail);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WhenCommandFails_MapsErrorToStatus(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
+        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId);
+
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
+            .Returns(new CommandResult(new V2_UpdateUserCommand.MustHaveConfirmedOwner()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_ExcludesDefaultCollectionsFromPreservedAccess(
+        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
+        OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        PutSetup(sutProvider, organization, organizationUser, userId);
+
+        // The client posts no collections; the user currently has access to a shared and a default collection.
+        model.Collections = [];
+        var currentAccess = new List<CollectionAccessSelection>
+        {
+            new() { Id = sharedCollectionId },
+            new() { Id = defaultCollectionId }
+        };
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(organizationUser, currentAccess));
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>
+            {
+                new() { Id = sharedCollectionId, OrganizationId = organization.Id, Type = CollectionType.SharedCollection },
+                new() { Id = defaultCollectionId, OrganizationId = organization.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        // The saving user cannot ModifyUserAccess on the current collections, so they would be preserved as read-only.
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Failed());
+
+        V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
+        sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
+            .UpdateUserAsync(Arg.Do<V2_UpdateUserCommand.UpdateOrganizationUserRequest>(r => captured = r))
+            .Returns(new CommandResult(new None()));
+
+        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
+
+        Assert.IsType<NoContent>(result);
+        Assert.NotNull(captured);
+        // The default collection is dropped from the preserved set; the shared one is kept.
+        Assert.Contains(captured.CollectionsToSave!, c => c.Id == sharedCollectionId);
+        Assert.DoesNotContain(captured.CollectionsToSave, c => c.Id == defaultCollectionId);
+    }
+
+    private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
+        OrganizationUser organizationUser, Guid userId)
+    {
+        organizationUser.OrganizationId = organization.Id;
+        organization.AllowAdminAccessToAllCollectionItems = true;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns(new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(
+                organizationUser, new List<CollectionAccessSelection>()));
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection>());
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+            .Returns(AuthorizationResult.Success());
     }
 }

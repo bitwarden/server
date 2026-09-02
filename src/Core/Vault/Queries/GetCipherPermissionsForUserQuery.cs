@@ -1,7 +1,7 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
@@ -11,13 +11,13 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICipherRepository _cipherRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
 
-    public GetCipherPermissionsForUserQuery(ICurrentContext currentContext, ICipherRepository cipherRepository, IApplicationCacheService applicationCacheService)
+    public GetCipherPermissionsForUserQuery(ICurrentContext currentContext, ICipherRepository cipherRepository, IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _currentContext = currentContext;
         _cipherRepository = cipherRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task<IDictionary<Guid, OrganizationCipherPermission>> GetByOrganization(Guid organizationId)
@@ -71,7 +71,7 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
             return true;
         }
 
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(org.Id);
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(org.Id);
 
         // Owners/Admins can only edit all ciphers if the organization has the setting enabled
         if (orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is

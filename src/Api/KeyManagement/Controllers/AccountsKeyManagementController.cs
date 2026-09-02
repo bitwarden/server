@@ -1,5 +1,4 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Auth.Models.Request;
+﻿using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Enums;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -13,9 +12,11 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.KeyManagement.UserKey.Queries.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -39,19 +40,22 @@ public class AccountsKeyManagementController : Controller
     private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
+    private readonly IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
     private readonly IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> _deviceValidator;
     private readonly IKeyConnectorConfirmationDetailsQuery _keyConnectorConfirmationDetailsQuery;
+    private readonly IKeyRotationDataQuery _keyRotationDataQuery;
     private readonly ISetKeyConnectorKeyCommand _setKeyConnectorKeyCommand;
+    private readonly IConvertUserToKeyConnectorCommand _convertUserToKeyConnectorCommand;
+    private readonly ISetUserKeyIdCommand _setUserKeyIdCommand;
 
     public AccountsKeyManagementController(IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IKeyConnectorConfirmationDetailsQuery keyConnectorConfirmationDetailsQuery,
+        IKeyRotationDataQuery keyRotationDataQuery,
         IRegenerateUserAsymmetricKeysCommand regenerateUserAsymmetricKeysCommand,
         IRotateUserAccountKeysCommand rotateUserKeyCommandV2,
         IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
@@ -59,12 +63,14 @@ public class AccountsKeyManagementController : Controller
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator,
-        IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
+        IRotationValidator<OrganizationAccountRecoveryRotationData, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
         IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
             webAuthnKeyValidator,
         IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>> deviceValidator,
-        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand)
+        ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
+        IConvertUserToKeyConnectorCommand convertUserToKeyConnectorCommand,
+        ISetUserKeyIdCommand setUserKeyIdCommand)
     {
         _userService = userService;
         _regenerateUserAsymmetricKeysCommand = regenerateUserAsymmetricKeysCommand;
@@ -79,7 +85,24 @@ public class AccountsKeyManagementController : Controller
         _webauthnKeyValidator = webAuthnKeyValidator;
         _deviceValidator = deviceValidator;
         _keyConnectorConfirmationDetailsQuery = keyConnectorConfirmationDetailsQuery;
+        _keyRotationDataQuery = keyRotationDataQuery;
         _setKeyConnectorKeyCommand = setKeyConnectorKeyCommand;
+        _convertUserToKeyConnectorCommand = convertUserToKeyConnectorCommand;
+        _setUserKeyIdCommand = setUserKeyIdCommand;
+    }
+
+    /// <summary>
+    /// Reports the key id of the caller's current user key to the server.
+    /// </summary>
+    /// <remarks>
+    /// This is meant for backfilling the user-key id for existing users for whom
+    /// the key id is not yet recorded.
+    /// </remarks>
+    [HttpPost("key-management/user-key-id")]
+    public async Task PostUserKeyIdAsync([FromBody] SetUserKeyIdRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        await _setUserKeyIdCommand.SetUserKeyIdAsync(user, request.ToKeyId());
     }
 
     [HttpPost("key-management/regenerate-keys")]
@@ -116,14 +139,21 @@ public class AccountsKeyManagementController : Controller
                         model.AccountUnlockData.EmergencyAccessUnlockData),
                 OrganizationUsers =
                     await _organizationUserValidator.ValidateAsync(user,
-                        model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+                        new OrganizationAccountRecoveryRotationData
+                        {
+                            AccountRecoveryUnlockData = model.AccountUnlockData.OrganizationAccountRecoveryUnlockData,
+                            // A manual key rotation carries no upgrade token, see V2UpgradeToken below.
+                            HasV2UpgradeToken = false
+                        }),
                 WebAuthnKeys =
                     await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
                 DeviceKeys = await _deviceValidator.ValidateAsync(user, model.AccountUnlockData.DeviceKeyUnlockData),
-                V2UpgradeToken = model.AccountUnlockData.V2UpgradeToken?.ToData(),
+                // A manual key rotation always logs the user out, so no upgrade token is needed.
+                V2UpgradeToken = null,
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
-                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends)
+                Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+                NewUserKeyId = KeyId.FromHexEncodedString(model.NewUserKeyId)
             }
         };
 
@@ -165,7 +195,13 @@ public class AccountsKeyManagementController : Controller
                     new TdeRotateUserAccountKeysData { BaseData = await ToBaseDataModelAsync(request, user) });
                 break;
             case UnlockMethod.KeyConnector:
-                throw new BadRequestException("Key connector not implemented");
+                await _rotateUserAccountKeysCommand.KeyConnectorRotateUserAccountKeysAsync(user,
+                    new KeyConnectorRotateUserAccountKeysData
+                    {
+                        KeyConnectorKeyWrappedUserKey = request.UnlockMethodData.KeyConnectorKeyWrappedUserKey!,
+                        BaseData = await ToBaseDataModelAsync(request, user),
+                    });
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(request.UnlockMethodData.UnlockMethod), "Unrecognized unlock method");
         }
@@ -213,18 +249,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, null);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user);
     }
 
     [HttpPost("key-connector/enroll")]
@@ -236,18 +261,7 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ConvertToKeyConnectorAsync(user, model.KeyConnectorKeyWrappedUserKey);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        throw new BadRequestException(ModelState);
+        await _convertUserToKeyConnectorCommand.ConvertAsync(user, model.KeyConnectorKeyWrappedUserKey);
     }
 
     [HttpGet("key-connector/confirmation-details/{orgSsoIdentifier}")]
@@ -263,6 +277,14 @@ public class AccountsKeyManagementController : Controller
         return new KeyConnectorConfirmationDetailsResponseModel(details);
     }
 
+    [HttpGet("key-management/key-rotation-data")]
+    public async Task<KeyRotationDataResponseModel> GetKeyRotationDataAsync()
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+        var data = await _keyRotationDataQuery.Run(user);
+        return new KeyRotationDataResponseModel(data);
+    }
+
     private async Task<BaseRotateUserAccountKeysData> ToBaseDataModelAsync(RotateUserKeysRequestModel request, User user)
     {
         return new BaseRotateUserAccountKeysData
@@ -272,14 +294,18 @@ public class AccountsKeyManagementController : Controller
                 await _emergencyAccessValidator.ValidateAsync(user, request.UnlockData.EmergencyAccessUnlockData),
             OrganizationUsers =
                 await _organizationUserValidator.ValidateAsync(user,
-                    request.UnlockData.OrganizationAccountRecoveryUnlockData),
+                    new OrganizationAccountRecoveryRotationData
+                    {
+                        AccountRecoveryUnlockData = request.UnlockData.OrganizationAccountRecoveryUnlockData,
+                        HasV2UpgradeToken = request.UnlockData.V2UpgradeToken != null
+                    }),
             WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, request.UnlockData.PasskeyUnlockData),
             DeviceKeys = await _deviceValidator.ValidateAsync(user, request.UnlockData.DeviceKeyUnlockData),
             V2UpgradeToken = request.UnlockData.V2UpgradeToken?.ToData(),
-
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
+            NewUserKeyId = KeyId.FromHexEncodedString(request.NewUserKeyId)
         };
     }
 }

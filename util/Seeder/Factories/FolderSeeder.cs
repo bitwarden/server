@@ -10,7 +10,7 @@ internal static class FolderSeeder
     {
         return new Folder
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             UserId = userId,
             Name = RustSdkService.EncryptString(name, userKeyBase64)
         };

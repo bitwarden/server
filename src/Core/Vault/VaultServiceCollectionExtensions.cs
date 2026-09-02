@@ -2,6 +2,7 @@
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Queries;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Core.Vault;
 
@@ -28,5 +29,6 @@ public static class VaultServiceCollectionExtensions
         services.AddScoped<IUnarchiveCiphersCommand, UnarchiveCiphersCommand>();
         services.AddScoped<IMarkNotificationsForTaskAsDeletedCommand, MarkNotificationsForTaskAsDeletedCommand>();
         services.AddScoped<IGetTaskMetricsForOrganizationQuery, GetTaskMetricsForOrganizationQuery>();
+        services.TryAddScoped<IDeleteManyFoldersCommand, DeleteManyFoldersCommand>();
     }
 }

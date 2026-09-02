@@ -73,6 +73,13 @@ public class PatchGroupCommand : IPatchGroupCommand
                     break;
                 }
 
+            // Replace externalId from path
+            case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId:
+                {
+                    await HandleExternalIdOperationAsync(group, operation.Value.GetString());
+                    break;
+                }
+
             // Replace group name from value object
             case PatchOps.Replace when
                 string.IsNullOrWhiteSpace(operation.Path) &&
@@ -85,6 +92,15 @@ public class PatchGroupCommand : IPatchGroupCommand
                         throw new NotFoundException();
                     }
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+                    break;
+                }
+
+            // Replace externalId from value object
+            case PatchOps.Replace when
+                string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Value.TryGetProperty("externalId", out var replaceExternalIdProperty):
+                {
+                    await HandleExternalIdOperationAsync(group, replaceExternalIdProperty.GetString());
                     break;
                 }
 
@@ -103,6 +119,22 @@ public class PatchGroupCommand : IPatchGroupCommand
                 operation.Path?.ToLowerInvariant() == PatchPaths.Members:
                 {
                     await AddMembersAsync(group, GetOperationValueIds(operation.Value));
+                    break;
+                }
+
+            // Add externalId from path.
+            case PatchOps.Add when operation.Path?.ToLowerInvariant() == PatchPaths.ExternalId:
+                {
+                    await HandleExternalIdOperationAsync(group, operation.Value.GetString());
+                    break;
+                }
+
+            // Add externalId from value object
+            case PatchOps.Add when
+                string.IsNullOrWhiteSpace(operation.Path) &&
+                operation.Value.TryGetProperty("externalId", out var addExternalIdProperty):
+                {
+                    await HandleExternalIdOperationAsync(group, addExternalIdProperty.GetString());
                     break;
                 }
 
@@ -134,6 +166,43 @@ public class PatchGroupCommand : IPatchGroupCommand
                     _logger.LogWarning("Group patch operation not handled: {OperationOp}:{OperationPath}", operation.Op, operation.Path);
                     break;
                 }
+        }
+    }
+
+    private async Task HandleExternalIdOperationAsync(Group group, string newExternalId)
+    {
+        var validExternalId = await GetValidExternalIdAsync(group, newExternalId);
+
+        group.ExternalId = validExternalId;
+        group.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
+        await _groupRepository.ReplaceAsync(group);
+    }
+
+    private async Task<string> GetValidExternalIdAsync(Group group, string newExternalId)
+    {
+        if (string.IsNullOrWhiteSpace(newExternalId))
+        {
+            // Ensure we're not saving empty or just whitespace externalId.
+            return null;
+        }
+
+        await EnsureExternalIdIsValidAsync(group, newExternalId);
+        return newExternalId;
+    }
+
+    private async Task EnsureExternalIdIsValidAsync(Group group, string newExternalId)
+    {
+        if (newExternalId.Length > 300)
+        {
+            throw new BadRequestException("ExternalId cannot exceed 300 characters.");
+        }
+
+        var existingGroups = await _groupRepository.GetManyByOrganizationIdAsync(group.OrganizationId);
+        if (existingGroups.Any(g => g.Id != group.Id &&
+                                    !string.IsNullOrWhiteSpace(g.ExternalId) &&
+                                    g.ExternalId.Equals(newExternalId, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ConflictException("ExternalId already exists for another group.");
         }
     }
 

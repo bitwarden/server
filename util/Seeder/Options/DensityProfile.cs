@@ -105,4 +105,33 @@ public class DensityProfile
     /// Folder count distribution override. When null, uses FolderCountDistributions.Realistic.
     /// </summary>
     public Distribution<(int Min, int Max)>? FolderDistribution { get; init; }
+
+    /// <summary>
+    /// Fraction of ciphers that get an archived state.
+    /// Applies independently to both the personal-cipher pool and the org-cipher pool — each pool
+    /// enforces this rate against its own size and its own MaxArchivedCiphers cap.
+    /// </summary>
+    public double ArchivedCipherRate { get; init; }
+
+    /// <summary>
+    /// Fraction of personal-vault and org ciphers that get DeletedDate set.
+    /// Applies independently to both ownership types, each against its own pool size and cap.
+    /// </summary>
+    public double DeletedCipherRate { get; init; }
+
+    /// <summary>
+    /// Fraction of the eligible cipher pool (personal or org, computed independently per pool)
+    /// deliberately made both archived and deleted.
+    /// </summary>
+    public double ArchivedAndDeletedOverlapRate { get; init; }
+
+    /// <summary>
+    /// Absolute cap on archived ciphers produced per pool (personal, org) in a single seed run.
+    /// </summary>
+    public int MaxArchivedCiphers { get; init; } = 50;
+
+    /// <summary>
+    /// Absolute cap on deleted ciphers produced per pool (personal, org) in a single seed run.
+    /// </summary>
+    public int MaxDeletedCiphers { get; init; } = 25;
 }

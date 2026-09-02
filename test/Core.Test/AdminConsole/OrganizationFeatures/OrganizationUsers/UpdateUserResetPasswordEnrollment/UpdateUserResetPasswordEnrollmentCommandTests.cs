@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Entities;
@@ -64,7 +65,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("User not valid.", exception.Message);
+        Assert.Contains(new ConfirmUserNotValidError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +84,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, userId, resetPasswordKey, null));
 
-        Assert.Contains("User not valid.", exception.Message);
+        Assert.Contains(new ConfirmUserNotValidError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -100,7 +101,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("User not valid.", exception.Message);
+        Assert.Contains(new ConfirmUserNotValidError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -117,7 +118,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("User not valid.", exception.Message);
+        Assert.Contains(new ConfirmUserNotValidError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -138,7 +139,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("Organization does not allow password reset enrollment.", exception.Message);
+        Assert.Contains(new PasswordResetEnrollmentNotAllowedError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -160,7 +161,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("Organization does not allow password reset enrollment.", exception.Message);
+        Assert.Contains(new PasswordResetEnrollmentNotAllowedError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -190,7 +191,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, resetPasswordKey, callingUserId));
 
-        Assert.Contains("Organization does not have the password reset policy enabled.", exception.Message);
+        Assert.Contains(new PasswordResetPolicyNotEnabledError().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -206,7 +207,7 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
                 organizationId, callingUserId, null, callingUserId));
 
-        Assert.Contains("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.", exception.Message);
+        Assert.Contains("Due to an Enterprise policy, you are not allowed to withdraw from account recovery.", exception.Message);
     }
 
     private static void SetupOrgUser(
