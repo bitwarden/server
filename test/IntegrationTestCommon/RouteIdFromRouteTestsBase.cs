@@ -1,27 +1,30 @@
-﻿using System.Reflection;
-using Bit.Api.IntegrationTest.Factories;
-using Microsoft.AspNetCore.Authorization;
+using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.AdminConsole.Authorization;
+namespace Bit.IntegrationTestCommon;
 
-public abstract class RequirementFromRouteTestsBase(ApiApplicationFactory factory)
+public abstract class RouteIdFromRouteTestsBase(IServiceProvider services)
 {
-    protected abstract bool IsRequirement(IAuthorizationRequirement requirement);
+    protected abstract bool IsGuardedEndpoint(Endpoint endpoint);
 
     protected abstract bool IsRouteIdParameter(ParameterInfo parameter);
 
     protected abstract string FailureSummary(int violationCount);
 
-    protected void AssertAllRequirementEndpointsBindIdFromRoute()
+    protected virtual string DescribeSuffix(Endpoint endpoint) => string.Empty;
+
+    protected void AssertAllGuardedEndpointsBindIdFromRoute()
     {
-        var endpointDataSources = factory.Services.GetRequiredService<IEnumerable<EndpointDataSource>>();
+        var endpointDataSources = services.GetRequiredService<IEnumerable<EndpointDataSource>>();
 
         var violations = endpointDataSources
             .SelectMany(source => source.Endpoints)
-            .Where(HasRequirement)
+            .Where(IsGuardedEndpoint)
             .Where(HasIdParameterNotBoundFromRoute)
             .Select(Describe)
             .Distinct()
@@ -30,12 +33,6 @@ public abstract class RequirementFromRouteTestsBase(ApiApplicationFactory factor
 
         Assert.True(violations.Count == 0, BuildFailureMessage(violations));
     }
-
-    private bool HasRequirement(Endpoint endpoint) =>
-        endpoint.Metadata
-            .OfType<IAuthorizationRequirementData>()
-            .SelectMany(data => data.GetRequirements())
-            .Any(IsRequirement);
 
     private bool HasIdParameterNotBoundFromRoute(Endpoint endpoint)
     {
@@ -60,14 +57,7 @@ public abstract class RequirementFromRouteTestsBase(ApiApplicationFactory factor
         var httpMethods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods;
         var verbs = httpMethods is { Count: > 0 } ? string.Join(",", httpMethods) : "ANY";
 
-        var requirements = endpoint.Metadata
-            .OfType<IAuthorizationRequirementData>()
-            .SelectMany(data => data.GetRequirements())
-            .Where(IsRequirement)
-            .Select(requirement => requirement.GetType().Name)
-            .Distinct();
-
-        return $"{verbs} {route} [{string.Join(", ", requirements)}]";
+        return $"{verbs} {route}{DescribeSuffix(endpoint)}";
     }
 
     private string BuildFailureMessage(List<string> violations) =>

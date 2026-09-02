@@ -1,13 +1,14 @@
 ﻿using System.Reflection;
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.IntegrationTestCommon;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Authorization;
 
 public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory)
-    : RequirementFromRouteTestsBase(factory), IClassFixture<ApiApplicationFactory>
+    : RouteIdFromRouteTestsBase(factory.Services), IClassFixture<ApiApplicationFactory>
 {
     private static readonly string[] _organizationIdRouteNames = ["orgId", "organizationId"];
 
@@ -29,10 +30,25 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
     /// </summary>
     [Fact]
     public void AllOrganizationRequirementEndpoints_BindOrganizationIdFromRoute() =>
-        AssertAllRequirementEndpointsBindIdFromRoute();
+        AssertAllGuardedEndpointsBindIdFromRoute();
 
-    protected override bool IsRequirement(IAuthorizationRequirement requirement) =>
-        requirement is IOrganizationRequirement || _routeReadingRequirements.Contains(requirement.GetType());
+    protected override bool IsGuardedEndpoint(Endpoint endpoint) =>
+        endpoint.Metadata
+            .OfType<IAuthorizationRequirementData>()
+            .SelectMany(data => data.GetRequirements())
+            .Any(IsRequirement);
+
+    protected override string DescribeSuffix(Endpoint endpoint)
+    {
+        var requirements = endpoint.Metadata
+            .OfType<IAuthorizationRequirementData>()
+            .SelectMany(data => data.GetRequirements())
+            .Where(IsRequirement)
+            .Select(requirement => requirement.GetType().Name)
+            .Distinct();
+
+        return $" [{string.Join(", ", requirements)}]";
+    }
 
     protected override bool IsRouteIdParameter(ParameterInfo parameter) =>
         _organizationIdRouteNames.Contains(parameter.Name, StringComparer.OrdinalIgnoreCase);
@@ -42,4 +58,7 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
         "'organizationId' parameter without [FromRoute]. The requirement handler reads the organization id from " +
         "route values only, so a same-named parameter must be bound with [FromRoute] or a form body value can " +
         "shadow it and diverge from the authorized id";
+
+    private static bool IsRequirement(IAuthorizationRequirement requirement) =>
+        requirement is IOrganizationRequirement || _routeReadingRequirements.Contains(requirement.GetType());
 }

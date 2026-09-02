@@ -1,13 +1,14 @@
 ﻿using System.Reflection;
 using Bit.Api.AdminConsole.Authorization.Providers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.IntegrationTestCommon;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Authorization;
 
 public class ProviderRequirementFromRouteTests(ApiApplicationFactory factory)
-    : RequirementFromRouteTestsBase(factory), IClassFixture<ApiApplicationFactory>
+    : RouteIdFromRouteTestsBase(factory.Services), IClassFixture<ApiApplicationFactory>
 {
     private const string _providerIdRouteName = "providerId";
 
@@ -21,10 +22,25 @@ public class ProviderRequirementFromRouteTests(ApiApplicationFactory factory)
     /// </summary>
     [Fact]
     public void AllProviderRequirementEndpoints_BindProviderIdFromRoute() =>
-        AssertAllRequirementEndpointsBindIdFromRoute();
+        AssertAllGuardedEndpointsBindIdFromRoute();
 
-    protected override bool IsRequirement(IAuthorizationRequirement requirement) =>
-        requirement is IProviderRequirement;
+    protected override bool IsGuardedEndpoint(Endpoint endpoint) =>
+        endpoint.Metadata
+            .OfType<IAuthorizationRequirementData>()
+            .SelectMany(data => data.GetRequirements())
+            .Any(IsRequirement);
+
+    protected override string DescribeSuffix(Endpoint endpoint)
+    {
+        var requirements = endpoint.Metadata
+            .OfType<IAuthorizationRequirementData>()
+            .SelectMany(data => data.GetRequirements())
+            .Where(IsRequirement)
+            .Select(requirement => requirement.GetType().Name)
+            .Distinct();
+
+        return $" [{string.Join(", ", requirements)}]";
+    }
 
     protected override bool IsRouteIdParameter(ParameterInfo parameter) =>
         string.Equals(parameter.Name, _providerIdRouteName, StringComparison.OrdinalIgnoreCase);
@@ -34,4 +50,7 @@ public class ProviderRequirementFromRouteTests(ApiApplicationFactory factory)
         "without [FromRoute]. The ProviderRequirementHandler reads the provider id from route values only, so a " +
         "same-named parameter must be bound with [FromRoute] or a form body value can shadow it and diverge from " +
         "the authorized id";
+
+    private static bool IsRequirement(IAuthorizationRequirement requirement) =>
+        requirement is IProviderRequirement;
 }
