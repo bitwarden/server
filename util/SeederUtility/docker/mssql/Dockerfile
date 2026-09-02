@@ -19,9 +19,11 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Healthy only once the seed is attached, so dependents can wait on it rather than
-# racing the attach and migrating an empty database into place
+# racing the attach and migrating an empty database into place.
+# MSSQL_SA_PASSWORD is what current images (and Aspire) set; SA_PASSWORD is the deprecated
+# name some consumers still use.
 HEALTHCHECK --interval=10s --timeout=15s --retries=90 --start-period=30s \
-    CMD /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${SA_PASSWORD}" -C \
+    CMD /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${MSSQL_SA_PASSWORD:-$SA_PASSWORD}" -C \
         -d vault_dev -b -Q "SET NOCOUNT ON; IF NOT EXISTS (SELECT 1 FROM [User]) RAISERROR('unseeded', 16, 1)" > /dev/null 2>&1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

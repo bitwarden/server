@@ -14,7 +14,9 @@ term_handler() {
 trap term_handler TERM INT
 
 sqlcmd() {
-    /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${SA_PASSWORD}" -C "$@"
+    # MSSQL_SA_PASSWORD is what current images (and Aspire) set; SA_PASSWORD is the deprecated
+    # name some consumers still use.
+    /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "${MSSQL_SA_PASSWORD:-$SA_PASSWORD}" -C "$@"
 }
 
 # Polls the given command every 2s, failing the container if it never succeeds
