@@ -146,7 +146,6 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
-        services.AddOptionality();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
 
@@ -190,12 +189,6 @@ public class Startup
         {
             app.UsePathBase("/identity");
             app.UseForwardedHeaders(globalSettings);
-
-            if (!CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
-            {
-                logger.LogWarning(
-                    "globalSettings__kdfdefaulthashkey is not set. This value not being set degrades account enumeration protections. Set this value to a strong random secret (used as an HMAC key) in production environments.");
-            }
         }
 
         // Default Middleware
@@ -237,8 +230,16 @@ public class Startup
         // Add IdentityServer to the request pipeline.
         app.UseIdentityServer();
 
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
+
         // Add Mvc stuff
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);

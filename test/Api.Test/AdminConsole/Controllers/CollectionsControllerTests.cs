@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
@@ -72,6 +73,151 @@ public class CollectionsControllerTests
             .Received(1)
             .UpdateAsync(ExpectedCollection(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
                 Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_ReturnsServerAuthoritative_GroupsAndUsers(Organization organization,
+        CreateCollectionRequestModel collectionRequest, CollectionAdminDetails serverDetails,
+        Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        // Server drops a group that does not exist; response must reflect what the server persisted, not the request.
+        serverDetails.Groups = [];
+        serverDetails.Users = [];
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(new CurrentContextOrganization());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionAdminDetails>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ReadWithAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(Arg.Any<Guid>(), userId, true)
+            .Returns(serverDetails);
+
+        var result = await sutProvider.Sut.Post(organization.Id, collectionRequest);
+
+        var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
+        Assert.Empty(response.Groups);
+        Assert.Empty(response.Users);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetByIdWithPermissionsAsync(Arg.Any<Guid>(), userId, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_WithoutReadWithAccess_ReturnsCollectionWithoutGroupsAndUsers(Organization organization,
+        CreateCollectionRequestModel collectionRequest, CollectionAdminDetails serverDetails,
+        Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(new CurrentContextOrganization());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Collection>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionAdminDetails>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ReadWithAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(Arg.Any<Guid>(), userId, true)
+            .Returns(serverDetails);
+
+        var result = await sutProvider.Sut.Post(organization.Id, collectionRequest);
+
+        // Without ReadWithAccess the response falls back to the basic Collection constructor — Groups/Users are not populated.
+        var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
+        Assert.Null(response.Groups);
+        Assert.Null(response.Users);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetByIdWithPermissionsAsync(Arg.Any<Guid>(), userId, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_ReturnsServerAuthoritative_GroupsAndUsers(Collection collection,
+        UpdateCollectionRequestModel collectionRequest, CollectionAdminDetails serverDetails,
+        Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        // Server drops a group that does not exist; response must reflect what the server persisted, not the request.
+        collection.DefaultUserCollectionEmail = null;
+        serverDetails.Groups = [];
+        serverDetails.Users = [];
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(new CurrentContextOrganization());
+
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collection.Id).Returns(collection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), collection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionAdminDetails>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ReadWithAccess)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(collection.Id, userId, true)
+            .Returns(serverDetails);
+
+        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+
+        var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
+        Assert.Empty(response.Groups);
+        Assert.Empty(response.Users);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetByIdWithPermissionsAsync(collection.Id, userId, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Put_WithoutReadWithAccess_ReturnsCollectionWithoutGroupsAndUsers(Collection collection,
+        UpdateCollectionRequestModel collectionRequest, CollectionAdminDetails serverDetails,
+        Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        collection.DefaultUserCollectionEmail = null;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(new CurrentContextOrganization());
+
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collection.Id).Returns(collection);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), collection,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<CollectionAdminDetails>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.ReadWithAccess)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetByIdWithPermissionsAsync(collection.Id, userId, true)
+            .Returns(serverDetails);
+
+        var result = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
+
+        // Without ReadWithAccess the response falls back to the basic Collection constructor — Groups/Users are not populated.
+        var response = Assert.IsType<CollectionAccessDetailsResponseModel>(result);
+        Assert.Null(response.Groups);
+        Assert.Null(response.Users);
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetByIdWithPermissionsAsync(collection.Id, userId, true);
     }
 
     [Theory, BitAutoData]

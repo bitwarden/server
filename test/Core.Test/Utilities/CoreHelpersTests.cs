@@ -22,18 +22,6 @@ public class CoreHelpersTests
         new object[] {new DateTime(2020, 12, 30, 11, 49, 12, DateTimeKind.Utc), 1609328952000L},
     };
 
-    [Fact]
-    public void GenerateComb_Success()
-    {
-        // Arrange & Act
-        var comb = CoreHelpers.GenerateComb();
-
-        // Assert
-        Assert.NotEqual(Guid.Empty, comb);
-        // TODO: Add more asserts to make sure important aspects of
-        // the comb are working properly
-    }
-
     public static IEnumerable<object[]> GuidSeedCases = [
         [
             Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
@@ -59,20 +47,13 @@ public class CoreHelpersTests
         Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
     ]).Select((zip) => new object[] { zip.Item1[0], zip.Item1[1], zip.Item2 });
 
-    [Theory]
-    [MemberData(nameof(GenerateCombCases))]
-    public void GenerateComb_WithInputs_Success(Guid inputGuid, DateTime inputTime, Guid expectedComb)
-    {
-        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
-
-        Assert.Equal(expectedComb, comb);
-    }
+    public static IEnumerable<object[]> DateFromCombCases =>
+        GenerateCombCases.Select(c => new object[] { c[1], c[2] });
 
     [Theory]
-    [MemberData(nameof(GuidSeedCases))]
-    public void DateFromComb_WithComb_Success(Guid inputGuid, DateTime inputTime)
+    [MemberData(nameof(DateFromCombCases))]
+    public void DateFromComb_WithComb_Success(DateTime inputTime, Guid comb)
     {
-        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
         var inverseComb = CoreHelpers.DateFromComb(comb);
 
         Assert.Equal(inputTime, inverseComb, TimeSpan.FromMilliseconds(4));
@@ -345,6 +326,34 @@ public class CoreHelpersTests
     }
 
     [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_SecretsManagerAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessSecretsManager = true;
+        orgWithoutAccess.AccessSecretsManager = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesssecretsmanager", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesssecretsmanager", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
+    public void BuildIdentityClaims_PamAccess_OnlyForOrganizationsWithAccess(User user,
+        CurrentContextOrganization orgWithAccess, CurrentContextOrganization orgWithoutAccess)
+    {
+        orgWithAccess.AccessPam = true;
+        orgWithoutAccess.AccessPam = false;
+
+        var actual = CoreHelpers.BuildIdentityClaims(user, [orgWithAccess, orgWithoutAccess],
+            Array.Empty<CurrentContextProvider>(), false);
+
+        Assert.Contains(new KeyValuePair<string, string>("accesspam", orgWithAccess.Id.ToString()), actual);
+        Assert.DoesNotContain(new KeyValuePair<string, string>("accesspam", orgWithoutAccess.Id.ToString()), actual);
+    }
+
+    [Theory, BitAutoData, UserCustomize]
     public void BuildIdentityClaims_ProviderClaims_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
@@ -471,5 +480,42 @@ public class CoreHelpersTests
     public void ReplaceWhiteSpace_Success(string email)
     {
         Assert.Equal("helloworld", CoreHelpers.ReplaceWhiteSpace(email, string.Empty));
+    }
+
+    [Theory]
+    [InlineData("user@example.com", "user[at]example[dot]com")]
+    [InlineData("https://bitwarden.com", "bitwarden[dot]com")]
+    [InlineData("ftp://files.example.org", "files[dot]example[dot]org")]
+    public void SanitizeForEmail_NeutralizesAddressesAndLinks(string value, string expected)
+    {
+        Assert.Equal(expected, CoreHelpers.SanitizeForEmail(value));
+    }
+
+    [Theory]
+    [InlineData("<script>alert('x')</script>")]
+    [InlineData("Org & Co \"quoted\"")]
+    [InlineData("Tom & Jerry <tag>")]
+    public void SanitizeForEmail_DoesNotHtmlEncode(string value)
+    {
+        // Handlebars HTML-encodes interpolated values by default, so this method must not
+        // encode as well; otherwise the output is double-encoded in rendered emails.
+        var result = CoreHelpers.SanitizeForEmail(value);
+
+        Assert.DoesNotContain("&lt;", result);
+        Assert.DoesNotContain("&gt;", result);
+        Assert.DoesNotContain("&amp;", result);
+        Assert.DoesNotContain("&quot;", result);
+    }
+
+    [Theory]
+    [InlineData("Client.Org", "Client.\u200COrg")]
+    [InlineData("40167 Max.Seats", "40167 Max.\u200CSeats")]
+    [InlineData("admin@example.com", "admin@\u200Cexample.\u200Ccom")]
+    [InlineData("No Dots Here", "No Dots Here")]
+    public void PreventEmailAutoLinking_InsertsZeroWidthNonJoiner(string value, string expected)
+    {
+        // Mail clients auto-link anything that looks like a domain (e.g. "Client.Org"), so a
+        // zero-width non-joiner is inserted after "." and "@" while the visible text is unchanged.
+        Assert.Equal(expected, CoreHelpers.PreventEmailAutoLinking(value));
     }
 }

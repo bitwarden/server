@@ -7,6 +7,7 @@ internal record SeedPreset
     public SeedPresetUsers? Users { get; init; }
     public SeedPresetGroups? Groups { get; init; }
     public SeedPresetCollections? Collections { get; init; }
+    public SeedPresetSso? Sso { get; init; }
     public bool? Folders { get; init; }
     public List<string>? FolderNames { get; init; }
     public SeedPresetCiphers? Ciphers { get; init; }
@@ -25,6 +26,7 @@ internal record SeedPresetOrganization
     public string? Fixture { get; init; }
     public string? Name { get; init; }
     public string? Domain { get; init; }
+    public List<string>? ClaimedDomains { get; init; }
     public int? Seats { get; init; }
     public string? PlanType { get; init; }
     public bool? UseAutomaticUserConfirmation { get; init; }
@@ -32,6 +34,13 @@ internal record SeedPresetOrganization
     public bool? LimitItemDeletion { get; init; }
     public bool? LimitCollectionCreation { get; init; }
     public bool? LimitCollectionDeletion { get; init; }
+}
+
+internal record SeedPresetSso
+{
+    public string? Identifier { get; init; }
+    public string? EncryptionType { get; init; }
+    public string? Provider { get; init; }
 }
 
 internal record SeedPresetRoster

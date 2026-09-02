@@ -6,24 +6,20 @@ namespace Bit.Seeder.Factories;
 
 internal static class DriversLicenseCipherSeeder
 {
-    internal static Cipher Create(
-        string encryptionKey,
-        string name,
-        DriversLicenseViewDto driversLicense,
-        Guid? organizationId = null,
-        Guid? userId = null,
-        string? notes = null)
+    internal static Cipher Create(CipherSeed options)
     {
         var cipherView = new CipherViewDto
         {
-            OrganizationId = organizationId,
-            Name = name,
-            Notes = notes,
+            OrganizationId = options.OrganizationId,
+            Name = options.Name,
+            Notes = options.Notes,
             Type = CipherTypes.DriversLicense,
-            DriversLicense = driversLicense
+            DriversLicense = options.DriversLicense,
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, encryptionKey);
-        return CipherEncryption.CreateEntity(encrypted, encrypted.ToDriversLicenseData(), CipherType.DriversLicense, organizationId, userId);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
+        return CipherEncryption.CreateEntity(encrypted, encrypted.ToDriversLicenseData(), CipherType.DriversLicense, options.OrganizationId, options.UserId);
     }
 }

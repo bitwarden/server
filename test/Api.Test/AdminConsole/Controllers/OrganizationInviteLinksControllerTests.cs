@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using Xunit;
+using ErrorResponseModel = Bit.Core.Models.Api.ErrorResponseModel;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
 
@@ -20,37 +22,37 @@ public class OrganizationInviteLinksControllerTests
 {
     [Theory, BitAutoData]
     public async Task Create_WithValidInput_Success(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
             .CreateAsync(Arg.Any<CreateOrganizationInviteLinkRequest>())
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Create(orgId, model);
+        var result = await sutProvider.Sut.Create(inviteLink.OrganizationId, model);
 
         var createdResult = Assert.IsType<Created<OrganizationInviteLinkResponseModel>>(result);
-        Assert.Equal($"organizations/{orgId}/invite-link", createdResult.Location);
+        Assert.Equal($"organizations/{inviteLink.OrganizationId}/invite-link", createdResult.Location);
         Assert.NotNull(createdResult.Value);
         Assert.Equal(inviteLink.Id, createdResult.Value.Id);
-        Assert.Equal(inviteLink.Code, createdResult.Value.Code);
-        Assert.Equal(orgId, createdResult.Value.OrganizationId);
+        Assert.Equal(Guid.Parse(inviteLink.Code), createdResult.Value.Code);
+        Assert.Equal(inviteLink.OrganizationId, createdResult.Value.OrganizationId);
 
         await sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
             .Received(1)
             .CreateAsync(Arg.Is<CreateOrganizationInviteLinkRequest>(r =>
-                r.OrganizationId == orgId &&
-                r.EncryptedInviteKey == "encrypted-key"));
+                r.OrganizationId == inviteLink.OrganizationId &&
+                r.Invite == "invite"));
     }
 
     [Theory, BitAutoData]
@@ -61,7 +63,8 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = ["acme.com"],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -76,23 +79,22 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task Get_WhenLinkExists_ReturnsOkWithModel(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         sutProvider.GetDependency<IGetOrganizationInviteLinkQuery>()
-            .GetAsync(orgId)
+            .GetAsync(inviteLink.OrganizationId)
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Get(orgId);
+        var result = await sutProvider.Sut.Get(inviteLink.OrganizationId);
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
         Assert.NotNull(okResult.Value);
         Assert.Equal(inviteLink.Id, okResult.Value.Id);
-        Assert.Equal(orgId, okResult.Value.OrganizationId);
+        Assert.Equal(inviteLink.OrganizationId, okResult.Value.OrganizationId);
     }
 
     [Theory, BitAutoData]
@@ -133,7 +135,8 @@ public class OrganizationInviteLinksControllerTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = [],
-            EncryptedInviteKey = "encrypted-key",
+            Invite = "invite",
+            SupportsConfirmation = false,
         };
 
         sutProvider.GetDependency<ICreateOrganizationInviteLinkCommand>()
@@ -148,12 +151,11 @@ public class OrganizationInviteLinksControllerTests
 
     [Theory, BitAutoData]
     public async Task Update_WithValidInput_ReturnsOk(
-        Guid orgId,
         OrganizationInviteLink inviteLink,
         SutProvider<OrganizationInviteLinksController> sutProvider)
     {
-        inviteLink.OrganizationId = orgId;
         inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
 
         var model = new UpdateOrganizationInviteLinkRequestModel
         {
@@ -164,17 +166,17 @@ public class OrganizationInviteLinksControllerTests
             .UpdateAsync(Arg.Any<UpdateOrganizationInviteLinkRequest>())
             .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
 
-        var result = await sutProvider.Sut.Update(orgId, model);
+        var result = await sutProvider.Sut.Update(inviteLink.OrganizationId, model);
 
         var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
         Assert.NotNull(okResult.Value);
         Assert.Equal(inviteLink.Id, okResult.Value.Id);
-        Assert.Equal(orgId, okResult.Value.OrganizationId);
+        Assert.Equal(inviteLink.OrganizationId, okResult.Value.OrganizationId);
 
         await sutProvider.GetDependency<IUpdateOrganizationInviteLinkCommand>()
             .Received(1)
             .UpdateAsync(Arg.Is<UpdateOrganizationInviteLinkRequest>(r =>
-                r.OrganizationId == orgId));
+                r.OrganizationId == inviteLink.OrganizationId));
     }
 
     [Theory, BitAutoData]
@@ -213,7 +215,187 @@ public class OrganizationInviteLinksControllerTests
 
         var result = await sutProvider.Sut.Update(orgId, model);
 
-        var badRequestResult = Assert.IsType<BadRequest<Bit.Core.Models.Api.ErrorResponseModel>>(result);
+        var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
         Assert.NotNull(badRequestResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WithValidInput_ReturnsOk(
+        Guid orgId,
+        OrganizationInviteLink inviteLink,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        inviteLink.OrganizationId = orgId;
+        inviteLink.AllowedDomains = "[\"acme.com\"]";
+        inviteLink.Code = Guid.NewGuid().ToString();
+
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(inviteLink));
+
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkResponseModel>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(inviteLink.Id, okResult.Value.Id);
+        Assert.Equal(orgId, okResult.Value.OrganizationId);
+
+        await sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .Received(1)
+            .UpdateAsync(Arg.Is<UpdateInviteSupportConfirmRequest>(r =>
+                r.OrganizationId == orgId &&
+                r.Invite == "new-invite" &&
+                r.SupportsConfirmation));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WhenNoLinkExists_ReturnsNotFound(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        // Arrange
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotFound()));
+
+        // Act
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        // Assert
+        var notFoundResult = Assert.IsType<NotFound<ErrorResponseModel>>(result);
+        Assert.NotNull(notFoundResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateInviteSupportConfirm_WhenInviteLinkNotAvailable_Returns400(
+        Guid orgId,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        // Arrange
+        var model = new UpdateInviteSupportConfirmRequestModel
+        {
+            Invite = "new-invite",
+            SupportsConfirmation = true,
+        };
+
+        sutProvider.GetDependency<IUpdateInviteSupportConfirmCommand>()
+            .UpdateAsync(Arg.Any<UpdateInviteSupportConfirmRequest>())
+            .Returns(new CommandResult<OrganizationInviteLink>(new InviteLinkNotAvailable()));
+
+        // Act
+        var result = await sutProvider.Sut.UpdateInviteSupportConfirm(orgId, model);
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+        Assert.NotNull(badRequestResult.Value);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithValidQuery_Success(
+        GetOrganizationInviteLinkStatusRequestModel model,
+        OrganizationInviteLinkStatus status,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(status));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        var okResult = Assert.IsType<Ok<OrganizationInviteLinkStatusResponseModel>>(result);
+        Assert.Equal(status.OrganizationName, okResult.Value!.OrganizationName);
+        Assert.Equal(status.LinksEnabled, okResult.Value.LinksEnabled);
+        Assert.Equal(status.SeatsAvailable, okResult.Value.SeatsAvailable);
+        Assert.Equal(status.SupportsConfirmation, okResult.Value.SupportsConfirmation);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithNotFoundError_ReturnsNotFound(
+        GetOrganizationInviteLinkStatusRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotFound()));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetStatus_WithNotAvailableError_ReturnsBadRequest(
+        GetOrganizationInviteLinkStatusRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkStatusQuery>()
+            .GetStatusAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<OrganizationInviteLinkStatus>(new InviteLinkNotAvailable()));
+
+        var result = await sutProvider.Sut.GetStatus(model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithValidInput_ReturnsOkWithList(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        List<Policy> policies,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        foreach (var policy in policies)
+        {
+            policy.Data = null;
+        }
+
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(policies));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
+
+        var okResult = Assert.IsType<Ok<ListResponseModel<PolicyResponseModel>>>(result);
+        Assert.NotNull(okResult.Value);
+        Assert.Equal(policies.Count, okResult.Value.Data.Count());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithNotFoundError_ReturnsNotFound(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotFound()));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
+
+        Assert.IsType<NotFound<ErrorResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPolicies_WithNotAvailableError_ReturnsBadRequest(
+        GetOrganizationInviteLinkPoliciesRequestModel model,
+        SutProvider<OrganizationInviteLinksController> sutProvider)
+    {
+        sutProvider.GetDependency<IGetOrganizationInviteLinkPoliciesQuery>()
+            .GetPoliciesAsync(model.OrganizationId, model.Code)
+            .Returns(new CommandResult<ICollection<Policy>>(new InviteLinkNotAvailable()));
+
+        var result = await sutProvider.Sut.GetPolicies(model);
+
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 }

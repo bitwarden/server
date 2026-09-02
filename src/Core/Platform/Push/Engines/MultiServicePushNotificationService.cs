@@ -1,6 +1,4 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Settings;
-using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
@@ -66,10 +64,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
 #endif
     }
 
-    public Task PushCipherAsync(Cipher cipher, PushType pushType, IEnumerable<Guid>? collectionIds)
-    {
-        return PushToServices((s) => s.PushCipherAsync(cipher, pushType, collectionIds));
-    }
     public Task PushAsync<T>(PushNotification<T> pushNotification) where T : class
     {
         return PushToServices((s) => s.PushAsync(pushNotification));

@@ -834,6 +834,16 @@ public class TaxService : ITaxService
             Example = "GB123456789",
             ValidationExpression = new Regex("^GB[0-9]{9}$")
         },
+        // Checked after the XI and GB prefixed entries. A bare 9-digit value cannot distinguish
+        // mainland UK from Northern Ireland, so it resolves to gb_vat.
+        new()
+        {
+            Country = "GB",
+            Code = "gb_vat",
+            Description = "United Kingdom VAT number (unprefixed)",
+            Example = "123456789",
+            ValidationExpression = new Regex("^[0-9]{9}$")
+        },
         new()
         {
             Country = "US",

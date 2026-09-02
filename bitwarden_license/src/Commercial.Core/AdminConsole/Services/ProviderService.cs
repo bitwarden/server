@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -58,7 +59,8 @@ public class ProviderService : IProviderService
     private readonly ICurrentContext _currentContext;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IPricingClient _pricingClient;
     private readonly IProviderClientOrganizationSignUpCommand _providerClientOrganizationSignUpCommand;
@@ -71,7 +73,9 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
+        IProviderBillingService providerBillingService, IPricingClient pricingClient,
         IProviderClientOrganizationSignUpCommand providerClientOrganizationSignUpCommand,
         IPolicyRequirementQuery policyRequirementQuery)
     {
@@ -89,7 +93,8 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
         _stripeAdapter = stripeAdapter;
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
+        _providerAbilityCacheService = providerAbilityCacheService;
         _providerBillingService = providerBillingService;
         _pricingClient = pricingClient;
         _providerClientOrganizationSignUpCommand = providerClientOrganizationSignUpCommand;
@@ -697,7 +702,7 @@ public class ProviderService : IProviderService
 
     public async Task DeleteAsync(Provider provider, string token)
     {
-        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.IsValid(provider))
+        if (!_providerDeleteTokenDataFactory.TryUnprotect(token, out var data) || !data.Valid || !data.IsValid(provider))
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -707,7 +712,7 @@ public class ProviderService : IProviderService
     public async Task DeleteAsync(Provider provider)
     {
         await _providerRepository.DeleteAsync(provider);
-        await _applicationCacheService.DeleteProviderAbilityAsync(provider.Id);
+        await _providerAbilityCacheService.DeleteProviderAbilityAsync(provider.Id);
     }
 
     private async Task SendInviteAsync(ProviderUser providerUser, Provider provider)
@@ -765,7 +770,7 @@ public class ProviderService : IProviderService
             {
                 organization.Enabled = enabled;
                 await _organizationRepository.ReplaceAsync(organization);
-                await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+                await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
             }
         }
     }

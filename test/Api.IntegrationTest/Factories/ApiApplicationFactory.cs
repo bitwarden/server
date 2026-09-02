@@ -1,6 +1,6 @@
-﻿using Bit.Core;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
@@ -64,7 +64,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
                 Email = email,
                 MasterPasswordHash = masterPasswordHash,
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
                 UserAsymmetricKeys = new KeysRequestModel()
                 {
                     PublicKey = TestEncryptionConstants.PublicKey,

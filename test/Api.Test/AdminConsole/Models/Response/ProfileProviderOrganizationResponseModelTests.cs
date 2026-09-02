@@ -127,5 +127,6 @@ public class ProfileProviderOrganizationResponseModelTests
         Assert.False(result.Permissions.ManageUsers);
         Assert.False(result.ResetPasswordEnrolled);
         Assert.False(result.AccessSecretsManager);
+        Assert.False(result.AccessPam);
     }
 }

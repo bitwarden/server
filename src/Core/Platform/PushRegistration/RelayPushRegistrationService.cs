@@ -28,6 +28,14 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     public async Task CreateOrUpdateRegistrationAsync(PushRegistrationData pushData, string deviceId, string userId,
         string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
+        if (string.IsNullOrEmpty(pushData.Token))
+        {
+            // Self-host installations have no need to relay non-mobile push registration
+            // as even web push capable clients will use signalR based push notifications
+            // in self-host environments.
+            return;
+        }
+
         var requestModel = new PushRegistrationRequestModel
         {
             DeviceId = deviceId,

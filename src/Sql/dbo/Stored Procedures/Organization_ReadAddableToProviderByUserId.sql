@@ -19,5 +19,11 @@ BEGIN
         -- All Teams & Enterprise for MSP
         (@ProviderType = 0 AND O.[PlanType] IN (2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20) OR
         -- All Enterprise for MOE
-         @ProviderType = 2 AND O.[PlanType] IN (4, 5, 10, 11, 14, 15, 19, 20));
+         @ProviderType = 2 AND O.[PlanType] IN (4, 5, 10, 11, 14, 15, 19, 20)) AND
+        -- Exclude organizations that already belong to a provider (PM-39894)
+        NOT EXISTS (
+            SELECT 1
+            FROM [dbo].[ProviderOrganization] PO
+            WHERE PO.[OrganizationId] = O.[Id]
+        );
 END

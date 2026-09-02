@@ -9,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -17,6 +18,7 @@ using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -32,21 +34,22 @@ public class AccountsController : Controller
     private readonly IGetWebAuthnLoginCredentialAssertionOptionsCommand _getWebAuthnLoginCredentialAssertionOptionsCommand;
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IFeatureService _featureService;
 
     private readonly byte[]? _defaultKdfHmacKey = null;
-    private static readonly List<UserKdfInformation> _defaultKdfResults =
+    internal static readonly List<UserKdfInformation> _defaultKdfResults =
     [
         // The first result (index 0) should always return the "normal" default.
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // We want more weight for this default, so add it again
         new()
         {
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
         },
         // Add some other possible defaults...
         new()
@@ -62,9 +65,17 @@ public class AccountsController : Controller
         new()
         {
             Kdf = KdfType.Argon2id,
-            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+            KdfIterations = 3,
+            KdfMemory = 64,
+            KdfParallelism = 4,
+        },
+        // Mobile-friendly Argon2id default, tuned for iOS memory constraints.
+        new()
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
         }
     ];
 
@@ -75,6 +86,7 @@ public class AccountsController : Controller
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        IFeatureService featureService,
         GlobalSettings globalSettings
         )
     {
@@ -84,6 +96,7 @@ public class AccountsController : Controller
         _getWebAuthnLoginCredentialAssertionOptionsCommand = getWebAuthnLoginCredentialAssertionOptionsCommand;
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _featureService = featureService;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -94,8 +107,10 @@ public class AccountsController : Controller
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
+
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
-            model.ReceiveMarketingEmails, model.FromMarketing);
+            model.ReceiveMarketingEmails, model.FromMarketing, model.OpenOrgInvite);
 
         if (token != null)
         {
@@ -103,6 +118,18 @@ public class AccountsController : Controller
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Mirrors <c>[RequireFeature(FeatureFlagKeys.GenerateInviteLink)]</c> on the other invite-link
+    /// surfaces — throws <see cref="FeatureUnavailableException"/> when the flag is off.
+    /// </summary>
+    private void GuardOpenOrgInviteFeatureEnabled(OpenOrgInviteRequestModel? openOrgInvite)
+    {
+        if (openOrgInvite is not null && !_featureService.IsEnabled(FeatureFlagKeys.GenerateInviteLink))
+        {
+            throw new FeatureUnavailableException();
+        }
     }
 
     [HttpPost("register/verification-email-clicked")]
@@ -126,6 +153,8 @@ public class AccountsController : Controller
     [HttpPost("register/finish")]
     public async Task<RegisterFinishResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
+        GuardOpenOrgInviteFeatureEnabled(model.OpenOrgInvite);
+
         var registerFinishData = model.ToData();
         var user = model.ToUser(registerFinishData.IsV2Encryption());
 
@@ -135,10 +164,16 @@ public class AccountsController : Controller
         switch (model.GetTokenType())
         {
             case RegisterFinishTokenType.EmailVerification:
-                identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(
-                    user,
-                    registerFinishData,
-                    model.EmailVerificationToken!);
+                identityResult = model.OpenOrgInvite is not null
+                    ? await _registerUserCommand.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!,
+                        model.OpenOrgInvite)
+                    : await _registerUserCommand.RegisterUserViaEmailVerificationToken(
+                        user,
+                        registerFinishData,
+                        model.EmailVerificationToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             case RegisterFinishTokenType.OrganizationInvite:
@@ -170,6 +205,13 @@ public class AccountsController : Controller
                     registerFinishData,
                     model.ProviderInviteToken!,
                     (Guid)model.ProviderUserId!);
+                return ProcessRegistrationResult(identityResult, user);
+
+            case RegisterFinishTokenType.SalesAssisted:
+                identityResult = await _registerUserCommand.RegisterUserViaSalesAssistedToken(
+                    user,
+                    registerFinishData,
+                    model.SalesAssistedToken!);
                 return ProcessRegistrationResult(identityResult, user);
 
             default:

@@ -4,6 +4,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
@@ -57,6 +58,69 @@ public class SendRequestModelTests
         Assert.False(root.TryGetProperty("Notes", out var _));
         var name = AssertHelper.AssertJsonProperty(root, "Name", JsonValueKind.String).GetString();
         Assert.Equal("encrypted_name", name);
+    }
+
+    [Fact]
+    public void ToSend_Item_Success()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+            },
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
+
+        Assert.Equal(deletionDate, send.DeletionDate);
+        Assert.False(send.Disabled);
+        Assert.Null(send.ExpirationDate);
+        Assert.False(send.HideEmail);
+        Assert.Equal("encrypted_key", send.Key);
+        Assert.Equal("owner@bitwarden.com", send.Emails);
+        var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
+        Assert.Equal(sendItemData.EncryptionVersion, sendRequest.Data.EncryptionVersion);
+        Assert.Equal(sendItemData.Data, sendRequest.Data.Data);
+    }
+
+    [Fact]
+    public void ToSend_Item_NullData()
+    {
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            ExpirationDate = null,
+            HideEmail = false,
+            Key = "encrypted_key",
+            MaxAccessCount = null,
+            Name = "encrypted_name",
+            Notes = null,
+            Emails = "owner@bitwarden.com",
+            Data = null,
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
     }
 
     [Fact]

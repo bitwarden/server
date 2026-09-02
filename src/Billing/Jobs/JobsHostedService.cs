@@ -18,10 +18,18 @@ public class JobsHostedService(
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        Jobs = new List<Tuple<Type, ITrigger>>
+        var jobs = new List<Tuple<Type, ITrigger>>
         {
             new(typeof(AliveJob), AliveJob.GetTrigger())
         };
+
+        // Bitwarden-hosted billing concern; self-hosted installations have no Stripe subscriptions to migrate.
+        if (!_globalSettings.SelfHosted)
+        {
+            jobs.Add(new(typeof(SendInvoicePriceMigrationJob), SendInvoicePriceMigrationJob.GetTrigger()));
+        }
+
+        Jobs = jobs;
 
         await base.StartAsync(cancellationToken);
     }
@@ -29,6 +37,7 @@ public class JobsHostedService(
     public static void AddJobsServices(IServiceCollection services)
     {
         services.AddTransient<AliveJob>();
+        services.AddTransient<SendInvoicePriceMigrationJob>();
         // add this service as a singleton so we can inject it where needed
         services.AddSingleton<JobsHostedService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());

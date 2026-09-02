@@ -20,5 +20,6 @@ public class OrganizationSignup : OrganizationUpgrade
     public bool IsFromSecretsManagerTrial { get; set; }
     public bool IsFromProvider { get; set; }
     public bool SkipTrial { get; set; }
+    public int? TrialLength { get; set; }
     public string[] Coupons { get; set; }
 }

@@ -3,6 +3,7 @@ using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
@@ -260,19 +261,23 @@ public class SecretVersionsControllerTests
         foreach (var version in versions)
         {
             version.SecretId = secret.Id;
-            sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
         }
 
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(ids).Returns(versions);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Secret> { secret });
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, false));
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)> { { secret.Id, (true, false) } });
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.BulkDeleteAsync(ids));
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .DeleteManyByIdAsync(default!);
     }
 
     [Theory]
@@ -295,9 +300,10 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
-            .ReturnsForAnyArgs((true, true));
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)> { { secret.Id, (true, true) } });
 
         await sutProvider.Sut.BulkDeleteAsync(ids);
 

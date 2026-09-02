@@ -1,13 +1,13 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
@@ -15,7 +15,7 @@ namespace Bit.Core.Dirt.Reports.ReportFeatures;
 public class MemberAccessReportQuery(
     IOrganizationMemberBaseDetailRepository organizationMemberBaseDetailRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     ILogger<MemberAccessReportQuery> logger) : IMemberAccessReportQuery
 {
     public async Task<IEnumerable<MemberAccessReportDetail>> GetMemberAccessReportsAsync(
@@ -39,7 +39,7 @@ public class MemberAccessReportQuery(
         logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved two-factor status for {UsersCount} users for OrganizationId: {OrganizationId}",
             orgUsersTwoFactorEnabled.Count(), request.OrganizationId);
 
-        var orgAbility = await applicationCacheService.GetOrganizationAbilityAsync(request.OrganizationId);
+        var orgAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(request.OrganizationId);
         logger.LogInformation(Constants.BypassFiltersEventId, "Retrieved organization ability (UseResetPassword: {UseResetPassword}) for OrganizationId: {OrganizationId}",
             orgAbility?.UseResetPassword, request.OrganizationId);
 

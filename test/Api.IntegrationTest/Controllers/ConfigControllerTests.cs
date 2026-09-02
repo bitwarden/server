@@ -1,12 +1,13 @@
 ﻿using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
+
+file record ConfigResponse(string Version);
 
 public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -48,7 +49,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.GetAsync("/config");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Version);
@@ -61,7 +62,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.GetAsync("/config");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Version);
@@ -87,7 +88,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.GetAsync("/config");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Version);

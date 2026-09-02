@@ -84,6 +84,7 @@ public class EnvironmentFileBuilder
             ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
             ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
             ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
+            ["globalSettings__sqlServer__migrationExecutionTimeoutSeconds"] = string.Empty,
             ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
             ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                 Helpers.SecureRandomString(64, alpha: true, numeric: true),

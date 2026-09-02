@@ -44,10 +44,14 @@ public class GlobalSettings : IGlobalSettings
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
+    public virtual int SalesAssistedRegistrationTokenLifetimeDays { get; set; } = 5;
+    public virtual bool SuppressOnboardingInterstitials { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
+    public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
@@ -92,11 +96,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
-    /// <summary>
-    /// This Hash Key is used to prevent enumeration attacks against the Send Access feature.
-    /// </summary>
-    public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual string PricingApiKey { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
     public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
@@ -258,6 +259,8 @@ public class GlobalSettings : IGlobalSettings
         private string _jobSchedulerConnectionString;
         public bool SkipDatabasePreparation { get; set; }
         public bool DisableDatabaseMaintenanceJobs { get; set; }
+
+        public int? MigrationExecutionTimeoutSeconds { get; set; }
 
         public string ConnectionString
         {
@@ -565,6 +568,10 @@ public class GlobalSettings : IGlobalSettings
         public string BlobName { get; set; } = "dataprotection.pfx";
 
         public string? CertificatePassword { get; set; }
+
+        public KeyProtectionPolicyType KeyProtectionPolicy { get; set; } =
+            KeyProtectionPolicyType.Certificate;
+
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
@@ -573,10 +580,47 @@ public class GlobalSettings : IGlobalSettings
 
         public CertificateInfo[] UnprotectCertificates { get; set; } = [];
 
+        /// <summary>
+        /// Stages a new protection certificate so its secret (Password) can be deployed before
+        /// the non-secret (FileName) without causing a startup failure. When Enabled is false the
+        /// entry is completely ignored. When Enabled is true the pending cert becomes the active
+        /// protection certificate and BlobName/CertificatePassword are ignored entirely, which
+        /// means they can be updated to match the new cert at any time without coordination.
+        /// The old protection certificate must be added to UnprotectCertificates explicitly
+        /// before activating PendingProtection to keep existing keys readable.
+        /// </summary>
+        public PendingProtectionSettings? PendingProtection { get; set; }
+
+        /// <summary>
+        /// Defines how ASP.NET Core data-protection keys are protected at rest.
+        /// Migration between types is not supported.
+        /// </summary>
+        public enum KeyProtectionPolicyType
+        {
+            /// <summary>
+            /// ASP.NET Core data-protection keys are wrapped using the configured certificate.
+            /// </summary>
+            Certificate = 0,
+
+            /// <summary>
+            /// Keys are persisted without application-level certificate wrapping and rely on storage
+            /// encryption at rest and access controls.
+            /// </summary>
+            StorageManaged = 1,
+        }
+
         public class CertificateInfo
         {
             public required string FileName { get; set; }
             public required string Password { get; set; }
+            public bool Enabled { get; set; } = true;
+        }
+
+        public class PendingProtectionSettings
+        {
+            public string? FileName { get; set; }
+            public string? Password { get; set; }
+            public bool Enabled { get; set; }
         }
     }
 #nullable disable
@@ -661,6 +705,8 @@ public class GlobalSettings : IGlobalSettings
         public int CiphersLimit { get; set; }
         public int CollectionRelationshipsLimit { get; set; }
         public int CollectionsLimit { get; set; }
+        public int FoldersLimit { get; set; }
+        public int FolderRelationshipsLimit { get; set; }
     }
 
     public class BitPaySettings
@@ -724,6 +770,10 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
         public string PremiumCheckoutSuccessUrl { get; set; }
         public string PremiumCheckoutCancelUrl { get; set; }
+        public string BrowserPremiumCheckoutSuccessUrl { get; set; }
+        public string BrowserPremiumCheckoutCancelUrl { get; set; }
+        public string DesktopPremiumCheckoutSuccessUrl { get; set; }
+        public string DesktopPremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

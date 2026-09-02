@@ -1,6 +1,9 @@
 #![allow(clippy::missing_safety_doc)]
 
+mod attachment;
 mod cipher;
+mod crypto_util;
+mod provider;
 mod rsa_keys;
 
 use std::{
@@ -13,8 +16,8 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 
 use bitwarden_crypto::{
     BitwardenLegacyKeyBytes, HashPurpose, Kdf, KeyEncryptable, MasterKey, Pkcs8PrivateKeyBytes,
-    PrivateKey, PublicKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey, UnsignedSharedKey,
-    UserKey,
+    PrivateKey, PublicKey, RsaKeyPair, SpkiPublicKeyBytes, SymmetricCryptoKey,
+    SymmetricKeyAlgorithm, UnsignedSharedKey, UserKey,
 };
 
 #[no_mangle]
@@ -96,7 +99,7 @@ fn keypair(key: &SymmetricCryptoKey, pool_index: u32) -> RsaKeyPair {
 
 #[no_mangle]
 pub unsafe extern "C" fn generate_organization_keys() -> *const c_char {
-    let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+    let key = SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac);
 
     let key = UserKey::new(key);
     let keypair = key.make_key_pair().expect("Failed to generate key pair");
@@ -159,7 +162,7 @@ pub unsafe extern "C" fn free_c_string(str: *mut c_char) {
 mod tests {
     use std::collections::HashSet;
 
-    use bitwarden_crypto::SymmetricCryptoKey;
+    use bitwarden_crypto::{SymmetricCryptoKey, SymmetricKeyAlgorithm};
 
     use super::RSA_POOL;
     use crate::keypair;
@@ -186,7 +189,7 @@ mod tests {
 
     #[test]
     fn keypair_different_indices_produce_different_public_keys() {
-        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let key = SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac);
         let kp0 = keypair(&key, 0);
         let kp1 = keypair(&key, 1);
         assert_ne!(
@@ -198,7 +201,7 @@ mod tests {
 
     #[test]
     fn keypair_same_index_produces_same_public_key() {
-        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let key = SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac);
         let kp_a = keypair(&key, 42);
         let kp_b = keypair(&key, 42);
         assert_eq!(
@@ -210,7 +213,7 @@ mod tests {
 
     #[test]
     fn keypair_index_wraps_at_pool_boundary() {
-        let key = SymmetricCryptoKey::make_aes256_cbc_hmac_key();
+        let key = SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac);
         let kp_zero = keypair(&key, 0);
         let kp_wrapped = keypair(&key, 100);
         assert_eq!(

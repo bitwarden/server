@@ -17,6 +17,7 @@ public class BaseRotateUserAccountKeysData
     public required IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }
     public required IEnumerable<Device> DeviceKeys { get; set; }
     public V2UpgradeTokenData? V2UpgradeToken { get; set; }
+    public KeyId? NewUserKeyId { get; set; }
 
     // User vault data encrypted by the userKey
     public required IEnumerable<Cipher> Ciphers { get; set; }

@@ -1,9 +1,7 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 
 /// <summary>
@@ -28,13 +26,16 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// that has the Require SSO policy enabled.
     /// </remarks>
     public bool SsoRequired { get; init; }
+
+    /// <summary>
+    /// Organizations that require SSO login
+    /// </summary>
+    public ICollection<Guid> OrganizationIds { get; init; } = Array.Empty<Guid>();
 }
 
-
-public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, IFeatureService featureService)
+public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings)
     : BasePolicyRequirementFactory<RequireSsoPolicyRequirement>
 {
-
     public override PolicyType PolicyType => PolicyType.RequireSso;
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
@@ -46,18 +47,11 @@ public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings, I
     {
         policyDetails = policyDetails.ToList();
 
-        var acceptedFeatureFlagEnabled = featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState);
-
-        var result = new RequireSsoPolicyRequirement
+        return new RequireSsoPolicyRequirement
         {
-            CanUsePasskeyLogin = !policyDetails.Any(p =>
-                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
-
-            SsoRequired = policyDetails.Any(p => !acceptedFeatureFlagEnabled
-                ? p.OrganizationUserStatus is OrganizationUserStatusType.Confirmed
-                : p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
+            CanUsePasskeyLogin = !policyDetails.Any(),
+            SsoRequired = policyDetails.Any(),
+            OrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
         };
-
-        return result;
     }
 }

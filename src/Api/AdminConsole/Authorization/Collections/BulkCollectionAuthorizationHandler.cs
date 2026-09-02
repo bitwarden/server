@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Diagnostics;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,7 +21,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
     private HashSet<Guid>? _managedCollectionsIds;
@@ -30,12 +31,12 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
         ICollectionRepository collectionRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IFeatureService featureService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _featureService = featureService;
     }
 
@@ -115,21 +116,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanCreateAsync(CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with CreateNewCollections permission can always create collections
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.CreateNewCollections: true })
-        {
-            return true;
-        }
-
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-
-        var userIsMemberOfOrg = org is not null;
-        var limitCollectionCreationEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionCreation: true };
-        var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-        // If the limit collection management setting is disabled, allow any user to create collections
-        if (userIsMemberOfOrg && (!limitCollectionCreationEnabled || userIsOrgOwnerOrAdmin))
+        if (CollectionPermissions.CanCreate(org, await GetOrganizationAbilityAsync(org)))
         {
             return true;
         }
@@ -325,7 +312,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return null;
         }
 
-        return await _applicationCacheService.GetOrganizationAbilityAsync(organization.Id);
+        return await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organization.Id);
     }
 
     private async Task<bool> AllowAdminAccessToAllCollectionItems(CurrentContextOrganization? org)

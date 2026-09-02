@@ -58,4 +58,5 @@ public interface IProfileOrganizationDetails
     bool UsePhishingBlocker { get; set; }
     bool UseMyItems { get; set; }
     bool UseInviteLinks { get; set; }
+    bool UsePam { get; set; }
 }

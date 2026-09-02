@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
@@ -7,7 +8,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
-using Bit.Core.Billing.Tax.Utilities;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -64,8 +65,9 @@ public class UpgradePremiumToOrganizationCommand(
     ICollectionRepository collectionRepository,
     IBraintreeService braintreeService,
     IGetPaymentMethodQuery getPaymentMethodQuery,
-    IApplicationCacheService applicationCacheService,
-    IPushNotificationService pushNotificationService)
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
+    IPushNotificationService pushNotificationService,
+    ITaxService taxService)
     : BaseBillingCommand<UpgradePremiumToOrganizationCommand>(logger), IUpgradePremiumToOrganizationCommand
 {
     private readonly ILogger<UpgradePremiumToOrganizationCommand> _logger = logger;
@@ -128,21 +130,21 @@ public class UpgradePremiumToOrganizationCommand(
             organizationId, user, organizationName, publicKey, encryptedPrivateKey, targetPlan, currentSubscription.Id);
 
         // Update customer billing address for tax calculation
-        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId,
-            new CustomerUpdateOptions
+        var addressUpdateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
             {
-                Address = new AddressOptions
-                {
-                    Country = billingAddress.Country,
-                    PostalCode = billingAddress.PostalCode
-                },
-                TaxExempt = TaxHelpers.DetermineTaxExemptStatus(billingAddress.Country),
-            });
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode
+            }
+        };
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(user.GatewayCustomerId, addressUpdateOptions);
 
         // Add tax ID to the customer for accurate tax calculation if provided
         if (billingAddress.TaxId != null)
         {
-            await AddTaxIdToCustomerAsync(user.GatewayCustomerId!, billingAddress.TaxId);
+            await AddTaxIdToCustomerAsync(user.GatewayCustomerId!, billingAddress.Country, billingAddress.TaxId);
         }
 
         // Release any scheduled price increase before updating subscription
@@ -257,6 +259,7 @@ public class UpgradePremiumToOrganizationCommand(
             UsersGetPremium = targetPlan.UsersGetPremium,
             UseCustomPermissions = targetPlan.HasCustomPermissions,
             UseScim = targetPlan.HasScim,
+            UseRiskInsights = targetPlan.HasRiskInsights,
             Plan = targetPlan.Name,
             Gateway = GatewayType.Stripe,
             Enabled = true,
@@ -326,7 +329,7 @@ public class UpgradePremiumToOrganizationCommand(
         });
 
         // Update cache
-        await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         // Create OrganizationUser for the upgrading user as owner
         var organizationUser = new OrganizationUser
@@ -388,13 +391,25 @@ public class UpgradePremiumToOrganizationCommand(
     /// If the tax ID is a Spanish NIF, also adds the corresponding EU VAT ID.
     /// </summary>
     /// <param name="customerId">The Stripe customer ID to add the tax ID to.</param>
+    /// <param name="country">The billing address country used to derive the tax ID type.</param>
     /// <param name="taxId">The tax ID to add, including the type and value.</param>
-    private async Task AddTaxIdToCustomerAsync(string customerId, TaxID taxId)
+    private async Task AddTaxIdToCustomerAsync(string customerId, string country, TaxID taxId)
     {
-        await stripeAdapter.CreateTaxIdAsync(customerId,
-            new TaxIdCreateOptions { Type = taxId.Code, Value = taxId.Value });
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
 
-        if (taxId.Code == TaxIdType.SpanishNIF)
+        if (derivedTaxIdCode == null)
+        {
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                country, taxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? taxId.Code;
+
+        await stripeAdapter.CreateTaxIdAsync(customerId,
+            new TaxIdCreateOptions { Type = taxIdCode, Value = taxId.Value });
+
+        if (taxIdCode == TaxIdType.SpanishNIF)
         {
             await stripeAdapter.CreateTaxIdAsync(customerId,
                 new TaxIdCreateOptions { Type = TaxIdType.EUVAT, Value = $"ES{taxId.Value}" });

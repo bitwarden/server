@@ -9,6 +9,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess;
 using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -25,17 +26,20 @@ public class EmergencyAccessController : Controller
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IEmergencyAccessService _emergencyAccessService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public EmergencyAccessController(
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
         _emergencyAccessService = emergencyAccessService;
         _globalSettings = globalSettings;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("trusted")]
@@ -173,15 +177,43 @@ public class EmergencyAccessController : Controller
     public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (model.RequestHasNewDataTypes())
+        {
+            var result = await _emergencyAccessService.FinishRecoveryTakeoverAsync(
+                id,
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData());
+
+            if (result.Succeeded)
+            {
+                return;
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            throw new BadRequestException(ModelState);
+        }
+
         await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
     }
 
+    /// <remarks>
+    /// Emergency access exposes the grantor's personal vault only, and a user-owned cipher is never
+    /// leasing-gated, so the gate authorizes all of them.
+    /// </remarks>
     [HttpPost("{id}/view")]
     public async Task<EmergencyAccessViewResponseModel> ViewCiphers(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user);
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, viewResult.Ciphers);
+        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user,
+            fullAccess);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

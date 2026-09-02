@@ -10,5 +10,6 @@ public interface IImportCiphersCommand
         IEnumerable<KeyValuePair<int, int>> folderRelationships, Guid importingUserId);
 
     Task ImportIntoOrganizationalVaultAsync(List<Collection> collections, List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
+        IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId,
+        List<Folder> folders, IEnumerable<KeyValuePair<int, int>> folderRelationships);
 }

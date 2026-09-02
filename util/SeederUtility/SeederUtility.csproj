@@ -7,7 +7,7 @@
     <RootNamespace>Bit.SeederUtility</RootNamespace>
     <AssemblyName>SeederUtility</AssemblyName>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <UserSecretsId>2294c6ba-7cd0-4293-a797-3882e41c61cb</UserSecretsId>
+    <UserSecretsId>bitwarden-seeder-utility</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +16,16 @@
 
   <ItemGroup>
     <PackageReference Include="CommandDotNet" Version="[7.0.5]" />
+    <PackageReference Include="Spectre.Console" Version="[0.55.2]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

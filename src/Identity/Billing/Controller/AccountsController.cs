@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Api.Requests.Accounts;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -15,7 +16,7 @@ public class AccountsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync([FromBody] TrialSendVerificationEmailRequestModel model)
     {
-        var trialLength = model.TrialLength ?? 7;
+        var trialLength = model.TrialLength ?? TrialInitiationConstants.DefaultTrialLengthDays;
 
         if (model.PaymentOptional && trialLength == 0)
         {

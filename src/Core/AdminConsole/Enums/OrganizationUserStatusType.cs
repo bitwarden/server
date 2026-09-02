@@ -23,6 +23,12 @@ public enum OrganizationUserStatusType : short
     /// </summary>
     Confirmed = 2,
     /// <summary>
+    /// The OrganizationUser has been provisioned (e.g. via SCIM or Directory Connector) but has not yet been invited to
+    /// join the organization. A staged member is tracked so it can be managed by provisioning tools, but does not consume
+    /// a seat, is not subject to organization policies, and is not sent an invitation while in this state.
+    /// </summary>
+    Staged = 3,
+    /// <summary>
     /// The OrganizationUser has been revoked from the organization and cannot access organization data while in this state.
     /// </summary>
     /// <remarks>

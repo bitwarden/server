@@ -167,8 +167,8 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             }
 
             var organizationUserHasResetPasswordPermission =
-                // The repository will pull users in all statuses, so we also need to ensure that revoked-status users do not have
-                // permissions sent down.
+                // The repository returns records in every status; only these three represent active membership
+                // that should propagate org permissions into decryption options.
                 organizationUser.Status is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Accepted or
                     OrganizationUserStatusType.Confirmed &&
                 // Admins and owners get ManageResetPassword functionally "for free" through their role.

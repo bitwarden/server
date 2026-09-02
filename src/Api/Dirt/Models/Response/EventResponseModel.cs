@@ -36,6 +36,7 @@ public class EventResponseModel : ResponseModel
         ProjectId = ev.ProjectId;
         ServiceAccountId = ev.ServiceAccountId;
         GrantedServiceAccountId = ev.GrantedServiceAccountId;
+        SendId = ev.SendId;
     }
 
     public EventType Type { get; set; }
@@ -60,4 +61,5 @@ public class EventResponseModel : ResponseModel
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
+    public Guid? SendId { get; set; }
 }

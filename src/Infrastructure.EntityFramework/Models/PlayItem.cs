@@ -8,6 +8,7 @@ public class PlayItem : Core.Entities.PlayItem
 {
     public virtual User? User { get; set; }
     public virtual AdminConsole.Models.Organization? Organization { get; set; }
+    public virtual AdminConsole.Models.Provider.Provider? Provider { get; set; }
 }
 
 public class PlayItemMapperProfile : Profile

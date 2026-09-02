@@ -12,7 +12,7 @@ public class MasterPasswordAuthenticationDataRequestModel
     public required KdfRequestModel Kdf { get; init; }
     [Required]
     public required string MasterPasswordAuthenticationHash { get; init; }
-    [Required]
+    [Required(AllowEmptyStrings = false)]
     [StringLength(256)]
     public required string Salt { get; init; }
 

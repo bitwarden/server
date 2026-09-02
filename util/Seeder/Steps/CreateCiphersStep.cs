@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Seeder.Data.Distributions;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
@@ -51,9 +52,27 @@ internal sealed class CreateCiphersStep : IStep
 
         var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{_fixtureName}");
         var collectionIds = context.Registry.CollectionIds;
+        var progress = context.GetProgress();
 
         var ciphers = new List<Cipher>(seedFile.Items.Count);
         var collectionCiphers = new List<CollectionCipher>();
+
+        progress?.Report(new PhaseStarted(SeederPhases.CreatingCiphers, seedFile.Items.Count));
+        var ticker = new ProgressTicker(progress, SeederPhases.CreatingCiphers, seedFile.Items.Count);
+
+        // Per-item archived/deleted lifecycle state on fixture ciphers. Required because the generated-cipher
+        // path applies archive/delete only via density rates, and generated ciphers can never carry attachments
+        // (attachments are fixture-only) — so archived/deleted ciphers that ALSO have attachments are only
+        // expressible here, on named fixture items. Archive is per-user (attributed to the vault owner, so it
+        // renders as archived in the owner's vault); delete is a global soft-delete. Reuses the same
+        // CipherComposer logic as the generated path so CreationDate/RevisionDate are backdated consistently.
+        var lifecycleSets = BuildLifecycleSets(seedFile.Items);
+        var hasLifecycleState = lifecycleSets.Archived.Count > 0 || lifecycleSets.DeletedOnly.Count > 0;
+        Guid ResolveArchiveOwner(int _) => _personal
+            ? userId!.Value
+            : context.Owner?.Id ?? throw new InvalidOperationException(
+                "A fixture cipher is marked archived, but the organization has no owner to attribute the archive to. " +
+                "Provide a roster owner or call AddOwner() before creating ciphers.");
 
         for (var i = 0; i < seedFile.Items.Count; i++)
         {
@@ -72,6 +91,9 @@ internal sealed class CreateCiphersStep : IStep
                 CipherType.Identity => IdentityCipherSeeder.Create(options),
                 CipherType.SecureNote => SecureNoteCipherSeeder.Create(options),
                 CipherType.SSHKey => SshKeyCipherSeeder.Create(options),
+                CipherType.BankAccount => BankAccountCipherSeeder.Create(options),
+                CipherType.DriversLicense => DriversLicenseCipherSeeder.Create(options),
+                CipherType.Passport => PassportCipherSeeder.Create(options),
                 _ => throw new ArgumentOutOfRangeException(nameof(options), $"Unsupported cipher type: {options.Type}")
             };
 
@@ -81,6 +103,11 @@ internal sealed class CreateCiphersStep : IStep
             }
 
             cipher.Reprompt = options.Reprompt;
+
+            if (hasLifecycleState)
+            {
+                CipherComposer.AssignArchiveOrDeleteState(cipher, i, lifecycleSets, ResolveArchiveOwner);
+            }
 
             ciphers.Add(cipher);
 
@@ -92,6 +119,8 @@ internal sealed class CreateCiphersStep : IStep
             }
 
             context.Registry.FixtureCipherNameToId[item.Name] = cipher.Id;
+
+            ticker.Tick();
 
             // Collection assignment (round-robin, skipped for personal vaults or when collectionAssignments handles it)
             if (_skipCollectionAssignment || collectionIds.Count <= 0)
@@ -116,7 +145,44 @@ internal sealed class CreateCiphersStep : IStep
             }
         }
 
+        ticker.Flush();
+
         context.Ciphers.AddRange(ciphers);
         context.CollectionCiphers.AddRange(collectionCiphers);
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingCiphers));
+    }
+
+    /// <summary>
+    /// Maps each item's <c>archived</c>/<c>deleted</c> flags onto the index sets
+    /// <see cref="CipherComposer.AssignArchiveOrDeleteState"/> consumes. <c>Both</c> is the subset that is
+    /// both archived and deleted; <c>DeletedOnly</c> is deleted but not archived.
+    /// </summary>
+    private static ArchiveDeleteSets BuildLifecycleSets(IReadOnlyList<SeedVaultItem> items)
+    {
+        var archived = new HashSet<int>();
+        var both = new HashSet<int>();
+        var deletedOnly = new HashSet<int>();
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            var isArchived = items[i].Archived == true;
+            var isDeleted = items[i].Deleted == true;
+
+            if (isArchived)
+            {
+                archived.Add(i);
+                if (isDeleted)
+                {
+                    both.Add(i);
+                }
+            }
+            else if (isDeleted)
+            {
+                deletedOnly.Add(i);
+            }
+        }
+
+        return new ArchiveDeleteSets(archived, both, deletedOnly, archived.OrderBy(index => index).ToList());
     }
 }

@@ -32,7 +32,8 @@ public class PermissionsHelpersTests
             ManageSso: true,
             ManageUsers: true,
             ManageResetPassword: true,
-            ManageScim: false
+            ManageScim: false,
+            ManageAccessRules: true
         });
     }
 }

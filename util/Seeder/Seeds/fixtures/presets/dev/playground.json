@@ -1,0 +1,51 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "dev-org",
+    "planType": "enterprise-annually",
+    "seats": 20,
+    "allowAdminAccessToAllCollectionItems": false
+  },
+  "roster": {
+    "fixture": "dev-roles"
+  },
+  "ciphers": {
+    "fixture": "dev-playground"
+  },
+  "collectionAssignments": [
+    { "cipher": "GitHub", "collection": "Engineering" },
+    { "cipher": "Docker Hub", "collection": "Engineering" },
+    { "cipher": "npm Registry", "collection": "Engineering" },
+    { "cipher": "Figma", "collection": "Engineering" },
+    { "cipher": "AWS IAM - Developer", "collection": "Engineering/Cloud Infrastructure" },
+    { "cipher": "PgAdmin (Production)", "collection": "Engineering/Cloud Infrastructure" },
+    { "cipher": "Deploy Key - prod-web-01", "collection": "Engineering/Cloud Infrastructure" },
+    { "cipher": "Datadog", "collection": "Engineering/CI & Releases" },
+    { "cipher": "Release Signing Checklist", "collection": "Engineering/CI & Releases" },
+    { "cipher": "Incident Response Runbook", "collection": "Engineering/CI & Releases" },
+    { "cipher": "Stripe Dashboard", "collection": "Finance" },
+    { "cipher": "Corporate Amex", "collection": "Finance" },
+    { "cipher": "Xero", "collection": "Finance/Vendors & Contracts" },
+    { "cipher": "BambooHR", "collection": "People Ops" },
+    { "cipher": "Onboarding Checklist", "collection": "People Ops" },
+    { "cipher": "Slack", "collection": "Company-Wide" },
+    { "cipher": "Office Wi-Fi", "collection": "Company-Wide" },
+    { "cipher": "Office Door Codes", "collection": "Company-Wide" },
+    { "cipher": "Office Shipping Profile", "collection": "Company-Wide" },
+    { "cipher": "AWS Console (Root)", "collection": "Leadership/Break Glass" },
+    { "cipher": "Google Workspace Admin", "collection": "Leadership/Break Glass" }
+  ],
+  "folderAssignments": [
+    { "cipher": "GitHub", "folder": "Work", "user": "uma.user" },
+    { "cipher": "Figma", "folder": "Work", "user": "uma.user" },
+    { "cipher": "npm Registry", "folder": "Personal Projects", "user": "uma.user" },
+    { "cipher": "AWS Console (Root)", "folder": "Break Glass", "user": "owen.owner" },
+    { "cipher": "Google Workspace Admin", "folder": "Break Glass", "user": "owen.owner" }
+  ],
+  "favoriteAssignments": [
+    { "cipher": "GitHub", "user": "uma.user" },
+    { "cipher": "Office Wi-Fi", "user": "uma.user" },
+    { "cipher": "AWS Console (Root)", "user": "owen.owner" },
+    { "cipher": "Stripe Dashboard", "user": "ingrid.larsen" }
+  ]
+}

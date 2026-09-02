@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -15,10 +16,21 @@ internal sealed class CreateOwnerStep : IStep
         var org = context.RequireOrganization();
         var password = context.GetPassword();
         var kdfIterations = context.GetKdfIterations();
-        var ownerEmail = context.GetMangler().Mangle($"owner@{context.RequireDomain()}");
+        var emailOverride = context.GetOwnerEmailOverride();
+        var ownerEmail = !string.IsNullOrWhiteSpace(emailOverride)
+            ? context.GetMangler().Mangle(emailOverride)
+            : context.GetMangler().Mangle($"owner@{context.RequireDomain()}");
         var userKeys = RustSdkService.GenerateUserKeys(ownerEmail, password, kdfIterations, poolIndex: 0);
-        var (owner, _) = UserSeeder.Create(ownerEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password, kdfIterations: kdfIterations);
-
+        var (owner, _) = UserSeeder.Create(
+            new UserSeed
+            {
+                Email = ownerEmail,
+                Keys = userKeys,
+                Password = password,
+                KdfIterations = kdfIterations
+            },
+            context.GetPasswordHasher(),
+            context.GetMangler());
 
         var ownerOrgKey = RustSdkService.GenerateUserOrganizationKey(owner.PublicKey!, context.RequireOrgKey());
         var ownerOrgUser = org.CreateOrganizationUserWithKey(

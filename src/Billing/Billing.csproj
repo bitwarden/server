@@ -7,12 +7,6 @@
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CA1305</WarningsNotAsErrors>
   </PropertyGroup>
 
-  <PropertyGroup Label="Server SDK settings">
-    <!-- These features will be gradually turned on -->
-    <BitIncludeFeatures>false</BitIncludeFeatures>
-    <BitIncludeAuthentication>false</BitIncludeAuthentication>
-  </PropertyGroup>
-
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />
   <ItemGroup>
     <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
@@ -20,7 +14,7 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MarkDig" Version="[1.1.0]" />
+    <PackageReference Include="MarkDig" Version="[1.3.2]" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="[10.1.7]" />
   </ItemGroup>
 

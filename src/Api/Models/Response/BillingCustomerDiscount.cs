@@ -41,6 +41,12 @@ public class BillingCustomerDiscount
     /// </summary>
     public decimal? AmountOff { get; }
 
+    /// <summary>The instant the discount stops applying (Stripe Discount.end). Null = no end date / perpetual.</summary>
+    public DateTime? End { get; }
+
+    /// <summary>For a repeating coupon, the number of months it applies. Null for once/forever.</summary>
+    public long? DurationInMonths { get; }
+
     /// <summary>
     /// List of Stripe product IDs that this discount applies to (e.g., ["prod_premium", "prod_families"]).
     /// <para>
@@ -50,6 +56,13 @@ public class BillingCustomerDiscount
     /// </para>
     /// </summary>
     public IReadOnlyList<string>? AppliesTo { get; }
+
+    /// <summary>
+    /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+    /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+    /// a deferred price-migration coupon from a real discount.
+    /// </summary>
+    public bool IsFromSchedule { get; }
 
     /// <summary>
     /// Creates a BillingCustomerDiscount from a SubscriptionInfo.BillingCustomerDiscount.
@@ -64,6 +77,9 @@ public class BillingCustomerDiscount
         Active = discount.Active;
         PercentOff = discount.PercentOff;
         AmountOff = discount.AmountOff;
+        End = discount.End;
+        DurationInMonths = discount.DurationInMonths;
         AppliesTo = discount.AppliesTo;
+        IsFromSchedule = discount.IsFromSchedule;
     }
 }

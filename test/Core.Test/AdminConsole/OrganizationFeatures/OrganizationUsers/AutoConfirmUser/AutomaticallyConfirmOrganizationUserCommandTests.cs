@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
@@ -24,6 +25,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
     public async Task AutomaticallyConfirmOrganizationUserAsync_UseMyItemsDisabled_DoesNotCreateCollection(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser,
+        Guid performingUserId,
         string key,
         string collectionName,
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
@@ -69,7 +71,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         // Act
@@ -85,6 +87,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
     public async Task AutomaticallyConfirmOrganizationUserAsync_UseMyItemsEnabled_CreatesCollection(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser,
+        Guid performingUserId,
         string key,
         string collectionName,
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
@@ -130,7 +133,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         // Act
@@ -149,6 +152,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
     public async Task AutomaticallyConfirmOrganizationUserAsync_UseMyItemsEnabled_PolicyDisabled_DoesNotCreateCollection(
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser,
+        Guid performingUserId,
         string key,
         string collectionName,
         SutProvider<AutomaticallyConfirmOrganizationUserCommand> sutProvider)
@@ -185,7 +189,7 @@ public class AutomaticallyConfirmOrganizationUserCommandTests
             OrganizationId = organization.Id,
             Key = key,
             DefaultUserCollectionName = collectionName,
-            PerformedBy = null
+            PerformedBy = new StandardUser(performingUserId, true)
         };
 
         // Act

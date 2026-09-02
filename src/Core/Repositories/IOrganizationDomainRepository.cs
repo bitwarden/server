@@ -1,8 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 
-#nullable enable
-
 namespace Bit.Core.Repositories;
 
 public interface IOrganizationDomainRepository : IRepository<OrganizationDomain, Guid>

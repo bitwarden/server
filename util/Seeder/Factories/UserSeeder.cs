@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
 
@@ -12,40 +13,58 @@ internal static class UserSeeder
     internal const string DefaultPassword = "asdfasdfasdf";
 
     internal static (User user, UserKeys keys) Create(
-        string email,
+        UserSeed seed,
         IPasswordHasher<User> passwordHasher,
-        IManglerService manglerService,
-        string? name = null,
-        bool emailVerified = true,
-        bool premium = false,
-        short? maxStorageGb = null,
-        UserKeys? keys = null,
-        string? password = null,
-        int kdfIterations = 5_000,
-        uint poolIndex = 0)
+        IManglerService manglerService)
     {
         // When keys are provided, caller owns email/key consistency - don't mangle
-        var mangledEmail = keys == null ? manglerService.Mangle(email) : email;
+        var keys = seed.Keys;
+        var mangledEmail = keys == null ? manglerService.Mangle(seed.Email) : seed.Email;
 
-        keys ??= RustSdkService.GenerateUserKeys(mangledEmail, password ?? DefaultPassword, kdfIterations, poolIndex);
+        keys ??= RustSdkService.GenerateUserKeys(
+            mangledEmail, seed.Password ?? DefaultPassword, seed.KdfIterations, seed.PoolIndex);
 
         var user = new User
         {
-            Id = CoreHelpers.GenerateComb(),
-            Name = name ?? mangledEmail.Split('@')[0],
+            Id = CombGuid.Generate(),
+            Name = seed.Name ?? mangledEmail.Split('@')[0],
             Email = mangledEmail,
-            EmailVerified = emailVerified,
+            EmailVerified = seed.EmailVerified,
             MasterPassword = null,
+            MasterPasswordHint = seed.MasterPasswordHint,
             SecurityStamp = Guid.NewGuid().ToString(),
             Key = keys.EncryptedUserKey,
             PublicKey = keys.PublicKey,
             PrivateKey = keys.PrivateKey,
-            Premium = premium,
-            MaxStorageGb = maxStorageGb,
+            Premium = seed.Premium,
+            PremiumExpirationDate = seed.Premium ? DateTime.UtcNow.AddYears(1) : null,
+            MaxStorageGb = seed.MaxStorageGb,
+            Gateway = seed.Gateway,
+            GatewayCustomerId = seed.GatewayCustomerId,
+            GatewaySubscriptionId = seed.GatewaySubscriptionId,
+            AvatarColor = seed.AvatarColor,
+            ForcePasswordReset = seed.ForcePasswordReset,
+            UsesKeyConnector = seed.UsesKeyConnector,
             ApiKey = CoreHelpers.SecureRandomString(30),
             Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = kdfIterations
+            KdfIterations = seed.KdfIterations
         };
+
+        // Set only when supplied so the entity's own default ("en-US") survives.
+        if (seed.Culture is not null)
+        {
+            user.Culture = seed.Culture;
+        }
+
+        if (seed.CreationDate is not null)
+        {
+            user.CreationDate = seed.CreationDate.Value;
+        }
+
+        if (seed.TwoFactorProviders is not null)
+        {
+            user.SetTwoFactorProviders(seed.TwoFactorProviders);
+        }
 
         user.MasterPassword = passwordHasher.HashPassword(user, keys.MasterPasswordHash);
 

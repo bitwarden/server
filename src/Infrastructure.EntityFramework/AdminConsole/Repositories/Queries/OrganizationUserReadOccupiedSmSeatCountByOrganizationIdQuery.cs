@@ -15,7 +15,11 @@ public class OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery : IQue
     public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
     {
         var query = from ou in dbContext.OrganizationUsers
-                    where ou.OrganizationId == _organizationId && ou.Status >= OrganizationUserStatusType.Invited && ou.AccessSecretsManager == true
+                    where ou.OrganizationId == _organizationId
+                          && (ou.Status == OrganizationUserStatusType.Invited ||
+                              ou.Status == OrganizationUserStatusType.Accepted ||
+                              ou.Status == OrganizationUserStatusType.Confirmed)
+                          && ou.AccessSecretsManager == true
                     select ou;
         return query;
     }

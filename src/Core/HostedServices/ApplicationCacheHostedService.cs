@@ -1,9 +1,8 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
@@ -15,7 +14,7 @@ namespace Bit.Core.HostedServices;
 
 public class ApplicationCacheHostedService : IHostedService, IDisposable
 {
-    private readonly FeatureRoutedCacheService? _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationRepository _organizationRepository;
     protected readonly ILogger<ApplicationCacheHostedService> _logger;
     private readonly ServiceBusClient _serviceBusClient;
@@ -28,14 +27,14 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
 
     public ApplicationCacheHostedService(
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationRepository organizationRepository,
         ILogger<ApplicationCacheHostedService> logger,
         GlobalSettings globalSettings)
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _applicationCacheService = applicationCacheService as FeatureRoutedCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
@@ -133,7 +132,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
 
     private async Task ProcessMessageAsync(ServiceBusReceivedMessage message, CancellationToken cancellationToken)
     {
-        if (message.Subject != _subName && _applicationCacheService != null)
+        if (message.Subject != _subName)
         {
             switch ((ApplicationCacheMessageType)message.ApplicationProperties["type"])
             {
@@ -142,12 +141,12 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
                     var upsertedOrg = await _organizationRepository.GetByIdAsync(upsertedOrgId);
                     if (upsertedOrg != null)
                     {
-                        await _applicationCacheService.BaseUpsertOrganizationAbilityAsync(upsertedOrg);
+                        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(upsertedOrg, cancellationToken);
                     }
                     break;
                 case ApplicationCacheMessageType.DeleteOrganizationAbility:
-                    await _applicationCacheService.BaseDeleteOrganizationAbilityAsync(
-                        (Guid)message.ApplicationProperties["id"]);
+                    await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(
+                        (Guid)message.ApplicationProperties["id"], cancellationToken);
                     break;
                 default:
                     break;

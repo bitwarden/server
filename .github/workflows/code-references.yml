@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -59,7 +59,7 @@ jobs:
 
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references@89a7d362d1d4b3725fe0fe0ccd0dc69e3bdcba58 # v2.14.0
+        uses: launchdarkly/find-code-references@a68d7da46aeffd66af43253b2d3619914508235b # v2.16.0
         with:
           accessToken: ${{ steps.get-kv-secrets.outputs.LD-ACCESS-TOKEN }}
           projKey: default

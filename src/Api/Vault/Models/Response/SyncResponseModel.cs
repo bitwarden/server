@@ -19,6 +19,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
@@ -46,25 +47,24 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<Send> sends,
         IEnumerable<WebAuthnCredential> webAuthnCredentials,
         IEnumerable<Policy> policiesNew = null,
-        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null)
+        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null,
+        FullCipherAccess fullCipherAccess = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingingUser,
+            organizationUserDetailsNew);
         Folders = folders.Select(f => new FolderResponseModel(f));
-        Ciphers = ciphers.Select(cipher =>
-            new CipherDetailsResponseModel(
-                cipher,
-                user,
-                GetOrganizationAbility(cipher, organizationAbilities),
-                globalSettings,
-                collectionCiphersDict));
+        // A leasing-gated cipher (one the witness does not authorize) is delivered partial; when no
+        // witness is supplied every cipher falls back to the partial shape, keeping sync fail-closed.
+        Ciphers = ciphers.Select(cipher => CipherDetailsResponseModel.From(
+            fullCipherAccess, cipher, user, GetOrganizationAbility(cipher, organizationAbilities), globalSettings,
+            collectionCiphersDict));
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
-        OrganizationsNew = organizationUserDetailsNew?.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingingUser));
         Sends = sends.Select(s => new SendResponseModel(s));
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
@@ -89,7 +89,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                         Parallelism = user.KdfParallelism
                     },
                     MasterKeyEncryptedUserKey = user.Key!,
-                    Salt = user.GetMasterPasswordSalt()
+                    Salt = user.GetMasterPasswordSalt(),
+                    ContainedKeyId = user.GetUserKeyId()?.ToString()
                 }
                 : null,
             WebAuthnPrfOptions = webAuthnPrfOptions.Length > 0 ? webAuthnPrfOptions : null,
@@ -99,7 +100,8 @@ public class SyncResponseModel() : ResponseModel("sync")
                     WrappedUserKey1 = tokenData.WrappedUserKey1,
                     WrappedUserKey2 = tokenData.WrappedUserKey2
                 }
-                : null
+                : null,
+            UserKeyId = user.GetUserKeyId()?.ToString()
         };
     }
 
@@ -125,16 +127,9 @@ public class SyncResponseModel() : ResponseModel("sync")
     public IEnumerable<PolicyResponseModel> Policies { get; set; }
     /// <summary>
     /// Policies for organizations where the user is in the Confirmed or Accepted status.
-    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
     /// New clients should prefer this property and fall back to <see cref="Policies"/> if absent.
     /// </summary>
     public IEnumerable<PolicyResponseModel> PoliciesNew { get; set; }
-    /// <summary>
-    /// Organizations where the user is in the Confirmed or Accepted status.
-    /// Null when the <c>pm-34145-policies-in-accepted-state</c> feature flag is disabled.
-    /// New clients should prefer this property and fall back to <see cref="Profile"/>.<c>Organizations</c> if absent.
-    /// </summary>
-    public IEnumerable<ProfileOrganizationResponseModel> OrganizationsNew { get; set; }
     public IEnumerable<SendResponseModel> Sends { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

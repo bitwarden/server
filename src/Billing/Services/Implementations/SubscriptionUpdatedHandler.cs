@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
@@ -7,6 +8,11 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+using Bit.Core.Billing.Organizations.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
@@ -15,7 +21,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using Stripe.TestHelpers;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
 
@@ -39,6 +44,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository;
+    private readonly IOrganizationPlanMigrationCohortAssignmentRepository _cohortAssignmentRepository;
     private readonly ILogger<SubscriptionUpdatedHandler> _logger;
 
     public SubscriptionUpdatedHandler(
@@ -58,6 +65,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationAdapter pushNotificationAdapter,
         IPriceIncreaseScheduler priceIncreaseScheduler,
         IFeatureService featureService,
+        IOrganizationPlanMigrationCohortRepository cohortRepository,
+        IOrganizationPlanMigrationCohortAssignmentRepository cohortAssignmentRepository,
         ILogger<SubscriptionUpdatedHandler> logger)
     {
         _stripeEventService = stripeEventService;
@@ -78,12 +87,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationAdapter = pushNotificationAdapter;
         _priceIncreaseScheduler = priceIncreaseScheduler;
         _featureService = featureService;
+        _cohortRepository = cohortRepository;
+        _cohortAssignmentRepository = cohortAssignmentRepository;
         _logger = logger;
     }
 
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice", "test_clock"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer.discount.source.coupon", "discounts.source.coupon", "latest_invoice", "test_clock"]);
         SubscriberId subscriberId = subscription;
 
         var subscriber = await GetSubscriberAsync(subscriberId);
@@ -134,10 +145,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 break;
             case Organization organization:
                 {
-                    if (_featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-                    {
-                        await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
-                    }
+                    await HandleScheduleTriggeredFamiliesMigrationAsync(parsedEvent, subscription, organization.Id);
+
+                    await HandleScheduleTriggeredBusinessMigrationAsync(parsedEvent, subscription, organization.Id);
+                    await HandleScheduleTriggeredAnnualUpgradeOfferAsync(parsedEvent, subscription, organization.Id);
 
                     await _organizationService.UpdateExpirationDateAsync(organization.Id, currentPeriodEnd);
 
@@ -310,10 +321,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         await _priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
 
-        if (subscription.TestClock != null)
-        {
-            await WaitForTestClockToAdvanceAsync(subscription.TestClock);
-        }
+        await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
 
         var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -338,8 +346,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
     private async Task RemovePendingCancellationAsync(Subscription subscription)
     {
-        await _priceIncreaseScheduler.Schedule(subscription);
-
         await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
             CancelAtPeriodEnd = false,
@@ -352,6 +358,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 [MetadataKeys.CancellationOrigin] = string.Empty
             }
         });
+        await _priceIncreaseScheduler.ScheduleForSubscription(subscription);
     }
 
     /// <summary>
@@ -414,10 +421,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         var customerHasSecretsManagerTrial = subscription.Customer
             ?.Discount
-            ?.Coupon
+            ?.Source?.Coupon
             ?.Id == "sm-standalone";
 
-        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Coupon.Id)
+        var subscriptionHasSecretsManagerTrial = subscription.Discounts.Select(discount => discount.Source?.Coupon?.Id)
             .Contains(CouponIDs.SecretsManagerStandalone);
 
         if (customerHasSecretsManagerTrial)
@@ -428,19 +435,6 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         if (subscriptionHasSecretsManagerTrial)
         {
             await _stripeAdapter.DeleteSubscriptionDiscountAsync(subscription.Id);
-        }
-    }
-
-    private async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
-    {
-        while (testClock.Status != "ready")
-        {
-            await Task.Delay(TimeSpan.FromSeconds(2));
-            testClock = await _stripeAdapter.GetTestClockAsync(testClock.Id);
-            if (testClock.Status == "internal_failure")
-            {
-                throw new Exception("Stripe Test Clock encountered an internal failure");
-            }
         }
     }
 
@@ -525,4 +519,293 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organizationId);
         }
     }
+
+    private async Task HandleScheduleTriggeredBusinessMigrationAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        try
+        {
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+            {
+                return;
+            }
+
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but the event had no previous subscription items to inspect",
+                    organizationId);
+                return;
+            }
+
+            var assignment = await _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId);
+            if (assignment == null)
+            {
+                return;
+            }
+
+            if (assignment.MigratedDate.HasValue)
+            {
+                _logger.LogInformation(
+                    "Schedule-triggered business migration already applied for organization ({OrganizationId}); skipping (assignment.MigratedDate is set)",
+                    organizationId);
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization == null)
+            {
+                _logger.LogWarning(
+                    "Organization ({OrganizationId}) not found for schedule-triggered business migration",
+                    organizationId);
+                return;
+            }
+
+            var cohort = await _cohortRepository.GetByIdAsync(assignment.CohortId);
+            if (cohort == null || cohort.MigrationPathId == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) is missing or has no MigrationPathId",
+                    organizationId,
+                    assignment.CohortId);
+                return;
+            }
+
+            var migrationPath = MigrationPaths.FromId(cohort.MigrationPathId.Value);
+            if (migrationPath == null)
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration fired for organization ({OrganizationId}) but cohort ({CohortId}) references unregistered MigrationPathId ({MigrationPathId})",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
+
+            // A Packaged source (Teams Starter via HasNonSeatBased, Teams 2019 via ActualUsage) is identified
+            // by its base price, which is present even when a sub-5 org has no seat-overage line; a Scalable
+            // source by its per-seat price.
+            var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+            var sourcePriceId = isPackagedSourcePlan
+                ? sourcePlan.PasswordManager.StripePlanId
+                : sourcePlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(sourcePriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): source plan ({SourcePlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    sourcePlan.Type);
+                return;
+            }
+
+            if (!previousSubscription.Items.Data.Any(item =>
+                    item.Price?.Id != null && item.Price.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
+            var targetPriceId = GetPasswordManagerPriceId(targetPlan);
+            if (string.IsNullOrEmpty(targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): target plan ({TargetPlanType}) has no resolvable PasswordManager price id; skipping",
+                    organizationId,
+                    targetPlan.Type);
+                return;
+            }
+
+            if (!subscription.Items.Any(item => item.Price?.Id != null && item.Price.Id == targetPriceId))
+            {
+                _logger.LogWarning(
+                    "Schedule-triggered business migration for organization ({OrganizationId}): expected target price ({ExpectedPriceId}) for PlanType ({TargetPlanType}) not found in current subscription items; skipping",
+                    organizationId,
+                    targetPriceId,
+                    targetPlan.Type);
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+
+            // Packaged source plans (Teams Starter's flat bundle cap, Teams 2019's base seat allotment) store a
+            // seat count in Seats that doesn't match the billed per-seat quantity; reconcile to what was billed.
+            // Also floor Seats on the DB SmSeats value to keep SM <= PM in the persisted record. Idempotent.
+            if (isPackagedSourcePlan)
+            {
+                var billedSeatQuantity = subscription.Items
+                    .First(item => item.Price?.Id == targetPriceId).Quantity;
+                organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
+            }
+
+            await _organizationRepository.ReplaceAsync(organization);
+
+            var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
+            var grace = Math.Max(0, sourceProvidedServiceAccounts - targetProvidedServiceAccounts);
+
+            var sourceSecretsManagerSeatPlanId = sourcePlan.SecretsManager?.StripeSeatPlanId;
+            var previousSubscriptionHasSecretsManager = sourceSecretsManagerSeatPlanId != null &&
+                previousSubscription.Items.Data.Any(item => item.Price?.Id == sourceSecretsManagerSeatPlanId);
+
+            if (grace > 0 && previousSubscriptionHasSecretsManager)
+            {
+                var metadata = new Dictionary<string, string>(subscription.Metadata)
+                {
+                    [MetadataKeys.MigrationGraceServiceAccounts] = grace.ToString(CultureInfo.InvariantCulture)
+                };
+
+                await _stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
+
+                try
+                {
+                    await _stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                        new SubscriptionUpdateOptions { Metadata = metadata });
+                }
+                catch (Exception graceException)
+                {
+                    // Surface as a BillingException so the generic catch below does not swallow it; the
+                    // webhook returns 500 and Stripe retries. Because MigratedDate is not yet stamped,
+                    // the replay re-runs this method: re-ChangePlan is a structural no-op and re-writing
+                    // the same metadata key/value is idempotent.
+                    _logger.LogError(
+                        graceException,
+                        "Business migration applied to organization ({OrganizationId}) but failed to write SM grace metadata; Stripe retry will re-apply",
+                        organizationId);
+                    throw new BillingException(
+                        message: "Partial business migration write: organization updated but grace metadata write failed.",
+                        innerException: graceException);
+                }
+            }
+
+            try
+            {
+                assignment.MigratedDate = DateTime.UtcNow;
+                assignment.RevisionDate = DateTime.UtcNow;
+                await _cohortAssignmentRepository.ReplaceAsync(assignment);
+            }
+            catch (Exception assignmentException)
+            {
+                // Partial-write window: the organization was migrated successfully but the
+                // assignment stamp failed. Log full cohort context so the inconsistent state
+                // is observable, then surface as a BillingException. Stripe replays the same
+                // event payload on retry and ChangePlan is structurally idempotent — re-applying
+                // the same target plan shape is a no-op, and the assignment stamp re-runs cleanly.
+                _logger.LogError(
+                    assignmentException,
+                    "Business migration applied to organization ({OrganizationId}) but failed to stamp MigratedDate on cohort assignment ({CohortId}, MigrationPathId {MigrationPathId}); Stripe retry will re-apply",
+                    organizationId,
+                    cohort.Id,
+                    cohort.MigrationPathId.Value);
+                throw new BillingException(
+                    message: "Partial business migration write: organization updated but cohort assignment stamp failed.",
+                    innerException: assignmentException);
+            }
+
+            _logger.LogInformation(
+                "Schedule-triggered business migration applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}, cohort ({CohortId})",
+                organizationId,
+                migrationPath.FromPlan,
+                migrationPath.ToPlan,
+                cohort.Id);
+        }
+        catch (BillingException)
+        {
+            // Rethrow distinguishes a partial-write or pricing-service failure from a regular
+            // catch-all; without this, the generic catch below would swallow it and Stripe
+            // would not retry. GetPlanOrThrow surfaces BillingException for pricing-service
+            // errors, unknown plan types, and malformed responses.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to handle schedule-triggered business migration for organization ({OrganizationId})",
+                organizationId);
+        }
+    }
+
+    private async Task HandleScheduleTriggeredAnnualUpgradeOfferAsync(
+        Event parsedEvent,
+        Subscription subscription,
+        Guid organizationId)
+    {
+        // Not flag-gated: schedules redeemed before the flag is turned off must still be honored.
+        // The monthly to annual price swap is expected on a single event, so any failure here has
+        // to surface as a non-200 for Stripe to redeliver it. Replaying is a no-op: once PlanType
+        // is annual, ResolveAnnualLatestPlanType returns null and the handler returns early.
+        try
+        {
+            if (subscription.ScheduleId == null)
+            {
+                return;
+            }
+
+            var previousSubscription = parsedEvent.Data.PreviousAttributes?.ToObject<Subscription>() as Subscription;
+            if (previousSubscription?.Items?.Data == null)
+            {
+                return;
+            }
+
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+            if (organization is null)
+            {
+                return;
+            }
+
+            // Still the monthly plan at this point.
+            var targetPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+            if (targetPlanType is null)
+            {
+                return;
+            }
+
+            var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            var sourcePriceId = sourcePlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(sourcePriceId) ||
+                !previousSubscription.Items.Data.Any(item => item.Price?.Id == sourcePriceId))
+            {
+                return;
+            }
+
+            var targetPlan = await _pricingClient.GetPlanOrThrow(targetPlanType.Value);
+            var targetPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+            if (string.IsNullOrEmpty(targetPriceId) ||
+                !subscription.Items.Any(item => item.Price?.Id == targetPriceId))
+            {
+                return;
+            }
+
+            organization.ChangePlan(targetPlan);
+            await _organizationRepository.ReplaceAsync(organization);
+
+            _logger.LogInformation(
+                "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",
+                organizationId,
+                sourcePlan.Type,
+                targetPlan.Type);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "Failed to handle schedule-triggered annual upgrade for organization ({OrganizationId})",
+                organizationId);
+            throw;
+        }
+    }
+
+    private static string GetPasswordManagerPriceId(Bit.Core.Models.StaticStore.Plan plan) =>
+        plan.HasNonSeatBasedPasswordManagerPlan()
+            ? plan.PasswordManager.StripePlanId
+            : plan.PasswordManager.StripeSeatPlanId;
 }

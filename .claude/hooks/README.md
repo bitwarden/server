@@ -1,7 +1,6 @@
 # Claude Code Hooks
 
-All hooks are Stop hooks — they fire when Claude finishes responding and check
-whether documentation or references need updating based on what was changed.
+Hooks fire on Claude Code events to automate checks and enforce constraints.
 
 ## Configuration
 

@@ -10,7 +10,7 @@ BEGIN
             SELECT COUNT(1)
             FROM [dbo].[OrganizationUserView]
             WHERE OrganizationId = @OrganizationId
-            AND Status >= 0 --Invited
+            AND Status IN (0, 1, 2) -- Invited, Accepted, Confirmed
         ) as Users,
         (
             -- Count admin-initiated sponsorships towards the seat count

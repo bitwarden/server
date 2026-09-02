@@ -19,7 +19,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandler
 /// </ul>
 /// </summary>
 public class AutomaticUserConfirmationPolicyEventHandler(
-    IAutomaticUserConfirmationOrganizationPolicyComplianceValidator validator,
+    IAutomaticUserConfirmationOrganizationPolicyComplianceHandler handler,
     IOrganizationUserRepository organizationUserRepository,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     : IPolicyValidationEvent, IEnforceDependentPoliciesEvent, IOnPolicyPreUpdateEvent
@@ -39,8 +39,8 @@ public class AutomaticUserConfirmationPolicyEventHandler(
             return string.Empty;
         }
 
-        return (await validator.IsOrganizationCompliantAsync(
-            new AutomaticUserConfirmationOrganizationPolicyComplianceValidatorRequest(policyUpdate.OrganizationId)))
+        return (await handler.IsOrganizationCompliantAsync(
+            new AutomaticUserConfirmationOrganizationPolicyComplianceHandlerRequest(policyUpdate.OrganizationId)))
             .Match(
                 error => error.Message,
                 _ => string.Empty);

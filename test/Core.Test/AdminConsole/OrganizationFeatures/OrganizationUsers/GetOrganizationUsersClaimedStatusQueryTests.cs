@@ -1,9 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -36,7 +36,7 @@ public class GetOrganizationUsersClaimedStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility(organization));
 
@@ -62,7 +62,7 @@ public class GetOrganizationUsersClaimedStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility(organization));
 
@@ -86,7 +86,7 @@ public class GetOrganizationUsersClaimedStatusQueryTests
         var userIdWithoutClaimedDomain = Guid.NewGuid();
         var userIdsToCheck = usersWithClaimedDomain.Select(u => u.Id).Concat(new List<Guid> { userIdWithoutClaimedDomain }).ToList();
 
-        sutProvider.GetDependency<IApplicationCacheService>()
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility(organization));
 

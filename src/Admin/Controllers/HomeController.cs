@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Bit.Admin.Models;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -18,12 +19,14 @@ public class HomeController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<HomeController> _logger;
+    private readonly IBitwardenEnvironment _bitwardenEnvironment;
 
-    public HomeController(GlobalSettings globalSettings, IHttpClientFactory httpClientFactory, ILogger<HomeController> logger)
+    public HomeController(GlobalSettings globalSettings, IHttpClientFactory httpClientFactory, ILogger<HomeController> logger, IBitwardenEnvironment bitwardenEnvironment)
     {
         _globalSettings = globalSettings;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        _bitwardenEnvironment = bitwardenEnvironment;
     }
 
     [Authorize]
@@ -32,7 +35,7 @@ public class HomeController : Controller
         return View(new HomeModel
         {
             GlobalSettings = _globalSettings,
-            CurrentVersion = Core.Utilities.AssemblyHelpers.GetVersion()
+            CurrentVersion = _bitwardenEnvironment.Version
         });
     }
 

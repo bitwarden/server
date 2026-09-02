@@ -4,12 +4,14 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
 public class CreateMspProviderModel : IValidatableObject
 {
+    [StrictEmailAddress]
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
 

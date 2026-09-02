@@ -22,6 +22,8 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
     public string? MasterPasswordHint { get; set; }
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
+    [KeyId]
+    public string? ContainedKeyId { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -74,6 +76,7 @@ public class MasterPasswordUnlockAndAuthenticationDataModel : IValidatableObject
             },
             Salt = MasterPasswordSalt ?? Email,
             MasterKeyWrappedUserKey = MasterKeyEncryptedUserKey,
+            ContainedKeyId = KeyId.FromHexEncodedString(ContainedKeyId)
         };
     }
 }

@@ -32,6 +32,21 @@ public class GetOrganizationReportQuery : IGetOrganizationReportQuery
         return result;
     }
 
+    public async Task<OrganizationReport> ReadLatestOrganizationReportAsync(Guid organizationId)
+    {
+        _logger.LogInformation(Constants.BypassFiltersEventId,
+            "Reading latest validated-file organization report for organization {organizationId}",
+            organizationId);
+        var result = await _organizationReportRepo.ReadLatestByOrganizationIdAsync(organizationId);
+
+        if (result == null)
+        {
+            throw new NotFoundException($"No validated report found for organization: {organizationId}");
+        }
+
+        return result;
+    }
+
     public async Task<OrganizationReport> GetOrganizationReportAsync(Guid reportId)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization reports for organization by Id: {reportId}", reportId);
