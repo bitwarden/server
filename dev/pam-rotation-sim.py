@@ -8,7 +8,7 @@ leaves a claimable job for a *real* rotation daemon to pick up, execute, and rep
   relative to organizations/{org}/access-connectors
     1. register an automatic target system    POST  rotation/target-systems
        (or reuse one via --target-id)
-    2. assign the daemon to that target       POST  {daemonId}/assignments
+    2. assign the connector to that target    POST  {connectorId}/assignments
     3. create a rotation config for a cipher  POST  rotation/configs
     4. trigger an on-demand rotation          POST  rotation/configs/{id}/rotate
 
@@ -23,7 +23,7 @@ Usage:
   python3 dev/pam-rotation-sim.py \
       --org-id 34C5C52C-AC9A-4D53-878B-B46600CA936C \
       --admin-email enterprise.owner@redwood.example \
-      --daemon-id <PamDaemon.Id> [--target-id <guid>] [--cipher-id <guid>] [--cleanup]
+      --connector-id <PamDaemon.Id> [--target-id <guid>] [--cipher-id <guid>] [--cleanup]
 """
 import argparse
 import json
@@ -96,7 +96,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--org-id", required=True)
     ap.add_argument("--admin-email", required=True)
-    ap.add_argument("--daemon-id", required=True, help="PamDaemon.Id to assign to the target")
+    ap.add_argument("--connector-id", "--daemon-id", dest="connector_id", required=True,
+                    help="access connector to assign to the target, as a PamDaemon.Id "
+                         "(--daemon-id is a deprecated alias)")
     ap.add_argument("--kind", default="entra", choices=["entra", "mssql", "customscript", "activedirectory"],
                     help="automatic connector kind for a newly registered target (default: entra)")
     ap.add_argument("--target-id", help="reuse an existing target system instead of registering one")
@@ -146,8 +148,8 @@ def main():
         target_id = target["id"]
         print(f"    targetSystemId = {target_id}")
 
-    step(2, "assign daemon to target")
-    status, _ = http("POST", f"{api}/organizations/{org}/access-connectors/{args.daemon_id}/assignments",
+    step(2, "assign connector to target")
+    status, _ = http("POST", f"{api}/organizations/{org}/access-connectors/{args.connector_id}/assignments",
                      admin, {"targetSystemId": target_id}, allow=(409,))
     print("    already assigned (409)" if status == 409 else "    assigned (204)")
 
@@ -168,7 +170,8 @@ def main():
                      FROM PamRotationJob WHERE RotationConfigId='{config_id}' ORDER BY CreationDate DESC;""")
     print(f"\n=== ready for the daemon ===")
     print(f"pending job: {job}   (PamRotationJobStatus 0=Pending)")
-    print(f"the assigned daemon ({args.daemon_id}) will now see this job on its next poll of access-connectors/rotation/jobs")
+    print(f"the daemon running as connector {args.connector_id} will now see this job "
+          f"on its next poll of access-connectors/rotation/jobs")
 
     if args.cleanup:
         http("DELETE", f"{api}/organizations/{org}/access-connectors/rotation/configs/{config_id}", admin)
