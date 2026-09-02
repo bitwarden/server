@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByOrganizationIdEmails]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyByOrganizationIdEmails]
     @OrganizationId UNIQUEIDENTIFIER,
     @Emails [dbo].[EmailArray] READONLY
 AS

@@ -476,7 +476,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
-                "[dbo].[OrganizationUser_ReadByOrganizationIdEmails]",
+                "[dbo].[OrganizationUser_ReadManyByOrganizationIdEmails]",
                 new { OrganizationId = organizationId, Emails = emailsTvp },
                 commandType: CommandType.StoredProcedure);
 
