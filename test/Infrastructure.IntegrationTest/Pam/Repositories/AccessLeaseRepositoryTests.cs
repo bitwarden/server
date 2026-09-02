@@ -201,11 +201,17 @@ public class LeaseRepositoryTests
         Assert.NotNull(produced);
         Assert.Equal(lease.Id, produced!.Id);
         Assert.Equal(AccessLeaseAction.None, produced.Action);
-        // The minted lease spans the request's approved window exactly — compare against the persisted request,
+        // The minted lease starts at the activation moment, not at the request's window start an hour earlier
+        // (PM-42596) — both providers must agree on that, which is why it is asserted here and not only in the
+        // command's unit tests. Its end is still the approved one; compare that against the persisted request,
         // since the in-memory entity keeps tick precision the driver's datetime parameters do not.
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
-        Assert.Equal(persistedRequest!.NotBefore, produced.NotBefore);
+        Assert.NotEqual(persistedRequest!.NotBefore, produced.NotBefore);
         Assert.Equal(persistedRequest.NotAfter, produced.NotAfter);
+        // The mint's own @Now, round-tripped through datetime2 — compare on the same tolerance the window
+        // assertions above rely on rather than on exact ticks.
+        Assert.Equal(now, produced.NotBefore, TimeSpan.FromSeconds(1));
+        Assert.Equal(produced.CreationDate, produced.NotBefore, TimeSpan.FromSeconds(1));
 
         // The requester now holds access through the standard active-lease read.
         var active = await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(
