@@ -358,6 +358,56 @@ public class CurrentContextTests
         Assert.True(sutProvider.Sut.Organizations.First().AccessSecretsManager);
     }
 
+    [Theory]
+    [BitAutoData(Claims.OrganizationOwner)]
+    [BitAutoData(Claims.OrganizationAdmin)]
+    [BitAutoData(Claims.OrganizationUser)]
+    [BitAutoData(Claims.OrganizationCustom)]
+    public async Task SetContextAsync_PamAccess_SetsAccessPam(
+        string userOrgAssociation,
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new(userOrgAssociation, orgId.ToString()),
+            new(Claims.PamAccess, orgId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Single(sutProvider.Sut.Organizations);
+        Assert.True(sutProvider.Sut.Organizations.First().AccessPam);
+        Assert.True(sutProvider.Sut.AccessPam(orgId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_PamAccessForAnotherOrganization_DoesNotSetAccessPam(
+        SutProvider<CurrentContext> sutProvider,
+        Guid orgId,
+        Guid otherOrgId)
+    {
+        // Arrange
+        var claims = new List<Claim>
+        {
+            new(Claims.OrganizationUser, orgId.ToString()),
+            new(Claims.PamAccess, otherOrgId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        // Act
+        await sutProvider.Sut.SetContextAsync(user);
+
+        // Assert
+        Assert.Single(sutProvider.Sut.Organizations);
+        Assert.False(sutProvider.Sut.Organizations.First().AccessPam);
+        Assert.False(sutProvider.Sut.AccessPam(orgId));
+    }
+
     #endregion
 
     #region Provider Claims Tests
