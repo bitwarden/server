@@ -40,7 +40,7 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
 
     public async Task InitializeAsync()
     {
-        _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        _ownerEmail = $"integration-test{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
         (_organization, _organizationOwner) = await OrganizationTestHelpers.SignUpAsync(_factory,
@@ -182,7 +182,7 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
     [Fact]
     public async Task Get_CollectionBelongsToDifferentOrg_ReturnsNotFound()
     {
-        var otherOwnerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var otherOwnerEmail = $"integration-test{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(otherOwnerEmail);
         var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
             plan: PlanType.EnterpriseAnnually,
