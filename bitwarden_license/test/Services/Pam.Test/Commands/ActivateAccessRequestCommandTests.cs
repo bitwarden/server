@@ -202,8 +202,10 @@ public class ActivateAccessRequestCommandTests
         Assert.Equal(request.CipherId, result.CipherId);
         Assert.Equal(request.RequesterId, result.RequesterId);
         Assert.Equal(AccessLeaseAction.None, result.Action);
-        // Activation mints the window the approver approved, not a window anchored at activation time.
-        Assert.Equal(request.NotBefore, result.NotBefore);
+        // The lease starts at activation and is never backdated to the approved window's start (PM-42596); its end
+        // is still the approved one, so activating late shortens the lease instead of sliding its end out.
+        Assert.Equal(_now, result.NotBefore);
+        Assert.NotEqual(request.NotBefore, result.NotBefore);
         Assert.Equal(request.NotAfter, result.NotAfter);
         Assert.Equal(_now, result.CreationDate);
         Assert.NotEqual(default, result.Id);
