@@ -106,6 +106,12 @@ public class InviteStagedOrganizationUsersCommandTests
         return request;
     }
 
+    /// <summary>Makes the invitation email send fail, which is what forces the command to unwind.</summary>
+    private static void FailInviteSend(SutProvider<InviteStagedOrganizationUsersCommand> sutProvider) =>
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
+            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+
     [Theory, BitAutoData]
     public async Task RunAsync_BumpsRevisionDateAndPreservesIdentityFields(
         Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
@@ -257,9 +263,7 @@ public class InviteStagedOrganizationUsersCommandTests
         var originalRevisionDates = organizationUsers
             .ToDictionary(organizationUser => organizationUser.Id, organizationUser => organizationUser.RevisionDate);
 
-        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
-            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
-            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        FailInviteSend(sutProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
 
@@ -620,9 +624,7 @@ public class InviteStagedOrganizationUsersCommandTests
             .When(command => command.UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>()))
             .Do(callInfo => organization.SmSeats = callInfo.Arg<SecretsManagerSubscriptionUpdate>().SmSeats);
 
-        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
-            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
-            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        FailInviteSend(sutProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
 
@@ -648,9 +650,7 @@ public class InviteStagedOrganizationUsersCommandTests
         organization.MaxAutoscaleSeats = 100;
         var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
 
-        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
-            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
-            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        FailInviteSend(sutProvider);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RunAsync(request));
 
@@ -675,9 +675,7 @@ public class InviteStagedOrganizationUsersCommandTests
         var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
             seats: 10, occupiedSeats: 9);
 
-        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
-            .SendInvitesAsync(Arg.Any<SendInvitesRequest>())
-            .ThrowsAsync(new InvalidOperationException("SMTP is down."));
+        FailInviteSend(sutProvider);
         sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update => !update.Autoscaling))
             .ThrowsAsync(new GatewayException("Stripe is unreachable."));

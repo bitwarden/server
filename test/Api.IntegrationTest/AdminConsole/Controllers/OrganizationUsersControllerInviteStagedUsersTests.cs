@@ -288,13 +288,6 @@ public class OrganizationUsersControllerInviteStagedUsersTests
     /// Fixes the organization's seat headroom. Gateway ids are stood in because AutoAddSeats refuses to
     /// adjust a subscription it cannot identify, and the test host's payment service is a no-op substitute.
     /// </summary>
-    private async Task SetSeatsAsync(int seats, int? maxAutoscaleSeats)
-    {
-        _organization.Seats = seats;
-        _organization.MaxAutoscaleSeats = maxAutoscaleSeats;
-        _organization.Gateway = GatewayType.Stripe;
-        _organization.GatewayCustomerId = "cus_integration_test";
-        _organization.GatewaySubscriptionId = "sub_integration_test";
-        await _organizationRepository.ReplaceAsync(_organization);
-    }
+    private Task SetSeatsAsync(int seats, int? maxAutoscaleSeats) =>
+        OrganizationTestHelpers.SetSeatsAsync(_factory, _organization, seats, maxAutoscaleSeats);
 }

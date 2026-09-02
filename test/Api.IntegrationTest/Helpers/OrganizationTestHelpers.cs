@@ -244,4 +244,19 @@ public static class OrganizationTestHelpers
 
         return result.AsSuccess.Single();
     }
+
+    /// <summary>
+    /// Puts the organization on a seat limit with gateway identifiers, so seat autoscaling runs its real
+    /// billing path instead of short-circuiting on a missing subscription.
+    /// </summary>
+    public static async Task SetSeatsAsync(
+        ApiApplicationFactory factory, Organization organization, int seats, int? maxAutoscaleSeats)
+    {
+        organization.Seats = seats;
+        organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+        organization.Gateway = GatewayType.Stripe;
+        organization.GatewayCustomerId = "cus_integration_test";
+        organization.GatewaySubscriptionId = "sub_integration_test";
+        await factory.GetService<IOrganizationRepository>().ReplaceAsync(organization);
+    }
 }

@@ -124,7 +124,7 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     }
 
     [Fact]
-    public async Task SendInvite_WhenSendingInvitationsFailsAfterAutoscaling_KeepsTheAddedSeats()
+    public async Task SendInvite_WhenSendingInvitationsFailsAfterAutoscaling_GivesTheSeatsBack()
     {
         await SetSeatsAsync(seats: 1, maxAutoscaleSeats: 5);
         var staged = await StageMembersAsync(1);
@@ -141,11 +141,10 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
         Assert.NotNull(reverted);
         Assert.Equal(OrganizationUserStatusType.Staged, reverted.Status);
 
-        // Seats bought from the gateway are not handed back: the admin can retry without paying twice, and
-        // unwinding a subscription change on a send failure is riskier than leaving the seat in place.
+        // Nobody ended up invited, so the seat bought to fit them is handed back rather than billed for.
         var organization = await _organizationRepository.GetByIdAsync(_organization.Id);
         Assert.NotNull(organization);
-        Assert.Equal(2, organization.Seats);
+        Assert.Equal(1, organization.Seats);
     }
 
     [Fact]
@@ -250,13 +249,6 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     /// Fixes the organization's seat headroom. Gateway ids are stood in because AutoAddSeats refuses to
     /// adjust a subscription it cannot identify, and the test host's payment service is a no-op substitute.
     /// </summary>
-    private async Task SetSeatsAsync(int seats, int? maxAutoscaleSeats)
-    {
-        _organization.Seats = seats;
-        _organization.MaxAutoscaleSeats = maxAutoscaleSeats;
-        _organization.Gateway = GatewayType.Stripe;
-        _organization.GatewayCustomerId = "cus_integration_test";
-        _organization.GatewaySubscriptionId = "sub_integration_test";
-        await _organizationRepository.ReplaceAsync(_organization);
-    }
+    private Task SetSeatsAsync(int seats, int? maxAutoscaleSeats) =>
+        OrganizationTestHelpers.SetSeatsAsync(_factory, _organization, seats, maxAutoscaleSeats);
 }
