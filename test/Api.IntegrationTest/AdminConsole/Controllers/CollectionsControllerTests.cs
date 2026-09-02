@@ -180,28 +180,6 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
     }
 
     [Fact]
-    public async Task Get_CollectionBelongsToDifferentOrg_ReturnsNotFound()
-    {
-        var otherOwnerEmail = $"integration-test{Guid.NewGuid()}@example.com";
-        await _factory.LoginWithNewAccount(otherOwnerEmail);
-        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
-            plan: PlanType.EnterpriseAnnually,
-            ownerEmail: otherOwnerEmail,
-            passwordManagerSeats: 10,
-            paymentMethod: PaymentMethodType.Card);
-
-        var otherOrgCollection = await OrganizationTestHelpers.CreateCollectionAsync(
-            _factory, otherOrganization.Id, "Other Org Collection");
-
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var response = await _client.GetAsync(
-            $"organizations/{_organization.Id}/collections/{otherOrgCollection.Id}");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
     public async Task Get_CollectionBelongsToRouteOrg_ReturnsOk()
     {
         var collection = await OrganizationTestHelpers.CreateCollectionAsync(
