@@ -99,22 +99,19 @@ public static class Saml2OptionsExtensions
             // The legacy check must not interfere with SSO login.
         }
 
+        // This can throw if an IdP sends encrypted assertions in an
+        // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+        // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+        // on a per-assertion basis.
+        // PM-42982 exists to improve this site to handle all cases.
         if (options.SPOptions.WantAssertionsSigned)
         {
-            // An encrypted assertion may arrive as <saml:EncryptedAssertion>.
-            // https://docs.oasis-open.org/security/saml/v2.0/saml-bindings-2.0-os.pdf :1555.
-            // In these cases, this boundary check should neither throw nor decrypt the assertion to check.
-            // This check enforces individual signed assertions for plaintext cases.
-            var isAssertionEncrypted = envelope["EncryptedAssertion", Saml2Namespaces.Saml2Name] != null;
-            if (!isAssertionEncrypted)
+            var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+            var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+            if (!isAssertionSigned)
             {
-                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
-                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
-                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
-                if (!isAssertionSigned)
-                {
-                    throw new Exception("Cannot verify SAML assertion signature.");
-                }
+                throw new Exception("Cannot verify SAML assertion signature.");
             }
         }
 
