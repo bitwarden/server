@@ -21,6 +21,10 @@ public class DeviceEntityTypeConfiguration : IEntityTypeConfiguration<Device>
             .HasIndex(d => d.Identifier)
             .IsClustered(false);
 
+        builder
+            .HasIndex(d => new { d.UserId, d.LastActivityDate, d.Type })
+            .IsClustered(false);
+
         builder.Property(c => c.Active)
             .ValueGeneratedNever()
             .HasDefaultValue(true);
