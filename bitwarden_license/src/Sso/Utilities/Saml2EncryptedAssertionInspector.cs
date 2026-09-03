@@ -19,42 +19,50 @@ public static class Saml2EncryptedAssertionInspector
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
     /// Logs when an unaccepted algorithm in in use.
     /// </summary>
-    /// <param name="envelope">The root element of a SAML response or request.</param> 
+    /// <param name="envelope">The root element of a SAML response or request.</param>
     /// <param name="scheme">The scheme provided in the request.</param>
     /// <param name="context">The current request context.</param>
+    /// <returns><see langword="false"/> when any exception interrupts the check. Otherwise, <see langword="true"/>.</returns>
     /// <remarks>
     /// A SAML response can hold more than one assertion, and each encrypted assertion holds one or more keys.
     /// Every key of every assertion must be checked.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
     /// </remarks>
-    public static void InspectKeyEncryptionAlgorithms(XmlElement envelope, string scheme, HttpContext context)
+    public static bool TryLogUnsupportedKeyTransportAlgorithms(XmlElement envelope, string scheme, HttpContext context)
     {
-        // Only the first-child nodes are relevant. We don't need a recursive check.
-        var encryptedAssertions = envelope.ChildNodes
-            .OfType<XmlElement>()
-            .Where(e => e.LocalName == "EncryptedAssertion"
-                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
-
-        var unacceptedAlgorithms = encryptedAssertions
-            .SelectMany(ReadKeyEncryptionAlgorithms)
-            .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
-            .Distinct()
-            .ToArray();
-
-        if (unacceptedAlgorithms.Length == 0)
+        try
         {
-            return;
+            // Only the first-child nodes are relevant. We don't need a recursive check.
+            var encryptedAssertions = envelope.ChildNodes
+                .OfType<XmlElement>()
+                .Where(e => e.LocalName == "EncryptedAssertion"
+                    && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+            var unacceptedAlgorithms = encryptedAssertions
+                .SelectMany(ReadKeyEncryptionAlgorithms)
+                .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
+                .Distinct()
+                .ToArray();
+
+            if (unacceptedAlgorithms.Length > 0)
+            {
+                var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
+
+                foreach (var unacceptedAlgorithm in unacceptedAlgorithms)
+                {
+                    logger.LogInformation(
+                        "Unsupported SAML key encryption. Scheme: {Scheme}," +
+                        "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
+                        scheme, unacceptedAlgorithm);
+                }
+            }
+
+            return true;
         }
-
-        var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
-
-        foreach (var unacceptedAlgorithm in unacceptedAlgorithms)
+        catch
         {
-            logger.LogInformation(
-                "Unsupported SAML key encryption. Scheme: {Scheme}," +
-                "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
-                scheme, unacceptedAlgorithm);
+            return false;
         }
     }
 
