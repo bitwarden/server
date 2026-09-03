@@ -26,6 +26,24 @@
 - **Dev Tools**: `/dev/` - Local development helpers
 - **Configuration**: `appsettings.{Environment}.json`, `/dev/secrets.json` for local development
 
+## Scripting
+
+New scripts in this repo are written in PowerShell (`.ps1`) — `pwsh` is already the toolchain for `dev/migrate.ps1` and
+other developer scripts and runs cross-platform for contributors. Do not add new `.sh`, `.py`, `.rb`, `.js`, or
+other-language scripts, and do not add new per-platform pairs (`.sh` + `.ps1`) to accomplish the same task.
+
+**Exceptions**:
+
+- Scripts that execute inside a runtime image or devcontainer lifecycle (for example `entrypoint.sh`, `build.sh`,
+  `util/Nginx/*.sh`, `util/MsSql/*.sh`, `.devcontainer/**/*Command.sh`) stay in POSIX shell — the runtime images do not
+  ship PowerShell.
+- Scripts executed by a JavaScript-only runtime (k6 scenarios under `perf/load/`, Node build tooling and MJML components
+  under `src/Core/MailTemplates/Mjml/`) stay in JavaScript — the toolchain will not execute anything else.
+
+This applies to standalone script files only, not inline command steps in other tools' config (Dockerfile `RUN`, GHA
+`run:`, `package.json` `"scripts"`). Existing scripts stay as they are, including when modified. The rule governs newly
+created files only.
+
 ## Security Requirements
 
 - **Compliance**: SOC 2 Type II, SOC 3, HIPAA, ISO 27001, GDPR, CCPA
