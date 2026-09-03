@@ -1042,11 +1042,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_RoutesToV2AndReturnsNoContentOnSuccess(
+    public async Task Put_ReturnsNoContentOnSuccess(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1058,18 +1058,15 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .Received(1)
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>());
-        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateUserAsync(default, default, default, default, default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_PassesRequestedEmailToV2Request(
+    public async Task Put_PassesRequestedEmailToRequest(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
         model.Email = "new@claimed.example.com";
 
         V2_UpdateUserCommand.UpdateOrganizationUserRequest captured = null;
@@ -1086,11 +1083,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabledAndCommandFails_MapsErrorToStatus(
+    public async Task Put_WhenCommandFails_MapsErrorToStatus(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
             .UpdateUserAsync(Arg.Any<V2_UpdateUserCommand.UpdateOrganizationUserRequest>())
@@ -1103,32 +1100,12 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_WhenFeatureFlagDisabled_RoutesToV1(
-        Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
-        OrganizationUser organizationUser, SutProvider<OrganizationUsersController> sutProvider)
-    {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: false);
-
-        var result = await sutProvider.Sut.Put(organization, organizationUser.Id, model);
-
-        Assert.IsType<Ok>(result);
-        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>()
-            .Received(1)
-            .UpdateUserAsync(Arg.Any<OrganizationUser>(), Arg.Any<OrganizationUserType>(), userId,
-                Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<IEnumerable<Guid>>(), model.DefaultUserCollectionName);
-        await sutProvider.GetDependency<V2_UpdateUserCommand.IUpdateOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .UpdateUserAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task Put_WhenFeatureFlagEnabled_ExcludesDefaultCollectionsFromPreservedAccess(
+    public async Task Put_ExcludesDefaultCollectionsFromPreservedAccess(
         Organization organization, OrganizationUserUpdateRequestModel model, Guid userId,
         OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        PutSetup(sutProvider, organization, organizationUser, userId, featureEnabled: true);
+        PutSetup(sutProvider, organization, organizationUser, userId);
 
         // The client posts no collections; the user currently has access to a shared and a default collection.
         model.Collections = [];
@@ -1170,7 +1147,7 @@ public class OrganizationUsersControllerTests
     }
 
     private static void PutSetup(SutProvider<OrganizationUsersController> sutProvider, Organization organization,
-        OrganizationUser organizationUser, Guid userId, bool featureEnabled)
+        OrganizationUser organizationUser, Guid userId)
     {
         organizationUser.OrganizationId = organization.Id;
         organization.AllowAdminAccessToAllCollectionItems = true;
@@ -1185,7 +1162,5 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Bit.Core.FeatureFlagKeys.ChangeMemberEmailNoMp)
-            .Returns(featureEnabled);
     }
 }

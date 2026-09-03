@@ -90,14 +90,7 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        try
-        {
-            Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, scheme, context);
-        }
-        catch (Exception)
-        {
-            // The legacy check must not interfere with SSO login.
-        }
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, scheme, context);
 
         // This can throw if an IdP sends encrypted assertions in an
         // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are

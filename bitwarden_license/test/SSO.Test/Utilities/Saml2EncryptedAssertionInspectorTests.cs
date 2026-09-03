@@ -18,13 +18,14 @@ public class Saml2EncryptedAssertionInspectorTests
     private const string Aes256Cbc = "http://www.w3.org/2001/04/xmlenc#aes256-cbc";
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_PlaintextAssertion_LogsNoEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_PlaintextAssertion_LogsNoEntry()
     {
         var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        var result = Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
+        Assert.True(result);
         // An envelope with no encrypted assertion names no algorithm, so no entry is logged.
         Assert.Empty(logger.Collector.GetSnapshot());
     }
@@ -32,23 +33,23 @@ public class Saml2EncryptedAssertionInspectorTests
     [Theory]
     [InlineData(RsaOaepMgf1P)]
     [InlineData(RsaOaep)]
-    public void InspectKeyEncryptionAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_LogsNoEntry(string algorithm)
+    public void TryLogUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_LogsNoEntry(string algorithm)
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         Assert.Empty(logger.Collector.GetSnapshot());
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_LogsEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_LogsEntry()
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(LogLevel.Information, record.Level);
@@ -57,7 +58,7 @@ public class Saml2EncryptedAssertionInspectorTests
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EncryptedKeyBesideEncryptedData_LogsEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_EncryptedKeyBesideEncryptedData_LogsEntry()
     {
         // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData.
         // An xenc:ReferenceList links the key to the data.
@@ -74,14 +75,14 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_DataAndKeyEncryptionMethods_LogsKeyEncryptionAlgorithm()
+    public void TryLogUnsupportedKeyTransportAlgorithms_DataAndKeyEncryptionMethods_LogsKeyEncryptionAlgorithm()
     {
         // xenc:EncryptedData names the data encryption algorithm, such as aes256-cbc.
         // xenc:EncryptedKey names the key encryption algorithm.
@@ -101,7 +102,7 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         var algorithm = GetStructuredValue(record, "KeyEncryptionAlgorithm");
@@ -114,7 +115,7 @@ public class Saml2EncryptedAssertionInspectorTests
     /// IdPs will generally send the algorithm with the assertion request, so this is an edge case.
     /// </summary>
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_NoEncryptedKey_LogsNullEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_NoEncryptedKey_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -124,7 +125,7 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         // One entry is logged, because the assertion names no algorithm and a missing algorithm is unaccepted.
         var record = Assert.Single(logger.Collector.GetSnapshot());
@@ -132,7 +133,7 @@ public class Saml2EncryptedAssertionInspectorTests
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_LogsNullEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -140,14 +141,14 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_EmptyAlgorithmAttribute_LogsNullEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_EmptyAlgorithmAttribute_LogsNullEntry()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -155,7 +156,7 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
@@ -165,7 +166,7 @@ public class Saml2EncryptedAssertionInspectorTests
     [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
     [InlineData("urn:example:unknown-algorithm")]
     [InlineData("rsa-1_5\nlevel=something-else")]
-    public void InspectKeyEncryptionAlgorithms_AlgorithmOutsideKnownValues_LogsUnrecognizedEntry(string algorithm)
+    public void TryLogUnsupportedKeyTransportAlgorithms_AlgorithmOutsideKnownValues_LogsUnrecognizedEntry(string algorithm)
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -175,14 +176,14 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal("unrecognized", GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_TwoAssertionsWithDifferentUnacceptedAlgorithms_LogsTwoEntriesInOrder()
+    public void TryLogUnsupportedKeyTransportAlgorithms_TwoAssertionsWithDifferentUnacceptedAlgorithms_LogsTwoEntriesInOrder()
     {
         // A federation proxy can aggregate assertions from two identity providers.
         // Each assertion then holds its own key, and the two keys can use different algorithms.
@@ -191,7 +192,7 @@ public class Saml2EncryptedAssertionInspectorTests
             BuildNestedEncryptedAssertion("urn:example:unknown-algorithm"));
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var records = logger.Collector.GetSnapshot();
         Assert.Equal(2, records.Count);
@@ -200,7 +201,7 @@ public class Saml2EncryptedAssertionInspectorTests
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_SameUnacceptedAlgorithmInTwoAssertions_LogsOneEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoAssertions_LogsOneEntry()
     {
         // Two assertions can share one unaccepted algorithm, such as after a federation proxy
         // aggregates assertions from two identity providers with the same configuration.
@@ -210,14 +211,14 @@ public class Saml2EncryptedAssertionInspectorTests
             BuildNestedEncryptedAssertion(RsaPkcs1));
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_NullAndAcceptedAlgorithmsInThreeAssertions_LogsOneNullEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_NullAndAcceptedAlgorithmsInThreeAssertions_LogsOneNullEntry()
     {
         // The first and the third assertion name no algorithm. Both resolve to null, and null deduplicates.
         // The second assertion uses an accepted algorithm, so it logs no entry.
@@ -233,14 +234,14 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_AcceptedKeyBeforeUnacceptedKeyInOneAssertion_LogsUnacceptedEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_AcceptedKeyBeforeUnacceptedKeyInOneAssertion_LogsUnacceptedEntry()
     {
         // The SAML 2.0 assertion schema declares xenc:EncryptedKey with maxOccurs="unbounded"
         // inside saml:EncryptedElementType, so one assertion can hold more than one key.
@@ -265,7 +266,7 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         // The accepted algorithm logs no entry, so rsa-1_5 is the only entry.
         var record = Assert.Single(logger.Collector.GetSnapshot());
@@ -273,7 +274,7 @@ public class Saml2EncryptedAssertionInspectorTests
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_TwoUnacceptedKeysInOneAssertion_LogsTwoEntriesInOrder()
+    public void TryLogUnsupportedKeyTransportAlgorithms_TwoUnacceptedKeysInOneAssertion_LogsTwoEntriesInOrder()
     {
         // XML Encryption 1.1 section 3.5.3 states that sibling keys carry the same key value,
         // "possibly encrypted in different ways or for different recipients".
@@ -294,7 +295,7 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var records = logger.Collector.GetSnapshot();
         Assert.Equal(2, records.Count);
@@ -303,7 +304,7 @@ public class Saml2EncryptedAssertionInspectorTests
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_SameUnacceptedAlgorithmInTwoKeysOfOneAssertion_LogsOneEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoKeysOfOneAssertion_LogsOneEntry()
     {
         // An identity provider can send one key for each service provider decryption certificate.
         // Both keys then name the same algorithm, and Distinct keeps the log volume at one entry.
@@ -323,14 +324,14 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
         var record = Assert.Single(logger.Collector.GetSnapshot());
         Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
 
     [Fact]
-    public void InspectKeyEncryptionAlgorithms_TwoAcceptedKeysInOneAssertion_LogsNoEntry()
+    public void TryLogUnsupportedKeyTransportAlgorithms_TwoAcceptedKeysInOneAssertion_LogsNoEntry()
     {
         // Service provider metadata advertises rsa-oaep-mgf1p and rsa-oaep, so an identity provider
         // can send one key for each advertised method. Neither key is unaccepted, so nothing is logged.
@@ -350,8 +351,19 @@ public class Saml2EncryptedAssertionInspectorTests
             "</saml:EncryptedAssertion>");
         var (context, logger) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.InspectKeyEncryptionAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
 
+        Assert.Empty(logger.Collector.GetSnapshot());
+    }
+
+    [Fact]
+    public void TryLogUnsupportedKeyTransportAlgorithms_NullEnvelope_ReturnsFalseWithoutThrowing()
+    {
+        var (context, logger) = BuildContext();
+
+        var result = Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(null!, Scheme, context);
+
+        Assert.False(result);
         Assert.Empty(logger.Collector.GetSnapshot());
     }
 

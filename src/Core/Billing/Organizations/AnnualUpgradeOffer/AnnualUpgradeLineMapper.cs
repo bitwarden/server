@@ -97,7 +97,11 @@ internal static class AnnualUpgradeLineMapper
     private static bool IsUnusable(Discount? discount) =>
         discount is null || string.IsNullOrEmpty(discount.Source?.CouponId);
 
-    // A discount with no coupon would silently drop a subscription-level coupon, so redemption refuses instead.
+    // A discount with no coupon id would only come from a promotion-code source; Bitwarden applies discounts
+    // exclusively via bare coupons (no promotion codes), so every real discount has one and this never rejects
+    // a valid subscriber. It exists to refuse rather than silently drop a discount that couldn't be carried.
+    // If promotion-code discounts are ever introduced, revisit this: a promo code's coupon lives on
+    // discount.Coupon, not necessarily Source.CouponId.
     private static bool HasUnusableDiscounts(Subscription subscription) =>
         (subscription.Discounts ?? []).Any(IsUnusable) ||
         subscription.Items.Data.Any(item => (item.Discounts ?? []).Any(IsUnusable));
