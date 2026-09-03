@@ -51,7 +51,7 @@ public class OrganizationDeleteTasksJobTests
     [Fact]
     public async Task Execute_NoPendingCleanup_ReturnsEarly()
     {
-        _cleanupRepository.ClaimNextPendingAsync().Returns((OrganizationDeleteTask?)null);
+        QueuePending();
         var context = CreateContext();
 
         await _sut.Execute(context);
@@ -69,7 +69,7 @@ public class OrganizationDeleteTasksJobTests
             _featureService,
             _logger);
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         var context = CreateContext();
 
         await sut.Execute(context);
@@ -91,7 +91,7 @@ public class OrganizationDeleteTasksJobTests
         // Freshly enqueued: a missing handler is plausibly just rolling-deploy skew.
         var pending = CreatePending();
         pending.CreationDate = DateTime.UtcNow;
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         var context = CreateContext();
 
         await sut.Execute(context);
@@ -111,7 +111,7 @@ public class OrganizationDeleteTasksJobTests
         // Unhandled for hours: deploy skew is no longer a plausible explanation, so escalate.
         var pending = CreatePending();
         pending.CreationDate = DateTime.UtcNow.AddHours(-2);
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         var context = CreateContext();
 
         await sut.Execute(context);
@@ -124,7 +124,7 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_DeletesRepeatedlyThenCompletes_WhenBatchReturnsZero()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         _handler
             .DeleteBatchAsync(pending, Arg.Any<CancellationToken>())
             .Returns(2000, 2000, 500, 0);
@@ -141,10 +141,97 @@ public class OrganizationDeleteTasksJobTests
     }
 
     [Fact]
+    public async Task Execute_MultiplePendingTasks_DrainsAllInOneRun()
+    {
+        // Regression: the job used to claim exactly one task per firing.
+        var first = CreatePending();
+        var second = CreatePending();
+        var third = CreatePending();
+        QueuePending(first, second, third);
+        _handler.DeleteBatchAsync(Arg.Any<OrganizationDeleteTask>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        await _sut.Execute(CreateContext());
+
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(first.Id);
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(second.Id);
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(third.Id);
+        // Three claims plus the one that returns null and ends the run.
+        await _cleanupRepository.Received(4).ClaimNextPendingAsync();
+    }
+
+    [Fact]
+    public async Task Execute_QueueEmpty_ClaimsOnceAndStops()
+    {
+        QueuePending();
+
+        await _sut.Execute(CreateContext());
+
+        await _cleanupRepository.Received(1).ClaimNextPendingAsync();
+    }
+
+    [Fact]
+    public async Task Execute_TaskFails_StillDrainsTasksBehindIt()
+    {
+        // The queue is strictly ordered, so aborting on one failure would stall everything behind it.
+        var failing = CreatePending();
+        var following = CreatePending();
+        QueuePending(failing, following);
+        _handler.DeleteBatchAsync(failing, Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException("boom"));
+        _handler.DeleteBatchAsync(following, Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        await _sut.Execute(CreateContext());
+
+        await _cleanupRepository.Received(1).UpdateErrorAsync(failing.Id, Arg.Any<string>());
+        await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(failing.Id);
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(following.Id);
+    }
+
+    [Fact]
+    public async Task Execute_TaskTypeHasNoHandler_StillDrainsTasksBehindIt()
+    {
+        var unhandled = CreatePending();
+        unhandled.TaskType = (OrganizationDeleteTaskType)99;
+        var following = CreatePending();
+        QueuePending(unhandled, following);
+        _handler.DeleteBatchAsync(following, Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        await _sut.Execute(CreateContext());
+
+        await _cleanupRepository.DidNotReceiveWithAnyArgs().UpdateErrorAsync(default, default!);
+        await _cleanupRepository.Received(1).UpdateCompletedAsync(following.Id);
+    }
+
+    [Fact]
+    public async Task Execute_CancellationRequested_StopsClaimingFurtherTasks()
+    {
+        var first = CreatePending();
+        var second = CreatePending();
+        QueuePending(first, second);
+
+        using var cts = new CancellationTokenSource();
+        _handler.DeleteBatchAsync(first, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return Task.FromResult(0);
+            });
+
+        await _sut.Execute(CreateContext(cts.Token));
+
+        // Only the first claim happens; the loop checks cancellation before claiming again.
+        await _cleanupRepository.Received(1).ClaimNextPendingAsync();
+        await _handler.DidNotReceive().DeleteBatchAsync(second, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Execute_CancellationRequested_LeavesPending()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
 
         using var cts = new CancellationTokenSource();
         _handler
@@ -166,14 +253,13 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_CancellationAlreadySignalled_DoesNotCompleteWithoutDeleting()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         await _sut.Execute(CreateContext(cts.Token));
 
-        // The loop never runs, so nothing was purged. Completing here would strand the
-        // organization's events permanently with the task marked done.
+        // Nothing was purged, so completing here would strand the organization's events.
         await _handler.DidNotReceiveWithAnyArgs().DeleteBatchAsync(default!, default);
         await _cleanupRepository.DidNotReceive().UpdateCompletedAsync(pending.Id);
     }
@@ -182,13 +268,12 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_DeleteThrows_RecordsErrorAndDoesNotComplete()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         _handler
             .DeleteBatchAsync(pending, Arg.Any<CancellationToken>())
             .Throws(new InvalidOperationException("boom"));
         var context = CreateContext();
 
-        // BaseJob.Execute swallows exceptions after logging; we verify via substitute calls.
         await _sut.Execute(context);
 
         // The exception type is recorded, never the message.
@@ -200,7 +285,7 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_DeleteThrows_BelowFailureCap_DoesNotLogAbandonment()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         _cleanupRepository.UpdateErrorAsync(pending.Id, Arg.Any<string>())
             .Returns(OrganizationDeleteTask.MaxFailureCount - 1);
         _handler
@@ -217,7 +302,7 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_DeleteThrows_AtFailureCap_LogsAbandonment()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         _cleanupRepository.UpdateErrorAsync(pending.Id, Arg.Any<string>())
             .Returns(OrganizationDeleteTask.MaxFailureCount);
         _handler
@@ -234,7 +319,7 @@ public class OrganizationDeleteTasksJobTests
     public async Task Execute_DeleteThrows_DoesNotLeakRowKeyIdentifiersInError()
     {
         var pending = CreatePending();
-        _cleanupRepository.ClaimNextPendingAsync().Returns(pending);
+        QueuePending(pending);
         // Azure SDK messages can embed row-key identifiers; these must never be persisted.
         var leakyMessage = "The specified entity already exists. UserId=abc123, CipherId=def456";
         _handler
@@ -249,9 +334,27 @@ public class OrganizationDeleteTasksJobTests
             Arg.Is<string>(error => !error.Contains("UserId") && !error.Contains("CipherId")));
     }
 
+    [Fact]
+    public async Task Execute_DeleteThrows_DoesNotLeakRowKeyIdentifiersInLogs()
+    {
+        var pending = CreatePending();
+        QueuePending(pending);
+        // Failures are not rethrown, so this log is the only thing keeping the Azure SDK
+        // message out of the logging pipeline.
+        var leakyMessage = "The specified entity already exists. UserId=abc123, CipherId=def456";
+        _handler
+            .DeleteBatchAsync(pending, Arg.Any<CancellationToken>())
+            .Throws(new InvalidOperationException(leakyMessage));
+
+        await _sut.Execute(CreateContext());
+
+        AssertNotLoggedContaining(LogLevel.Error, "UserId");
+        AssertNotLoggedContaining(LogLevel.Error, "CipherId");
+        AssertLoggedContaining(LogLevel.Error, typeof(InvalidOperationException).FullName!);
+    }
+
     /// <summary>
-    /// Matches a specific log entry by content. Needed where <c>BaseJob.Execute</c> also logs at the
-    /// same level after the rethrow, so asserting on level alone would match both.
+    /// Matches a log entry by content, for levels where more than one entry can be emitted.
     /// </summary>
     private void AssertLoggedContaining(LogLevel level, string fragment) =>
         _logger.Received(1).Log(
@@ -284,6 +387,17 @@ public class OrganizationDeleteTasksJobTests
             Arg.Any<object>(),
             Arg.Any<Exception>(),
             Arg.Any<Func<object, Exception?, string>>());
+
+    /// <summary>
+    /// Stubs the queue with the given tasks in order, then empty. The job claims in a loop until
+    /// it gets null, so a stub returning the same task forever would spin for the whole run budget.
+    /// </summary>
+    private void QueuePending(params OrganizationDeleteTask[] tasks)
+    {
+        var queue = new Queue<OrganizationDeleteTask>(tasks);
+        _cleanupRepository.ClaimNextPendingAsync()
+            .Returns(_ => queue.Count > 0 ? queue.Dequeue() : null);
+    }
 
     private static OrganizationDeleteTask CreatePending() => new()
     {
