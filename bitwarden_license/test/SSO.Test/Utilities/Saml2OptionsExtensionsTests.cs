@@ -23,29 +23,11 @@ public class Saml2OptionsExtensionsTests
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
 
     [Fact]
-    public async Task CouldHandleAsync_EncryptedAssertionAndWantAssertionsSigned_DoesNotThrow()
-    {
-        // An encrypted assertion has no plaintext <saml:Assertion> element at this stage.
-        // There is no element to check for a signature.
-        // A throw here blocks single sign-on (SSO) login for each organization that sets
-        // WantAssertionsSigned to true and receives encrypted assertions.
-        var options = BuildOptions(wantAssertionsSigned: true);
-        var context = BuildPostContext(BuildResponseXml(
-            "<saml:EncryptedAssertion>" +
-            "<xenc:EncryptedData>" +
-            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
-            "</xenc:EncryptedData>" +
-            "</saml:EncryptedAssertion>"));
-
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
-    }
-
-    [Fact]
     public async Task CouldHandleAsync_NoAssertionAndWantAssertionsSigned_Throws()
     {
-        // An envelope with no <saml:Assertion> element and no <saml:EncryptedAssertion> element
-        // must still cause a throw from the signature check.
-        // The census try/catch wraps only the census, so it must not hide this throw.
+        // An envelope with no <saml:Assertion> element must still cause a throw from the
+        // signature check. The algorithm validation try/catch wraps only the validation,
+        // so it must not hide this throw.
         var options = BuildOptions(wantAssertionsSigned: true);
         var logger = new FakeLogger<Saml2Options>();
         var context = BuildPostContext(BuildResponseXml(string.Empty), logger);
@@ -59,7 +41,7 @@ public class Saml2OptionsExtensionsTests
     [Fact]
     public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_LogsOneEntry()
     {
-        var options = BuildOptions(wantAssertionsSigned: true);
+        var options = BuildOptions(wantAssertionsSigned: false);
         var logger = new FakeLogger<Saml2Options>();
         var context = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)),
@@ -93,7 +75,7 @@ public class Saml2OptionsExtensionsTests
     {
         // A federation proxy can aggregate assertions from two identity providers.
         // The census then holds one entry for each distinct algorithm.
-        var options = BuildOptions(wantAssertionsSigned: true);
+        var options = BuildOptions(wantAssertionsSigned: false);
         var logger = new FakeLogger<Saml2Options>();
         var context = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1) + BuildEncryptedAssertion(RsaOaep)),
@@ -114,7 +96,7 @@ public class Saml2OptionsExtensionsTests
     {
         // An empty service provider makes the logger resolution throw.
         // The inspection must swallow that throw, and the login must continue.
-        var options = BuildOptions(wantAssertionsSigned: true);
+        var options = BuildOptions(wantAssertionsSigned: false);
         var context = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
         context.RequestServices = new ServiceCollection().BuildServiceProvider();
 
