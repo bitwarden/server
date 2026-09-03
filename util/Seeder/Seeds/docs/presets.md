@@ -2,6 +2,8 @@
 
 Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to avoid collisions with existing data.
 
+Some of these presets make up the default build list in `.github/workflows/build-seeded-databases.yml` under the`_DEFAULT_PRESETS` variable. Removing one requires updating that list with the same change.
+
 ## Cipher generation knobs
 
 These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.

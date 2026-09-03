@@ -1,0 +1,7 @@
+docker/dp-keys/
+docker/bundles/
+docker/seed.sql
+docker/**/seed.sql
+docker/**/*.mdf
+docker/**/*.ldf
+docker/*/build/
