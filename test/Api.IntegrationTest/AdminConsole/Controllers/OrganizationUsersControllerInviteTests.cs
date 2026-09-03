@@ -25,7 +25,7 @@ namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 /// partitions the batch: staged rows are promoted in place, everything else is created. Seat accounting and
 /// the rollback both span that partition, so they are exercised end to end here.
 /// </summary>
-public class OrganizationUsersControllerInviteStagedUsersTests
+public class OrganizationUsersControllerInviteTests
     : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly ApiApplicationFactory _factory;
@@ -39,7 +39,7 @@ public class OrganizationUsersControllerInviteStagedUsersTests
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
-    public OrganizationUsersControllerInviteStagedUsersTests(ApiApplicationFactory factory)
+    public OrganizationUsersControllerInviteTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
