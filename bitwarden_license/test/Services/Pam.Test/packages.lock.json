@@ -1363,7 +1363,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1433,8 +1433,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.8.1, )",
-          "Core": "[2026.8.1, )",
+          "Common": "[2026.8.2, )",
+          "Core": "[2026.8.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1448,7 +1448,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.1, )"
+          "HttpExtensions": "[2026.8.2, )"
         }
       },
       "httpextensions": {
@@ -1457,16 +1457,16 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )"
+          "Core": "[2026.8.2, )"
         }
       },
       "pam": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
-          "HttpExtensions": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
+          "HttpExtensions": "[2026.8.2, )",
           "OrganizationAuthorization": "[0.0.1, )",
-          "Pam.Domain": "[2026.8.1, )"
+          "Pam.Domain": "[2026.8.2, )"
         }
       },
       "pam.domain": {
