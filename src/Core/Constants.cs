@@ -244,6 +244,7 @@ public static partial class FeatureFlagKeys
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
+    public const string CodedValidationProblems = "coded-validation-problems";
 
     /* Tools Team */
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
