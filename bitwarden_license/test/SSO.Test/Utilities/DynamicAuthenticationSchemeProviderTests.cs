@@ -30,7 +30,7 @@ public class DynamicAuthenticationSchemeProviderTests
         DynamicAuthenticationSchemeProvider.OnMetadataCreated(entityDescriptor, null!);
 
         Assert.Equal(
-            SamlEncryptionAlgorithms.Accepted,
+            Saml2KeyTransportEncryptionAlgorithms.Accepted,
             keyDescriptor.EncryptionMethods.Select(m => m.Algorithm.ToString()));
     }
 
@@ -88,10 +88,10 @@ public class DynamicAuthenticationSchemeProviderTests
         DynamicAuthenticationSchemeProvider.OnMetadataCreated(entityDescriptor, null!);
 
         Assert.Equal(
-            SamlEncryptionAlgorithms.Accepted,
+            Saml2KeyTransportEncryptionAlgorithms.Accepted,
             firstKey.EncryptionMethods.Select(m => m.Algorithm.ToString()));
         Assert.Equal(
-            SamlEncryptionAlgorithms.Accepted,
+            Saml2KeyTransportEncryptionAlgorithms.Accepted,
             secondKey.EncryptionMethods.Select(m => m.Algorithm.ToString()));
     }
 

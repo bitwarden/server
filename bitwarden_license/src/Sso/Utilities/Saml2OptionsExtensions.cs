@@ -30,7 +30,6 @@ public static class Saml2OptionsExtensions
             return true;
         }
 
-        // We need to pull out and parse the response or request SAML envelope
         XmlElement envelope = null;
         try
         {
@@ -91,6 +90,13 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
+        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, scheme, context);
+
+        // This can throw if an IdP sends encrypted assertions in an
+        // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+        // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+        // on a per-assertion basis.
+        // PM-42982 exists to improve this site to handle all cases.
         if (options.SPOptions.WantAssertionsSigned)
         {
             var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
