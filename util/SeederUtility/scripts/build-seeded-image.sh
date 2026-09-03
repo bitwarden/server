@@ -105,6 +105,7 @@ _docker_build_and_push() {
         --build-arg "PRESET_NAME=${PRESET_NAME}" \
         --build-arg "GIT_SHA=${GIT_SHA}" \
         --build-arg "BUILD_DATE=${BUILD_DATE}" \
+        --build-arg "OWNER_EMAIL=${OWNER_EMAIL}" \
         -t "${IMAGE_VERSIONED}" \
         -t "${IMAGE_LATEST}" \
         "${WORK_DIR}" \
@@ -335,10 +336,14 @@ case "${DB_TYPE}" in
     ;;
 esac
 
+SEED_LOG="$(mktemp)"
 env "${SEED_ENV[@]}" \
     "globalSettings__databaseProvider=${DB_PROVIDER}" \
     "${DB_CONNECTION}" \
-    dotnet run --project . -- preset --name "${PRESET_NAME}"
+    dotnet run --project . -- preset --name "${PRESET_NAME}" | tee "${SEED_LOG}"
+
+OWNER_EMAIL=$(grep -E '^\s*(Owner|Email)\s*:' "${SEED_LOG}" | head -1 | sed -E 's/^\s*(Owner|Email)\s*:\s*//')
+rm -f "${SEED_LOG}"
 
 # --- Dump database ---
 case "${DB_TYPE}" in
