@@ -179,6 +179,7 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<ISelfRevokeOrganizationUserCommand, SelfRevokeOrganizationUserCommand>();
         services.AddScoped<ICreateStagedOrganizationUsersCommand, CreateStagedOrganizationUsersCommand>();
+        services.AddScoped<IInviteStagedOrganizationUsersCommand, InviteStagedOrganizationUsersCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

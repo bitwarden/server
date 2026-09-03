@@ -502,9 +502,16 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
-                organizationId, invites.SelectMany(i => i.invite.Emails), false),
+        var requestedEmails = invites.SelectMany(i => i.invite.Emails).ToList();
+
+        var existingEmails = new HashSet<string>(
+            await _organizationUserRepository.SelectKnownEmailsAsync(organizationId, requestedEmails, false),
             StringComparer.InvariantCultureIgnoreCase);
+
+        var stagedUsersByEmail = (await _organizationUserRepository
+                .GetManyByOrganizationEmailsAsync(organizationId, requestedEmails))
+            .Where(ou => ou.Status == OrganizationUserStatusType.Staged)
+            .ToDictionary(ou => ou.Email, StringComparer.InvariantCultureIgnoreCase);
 
         // Seat autoscaling
         var initialSmSeatCount = organization.SmSeats;
@@ -513,7 +520,9 @@ public class OrganizationService : IOrganizationService
         {
             var seatCounts = await _organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var availableSeats = organization.Seats.Value - seatCounts.Total;
-            newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
+            // Staged matches are promoted rather than skipped, so they still need a seat.
+            var skippedEmailCount = existingEmails.Count(email => !stagedUsersByEmail.ContainsKey(email));
+            newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - skippedEmailCount - availableSeats;
         }
 
         if (newSeatsRequired > 0)
@@ -530,7 +539,7 @@ public class OrganizationService : IOrganizationService
         var inviteWithSmAccessCount = invites
             .Where(i => i.invite.AccessSecretsManager)
             .SelectMany(i => i.invite.Emails)
-            .Count(email => !existingEmails.Contains(email));
+            .Count(email => !existingEmails.Contains(email) || stagedUsersByEmail.ContainsKey(email));
 
         var additionalSmSeatsRequired =
             await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
@@ -552,6 +561,7 @@ public class OrganizationService : IOrganizationService
         var orgUsersWithoutCollections = new List<OrganizationUser>();
         var orgUsersWithCollections = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
+        var stagedInvitations = new Dictionary<Guid, (OrganizationUser OrgUser, OrganizationUserInvite Invite)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
         var events = new List<(OrganizationUser, EventType, DateTime?)>();
@@ -562,6 +572,14 @@ public class OrganizationService : IOrganizationService
             {
                 try
                 {
+                    // A Staged row already exists, so it is promoted below rather than created here. Emails
+                    // are deduplicated within an invite but not across them, so keying by row promotes once.
+                    if (stagedUsersByEmail.TryGetValue(email, out var stagedOrgUser))
+                    {
+                        stagedInvitations.TryAdd(stagedOrgUser.Id, (stagedOrgUser, invite));
+                        continue;
+                    }
+
                     // Make sure user is not already invited
                     if (existingEmails.Contains(email))
                     {
@@ -616,8 +634,31 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        var allOrgUsers = orgUsersWithoutCollections
+        // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
+        // Directory Connector key off both, and only the fields the invite specifies are overwritten.
+        foreach (var (orgUser, invite) in stagedInvitations.Values)
+        {
+            orgUser.Type = invite.Type.Value;
+            orgUser.Status = OrganizationUserStatusType.Invited;
+            orgUser.AccessSecretsManager = invite.AccessSecretsManager;
+            orgUser.RevisionDate = DateTime.UtcNow;
+            // Custom permissions only apply to the Custom role, and a staged row may already carry some.
+            orgUser.Permissions = null;
+
+            if (invite.Type == OrganizationUserType.Custom)
+            {
+                orgUser.SetPermissions(invite.Permissions ?? new Permissions());
+            }
+
+            events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
+        }
+
+        var createdOrgUsers = orgUsersWithoutCollections
             .Concat(orgUsersWithCollections.Select(u => u.Item1))
+            .ToList();
+
+        var allOrgUsers = createdOrgUsers
+            .Concat(stagedInvitations.Values.Select(s => s.OrgUser))
             .ToList();
 
         try
@@ -647,12 +688,29 @@ public class OrganizationService : IOrganizationService
             }
 
             await SendInvitesAsync(allOrgUsers, organization, invitingUserId);
+
+            // Staged users' changes are handled separately to avoid unnecessary conditions above
+            foreach (var (orgUser, invite) in stagedInvitations.Values)
+            {
+                if (invite.Collections != null && invite.Collections.Any())
+                {
+                    await _organizationUserRepository.ReplaceAsync(orgUser, invite.Collections);
+                }
+                else
+                {
+                    await _organizationUserRepository.ReplaceAsync(orgUser);
+                }
+
+                if (invite.Groups != null && invite.Groups.Any())
+                {
+                    await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, invite.Groups, revisionDate);
+                }
+            }
         }
         catch (Exception e)
         {
-            // Revert any added users.
-            var invitedOrgUserIds = allOrgUsers.Select(ou => ou.Id);
-            await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
+            // Revert any created/non-staged users.
+            await _organizationUserRepository.DeleteManyAsync(createdOrgUsers.Select(ou => ou.Id));
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
             // Revert autoscaling

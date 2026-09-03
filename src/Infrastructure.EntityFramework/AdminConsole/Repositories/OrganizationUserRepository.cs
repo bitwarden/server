@@ -240,6 +240,22 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationEmailsAsync(
+        Guid organizationId, IEnumerable<string> emails)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var emailList = emails.ToList();
+
+            var organizationUsers = await dbContext.OrganizationUsers
+                .Where(w => w.OrganizationId == organizationId && emailList.Contains(w.Email))
+                .ToListAsync();
+
+            return Mapper.Map<List<Core.Entities.OrganizationUser>>(organizationUsers);
+        }
+    }
+
     public async Task<int> GetCountByFreeOrganizationAdminUserAsync(Guid userId)
     {
         var query = new OrganizationUserReadCountByFreeOrganizationAdminUserQuery(userId);

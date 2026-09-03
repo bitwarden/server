@@ -23,6 +23,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -96,6 +97,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IInviteStagedOrganizationUsersCommand _inviteStagedOrganizationUsersCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -132,7 +134,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -170,6 +173,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
         _globalSettings = globalSettings;
+        _inviteStagedOrganizationUsersCommand = inviteStagedOrganizationUsersCommand;
     }
 
     [HttpGet("{id}")]
@@ -340,6 +344,34 @@ public class OrganizationUsersController : BaseAdminConsoleController
     {
         var userId = _userService.GetProperUserId(User);
         await _resendOrganizationInviteCommand.ResendInviteAsync(orgId, userId.Value, id);
+    }
+
+    /// <summary>
+    /// Invites members who are currently in Staged status, without changing their access.
+    /// </summary>
+    /// <remarks>
+    /// Backs the members-grid "Send invite" row action. Configuring role, collections, or groups while inviting
+    /// goes through <see cref="Invite"/> instead, which is email-keyed because a staged member cannot be told
+    /// apart from a new one by email alone.
+    /// </remarks>
+    [HttpPost("send-invite")]
+    [Authorize<ManageUsersRequirement>]
+    public async Task<IResult> SendInviteToStagedUsers(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User);
+
+        var result = await _inviteStagedOrganizationUsersCommand.RunAsync(new InviteStagedOrganizationUsersRequest
+        {
+            OrganizationId = orgId,
+            OrganizationUserIds = model.Ids,
+            PerformedBy = userId!.Value
+        });
+
+        return Handle(result, results => TypedResults.Ok(
+            new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Id, r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty))))));
     }
 
     [HttpPost("{organizationUserId}/accept-init")]

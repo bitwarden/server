@@ -469,6 +469,21 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationEmailsAsync(Guid organizationId,
+        IEnumerable<string> emails)
+    {
+        var emailsTvp = emails.ToArrayTVP("Email");
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                "[dbo].[OrganizationUser_ReadManyByOrganizationIdEmails]",
+                new { OrganizationId = organizationId, Emails = emailsTvp },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task DeleteManyAsync(IEnumerable<Guid> organizationUserIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
