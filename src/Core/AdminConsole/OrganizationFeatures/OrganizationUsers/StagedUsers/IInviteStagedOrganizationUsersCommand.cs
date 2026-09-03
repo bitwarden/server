@@ -24,5 +24,5 @@ public interface IInviteStagedOrganizationUsersCommand
     /// A per-member result for every requested id, or an error if the organization is missing or no seats
     /// could be reserved.
     /// </returns>
-    Task<CommandResult<ICollection<BulkCommandResult>>> RunAsync(InviteStagedOrganizationUsersRequest request);
+    Task<BulkCommandResultCollection> RunAsync(InviteStagedOrganizationUsersRequest request);
 }

@@ -32,7 +32,7 @@ public class InviteStagedOrganizationUsersCommand(
     ILogger<InviteStagedOrganizationUsersCommand> logger)
     : IInviteStagedOrganizationUsersCommand
 {
-    public async Task<CommandResult<ICollection<BulkCommandResult>>> RunAsync(InviteStagedOrganizationUsersRequest request)
+    public async Task<BulkCommandResultCollection> RunAsync(InviteStagedOrganizationUsersRequest request)
     {
         var organization = await organizationRepository.GetByIdAsync(request.OrganizationId);
         if (organization is null)

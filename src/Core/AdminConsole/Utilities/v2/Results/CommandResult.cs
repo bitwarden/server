@@ -39,3 +39,14 @@ public record BulkCommandResult<T>(Guid Id, CommandResult<T> Result);
 /// A wrapper for <see cref="CommandResult"/> with an ID, to identify the result in bulk operations.
 /// </summary>
 public record BulkCommandResult(Guid Id, CommandResult Result);
+
+/// <summary>
+/// The result of a bulk command: either an <see cref="Error"/> that failed the request as a whole, or a
+/// <see cref="BulkCommandResult"/> for every item that was requested.
+/// </summary>
+public class BulkCommandResultCollection(OneOf<Error, ICollection<BulkCommandResult>> result)
+    : CommandResult<ICollection<BulkCommandResult>>(result)
+{
+    public static implicit operator BulkCommandResultCollection(Error error) => new(error);
+    public static implicit operator BulkCommandResultCollection(List<BulkCommandResult> results) => new(results);
+}

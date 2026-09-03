@@ -372,11 +372,10 @@ public class OrganizationUsersController : BaseAdminConsoleController
             PerformedBy = userId!.Value
         });
 
-        return Handle(result, results => TypedResults.Ok(
-            new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-                new OrganizationUserBulkResponseModel(r.Id, r.Result.Match(
-                    error => error.Message,
-                    _ => string.Empty))))));
+        return HandleBulk(result, r =>
+            new OrganizationUserBulkResponseModel(r.Id, r.Result.Match(
+                error => error.Message,
+                _ => string.Empty)));
     }
 
     [HttpPost("{organizationUserId}/accept-init")]

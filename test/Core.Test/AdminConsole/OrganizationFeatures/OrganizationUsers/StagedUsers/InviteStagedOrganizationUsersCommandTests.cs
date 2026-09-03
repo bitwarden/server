@@ -715,7 +715,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
     /// <summary>Asserts the request succeeded overall but reported <typeparamref name="TError"/> for one member.</summary>
     private static void AssertSkipped<TError>(
-        CommandResult<ICollection<BulkCommandResult>> result, Guid skippedId) where TError : Error
+        BulkCommandResultCollection result, Guid skippedId) where TError : Error
     {
         Assert.True(result.IsSuccess);
         var skipped = Assert.Single(result.AsSuccess, memberResult => memberResult.Id == skippedId);
@@ -724,7 +724,7 @@ public class InviteStagedOrganizationUsersCommandTests
 
     /// <summary>Asserts every member in <paramref name="expected"/> was invited and reported without an error.</summary>
     private static void AssertInvited(
-        CommandResult<ICollection<BulkCommandResult>> result, ICollection<OrganizationUser> expected)
+        BulkCommandResultCollection result, ICollection<OrganizationUser> expected)
     {
         Assert.All(expected, organizationUser =>
         {

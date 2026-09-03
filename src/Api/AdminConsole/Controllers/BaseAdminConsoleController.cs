@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Utilities.v2;
+﻿using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Models.Api;
@@ -30,6 +31,20 @@ public abstract class BaseAdminConsoleController : Controller
         commandResult.Match<IResult>(
             error => MapError(error),
             success
+        );
+
+    /// <summary>
+    /// Maps a <see cref="BulkCommandResultCollection"/> to an HTTP response.
+    /// On success, returns 200 OK with a per-item list produced by <paramref name="mapResult"/>. On a
+    /// failure of the request as a whole, returns the appropriate error status code.
+    /// </summary>
+    protected static IResult HandleBulk<TResponse>(
+        BulkCommandResultCollection commandResult,
+        Func<BulkCommandResult, TResponse> mapResult)
+        where TResponse : ResponseModel =>
+        commandResult.Match<IResult>(
+            MapError,
+            results => TypedResults.Ok(new ListResponseModel<TResponse>(results.Select(mapResult)))
         );
 
     protected static class Error
