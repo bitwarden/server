@@ -488,7 +488,7 @@ public class OrganizationsController : Controller
     [HttpGet("{orgId}/private-key")]
     [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     [Authorize<ManageUsersRequirement>]
-    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey(Guid orgId)
+    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey([FromRoute] Guid orgId)
     {
         var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)

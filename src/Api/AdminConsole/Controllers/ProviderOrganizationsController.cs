@@ -51,7 +51,7 @@ public class ProviderOrganizationsController : Controller
 
     [HttpGet("")]
     [Authorize<ProviderUserRequirement>]
-    public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get(Guid providerId)
+    public async Task<ListResponseModel<ProviderOrganizationOrganizationDetailsResponseModel>> Get([FromRoute] Guid providerId)
     {
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
         var responses = providerOrganizations.Select(o => new ProviderOrganizationOrganizationDetailsResponseModel(o));
@@ -60,7 +60,7 @@ public class ProviderOrganizationsController : Controller
 
     [HttpPost("add")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task Add(Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
+    public async Task Add([FromRoute] Guid providerId, [FromBody] ProviderOrganizationAddRequestModel model)
     {
         if (!await _currentContext.OrganizationOwner(model.OrganizationId))
         {
@@ -73,7 +73,7 @@ public class ProviderOrganizationsController : Controller
     [HttpPost("")]
     [SelfHosted(NotSelfHostedOnly = true)]
     [Authorize<ProviderAdminRequirement>]
-    public async Task<ProviderOrganizationResponseModel> Post(Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
+    public async Task<ProviderOrganizationResponseModel> Post([FromRoute] Guid providerId, [FromBody] ProviderOrganizationCreateRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -89,7 +89,7 @@ public class ProviderOrganizationsController : Controller
 
     [HttpDelete("{id:guid}")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task Delete(Guid providerId, Guid id)
+    public async Task Delete([FromRoute] Guid providerId, Guid id)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
 
@@ -106,7 +106,7 @@ public class ProviderOrganizationsController : Controller
     [HttpPost("{id:guid}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task PostDelete(Guid providerId, Guid id)
+    public async Task PostDelete([FromRoute] Guid providerId, Guid id)
     {
         await Delete(providerId, id);
     }
