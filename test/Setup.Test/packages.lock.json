@@ -1446,7 +1446,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.1, )"
+          "HttpExtensions": "[2026.8.2, )"
         }
       },
       "httpextensions": {
@@ -1455,7 +1455,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1469,10 +1469,10 @@
       "setup": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
-          "Migrator": "[2026.8.1, )",
+          "Migrator": "[2026.8.2, )",
           "YamlDotNet": "[11.2.1, 11.2.1]"
         }
       },

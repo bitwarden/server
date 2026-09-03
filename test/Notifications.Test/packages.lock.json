@@ -1843,7 +1843,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1913,8 +1913,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.8.1, )",
-          "Core": "[2026.8.1, )",
+          "Common": "[2026.8.2, )",
+          "Core": "[2026.8.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1928,7 +1928,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.1, )"
+          "HttpExtensions": "[2026.8.2, )"
         }
       },
       "httpextensions": {
@@ -1940,7 +1940,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.15.2, )",
@@ -1948,27 +1948,27 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "SharedWeb": "[2026.8.1, )"
+          "SharedWeb": "[2026.8.2, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Dapper": "[2.1.66, 2.1.66]",
-          "Pam.Domain": "[2026.8.1, )"
+          "Pam.Domain": "[2026.8.2, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.8, 8.0.8]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.8, 8.0.8]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.4, 8.0.4]",
-          "Pam.Domain": "[2026.8.1, )",
+          "Pam.Domain": "[2026.8.2, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[5.4.1, 5.4.1]",
           "linq2db.EntityFrameworkCore": "[8.1.0, 8.1.0]"
@@ -1977,17 +1977,17 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2026.8.1, )",
-          "Identity": "[2026.8.1, )",
+          "Common": "[2026.8.2, )",
+          "Identity": "[2026.8.2, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[10.0.10, 10.0.10]",
-          "Migrator": "[2026.8.1, )",
-          "Seeder": "[2026.8.1, )"
+          "Migrator": "[2026.8.2, )",
+          "Seeder": "[2026.8.2, )"
         }
       },
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
@@ -1998,7 +1998,7 @@
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
           "Bitwarden.Server.Sdk.WebEssentials": "[0.5.0, )",
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "MessagePack": "[3.1.7, 3.1.7]",
           "Microsoft.AspNetCore.SignalR.Protocols.MessagePack": "[10.0.10, 10.0.10]",
           "Microsoft.AspNetCore.SignalR.StackExchangeRedis": "[10.0.10, 10.0.10]",
@@ -2009,7 +2009,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
-          "SharedWeb": "[2026.8.1, )"
+          "SharedWeb": "[2026.8.2, )"
         }
       },
       "pam.domain": {
@@ -2025,10 +2025,10 @@
         "type": "Project",
         "dependencies": {
           "Bogus": "[35.6.5, 35.6.5]",
-          "Core": "[2026.8.1, )",
-          "Infrastructure.EntityFramework": "[2026.8.1, )",
-          "RustSdk": "[2026.8.1, )",
-          "SharedWeb": "[2026.8.1, )"
+          "Core": "[2026.8.2, )",
+          "Infrastructure.EntityFramework": "[2026.8.2, )",
+          "RustSdk": "[2026.8.2, )",
+          "SharedWeb": "[2026.8.2, )"
         }
       },
       "serilogfilelogging": {
@@ -2042,9 +2042,9 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
-          "Core": "[2026.8.1, )",
-          "Infrastructure.Dapper": "[2026.8.1, )",
-          "Infrastructure.EntityFramework": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
+          "Infrastructure.Dapper": "[2026.8.2, )",
+          "Infrastructure.EntityFramework": "[2026.8.2, )",
           "Microsoft.Bot.Builder.Integration.AspNet.Core": "[4.23.0, 4.23.0]",
           "Swashbuckle.AspNetCore.SwaggerGen": "[10.1.7, 10.1.7]"
         }
