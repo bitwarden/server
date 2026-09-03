@@ -35,7 +35,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        var record = Assert.Single(GetCensusRecords(context));
+        var record = Assert.Single(GetKeyEncryptionLogRecords(context));
         Assert.Equal(organizationId.ToString(), GetStructuredValue(record, "Scheme"));
         Assert.Equal(Rsa15, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
     }
@@ -50,7 +50,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        Assert.Empty(GetCensusRecords(context));
+        Assert.Empty(GetKeyEncryptionLogRecords(context));
     }
 
     [Fact]
@@ -64,11 +64,11 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        Assert.Empty(GetCensusRecords(context));
+        Assert.Empty(GetKeyEncryptionLogRecords(context));
     }
 
     [Fact]
-    public async Task CouldHandleAsync_WithMismatchedIssuer_DoesNotReachCensus_LogsNothing()
+    public async Task CouldHandleAsync_WithMismatchedIssuer_DoesNotReachVerification_LogsNothing()
     {
         // Arrange: The issuer does not match the seeded IdpEntityId value. The entity-ID guard
         // in CouldHandleAsync must reject the request before the key transport algorithm verification logic runs.
@@ -79,7 +79,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        Assert.Empty(GetCensusRecords(context));
+        Assert.Empty(GetKeyEncryptionLogRecords(context));
     }
 
     private static async Task<(Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context)> ArrangeAsync(
@@ -118,7 +118,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         return (samlOptions, organizationId, context);
     }
 
-    private static IReadOnlyList<FakeLogRecord> GetCensusRecords(HttpContext context) =>
+    private static IReadOnlyList<FakeLogRecord> GetKeyEncryptionLogRecords(HttpContext context) =>
         context.RequestServices.GetRequiredService<FakeLogCollector>()
             .GetSnapshot()
             .Where(r => r.StructuredState!.Any(entry => entry.Key == "KeyEncryptionAlgorithm"))
