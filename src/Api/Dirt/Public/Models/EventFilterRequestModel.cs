@@ -1,18 +1,18 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
-using Bit.Core.Exceptions;
+using Bit.Api.Utilities;
 
 namespace Bit.Api.Dirt.Public.Models;
 
 public class EventFilterRequestModel
 {
     /// <summary>
-    /// The start date. Must be less than the end date.
+    /// The start date. If omitted, defaults to 30 days before the end date.
     /// </summary>
     public DateTime? Start { get; set; }
     /// <summary>
-    /// The end date. Must be greater than the start date.
+    /// The end date. If omitted, defaults to the end of the current day.
     /// </summary>
     public DateTime? End { get; set; }
     /// <summary>
@@ -38,23 +38,9 @@ public class EventFilterRequestModel
 
     public Tuple<DateTime, DateTime> ToDateRange()
     {
-        if (!End.HasValue || !Start.HasValue)
-        {
-            End = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
-            Start = DateTime.UtcNow.Date.AddDays(-30);
-        }
-        else if (Start.Value > End.Value)
-        {
-            var newEnd = Start;
-            Start = End;
-            End = newEnd;
-        }
-
-        if ((End.Value - Start.Value) > TimeSpan.FromDays(367))
-        {
-            throw new BadRequestException("Date range must be < 367 days.");
-        }
-
-        return new Tuple<DateTime, DateTime>(Start.Value, End.Value);
+        var dateRange = ApiHelpers.GetDateRange(Start, End);
+        Start = dateRange.Item1;
+        End = dateRange.Item2;
+        return dateRange;
     }
 }

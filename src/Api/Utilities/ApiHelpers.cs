@@ -80,28 +80,34 @@ public static class ApiHelpers
     /// <param name="start">start date and time</param>
     /// <param name="end">end date and time</param>
     /// <remarks>
-    /// If start or end are null, will return a range of the last 30 days.
-    /// If a time span greater than 367 days is passed will throw BadRequestException.
+    /// A supplied bound is always honored; the missing bound is inferred from it.
+    /// With neither supplied, returns the last 30 days.
+    /// With only <paramref name="start"/>, the range runs to the end of the current day.
+    /// With only <paramref name="end"/>, the range covers the 30 days before it.
+    /// An inverted range is swapped. A range greater than 367 days throws BadRequestException.
     /// </remarks>
     public static Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
     {
-        if (!end.HasValue || !start.HasValue)
+        if (!start.HasValue)
         {
-            end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
-            start = DateTime.UtcNow.Date.AddDays(-30);
+            start = end.HasValue ? ThirtyDaysBefore(end.Value) : DateTime.UtcNow.Date.AddDays(-30);
         }
-        else if (start.Value > end.Value)
+
+        end ??= DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
+
+        if (start.Value > end.Value)
         {
-            var newEnd = start;
-            start = end;
-            end = newEnd;
+            (start, end) = (end, start);
         }
 
         if ((end.Value - start.Value) > TimeSpan.FromDays(367))
         {
-            throw new BadRequestException("Range too large.");
+            throw new BadRequestException("Date range must be < 367 days.");
         }
 
         return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
+
+    private static DateTime ThirtyDaysBefore(DateTime value) =>
+        value - DateTime.MinValue < TimeSpan.FromDays(30) ? DateTime.MinValue : value.AddDays(-30);
 }
