@@ -24,3 +24,7 @@ CREATE UNIQUE NONCLUSTERED INDEX [UX_Device_UserId_Identifier]
 GO
 CREATE NONCLUSTERED INDEX [IX_Device_Identifier]
     ON [dbo].[Device]([Identifier] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Device_UserId_LastActivityDate_Type]
+    ON [dbo].[Device]([UserId] ASC, [LastActivityDate] ASC, [Type] ASC);
