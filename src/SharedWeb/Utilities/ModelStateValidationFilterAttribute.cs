@@ -1,6 +1,11 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core;
+using Bit.Core.Models.Api;
+using Bit.HttpExtensions;
+using Bitwarden.Server.Sdk.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SharedWeb.Utilities;
 
@@ -27,5 +32,38 @@ public class ModelStateValidationFilterAttribute : ActionFilterAttribute
     protected virtual void OnModelStateInvalid(ActionExecutingContext context)
     {
         context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
+    }
+
+    /// <summary>
+    /// The coded problem document for this failure, or null when the surface has not been switched over to it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Offered rather than applied, because the shape is a breaking change for whoever is reading it: a caller
+    /// parsing <c>validationErrors</c> finds nothing it recognises in an RFC 7807 body. Each surface opts in on
+    /// its own schedule, and none is switched by inheriting from this.
+    /// </para>
+    /// <para>
+    /// Roots are the action's own parameter types. Model state names the property a failure sits on but not the
+    /// argument it was bound from, so the lookup tries each until one claims the path.
+    /// </para>
+    /// </remarks>
+    protected static IActionResult? TryCodedProblem(ActionExecutingContext context)
+    {
+        var featureService = context.HttpContext.RequestServices.GetService<IFeatureService>();
+        if (featureService?.IsEnabled(FeatureFlagKeys.CodedValidationProblems) != true)
+        {
+            return null;
+        }
+
+        var rootTypes = context.ActionDescriptor.Parameters
+            .Select(parameter => parameter.ParameterType)
+            .ToArray();
+
+        return new ObjectResult(ValidationProblemFactory.FromModelState(context.ModelState, rootTypes))
+        {
+            StatusCode = StatusCodes.Status400BadRequest,
+            ContentTypes = { "application/problem+json" },
+        };
     }
 }
