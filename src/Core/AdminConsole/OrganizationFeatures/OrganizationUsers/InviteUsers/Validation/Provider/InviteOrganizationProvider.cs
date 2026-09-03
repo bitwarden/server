@@ -8,12 +8,14 @@ public class InviteOrganizationProvider
     public ProviderType Type { get; init; }
     public ProviderStatusType Status { get; init; }
     public bool Enabled { get; init; }
+    public int? Seats { get; init; }
 
-    public InviteOrganizationProvider(Entities.Provider.Provider provider)
+    public InviteOrganizationProvider(Entities.Provider.Provider provider, int? seats)
     {
         ProviderId = provider.Id;
         Type = provider.Type;
         Status = provider.Status;
         Enabled = provider.Enabled;
+        Seats = seats;
     }
 }

@@ -9,9 +9,12 @@ public record PasswordManagerSeatLimitHasBeenReachedError(PasswordManagerSubscri
 }
 
 public record PasswordManagerPlanDoesNotAllowAdditionalSeatsError(PasswordManagerSubscriptionUpdate InvalidRequest)
-    : Error<PasswordManagerSubscriptionUpdate>(Code, InvalidRequest)
+    : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
-    public const string Code = "Plan does not allow additional seats.";
+    private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
+        string.Format(Code, invalidRequest.Seats);
+
+    public const string Code = "Seat limit of {0} has been reached. Contact Customer Support to upgrade your plan.";
 }
 
 public record PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(PasswordManagerSubscriptionUpdate InvalidRequest)
