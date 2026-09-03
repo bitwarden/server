@@ -40,11 +40,14 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="deletionDateBefore">
     /// Load sends whose <see cref="Send.DeletionDate" /> is &lt; this date.
     /// </param>
+    /// <param name="batchSize">
+    /// The maximum number of <see cref="Send"/>s to load, oldest <see cref="Send.DeletionDate" /> first.
+    /// </param>
     /// <returns>
     /// A task that completes once the <see cref="Send"/>s have been loaded.
     /// The task's result contains the loaded <see cref="Send"/>s.
     /// </returns>
-    Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore);
+    Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore, int batchSize);
 
     /// <summary>
     /// Loads file-type <see cref="Send"/>s created by a user.
@@ -97,4 +100,11 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
     /// <returns></returns>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Deletes <see cref="Send"/>s in bulk by IDs, bumping each affected user's account revision date
+    /// once and recomputing storage once for each user who had a File-type <see cref="Send"/> deleted.
+    /// </summary>
+    /// <param name="ids">The IDs of the <see cref="Send"/>s to delete</param>
+    Task DeleteManyAsync(IEnumerable<Guid> ids);
 }
