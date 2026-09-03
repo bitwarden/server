@@ -430,6 +430,34 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
+    public async Task Put_OmittingEmailAndName_DoesNotOverwriteThem()
+    {
+        var (member, _) = await CreateClaimedMemberWithoutMasterPasswordAsync();
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var existingUser = await userRepository.GetByIdAsync(member.UserId!.Value);
+        Assert.NotNull(existingUser);
+        existingUser.Name = "Original Name";
+        await userRepository.ReplaceAsync(existingUser);
+        var originalEmail = existingUser.Email;
+
+        var request = new MemberUpdateRequestModel
+        {
+            Type = OrganizationUserType.User,
+            Collections = []
+        };
+
+        var response = await _client.PutAsync($"/public/members/{member.Id}", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updatedUser = await userRepository.GetByIdAsync(member.UserId!.Value);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("Original Name", updatedUser.Name);
+        Assert.Equal(originalEmail, updatedUser.Email);
+    }
+
+    [Fact]
     public async Task Put_ClaimedMemberWithoutMasterPassword_EmailChangeSucceeds()
     {
         var (member, domain) = await CreateClaimedMemberWithoutMasterPasswordAsync();
