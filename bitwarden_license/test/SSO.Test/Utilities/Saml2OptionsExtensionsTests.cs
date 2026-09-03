@@ -58,8 +58,8 @@ public class Saml2OptionsExtensionsTests
     [Fact]
     public async Task CouldHandleAsync_PlaintextAssertion_LogsNoEntry()
     {
-        // An empty inspector result reports an envelope with no encrypted assertion.
-        // The census skips that envelope, so no log entry claims IsEncrypted is false.
+        // An envelope with no encrypted assertion names no key encryption algorithm,
+        // so the inspector logs no entry.
         var options = BuildOptions(wantAssertionsSigned: false);
         var logger = new FakeLogger<Saml2Options>();
         var context = BuildPostContext(
@@ -74,7 +74,7 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_TwoEncryptedAssertionsWithOneUnsupportedAlgorithm_LogsOneEntry()
     {
         // A federation proxy can aggregate assertions from two identity providers.
-        // The census then holds one entry for each distinct algorithm.
+        // The inspector then logs one entry for each distinct unaccepted algorithm.
         var options = BuildOptions(wantAssertionsSigned: false);
         var logger = new FakeLogger<Saml2Options>();
         var context = BuildPostContext(
@@ -156,7 +156,7 @@ public class Saml2OptionsExtensionsTests
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
 
-        // CouldHandleAsync resolves the census logger from the request services.
+        // CouldHandleAsync resolves the inspector logger from the request services.
         if (logger != null)
         {
             var services = new ServiceCollection();

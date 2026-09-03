@@ -13,6 +13,8 @@ public static class Saml2EncryptedAssertionInspector
     // Encryption algorithms found outside the known list are categorized an "unrecognized."
     private const string _unrecognizedAlgorithm = "unrecognized";
 
+    private const string _xencNamespace = "http://www.w3.org/2001/04/xmlenc#";
+
     /// <summary>
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
     /// Logs when an unaccepted algorithm in in use.
@@ -21,8 +23,8 @@ public static class Saml2EncryptedAssertionInspector
     /// <param name="scheme">The scheme provided in the request.</param>
     /// <param name="context">The current request context.</param>
     /// <remarks>
-    /// A SAML response can hold more than one assertion, and each encrypted assertion holds its own key.
-    /// Each assertion must be checked.
+    /// A SAML response can hold more than one assertion, and each encrypted assertion holds one or more keys.
+    /// Every key of every assertion must be checked.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
     /// </remarks>
@@ -34,14 +36,13 @@ public static class Saml2EncryptedAssertionInspector
             .Where(e => e.LocalName == "EncryptedAssertion"
                 && e.NamespaceURI == Saml2Namespaces.Saml2Name);
 
-        var algorithms = encryptedAssertions
-            .Select(ReadKeyEncryptionAlgorithm);
-
-        var unacceptedAlgorithms = algorithms
+        var unacceptedAlgorithms = encryptedAssertions
+            .SelectMany(ReadKeyEncryptionAlgorithms)
             .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
-            .Distinct();
+            .Distinct()
+            .ToArray();
 
-        if (!unacceptedAlgorithms.Any())
+        if (unacceptedAlgorithms.Length == 0)
         {
             return;
         }
@@ -57,22 +58,43 @@ public static class Saml2EncryptedAssertionInspector
         }
     }
 
-    private static string? ReadKeyEncryptionAlgorithm(XmlElement encryptedAssertion)
+    /// <summary>
+    /// Reads the key encryption algorithm of every xenc:EncryptedKey in one encrypted assertion.
+    /// </summary>
+    /// <remarks>
+    /// The SAML 2.0 assertion schema declares xenc:EncryptedKey with maxOccurs="unbounded" inside
+    /// saml:EncryptedElementType, the type of saml:EncryptedAssertion. One assertion can therefore hold
+    /// more than one key. XML Encryption 1.1 section 3.5.3 states that such keys carry the same key value,
+    /// "possibly encrypted in different ways or for different recipients", so the algorithms can differ.
+    /// Every key must be read. Reading only the first key hides a deprecated algorithm behind an accepted one.
+    /// </remarks>
+    private static IEnumerable<string?> ReadKeyEncryptionAlgorithms(XmlElement encryptedAssertion)
     {
-        const string XencNamespace = "http://www.w3.org/2001/04/xmlenc#";
-
         // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData instead of inside it.
         // An xenc:ReferenceList then links the two elements.
         // A search by tag name finds the element in either shape. A fixed nested path does not.
-        var encryptedKeys = encryptedAssertion.GetElementsByTagName("EncryptedKey", XencNamespace);
-        var encryptedKey = encryptedKeys.Count > 0 ? encryptedKeys[0] : null;
+        var encryptedKeys = encryptedAssertion
+            .GetElementsByTagName("EncryptedKey", _xencNamespace)
+            .OfType<XmlElement>()
+            .ToArray();
 
+        // An assertion that names no key relies on an out-of-band agreement. Report it as an absent algorithm.
+        if (encryptedKeys.Length == 0)
+        {
+            return [null];
+        }
+
+        return encryptedKeys.Select(ClassifyAlgorithm);
+    }
+
+    private static string? ClassifyAlgorithm(XmlElement encryptedKey)
+    {
         // The xenc:EncryptionMethod child of xenc:EncryptedKey names the key encryption algorithm.
         // The xenc:EncryptionMethod child of xenc:EncryptedData names the data encryption algorithm.
         // Read only the first one. The indexer restricts the read to a direct child.
         //
         // GetAttribute returns an empty string for a missing attribute.
-        var rawAlgorithm = encryptedKey?["EncryptionMethod", XencNamespace]?.GetAttribute("Algorithm");
+        var rawAlgorithm = encryptedKey["EncryptionMethod", _xencNamespace]?.GetAttribute("Algorithm");
 
         if (string.IsNullOrEmpty(rawAlgorithm))
         {
