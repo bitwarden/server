@@ -220,7 +220,7 @@ public class MembersController : BaseAdminConsoleController
             null,
             new SystemUser(EventSystemUser.PublicApi));
 
-        return await Handle(await _updateOrganizationUserCommand.UpdateUserAsync(request),
+        return await HandlePublic(await _updateOrganizationUserCommand.UpdateUserAsync(request),
             async _ =>
             {
                 MemberResponseModel response;

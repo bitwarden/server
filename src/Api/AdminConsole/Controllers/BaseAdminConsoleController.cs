@@ -34,13 +34,13 @@ public abstract class BaseAdminConsoleController : Controller
         );
 
     /// <summary>
-    /// Maps a <see cref="CommandResult{T}"/> to an HTTP response.
+    /// Maps a <see cref="CommandResult{T}"/> to an HTTP response for the public api endpoints.
     /// On success, delegates to <paramref name="success"/> so the caller can use an async func.
     /// On failure, returns the appropriate error status code.
     /// </summary>
-    protected static Task<IResult> Handle<T>(CommandResult<T> commandResult, Func<T, Task<IResult>> success) =>
+    protected static Task<IResult> HandlePublic<T>(CommandResult<T> commandResult, Func<T, Task<IResult>> success) =>
         commandResult.Match(
-            error => Task.FromResult(MapError(error)),
+            error => Task.FromResult(MapErrorPublic(error)),
             success
         );
 
@@ -66,6 +66,12 @@ public abstract class BaseAdminConsoleController : Controller
         error switch
         {
             IValidationError validationError => TypedResults.BitwardenValidationProblem(validationError),
+            _ => MapErrorPublic(error),
+        };
+
+    private static IResult MapErrorPublic(CommandError error) =>
+        error switch
+        {
             BadRequestError badRequest => TypedResults.BadRequest(new ErrorResponseModel(badRequest.Message)),
             NotFoundError notFound => TypedResults.NotFound(new ErrorResponseModel(notFound.Message)),
             ConflictError conflict => TypedResults.Json(
