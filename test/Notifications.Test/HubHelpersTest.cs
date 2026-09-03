@@ -276,14 +276,14 @@ public class HubHelpersTest
 
     private static string ToNotificationJson(object payload, PushType type, string contextId)
     {
-        var notification = new PushNotificationData<object>(type, payload, contextId);
+        var notification = new ClientNotification<object> { Type = type, Payload = payload, ContextId = contextId };
         return JsonSerializer.Serialize(notification, JsonHelpers.IgnoreWritingNull);
     }
 
     private static bool IsNotificationPushNotificationEqual(NotificationPushNotification expected, object? actual,
         PushType type, string contextId)
     {
-        if (actual is not PushNotificationData<NotificationPushNotification> pushNotificationData)
+        if (actual is not ClientNotification<NotificationPushNotification> pushNotificationData)
         {
             return false;
         }
@@ -300,7 +300,7 @@ public class HubHelpersTest
     private static bool AssertSyncPolicyPushNotification(SyncPolicyPushNotification expected, object? actual,
         PushType type, string contextId)
     {
-        if (actual is not PushNotificationData<SyncPolicyPushNotification> pushNotificationData)
+        if (actual is not ClientNotification<SyncPolicyPushNotification> pushNotificationData)
         {
             return false;
         }
@@ -316,7 +316,7 @@ public class HubHelpersTest
     private static bool AssertPremiumStatusPushNotification(PremiumStatusPushNotification expected, object? actual,
         PushType type, string contextId)
     {
-        if (actual is not PushNotificationData<PremiumStatusPushNotification> pushNotificationData)
+        if (actual is not ClientNotification<PremiumStatusPushNotification> pushNotificationData)
         {
             return false;
         }

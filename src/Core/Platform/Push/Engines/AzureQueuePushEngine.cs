@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -11,6 +10,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
+/// <summary>
+/// Sends notifications to the Notifications service by writing them to the notifications Azure
+/// Queue, where AzureQueueHostedService dequeues them and fans them out over SignalR. Registered for
+/// cloud-hosted installations that have a notifications queue configured; the self-hosted equivalent
+/// is <see cref="NotificationsApiPushEngine"/>.
+/// </summary>
+/// <remarks>
+/// Every notification is written, whatever client type it is bound for; this engine filters nothing.
+/// Which connections receive one is decided by the Notifications service, and a mobile app holding a
+/// SignalR connection is delivered to like any other client.
+/// </remarks>
 public class AzureQueuePushEngine : IPushEngine
 {
     private readonly QueueClient _queueClient;
@@ -30,11 +40,18 @@ public class AzureQueuePushEngine : IPushEngine
         }
     }
 
-    private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
+    public async Task PushAsync<T>(PushNotification<T> pushNotification)
+        where T : class
     {
-        var contextId = GetContextIdentifier(excludeCurrentContext);
-        var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
-            JsonHelpers.IgnoreWritingNull);
+        var message = JsonSerializer.Serialize(new PushNotificationData<T>
+        {
+            Type = pushNotification.Type,
+            Payload = pushNotification.Payload,
+            ContextId = GetContextIdentifier(pushNotification.ExcludeCurrentContext),
+            Target = pushNotification.Target,
+            TargetId = pushNotification.TargetId,
+            ClientType = pushNotification.ClientType,
+        }, JsonHelpers.Default);
         await _queueClient.SendMessageAsync(message);
     }
 
@@ -48,11 +65,5 @@ public class AzureQueuePushEngine : IPushEngine
         var currentContext =
             _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
-    }
-
-    public async Task PushAsync<T>(PushNotification<T> pushNotification)
-        where T : class
-    {
-        await SendMessageAsync(pushNotification.Type, pushNotification.Payload, pushNotification.ExcludeCurrentContext);
     }
 }
