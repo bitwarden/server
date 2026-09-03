@@ -76,7 +76,7 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
-        await _eventService.Received(1).LogUserEventAsync(userId, EventType.User_ClientExportedVault, eventDate);
+        await _eventService.Received(1).LogUserEventAsync(userId, EventType.User_ClientExportedVault, null);
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public class CollectControllerTests
         var result = await _sut.Post(events);
 
         Assert.IsType<OkResult>(result);
-        await _eventService.Received(1).LogOrganizationUserEventAsync(orgUser, type, eventDate);
+        await _eventService.Received(1).LogOrganizationUserEventAsync(orgUser, type, null);
     }
 
     [Theory]
@@ -183,7 +183,7 @@ public class CollectControllerTests
                 tuples => tuples.Count() == 1 &&
                          tuples.First().Item1 == cipherDetails &&
                          tuples.First().Item2 == EventType.Cipher_ClientAutofilled &&
-                         tuples.First().Item3 == eventDate
+                         tuples.First().Item3 == null
             )
         );
     }
@@ -635,7 +635,7 @@ public class CollectControllerTests
         Assert.IsType<OkResult>(result);
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
-        await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_ClientExportedVault, eventDate);
+        await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_ClientExportedVault, null);
     }
 
     [Theory]
@@ -830,7 +830,7 @@ public class CollectControllerTests
         Assert.IsType<OkResult>(result);
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
-        await _eventService.Received(1).LogOrganizationEventAsync(organization, eventType, eventDate);
+        await _eventService.Received(1).LogOrganizationEventAsync(organization, eventType, null);
     }
 
     [Theory]
@@ -910,7 +910,7 @@ public class CollectControllerTests
         Assert.IsType<OkResult>(result);
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
-        await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkClientCopied, eventDate);
+        await _eventService.Received(1).LogOrganizationEventAsync(organization, EventType.Organization_InviteLinkClientCopied, null);
     }
 
     [Theory]
@@ -996,7 +996,7 @@ public class CollectControllerTests
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _eventService.Received(1).LogOrganizationUserEventAsync(
-            Arg.Is<OrganizationUser>(o => o == orgUser), type, eventDate);
+            Arg.Is<OrganizationUser>(o => o == orgUser), type, null);
     }
 
     [Theory]
@@ -1080,5 +1080,85 @@ public class CollectControllerTests
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
         await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<DateTime?>());
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_CipherEventWithSkewedClientDate_DoesNotForwardClientDate(Guid userId, Guid cipherId, CipherDetails cipherDetails)
+    {
+        _currentContext.UserId.Returns(userId);
+        cipherDetails.Id = cipherId;
+        _cipherRepository.GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientCopiedPassword,
+                CipherId = cipherId,
+                Date = DateTime.UtcNow.AddMinutes(-4)
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _eventService.Received(1).LogCipherEventsAsync(
+            Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(
+                tuples => tuples.Single().Item3 == null
+            )
+        );
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_CipherEventWithFutureClientDate_DoesNotForwardClientDate(Guid userId, Guid cipherId, CipherDetails cipherDetails)
+    {
+        _currentContext.UserId.Returns(userId);
+        cipherDetails.Id = cipherId;
+        _cipherRepository.GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientCopiedPassword,
+                CipherId = cipherId,
+                Date = DateTime.UtcNow.AddHours(2)
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _eventService.Received(1).LogCipherEventsAsync(
+            Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(
+                tuples => tuples.Single().Item3 == null
+            )
+        );
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task Post_CipherEventWithNoClientDate_DoesNotForwardDateTimeMinValue(Guid userId, Guid cipherId, CipherDetails cipherDetails)
+    {
+        _currentContext.UserId.Returns(userId);
+        cipherDetails.Id = cipherId;
+        _cipherRepository.GetByIdAsync(cipherId, userId).Returns(cipherDetails);
+        var events = new List<EventModel>
+        {
+            new EventModel
+            {
+                Type = EventType.Cipher_ClientCopiedPassword,
+                CipherId = cipherId
+            }
+        };
+
+        var result = await _sut.Post(events);
+
+        Assert.IsType<OkResult>(result);
+        await _eventService.Received(1).LogCipherEventsAsync(
+            Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(
+                tuples => tuples.Single().Item3 == null
+            )
+        );
     }
 }
