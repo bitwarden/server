@@ -3,8 +3,10 @@ FROM mariadb:12
 ARG PRESET_NAME=unknown
 ARG GIT_SHA=unknown
 ARG BUILD_DATE=unknown
+ARG OWNER_EMAIL=unknown
 
 LABEL bitwarden.seeder.preset="${PRESET_NAME}"
+LABEL bitwarden.seeder.owner="${OWNER_EMAIL}"
 LABEL org.opencontainers.image.revision="${GIT_SHA}"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 
