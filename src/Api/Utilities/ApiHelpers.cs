@@ -88,7 +88,11 @@ public static class ApiHelpers
     /// </remarks>
     public static Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
     {
-        start ??= end?.AddDays(-30) ?? DateTime.UtcNow.Date.AddDays(-30);
+        if (!start.HasValue)
+        {
+            start = end.HasValue ? ThirtyDaysBefore(end.Value) : DateTime.UtcNow.Date.AddDays(-30);
+        }
+
         end ??= DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
 
         if (start.Value > end.Value)
@@ -103,4 +107,7 @@ public static class ApiHelpers
 
         return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
+
+    private static DateTime ThirtyDaysBefore(DateTime value) =>
+        value - DateTime.MinValue < TimeSpan.FromDays(30) ? DateTime.MinValue : value.AddDays(-30);
 }

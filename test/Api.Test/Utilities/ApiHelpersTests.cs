@@ -55,6 +55,33 @@ public class ApiHelpersTests
     }
 
     [Fact]
+    public void GetDateRange_OnlyEndSuppliedNearMinValue_ClampsStartInsteadOfThrowing()
+    {
+        var suppliedEnd = new DateTime(1, 1, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var (start, end) = ApiHelpers.GetDateRange(null, suppliedEnd);
+
+        Assert.Equal(DateTime.MinValue, start);
+        Assert.Equal(suppliedEnd, end);
+    }
+
+    [Fact]
+    public void GetDateRange_OnlyEndSuppliedExactlyThirtyDaysAfterMinValue_ClampsToMinValue()
+    {
+        var suppliedEnd = DateTime.MinValue.AddDays(30);
+
+        var (start, _) = ApiHelpers.GetDateRange(null, suppliedEnd);
+
+        Assert.Equal(DateTime.MinValue, start);
+    }
+
+    [Fact]
+    public void GetDateRange_OnlyStartSuppliedAtMaxValue_ThrowsBadRequestRatherThanOverflowing()
+    {
+        Assert.Throws<BadRequestException>(() => ApiHelpers.GetDateRange(DateTime.MaxValue, null));
+    }
+
+    [Fact]
     public void GetDateRange_BothBoundsSupplied_ReturnsThemUnchanged()
     {
         var suppliedStart = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
