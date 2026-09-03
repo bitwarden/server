@@ -1,0 +1,29 @@
+name: Label PR
+run-name: Label PR #${{ github.event.pull_request.number }}
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  label:
+    name: Label PR
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Label PR
+        uses: bitwarden/gh-actions/auto-label-pr-sdlc@main
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          pr-labels: ${{ toJSON(github.event.pull_request.labels) }}
+          mode: add
+          github-token: ${{ secrets.GITHUB_TOKEN }}
