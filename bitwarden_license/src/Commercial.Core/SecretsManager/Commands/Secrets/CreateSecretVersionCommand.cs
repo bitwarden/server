@@ -39,15 +39,9 @@ public class CreateSecretVersionCommand : ICreateSecretVersionCommand
         });
     }
 
-    /// <summary>
-    /// Service accounts are recorded by their own id; members are recorded by their OrganizationUser id
-    /// so attribution stays scoped to the organization.
-    /// </summary>
-    /// <remarks>
-    /// Both ids stay null when the caller cannot be attributed to either — an organization API key
-    /// authenticates as the organization itself, so it matches no OrganizationUser. That surfaces as an
-    /// unknown editor rather than failing the write, which would otherwise block those clients entirely.
-    /// </remarks>
+    // Members are recorded by OrganizationUser id rather than User id, so attribution stays scoped to
+    // this organization. Null is tolerated rather than fatal — the value change already happened, and
+    // enforcing membership is the authorization layer's job, not this command's.
     private async Task<(Guid? ServiceAccountId, Guid? OrganizationUserId)> ResolveEditorAsync(
         Guid organizationId, Guid accessClientId)
     {
