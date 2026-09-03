@@ -181,12 +181,12 @@ enum FailureSyncState { target_unchanged | target_updated | indeterminate }
 -- Entities
 
 -- A target system the access connector can rotate credentials in (Entra, a SQL Server, a custom
--- script, ...). Defined and owned server-side: the admin registers it with a name and a
--- rotation method, and the server holds NO connection details -- those live in the
--- access connector's local resolver, keyed by this id (see access-connector.allium). Status enables or
--- disables the whole target. Status literals (active|disabled) are deliberately distinct
--- from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference stays
--- unambiguous.
+-- script, an on-premises Active Directory domain, ...). Defined and owned server-side: the admin
+-- registers it with a name and a rotation method, and the server holds NO connection details --
+-- those live in the access connector's local resolver, keyed by this id (see
+-- access-connector.allium). Status enables or disables the whole target. Status literals
+-- (active|disabled) are deliberately distinct from ConnectorRegistration's (enrolled|revoked) so
+-- untyped trigger-param inference stays unambiguous.
 entity TargetSystem {
     id: String
     name: String
@@ -196,8 +196,9 @@ entity TargetSystem {
     -- manual: no access connector integration -- rotations are recorded out of band (Goal 3); kind,
     --   password_policy and supports_session_termination do not apply.
     method: automatic | manual
-    -- Which integration the access connector runs (Entra, MSSQL, or a custom script).
-    kind: entra | mssql | custom_script when method = automatic
+    -- Which integration the access connector runs (Entra, MSSQL, a custom script, or
+    -- on-premises Active Directory -- distinct from entra, which is Entra ID).
+    kind: entra | mssql | custom_script | active_directory when method = automatic
     password_policy: PasswordPolicy when method = automatic
     -- Whether the target can terminate active sessions for a rotated account. Used at
     -- config time to reject terminate_sessions on a target that cannot honour it
@@ -294,9 +295,9 @@ entity RotationConfig {
     target_system: TargetSystem
     -- account_identity is an opaque String: the account's identifier in the target system,
     -- interpreted by the target's kind (an Entra UPN/email, a SQL Server login, a
-    -- custom-script argument). No type or kind discriminator -- the access connector's kind
-    -- integration knows how to read it; it is carried verbatim to the access connector on the claim
-    -- and never parsed server-side.
+    -- custom-script argument, an Active Directory sAMAccountName). No type or kind
+    -- discriminator -- the access connector's kind integration knows how to read it; it is
+    -- carried verbatim to the access connector on the claim and never parsed server-side.
     account_identity: String
     terminate_sessions: Boolean
     -- Whether this credential rotates automatically or by hand is a property of its target
