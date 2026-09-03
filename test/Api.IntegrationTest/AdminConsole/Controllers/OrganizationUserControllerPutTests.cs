@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -575,6 +576,40 @@ public class OrganizationUserControllerPutTests : IClassFixture<ApiApplicationFa
             $"organizations/{_organization.Id}/users/{member.Id}", UpdateRequest(email: takenEmail));
 
         await AssertValidationProblemAsync(response, new EmailTakenOutsideOrganizationError());
+    }
+
+    [Fact]
+    public async Task Put_AsProviderUserForOrganization_PersistsChanges()
+    {
+        // A provider user with no organization membership is authorized to manage the org's users
+        // because their provider is linked to the organization (ManageUsersRequirement falls through
+        // to the provider check).
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        var providerUserEmail = $"provider-user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(providerUserEmail);
+        await ProviderTestHelpers.CreateProviderUserAsync(_factory, provider.Id, providerUserEmail,
+            ProviderUserType.ProviderAdmin);
+
+        var (_, member) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+
+        await _loginHelper.LoginAsync(providerUserEmail);
+
+        var request = new OrganizationUserUpdateRequestModel
+        {
+            Type = OrganizationUserType.Admin,
+            Permissions = new Permissions(),
+            Collections = [],
+            Groups = []
+        };
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{member.Id}", request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var updatedOrgUser = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(member.Id);
+        Assert.NotNull(updatedOrgUser);
+        Assert.Equal(OrganizationUserType.Admin, updatedOrgUser.Type);
     }
 
     private async Task SetAllowAdminAccessToAllCollectionItemsAsync(bool value)
