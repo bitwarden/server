@@ -8,7 +8,6 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -30,7 +29,7 @@ public class SecretsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
-    private readonly ISecretVersionRepository _secretVersionRepository;
+    private readonly ICreateSecretVersionCommand _createSecretVersionCommand;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
@@ -40,13 +39,12 @@ public class SecretsController : Controller
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SecretsController(
         ICurrentContext currentContext,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
-        ISecretVersionRepository secretVersionRepository,
+        ICreateSecretVersionCommand createSecretVersionCommand,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
@@ -55,13 +53,12 @@ public class SecretsController : Controller
         ISecretAccessPoliciesUpdatesQuery secretAccessPoliciesUpdatesQuery,
         IUserService userService,
         IEventService eventService,
-        IAuthorizationService authorizationService,
-        IOrganizationUserRepository organizationUserRepository)
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
-        _secretVersionRepository = secretVersionRepository;
+        _createSecretVersionCommand = createSecretVersionCommand;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
@@ -71,8 +68,6 @@ public class SecretsController : Controller
         _userService = userService;
         _eventService = eventService;
         _authorizationService = authorizationService;
-        _organizationUserRepository = organizationUserRepository;
-
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -119,6 +114,9 @@ public class SecretsController : Controller
         }
 
         var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
+        var userId = _userService.GetProperUserId(User).Value;
+        await _createSecretVersionCommand.CreateAsync(result, userId);
+
         await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -177,11 +175,6 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        // ToSecret mutates the entity in place, so capture the pre-update value and
-        // revision date before they are overwritten.
-        var originalValue = secret.Value;
-        var originalRevisionDate = secret.RevisionDate;
-
         var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -202,46 +195,14 @@ public class SecretsController : Controller
             }
         }
 
-        // Create a version record if the value changed
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
+
         if (updateRequest.ValueChanged)
         {
             var userId = _userService.GetProperUserId(User)!.Value;
-            Guid? editorServiceAccountId = null;
-            Guid? editorOrganizationUserId = null;
-
-            if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
-            {
-                editorServiceAccountId = userId;
-            }
-            else if (_currentContext.IdentityClientType == IdentityClientType.User)
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
-                if (orgUser != null)
-                {
-                    editorOrganizationUserId = orgUser.Id;
-                }
-            }
-            else if (_currentContext.IdentityClientType == IdentityClientType.Organization)
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
-                if (orgUser != null)
-                {
-                    editorOrganizationUserId = orgUser.Id;
-                }
-            }
-
-            var secretVersion = new SecretVersion
-            {
-                SecretId = id,
-                Value = originalValue,
-                VersionDate = originalRevisionDate,
-                EditorServiceAccountId = editorServiceAccountId,
-                EditorOrganizationUserId = editorOrganizationUserId
-            };
-            await _secretVersionRepository.CreateAsync(secretVersion);
+            await _createSecretVersionCommand.CreateAsync(result, userId);
         }
 
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
         await LogSecretEventAsync(secret, EventType.Secret_Edited);
 
         // Updating a secret means you have read & write permission.

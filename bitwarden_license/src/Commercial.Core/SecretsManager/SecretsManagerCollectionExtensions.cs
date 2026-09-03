@@ -55,6 +55,7 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ISecretsSyncQuery, SecretsSyncQuery>();
         services.AddScoped<IProjectServiceAccountsAccessPoliciesUpdatesQuery, ProjectServiceAccountsAccessPoliciesUpdatesQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
+        services.AddScoped<ICreateSecretVersionCommand, CreateSecretVersionCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
         services.AddScoped<ICreateProjectCommand, CreateProjectCommand>();

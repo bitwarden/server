@@ -1,4 +1,5 @@
 ﻿using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Core.SecretsManager.Repositories.Noop;
 
@@ -27,5 +28,20 @@ public class NoopSecretVersionRepository : ISecretVersionRepository
     public Task<IEnumerable<SecretVersion>> GetManyByIdsAsync(IEnumerable<Guid> ids)
     {
         return Task.FromResult(Enumerable.Empty<SecretVersion>());
+    }
+
+    public Task<SecretVersionDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        return Task.FromResult(null as SecretVersionDetails);
+    }
+
+    public Task<IEnumerable<SecretVersionDetails>> GetManyDetailsBySecretIdAsync(Guid secretId)
+    {
+        return Task.FromResult(Enumerable.Empty<SecretVersionDetails>());
+    }
+
+    public Task<IEnumerable<SecretVersionDetails>> GetManyDetailsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        return Task.FromResult(Enumerable.Empty<SecretVersionDetails>());
     }
 }

@@ -164,6 +164,41 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task CreateSecret_RecordsInitialVersion(SutProvider<SecretsController> sutProvider,
+        SecretCreateRequestModel data, Guid organizationId, Secret createdSecret, Guid userId)
+    {
+        data = SetupSecretCreateRequest(sutProvider, data, organizationId);
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<ICreateSecretCommand>()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(createdSecret);
+
+        await sutProvider.Sut.CreateAsync(organizationId, data);
+
+        // Without this the secret has no author until someone edits it, which surfaces in the
+        // client as an unknown editor.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
+            .CreateAsync(createdSecret, userId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateSecret_NoAccess_DoesNotRecordVersion(SutProvider<SecretsController> sutProvider,
+        SecretCreateRequestModel data, Guid organizationId)
+    {
+        data = SetupSecretCreateRequest(sutProvider, data, organizationId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task CreateSecret_AccessPolicyUpdates_NoAccess_Throws(SutProvider<SecretsController> sutProvider,
         SecretCreateRequestModel data, Guid organizationId)
     {
@@ -293,7 +328,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateSecret_ValueChanged_CreatesVersionWithPreviousValueAndRevisionDate(
+    public async Task UpdateSecret_ValueChanged_RecordsVersionForUpdatedSecret(
         SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
         Secret updatedSecret, Guid userId)
     {
@@ -301,45 +336,50 @@ public class SecretsControllerTests
         data.ValueChanged = true;
         data.Value = "new-value";
 
-        // CreationDate is deliberately different from RevisionDate. The snapshot records when the
-        // archived value was last set, not when the secret was first created.
         currentSecret.Value = "previous-value";
-        currentSecret.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        currentSecret.RevisionDate = new DateTime(2026, 6, 15, 12, 30, 0, DateTimeKind.Utc);
-
-        // Captured up front because ToSecret mutates the entity in place during the request.
-        var expectedValue = currentSecret.Value;
-        var expectedVersionDate = currentSecret.RevisionDate;
 
         SetControllerUser(sutProvider, userId);
-        sutProvider.GetDependency<ICurrentContext>().IdentityClientType
-            .Returns(IdentityClientType.ServiceAccount);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
             .ReturnsForAnyArgs(currentSecret);
-
-        // Intentionally not data.ToSecret(currentSecret): that would mutate currentSecret during
-        // arrange and overwrite the very values this test asserts on.
         sutProvider.GetDependency<IUpdateSecretCommand>()
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
             .ReturnsForAnyArgs(updatedSecret);
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
 
-        var createdVersions = sutProvider.GetDependency<ISecretVersionRepository>()
-            .ReceivedCalls()
-            .Where(c => c.GetMethodInfo().Name == nameof(ISecretVersionRepository.CreateAsync))
-            .Select(c => (SecretVersion)c.GetArguments()[0])
-            .ToList();
+        // The version records the secret as persisted, so the newest version mirrors the new value.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
+            .CreateAsync(updatedSecret, userId);
+    }
 
-        var version = Assert.Single(createdVersions);
-        Assert.Equal(currentSecret.Id, version.SecretId);
-        Assert.Equal(expectedValue, version.Value);
-        Assert.Equal(expectedVersionDate, version.VersionDate);
-        Assert.Equal(userId, version.EditorServiceAccountId);
-        Assert.Null(version.EditorOrganizationUserId);
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_RecordsVersionAfterUpdatePersists(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs<Secret>(_ => throw new InvalidOperationException("update failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
+
+        // A failed update must not leave a version claiming a value the secret never held.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -365,8 +405,8 @@ public class SecretsControllerTests
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
 
-        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<SecretVersion>());
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]

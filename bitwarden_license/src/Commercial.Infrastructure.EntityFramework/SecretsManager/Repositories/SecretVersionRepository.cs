@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -30,6 +31,7 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         var secretVersions = await dbContext.SecretVersion
             .Where(sv => sv.SecretId == secretId)
             .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id)
             .ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
     }
@@ -42,6 +44,7 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         var secretVersions = await dbContext.SecretVersion
             .Where(sv => versionIds.Contains(sv.Id))
             .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id)
             .ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
     }
@@ -59,6 +62,7 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         var versionsToKeepIds = await dbContext.SecretVersion
             .Where(sv => sv.SecretId == secretVersion.SecretId)
             .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id)
             .Take(maxVersionsToKeep - 1)
             .Select(sv => sv.Id)
             .ToListAsync();
@@ -90,5 +94,66 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
         await dbContext.SecretVersion
             .Where(sv => secretVersionIds.Contains(sv.Id))
             .ExecuteDeleteAsync();
+    }
+
+    public async Task<SecretVersionDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var details = await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => sv.Id == id));
+
+        return details.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<SecretVersionDetails>> GetManyDetailsBySecretIdAsync(Guid secretId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        return await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => sv.SecretId == secretId)
+            .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id));
+    }
+
+    public async Task<IEnumerable<SecretVersionDetails>> GetManyDetailsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var versionIds = ids.ToList();
+
+        return await ToDetailsAsync(dbContext.SecretVersion
+            .AsNoTracking()
+            .Where(sv => versionIds.Contains(sv.Id))
+            .OrderByDescending(sv => sv.VersionDate)
+            .ThenByDescending(sv => sv.Id));
+    }
+
+    private async Task<List<SecretVersionDetails>> ToDetailsAsync(IQueryable<SecretVersion> query)
+    {
+        var rows = await query
+            .Select(sv => new
+            {
+                SecretVersion = sv,
+                EditorUserName = sv.EditorOrganizationUser!.User.Name,
+                EditorUserEmail = sv.EditorOrganizationUser!.User.Email,
+                EditorServiceAccountName = sv.EditorServiceAccount!.Name
+            })
+            .ToListAsync();
+
+        return rows
+            .Select(row => new SecretVersionDetails
+            {
+                SecretVersion = Mapper.Map<Core.SecretsManager.Entities.SecretVersion>(row.SecretVersion),
+                EditorUserName = row.EditorUserName,
+                EditorUserEmail = row.EditorUserEmail,
+                EditorServiceAccountName = row.EditorServiceAccountName
+            })
+            .ToList();
     }
 }
