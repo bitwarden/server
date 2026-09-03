@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 

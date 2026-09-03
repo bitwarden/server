@@ -1,4 +1,4 @@
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.KeyPerFile;
 using Xunit;
@@ -44,7 +44,7 @@ public class ConfigurationBuilderExtensionsTests
     [InlineData("")]
     [InlineData(" ")]
     [InlineData(null)]
-    public void AddKeyPerFile_ShouldNotRegister_WhenFileConfigDirectoryIsEmptyString(string fileConfigDirectory)
+    public void AddKeyPerFile_ShouldNotRegister_WhenFileConfigDirectoryIsEmptyString(string? fileConfigDirectory)
     {
         // Arrange
         var configurationBuilder = new ConfigurationBuilder();
