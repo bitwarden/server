@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
@@ -9,10 +10,13 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Sso.Models;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 
@@ -60,6 +64,8 @@ public class SsoTestDataBuilder
     private bool _mockAutoscaleSuccess = false;
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
+    private X509Certificate2? _samlSigningCertificate;
+    private bool _enableFakeLogging = false;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -217,6 +223,31 @@ public class SsoTestDataBuilder
         return this;
     }
 
+    /// <summary>
+    /// Replaces the host's <see cref="SamlEnvironment"/> object. This method sets
+    /// <c>SpSigningCertificate</c> to a non-null value.
+    /// Without this method, <c>DynamicAuthenticationSchemeProvider.GetSaml2AuthenticationScheme</c>
+    /// never adds a Service Provider (SP) certificate. Without this method, the published SP
+    /// metadata has no <c>KeyDescriptor</c> elements.
+    /// </summary>
+    public SsoTestDataBuilder WithSamlSigningCertificate(X509Certificate2 cert)
+    {
+        _samlSigningCertificate = cert;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the host's <see cref="ILoggerFactory"/> object with real logging and a
+    /// <see cref="FakeLogCollector"/> object.
+    /// The base factory disables logging completely, through <c>NullLoggerFactory</c>, to keep
+    /// unrelated tests quiet. This method lets a test inspect log records that a request emits.
+    /// </summary>
+    public SsoTestDataBuilder WithFakeLogging()
+    {
+        _enableFakeLogging = true;
+        return this;
+    }
+
     public async Task<SsoTestData> BuildAsync()
     {
         // Create factory
@@ -263,6 +294,27 @@ public class SsoTestDataBuilder
 
         // 1.b configure setting feature flags
         _featureFlagConfig?.Invoke(factory);
+
+        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        if (_samlSigningCertificate != null)
+        {
+            var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<SamlEnvironment>();
+                services.AddSingleton(samlEnvironment);
+            });
+        }
+
+        // 1.b.ii Replace the disabled NullLoggerFactory with real logging and a fake collector, if the test requests it
+        if (_enableFakeLogging)
+        {
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<ILoggerFactory>();
+                services.AddFakeLogging();
+            });
+        }
 
         // 1.c Configure IIdentityServerInteractionService for native client flow
         if (_isNativeClient)
