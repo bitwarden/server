@@ -29,6 +29,7 @@ public class CipherLoginModel
         PasswordRevisionDate = data.PasswordRevisionDate;
         Totp = data.Totp;
         AutofillOnPageLoad = data.AutofillOnPageLoad;
+        AutotypeApps = data.AutotypeApps == null ? new CipherAutotypeAppsModel() : new CipherAutotypeAppsModel(data.AutotypeApps);
     }
 
     [EncryptedString]
@@ -64,6 +65,7 @@ public class CipherLoginModel
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
     public CipherFido2CredentialModel[] Fido2Credentials { get; set; }
+    public CipherAutotypeAppsModel AutotypeApps { get; set; }
 
     public class CipherLoginUriModel
     {
