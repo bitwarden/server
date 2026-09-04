@@ -123,6 +123,12 @@ public static class BuilderExtensions
         if (!int.TryParse(builder.Required("Idp:Port"), out var port))
             throw new InvalidOperationException("Invalid value for Idp:Port.");
 
+        // Docker Compose solves this prerequisite with an ephemeral container.
+        // AppHost can copy the file directly; permissions are correct for the container.
+        var samlRemotePath = Path.Combine(builder.Required("WorkingDirectory"), "saml20-sp-remote.php");
+        if (!File.Exists(samlRemotePath))
+            File.Copy($"{samlRemotePath}.example", samlRemotePath);
+
         // This is hardcoded to localhost because the browser needs to navigate to the published SSO address,
         // not the internal Aspire endpoint reference (aspire.dev.internal). The port is still detected dynamically.
         var ssoBaseUrl = $"http://localhost:{builder.GetBitwardenServicePort("sso")}/saml2";
@@ -138,6 +144,7 @@ public static class BuilderExtensions
                 ReferenceExpression.Create($"{ssoBaseUrl}/{orgId.Resource}/Acs"))
             .WithBindMount($"{builder.Required("WorkingDirectory")}/authsources.php",
                 "/var/www/simplesamlphp/config/authsources.php")
+            .WithBindMount(samlRemotePath, "/var/www/simplesamlphp/config/saml20-sp-remote.php")
             .WithExplicitStart();
     }
 
