@@ -86,6 +86,14 @@ services:
       - mariadb
       - ef
 
+  idp-init:
+    image: kenchan0130/simplesamlphp:1.19.8
+    volumes:
+      - ./:/workdir
+    command: sh -c '[ -f /workdir/saml20-sp-remote.php ] || cp /workdir/saml20-sp-remote.php.example /workdir/saml20-sp-remote.php'
+    profiles:
+      - idp
+
   idp:
     image: kenchan0130/simplesamlphp:1.19.8
     ports:
@@ -94,6 +102,9 @@ services:
       SIMPLESAMLPHP_SP_ENTITY_ID: ${IDP_SP_ENTITY_ID}
       SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: ${IDP_SP_ACS_URL}
       SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE: null
+    depends_on:
+      idp-init:
+        condition: service_completed_successfully
     volumes:
       - ./authsources.php:/var/www/simplesamlphp/config/authsources.php
       - ./saml20-sp-remote.php:/var/www/simplesamlphp/metadata/saml20-sp-remote.php
