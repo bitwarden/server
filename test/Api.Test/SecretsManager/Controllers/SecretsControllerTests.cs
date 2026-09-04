@@ -164,21 +164,31 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task CreateSecret_RecordsInitialVersion(SutProvider<SecretsController> sutProvider,
-        SecretCreateRequestModel data, Guid organizationId, Secret createdSecret, Guid userId)
+    public async Task CreateSecret_WritesInitialVersionInsideCreateTransaction(
+        SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId,
+        Secret createdSecret, SecretVersion builtVersion, Guid userId)
     {
         data = SetupSecretCreateRequest(sutProvider, data, organizationId);
         SetControllerUser(sutProvider, userId);
         sutProvider.GetDependency<ICreateSecretCommand>()
-            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<SecretVersion>())
             .ReturnsForAnyArgs(createdSecret);
+        sutProvider.GetDependency<IBuildSecretVersionCommand>()
+            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>())
+            .Returns(builtVersion);
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
 
         // Without this the secret has no author until someone edits it, which surfaces in the
         // client as an unknown editor.
-        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
-            .CreateAsync(createdSecret, userId);
+        await sutProvider.GetDependency<IBuildSecretVersionCommand>().Received(1)
+            .BuildAsync(Arg.Any<Secret>(), userId);
+
+        // Handed to the create command rather than written separately: a standalone version write
+        // that failed would return an error for an already-committed secret, and the retry would
+        // create a duplicate.
+        await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), builtVersion);
     }
 
     [Theory]
@@ -193,8 +203,8 @@ public class SecretsControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
 
-        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IBuildSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -328,9 +338,9 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateSecret_ValueChanged_RecordsVersionForUpdatedSecret(
+    public async Task UpdateSecret_ValueChanged_WritesVersionInsideUpdateTransaction(
         SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
-        Secret updatedSecret, Guid userId)
+        Secret updatedSecret, SecretVersion builtVersion, Guid userId)
     {
         data = SetupSecretUpdateRequest(data);
         data.ValueChanged = true;
@@ -345,42 +355,27 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
             .ReturnsForAnyArgs(currentSecret);
         sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<SecretVersion>())
             .ReturnsForAnyArgs(updatedSecret);
+        sutProvider.GetDependency<IBuildSecretVersionCommand>()
+            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>())
+            .Returns(builtVersion);
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
 
-        // The version records the secret as persisted, so the newest version mirrors the new value.
-        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
-            .CreateAsync(updatedSecret, userId);
+        // ToSecret mutates the loaded secret in place, so the version is built from the instance
+        // carrying the new value and revision date.
+        await sutProvider.GetDependency<IBuildSecretVersionCommand>().Received(1)
+            .BuildAsync(Arg.Is<Secret>(s => s.Value == "new-value"), userId);
+
+        // The version travels with the update so both commit together.
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), builtVersion);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSecret_ValueChanged_RecordsVersionAfterUpdatePersists(
-        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
-        Guid userId)
-    {
-        data = SetupSecretUpdateRequest(data);
-        data.ValueChanged = true;
-
-        SetControllerUser(sutProvider, userId);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
-        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
-            .ReturnsForAnyArgs(currentSecret);
-        sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
-            .ReturnsForAnyArgs<Secret>(_ => throw new InvalidOperationException("update failed"));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
-
-        // A failed update must not leave a version claiming a value the secret never held.
-        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
-    }
+    // A failed update can no longer leave a version behind: the controller has no version-writing
+    // dependency, so the only path to the database is inside the update's own transaction. That is
+    // a repository-level guarantee now and is not observable from a controller test.
 
     [Theory]
     [BitAutoData]
@@ -405,8 +400,8 @@ public class SecretsControllerTests
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
 
-        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IBuildSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]

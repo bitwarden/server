@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Repositories;
@@ -15,8 +14,9 @@ public class CreateSecretCommand : ICreateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates)
+    public async Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates,
+        SecretVersion? initialVersion = null)
     {
-        return await _secretRepository.CreateAsync(secret, accessPoliciesUpdates);
+        return await _secretRepository.CreateAsync(secret, accessPoliciesUpdates, initialVersion);
     }
 }

@@ -49,12 +49,14 @@ public class NoopSecretRepository : ISecretRepository
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
+    public Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates,
+        SecretVersion initialVersion)
     {
         return Task.FromResult(null as Secret);
     }
 
-    public Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates)
+    public Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates,
+        SecretVersion newVersion)
     {
         return Task.FromResult(null as Secret);
     }

@@ -288,7 +288,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task CreateVersion_PrunesToTenMostRecentVersions()
+    public async Task GetVersion_PrunesToTenMostRecentVersions()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);

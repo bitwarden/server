@@ -18,8 +18,19 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
-    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
-    Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
+    /// <summary>
+    /// Creates a secret, and when <paramref name="initialVersion"/> is supplied writes it in the
+    /// same transaction so a secret is never persisted without its version snapshot.
+    /// </summary>
+    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null,
+        SecretVersion initialVersion = null);
+
+    /// <summary>
+    /// Updates a secret, and when <paramref name="newVersion"/> is supplied writes it in the same
+    /// transaction. Pass null when the value did not change and no snapshot is wanted.
+    /// </summary>
+    Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null,
+        SecretVersion newVersion = null);
     Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task HardDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task RestoreManyByIdAsync(IEnumerable<Guid> ids);

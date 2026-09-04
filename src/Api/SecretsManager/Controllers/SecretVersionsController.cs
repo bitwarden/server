@@ -20,20 +20,20 @@ public class SecretVersionsController : Controller
     private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
-    private readonly ICreateSecretVersionCommand _createSecretVersionCommand;
+    private readonly IBuildSecretVersionCommand _buildSecretVersionCommand;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        ICreateSecretVersionCommand createSecretVersionCommand)
+        IBuildSecretVersionCommand buildSecretVersionCommand)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
-        _createSecretVersionCommand = createSecretVersionCommand;
+        _buildSecretVersionCommand = buildSecretVersionCommand;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -53,6 +53,14 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        if (!CanReadEditorNames(accessClient))
+        {
+            var versionsWithoutEditors = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
+
+            return new ListResponseModel<SecretVersionResponseModel>(
+                versionsWithoutEditors.Select(v => new SecretVersionResponseModel(v)));
+        }
+
         var versions = await _secretVersionRepository.GetManyDetailsBySecretIdAsync(secretId);
         var responses = versions.Select(v => new SecretVersionResponseModel(v));
 
@@ -62,13 +70,11 @@ public class SecretVersionsController : Controller
     [HttpGet("secret-versions/{id}")]
     public async Task<SecretVersionResponseModel> GetByIdAsync([FromRoute] Guid id)
     {
-        var secretVersionDetails = await _secretVersionRepository.GetDetailsByIdAsync(id);
-        if (secretVersionDetails == null)
+        var secretVersion = await _secretVersionRepository.GetByIdAsync(id);
+        if (secretVersion == null)
         {
             throw new NotFoundException();
         }
-
-        var secretVersion = secretVersionDetails.SecretVersion;
 
         var secret = await _secretRepository.GetByIdAsync(secretVersion.SecretId);
         if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
@@ -80,6 +86,18 @@ public class SecretVersionsController : Controller
 
         var access = await _secretRepository.AccessToSecretAsync(secretVersion.SecretId, accessClientId, accessClient);
         if (!access.Read)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!CanReadEditorNames(accessClient))
+        {
+            return new SecretVersionResponseModel(secretVersion);
+        }
+
+        // Re-read with the editor join only once the caller is known to be allowed to see names.
+        var secretVersionDetails = await _secretVersionRepository.GetDetailsByIdAsync(id);
+        if (secretVersionDetails == null)
         {
             throw new NotFoundException();
         }
@@ -96,14 +114,14 @@ public class SecretVersionsController : Controller
         }
 
         // Get all versions
-        var versions = (await _secretVersionRepository.GetManyDetailsByIdsAsync(ids)).ToList();
+        var versions = (await _secretVersionRepository.GetManyByIdsAsync(ids)).ToList();
         if (!versions.Any())
         {
             throw new NotFoundException();
         }
 
         // Get all associated secrets and check permissions
-        var secretIds = versions.Select(v => v.SecretVersion.SecretId).Distinct().ToList();
+        var secretIds = versions.Select(v => v.SecretId).Distinct().ToList();
         var secrets = (await _secretRepository.GetManyByIds(secretIds)).ToList();
 
         if (!secrets.Any())
@@ -165,12 +183,13 @@ public class SecretVersionsController : Controller
         secret.Value = version.Value;
         secret.RevisionDate = DateTime.UtcNow;
 
-        var updatedSecret = await _secretRepository.UpdateAsync(secret);
+        // Built before the write so the restored value and its version snapshot share one
+        // transaction; writing the version afterwards could restore a value with no record of it.
+        var restoredVersion = valueChanged
+            ? await _buildSecretVersionCommand.BuildAsync(secret, accessClientId)
+            : null;
 
-        if (valueChanged)
-        {
-            await _createSecretVersionCommand.CreateAsync(updatedSecret, accessClientId);
-        }
+        var updatedSecret = await _secretRepository.UpdateAsync(secret, null, restoredVersion);
 
         return new SecretResponseModel(updatedSecret, true, true);
     }
@@ -220,9 +239,11 @@ public class SecretVersionsController : Controller
     }
 
     /// <summary>
-    /// Resolves the access client for the current caller. Organization admins and organization API
-    /// keys resolve to <see cref="AccessClientType.NoAccessCheck"/>, which grants organization-wide
-    /// access; every other caller is checked against the secret's own access policies.
+    /// Resolves the access client for the current caller. Organization admins resolve to
+    /// <see cref="AccessClientType.NoAccessCheck"/>, which grants organization-wide access;
+    /// every other caller is checked against the secret's own access policies. Organization
+    /// API keys resolve to <see cref="AccessClientType.Organization"/>, which grants no
+    /// access to individual secrets.
     /// </summary>
     private async Task<(AccessClientType AccessClient, Guid AccessClientId)> GetAccessContextAsync(Guid organizationId)
     {

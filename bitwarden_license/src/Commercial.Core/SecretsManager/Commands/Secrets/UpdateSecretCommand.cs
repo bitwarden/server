@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data.AccessPolicyUpdates;
 using Bit.Core.SecretsManager.Repositories;
@@ -15,8 +14,9 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPolicyUpdates)
+    public async Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPolicyUpdates,
+        SecretVersion? newVersion = null)
     {
-        return await _secretRepository.UpdateAsync(secret, accessPolicyUpdates);
+        return await _secretRepository.UpdateAsync(secret, accessPolicyUpdates, newVersion);
     }
 }

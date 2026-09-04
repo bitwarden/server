@@ -51,34 +51,13 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
 
     public override async Task<Core.SecretsManager.Entities.SecretVersion> CreateAsync(Core.SecretsManager.Entities.SecretVersion secretVersion)
     {
-        const int maxVersionsToKeep = 10;
-
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Get the IDs of the most recent (maxVersionsToKeep - 1) versions to keep
-        var versionsToKeepIds = await dbContext.SecretVersion
-            .Where(sv => sv.SecretId == secretVersion.SecretId)
-            .OrderByDescending(sv => sv.VersionDate)
-            .ThenByDescending(sv => sv.Id)
-            .Take(maxVersionsToKeep - 1)
-            .Select(sv => sv.Id)
-            .ToListAsync();
+        await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, secretVersion);
 
-        // Delete all versions for this secret that are not in the "keep" list
-        if (versionsToKeepIds.Any())
-        {
-            await dbContext.SecretVersion
-                .Where(sv => sv.SecretId == secretVersion.SecretId && !versionsToKeepIds.Contains(sv.Id))
-                .ExecuteDeleteAsync();
-        }
-
-        secretVersion.SetNewId();
-        var entity = Mapper.Map<SecretVersion>(secretVersion);
-
-        await dbContext.AddAsync(entity);
         await dbContext.SaveChangesAsync();
         await transaction.CommitAsync();
 

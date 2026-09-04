@@ -29,7 +29,7 @@ public class SecretsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
-    private readonly ICreateSecretVersionCommand _createSecretVersionCommand;
+    private readonly IBuildSecretVersionCommand _buildSecretVersionCommand;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
@@ -44,7 +44,7 @@ public class SecretsController : Controller
         ICurrentContext currentContext,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
-        ICreateSecretVersionCommand createSecretVersionCommand,
+        IBuildSecretVersionCommand buildSecretVersionCommand,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
@@ -58,7 +58,7 @@ public class SecretsController : Controller
         _currentContext = currentContext;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
-        _createSecretVersionCommand = createSecretVersionCommand;
+        _buildSecretVersionCommand = buildSecretVersionCommand;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
@@ -113,9 +113,13 @@ public class SecretsController : Controller
             }
         }
 
-        var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
-        var userId = _userService.GetProperUserId(User).Value;
-        await _createSecretVersionCommand.CreateAsync(result, userId);
+        // Built before the write and handed to the command so the secret and its first version are
+        // committed together. Writing the version afterwards would return an error for a secret that
+        // was already saved, and a retry would create a duplicate.
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var initialVersion = await _buildSecretVersionCommand.BuildAsync(secret, userId);
+
+        var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates, initialVersion);
 
         await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
@@ -195,13 +199,16 @@ public class SecretsController : Controller
             }
         }
 
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
-
+        // Built before the write so the update and its version snapshot share one transaction.
+        // ToSecret has already stamped the new value and revision date onto updatedSecret.
+        SecretVersion newVersion = null;
         if (updateRequest.ValueChanged)
         {
-            var userId = _userService.GetProperUserId(User)!.Value;
-            await _createSecretVersionCommand.CreateAsync(result, userId);
+            var versionEditorId = _userService.GetProperUserId(User)!.Value;
+            newVersion = await _buildSecretVersionCommand.BuildAsync(updatedSecret, versionEditorId);
         }
+
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates, newVersion);
 
         await LogSecretEventAsync(secret, EventType.Secret_Edited);
 

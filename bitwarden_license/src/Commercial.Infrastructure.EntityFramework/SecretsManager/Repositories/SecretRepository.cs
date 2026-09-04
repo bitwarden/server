@@ -160,7 +160,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
-        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null,
+        Core.SecretsManager.Entities.SecretVersion? initialVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -183,12 +184,21 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.AddAsync(entity);
         await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
+
+        if (initialVersion != null)
+        {
+            initialVersion.SecretId = entity.Id;
+            await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, initialVersion);
+            await dbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
         return secret;
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret,
-        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null,
+        Core.SecretsManager.Entities.SecretVersion? newVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -216,6 +226,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         await dbContext.SaveChangesAsync();
+
+        if (newVersion != null)
+        {
+            newVersion.SecretId = entity.Id;
+            await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, newVersion);
+            await dbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
         return Mapper.Map<Core.SecretsManager.Entities.Secret>(entity);
     }
