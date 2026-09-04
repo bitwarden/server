@@ -7,88 +7,71 @@ BEGIN
     IF @OrganizationId IS NULL
         THROW 50000, 'OrganizationId cannot be null', 1;
 
-    SELECT
-        OU.[Id] AS [OrganizationUserId],
-        OU.[UserId],
-        U.[Name],
-        ISNULL(ISNULL(U.[Email], OU.[Email]), '') AS [Email],
-        LA.[LastActivityDate],
-        CAST(CASE WHEN EXT.[Id] IS NULL THEN 0 ELSE 1 END AS BIT) AS [HasExtensionInstalled],
-        ISNULL(VI.[VaultItemCount], 0) AS [VaultItemCount],
-        ISNULL(SI.[SharedItemCount], 0) AS [SharedItemCount],
-        CAST(CASE WHEN SP.[Id] IS NULL THEN 0 ELSE 1 END AS BIT) AS [HasRedeemedSponsorship]
-    FROM
-        [dbo].[OrganizationUser] OU
-    LEFT JOIN
-        [dbo].[User] U ON U.[Id] = OU.[UserId]
-    OUTER APPLY (
+    ;WITH [Member] AS (
         SELECT
-            MAX(D.[LastActivityDate]) AS [LastActivityDate]
+            OU.[Id],
+            OU.[UserId],
+            OU.[Email]
         FROM
-            [dbo].[Device] D
+            [dbo].[OrganizationUser] OU
         WHERE
-            D.[UserId] = OU.[UserId]
-    ) LA
-    OUTER APPLY (
-        SELECT TOP 1
-            D.[Id]
-        FROM
-            [dbo].[Device] D
-        WHERE
-            D.[UserId] = OU.[UserId]
-            AND D.[Type] IN (2, 3, 4, 5, 19, 20) -- Chrome, Firefox, Opera, Edge, Vivaldi and Safari browser extensions
-    ) EXT
-    OUTER APPLY (
+            OU.[OrganizationId] = @OrganizationId
+            -- Adoption is only measured for Confirmed members.
+            AND OU.[Status] = 2
+    ),
+    [MemberVaultItem] AS (
         SELECT
+            C.[UserId],
             COUNT(1) AS [VaultItemCount]
         FROM
             [dbo].[Cipher] C
         WHERE
-            C.[UserId] = OU.[UserId]
-            AND C.[OrganizationId] IS NULL
+            C.[OrganizationId] IS NULL
             AND C.[DeletedDate] IS NULL
-    ) VI
+            -- Restricting to this organization's members keeps the aggregate off every other
+            -- account's personal vault. A member with no [UserId] matches nothing, as before.
+            AND EXISTS (SELECT 1 FROM [Member] M WHERE M.[UserId] = C.[UserId])
+        GROUP BY
+            C.[UserId]
+    )
+    SELECT
+        M.[Id] AS [OrganizationUserId],
+        M.[UserId],
+        U.[Name],
+        ISNULL(ISNULL(U.[Email], M.[Email]), '') AS [Email],
+        DEV.[LastActivityDate],
+        CAST(ISNULL(DEV.[HasExtension], 0) AS BIT) AS [HasExtensionInstalled],
+        ISNULL(VI.[VaultItemCount], 0) AS [VaultItemCount],
+        CAST(CASE WHEN SP.[Id] IS NULL THEN 0 ELSE 1 END AS BIT) AS [HasRedeemedSponsorship]
+    FROM
+        [Member] M
+    LEFT JOIN
+        [dbo].[User] U ON U.[Id] = M.[UserId]
     OUTER APPLY (
         SELECT
-            COUNT(DISTINCT CC.[CipherId]) AS [SharedItemCount]
+            MAX(D.[LastActivityDate]) AS [LastActivityDate],
+            -- Chrome, Firefox, Opera, Edge, Vivaldi and Safari browser extensions
+            MAX(CASE WHEN D.[Type] IN (2, 3, 4, 5, 19, 20) THEN 1 ELSE 0 END) AS [HasExtension]
         FROM
-            [dbo].[CollectionCipher] CC
-        INNER JOIN
-            [dbo].[Collection] COL ON COL.[Id] = CC.[CollectionId]
-                AND COL.[OrganizationId] = @OrganizationId
-        INNER JOIN
-            [dbo].[Cipher] OC ON OC.[Id] = CC.[CipherId]
-                AND OC.[OrganizationId] = @OrganizationId
-                AND OC.[DeletedDate] IS NULL
+            [dbo].[Device] D
         WHERE
-            EXISTS (
-                SELECT 1
-                FROM [dbo].[CollectionUser] CU
-                WHERE CU.[CollectionId] = CC.[CollectionId]
-                    AND CU.[OrganizationUserId] = OU.[Id]
-            )
-            OR EXISTS (
-                SELECT 1
-                FROM [dbo].[CollectionGroup] CG
-                INNER JOIN [dbo].[GroupUser] GU ON GU.[GroupId] = CG.[GroupId]
-                WHERE CG.[CollectionId] = CC.[CollectionId]
-                    AND GU.[OrganizationUserId] = OU.[Id]
-            )
-    ) SI
+            D.[UserId] = M.[UserId]
+    ) DEV
+    LEFT JOIN
+        [MemberVaultItem] VI ON VI.[UserId] = M.[UserId]
     OUTER APPLY (
         SELECT TOP 1
             OS.[Id]
         FROM
             [dbo].[OrganizationSponsorship] OS
         WHERE
-            OS.[SponsoringOrganizationUserID] = OU.[Id]
+            OS.[SponsoringOrganizationUserID] = M.[Id]
             AND OS.[SponsoredOrganizationId] IS NOT NULL
     ) SP
-    WHERE
-        OU.[OrganizationId] = @OrganizationId
-        -- Adoption is only measured for Confirmed members.
-        AND OU.[Status] = 2
     ORDER BY
         [Email] ASC,
-        OU.[Id] ASC
+        M.[Id] ASC
+    -- The remaining per-member OUTER APPLYs make this CPU-bound rather than I/O-bound, and its
+    -- parallel plan scales negatively: it burns more CPU across workers than it saves in elapsed time.
+    OPTION (MAXDOP 1)
 END
