@@ -69,7 +69,7 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        var roleChangeError = await ValidateRoleChangeAsync(request);
+        var roleChangeError = ValidateRoleChange(request);
         if (roleChangeError is not null)
         {
             return Invalid(request, roleChangeError);
@@ -180,10 +180,10 @@ public class UpdateOrganizationUserValidator(
 
     /// <summary>
     /// Delegates the role-change authority decision to
-    /// <see cref="IOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users and provider users
+    /// <see cref="IOrganizationUserValidationService.CanManageRoleChange"/>. System users and provider users
     /// hold authority above the organization role hierarchy and skip the check.
     /// </summary>
-    private async Task<Error?> ValidateRoleChangeAsync(UpdateOrganizationUserRequest request)
+    private Error? ValidateRoleChange(UpdateOrganizationUserRequest request)
     {
         if (request.PerformedBy is not StandardUser standardUser)
         {
@@ -200,8 +200,7 @@ public class UpdateOrganizationUserValidator(
             request.OrganizationUserToUpdate.OrganizationId,
             request.NewPermissions);
 
-        return await organizationUserValidationService.CanManageRoleChangeAsync(
-            standardUser.UserId!.Value,
+        return organizationUserValidationService.CanManageRoleChange(
             actingUser,
             request.OrganizationUserToUpdate,
             newTargetUser);
