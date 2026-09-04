@@ -1,6 +1,8 @@
 ﻿using AutoFixture;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Dirt.Controllers;
 using Bit.Api.Dirt.Models;
+using Bit.Api.Dirt.Models.Response;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Reports.Models.Data;
@@ -9,6 +11,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
+using Bit.OrganizationAuthorization;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -101,6 +104,154 @@ public class ReportsControllerTests
         await sutProvider.GetDependency<IRiskInsightsReportQuery>()
             .DidNotReceive()
             .GetRiskInsightsReportDetails(Arg.Any<RiskInsightsReportRequest>());
+    }
+
+    // GetMemberAdoptionReport
+
+    [Theory, BitAutoData]
+    public async Task GetMemberAdoptionReportAsync_ReturnsCountsAndMembers(
+        SutProvider<ReportsController> sutProvider,
+        Guid organizationId,
+        Guid organizationUserId,
+        Guid userId)
+    {
+        // Arrange
+        SetupAuthorization(sutProvider);
+
+        var report = new MemberAdoptionReportResult
+        {
+            TotalMemberCount = 3,
+            ActiveMemberCount = 2,
+            InactiveMemberCount = 1,
+            SponsoredFamiliesRedeemedCount = 1,
+            Members =
+            [
+                new MemberAdoptionReportMember
+                {
+                    OrganizationUserId = organizationUserId,
+                    UserId = userId,
+                    Name = "Test User",
+                    Email = "user@example.com",
+                    HasRecentLogin = true,
+                    HasExtensionInstalled = true,
+                    VaultItemCount = 12,
+                    SharedItemCount = 3
+                }
+            ]
+        };
+        sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .GetMemberAdoptionReportAsync(Arg.Is<MemberAdoptionReportRequest>(r => r.OrganizationId == organizationId))
+            .Returns(report);
+
+        // Act
+        var result = await sutProvider.Sut.GetMemberAdoptionReportAsync(organizationId);
+
+        // Assert
+        var response = Assert.IsType<MemberAdoptionReportResponseModel>(result.Value);
+        Assert.Equal(3, response.TotalMemberCount);
+        Assert.Equal(2, response.ActiveMemberCount);
+        Assert.Equal(1, response.InactiveMemberCount);
+        Assert.Equal(1, response.SponsoredFamiliesRedeemedCount);
+
+        var member = Assert.Single(response.Members);
+        Assert.Equal(organizationUserId, member.OrganizationUserId);
+        Assert.Equal(userId, member.UserId);
+        Assert.Equal("Test User", member.Name);
+        Assert.Equal("user@example.com", member.Email);
+        Assert.True(member.HasRecentLogin);
+        Assert.True(member.HasExtensionInstalled);
+        Assert.Equal(12, member.VaultItemCount);
+        Assert.Equal(3, member.SharedItemCount);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMemberAdoptionReportAsync_PassesRouteOrganizationIdToQuery(
+        SutProvider<ReportsController> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        SetupAuthorization(sutProvider);
+
+        sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .GetMemberAdoptionReportAsync(Arg.Any<MemberAdoptionReportRequest>())
+            .Returns(new MemberAdoptionReportResult());
+
+        // Act
+        await sutProvider.Sut.GetMemberAdoptionReportAsync(organizationId);
+
+        // Assert
+        await sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .Received(1)
+            .GetMemberAdoptionReportAsync(Arg.Is<MemberAdoptionReportRequest>(r => r.OrganizationId == organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMemberAdoptionReportAsync_OrganizationWithNoMembers_ReturnsEmptyReport(
+        SutProvider<ReportsController> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        SetupAuthorization(sutProvider);
+
+        sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .GetMemberAdoptionReportAsync(Arg.Any<MemberAdoptionReportRequest>())
+            .Returns(new MemberAdoptionReportResult());
+
+        // Act
+        var result = await sutProvider.Sut.GetMemberAdoptionReportAsync(organizationId);
+
+        // Assert
+        var response = Assert.IsType<MemberAdoptionReportResponseModel>(result.Value);
+        Assert.Equal(0, response.TotalMemberCount);
+        Assert.Equal(0, response.ActiveMemberCount);
+        Assert.Equal(0, response.InactiveMemberCount);
+        Assert.Equal(0, response.SponsoredFamiliesRedeemedCount);
+        Assert.Empty(response.Members);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMemberAdoptionReportAsync_withoutUseRiskInsights_throwsBadRequest(
+        SutProvider<ReportsController> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        SetupAuthorization(sutProvider, useRiskInsights: false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetMemberAdoptionReportAsync(organizationId));
+
+        await sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .DidNotReceive()
+            .GetMemberAdoptionReportAsync(Arg.Any<MemberAdoptionReportRequest>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetMemberAdoptionReportAsync_withoutOrganizationAbility_throwsBadRequest(
+        SutProvider<ReportsController> sutProvider,
+        Guid organizationId)
+    {
+        // Arrange
+        SetupMissingOrganizationAbility(sutProvider);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.GetMemberAdoptionReportAsync(organizationId));
+
+        await sutProvider.GetDependency<IMemberAdoptionReportQuery>()
+            .DidNotReceive()
+            .GetMemberAdoptionReportAsync(Arg.Any<MemberAdoptionReportRequest>());
+    }
+
+    [Fact]
+    public void GetMemberAdoptionReportAsync_RequiresAccessReportsAuthorization()
+    {
+        var action = typeof(ReportsController)
+            .GetMethod(nameof(ReportsController.GetMemberAdoptionReportAsync))!;
+
+        Assert.Contains(
+            action.GetCustomAttributes(inherit: true),
+            attribute => attribute is AuthorizeAttribute<AccessReportsRequirement>);
     }
 
     // GetPasswordHealthReportApplications
