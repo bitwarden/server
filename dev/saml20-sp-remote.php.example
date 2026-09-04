@@ -5,9 +5,6 @@
  * Assertion encryption will default to FALSE. Change assertion.encryption to TRUE
  * and paste your certificate data to 'certData' below to enable.
  *
- * Docker-compose idp-init runs before idp stands up. It copies this file to saml20-sp-remote.php to
- * enable encrypted assertion configuration for the local IdP.
- *
  * Get certData with:
  *   openssl x509 -in dev/identity_server_dev.crt -outform der | base64 | tr -d '\n'
  *
