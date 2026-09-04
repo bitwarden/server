@@ -1,8 +1,6 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -19,8 +17,7 @@ public class GetActingUserForOrganizationQueryTests
     public async Task GetActingUserAsync_OrganizationOwner_ReturnsStandardUserAsOwner(Guid userId, Guid organizationId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        var providerUserRepository = Substitute.For<IProviderUserRepository>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext, providerUserRepository);
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns(new CurrentContextOrganization
         {
             Id = organizationId,
@@ -40,8 +37,7 @@ public class GetActingUserForOrganizationQueryTests
     public async Task GetActingUserAsync_OrganizationAdmin_ReturnsStandardUserNotOwner(Guid userId, Guid organizationId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        var providerUserRepository = Substitute.For<IProviderUserRepository>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext, providerUserRepository);
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns(new CurrentContextOrganization
         {
             Id = organizationId,
@@ -61,8 +57,7 @@ public class GetActingUserForOrganizationQueryTests
         Guid userId, Guid organizationId, Permissions permissions)
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        var providerUserRepository = Substitute.For<IProviderUserRepository>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext, providerUserRepository);
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns(new CurrentContextOrganization
         {
             Id = organizationId,
@@ -79,22 +74,14 @@ public class GetActingUserForOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetActingUserAsync_ProviderMember_ReturnsProviderUser(
+    public async Task GetActingUserAsync_ProviderAdmin_ReturnsProviderUser(
         Guid userId, Guid organizationId, Guid providerId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        var providerUserRepository = Substitute.For<IProviderUserRepository>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext, providerUserRepository);
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
-            .Returns([
-                new ProviderUserOrganizationDetails
-                {
-                    OrganizationId = organizationId,
-                    ProviderId = providerId,
-                    Type = ProviderUserType.ProviderAdmin,
-                }
-            ]);
+        currentContext.ProviderIdForOrg(organizationId).Returns(providerId);
+        currentContext.ProviderProviderAdmin(providerId).Returns(true);
 
         var result = await sut.GetActingUserAsync(userId, organizationId);
 
@@ -103,24 +90,35 @@ public class GetActingUserForOrganizationQueryTests
         Assert.Equal(providerId, providerUser.ProviderId);
         Assert.Equal(ProviderUserType.ProviderAdmin, providerUser.ProviderUserType);
         Assert.True(providerUser.IsOrganizationOwnerOrProvider);
-        Assert.True(ProviderUser.IsProvider);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetActingUserAsync_NoMembership_ReturnsStandardUserWithLowestPermission(Guid userId, Guid organizationId)
+    public async Task GetActingUserAsync_ProviderServiceUser_ReturnsProviderUser(
+        Guid userId, Guid organizationId, Guid providerId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        var providerUserRepository = Substitute.For<IProviderUserRepository>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext, providerUserRepository);
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
-            .Returns([]);
+        currentContext.ProviderIdForOrg(organizationId).Returns(providerId);
+        currentContext.ProviderProviderAdmin(providerId).Returns(false);
 
         var result = await sut.GetActingUserAsync(userId, organizationId);
 
-        var standardUser = Assert.IsType<StandardUser>(result);
-        Assert.Equal(userId, standardUser.UserId);
-        Assert.Equal(OrganizationUserType.User, standardUser.OrganizationUserType);
+        var providerUser = Assert.IsType<ProviderUser>(result);
+        Assert.Equal(ProviderUserType.ServiceUser, providerUser.ProviderUserType);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetActingUserAsync_NeitherMemberNorProvider_Throws(Guid userId, Guid organizationId)
+    {
+        var currentContext = Substitute.For<ICurrentContext>();
+        var sut = new GetActingUserForOrganizationQuery(currentContext);
+        currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
+        currentContext.ProviderIdForOrg(organizationId).Returns((Guid?)null);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => sut.GetActingUserAsync(userId, organizationId));
     }
 }
