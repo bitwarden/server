@@ -11,7 +11,7 @@ namespace Bit.Core.SecretsManager.Models.Data;
 /// </summary>
 public class SecretVersionDetails
 {
-    public SecretVersion SecretVersion { get; set; } = new();
+    public required SecretVersion SecretVersion { get; set; }
     public string? EditorUserName { get; set; }
     public string? EditorUserEmail { get; set; }
     public string? EditorServiceAccountName { get; set; }
