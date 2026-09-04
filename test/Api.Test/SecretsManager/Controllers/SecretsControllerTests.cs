@@ -164,6 +164,41 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task CreateSecret_RecordsInitialVersion(SutProvider<SecretsController> sutProvider,
+        SecretCreateRequestModel data, Guid organizationId, Secret createdSecret, Guid userId)
+    {
+        data = SetupSecretCreateRequest(sutProvider, data, organizationId);
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<ICreateSecretCommand>()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(createdSecret);
+
+        await sutProvider.Sut.CreateAsync(organizationId, data);
+
+        // Without this the secret has no author until someone edits it, which surfaces in the
+        // client as an unknown editor.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
+            .CreateAsync(createdSecret, userId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateSecret_NoAccess_DoesNotRecordVersion(SutProvider<SecretsController> sutProvider,
+        SecretCreateRequestModel data, Guid organizationId)
+    {
+        data = SetupSecretCreateRequest(sutProvider, data, organizationId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task CreateSecret_AccessPolicyUpdates_NoAccess_Throws(SutProvider<SecretsController> sutProvider,
         SecretCreateRequestModel data, Guid organizationId)
     {
@@ -289,6 +324,89 @@ public class SecretsControllerTests
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_RecordsVersionForUpdatedSecret(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Secret updatedSecret, Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+        data.Value = "new-value";
+
+        currentSecret.Value = "previous-value";
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(updatedSecret);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        // The version records the secret as persisted, so the newest version mirrors the new value.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().Received(1)
+            .CreateAsync(updatedSecret, userId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_RecordsVersionAfterUpdatePersists(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs<Secret>(_ => throw new InvalidOperationException("update failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
+
+        // A failed update must not leave a version claiming a value the secret never held.
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueNotChanged_DoesNotCreateVersion(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Secret updatedSecret, Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = false;
+
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType
+            .Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(updatedSecret);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        await sutProvider.GetDependency<ICreateSecretVersionCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
     }
 
     [Theory]
