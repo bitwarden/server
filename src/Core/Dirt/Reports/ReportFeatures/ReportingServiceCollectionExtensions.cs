@@ -16,6 +16,7 @@ public static class ReportingServiceCollectionExtensions
 
         services.AddScoped<IRiskInsightsReportQuery, RiskInsightsReportQuery>();
         services.AddScoped<IMemberAccessReportQuery, MemberAccessReportQuery>();
+        services.AddScoped<IMemberAdoptionReportQuery, MemberAdoptionReportQuery>();
         services.AddScoped<IAddPasswordHealthReportApplicationCommand, AddPasswordHealthReportApplicationCommand>();
         services.AddScoped<IGetPasswordHealthReportApplicationQuery, GetPasswordHealthReportApplicationQuery>();
         services.AddScoped<IDropPasswordHealthReportApplicationCommand, DropPasswordHealthReportApplicationCommand>();
