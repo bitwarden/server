@@ -79,7 +79,7 @@ public class AccessConnectorAdminEndpointsTests
     {
         var endpoints = AdminEndpoints();
 
-        Assert.Equal(22, endpoints.Count);
+        Assert.Equal(23, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -98,6 +98,7 @@ public class AccessConnectorAdminEndpointsTests
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Enable", "POST", "rotation/target-systems/{id:guid}/enable")]
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Disable", "POST", "rotation/target-systems/{id:guid}/disable")]
     [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Put", "PUT", "rotation/target-systems/{id:guid}")]
+    [InlineData("Pam_AccessConnectors_Rotation_TargetSystems_Delete", "DELETE", "rotation/target-systems/{id:guid}")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_GetAll", "GET", "rotation/configs")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Get", "GET", "rotation/configs/{id:guid}")]
     [InlineData("Pam_AccessConnectors_Rotation_Configs_Post", "POST", "rotation/configs")]

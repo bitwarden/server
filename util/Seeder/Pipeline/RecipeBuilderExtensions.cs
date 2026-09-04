@@ -552,6 +552,26 @@ public static class RecipeBuilderExtensions
     }
 
     /// <summary>
+    /// Create a real Stripe test-environment customer and subscription for the organization after it commits.
+    /// </summary>
+    /// <param name="builder">The recipe builder</param>
+    /// <param name="options">Trial configuration for the subscription</param>
+    /// <returns>The builder for fluent chaining</returns>
+    /// <remarks>
+    /// Opt-in only. This step makes live network calls. <c>RecipeOrchestrator.ValidateBillingOptIn</c> still
+    /// validates the host's Stripe configuration before any entity is created, for fast feedback — but
+    /// <see cref="IStripeBillingInitializer.InitializeOrganizationAsync"/> also self-validates, so a caller that
+    /// skips the pre-flight check fails before touching Stripe rather than after.
+    /// </remarks>
+    public static RecipeBuilder WithStripeBilling(this RecipeBuilder builder, StripeBillingOptions options)
+    {
+        builder.HasBilling = true;
+        builder.AddAsyncStep(sp => new FinalizeOrganizationBillingStep(
+            sp.GetRequiredService<IStripeBillingInitializer>(), options));
+        return builder;
+    }
+
+    /// <summary>
     /// Validates the builder state to ensure all required steps are present and dependencies are met.
     /// </summary>
     /// <param name="builder">The recipe builder</param>
@@ -593,6 +613,12 @@ public static class RecipeBuilderExtensions
         {
             throw new InvalidOperationException(
                 "Cipher folder assignment requires folders. Set 'folders: true' or call AddFolders() first.");
+        }
+
+        if (builder.HasBilling && !builder.HasOrg)
+        {
+            throw new InvalidOperationException(
+                "Stripe billing requires an organization. Call UseOrganization() or CreateOrganization() first.");
         }
 
         return builder;

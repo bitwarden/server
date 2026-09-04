@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
@@ -222,7 +221,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
             return _twoFactorProviders;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return null;
         }

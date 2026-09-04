@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Billing.Enums;
@@ -480,7 +479,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
 
             return _twoFactorProviders;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return null;
         }

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
@@ -8,6 +7,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -79,7 +79,7 @@ public class OrganizationInviteLinksController(
     [HttpGet("")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
-    public async Task<IResult> Get(Guid orgId)
+    public async Task<IResult> Get([FromRoute] Guid orgId)
     {
         var result = await getOrganizationInviteLinkQuery.GetAsync(orgId);
 
@@ -90,7 +90,7 @@ public class OrganizationInviteLinksController(
     [HttpPost("")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.Created)]
-    public async Task<IResult> Create(Guid orgId, [FromBody] CreateOrganizationInviteLinkRequestModel model)
+    public async Task<IResult> Create([FromRoute] Guid orgId, [FromBody] CreateOrganizationInviteLinkRequestModel model)
     {
         var result = await createOrganizationInviteLinkCommand.CreateAsync(
             model.ToCommandRequest(orgId));
@@ -104,7 +104,7 @@ public class OrganizationInviteLinksController(
     [HttpPut("")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
-    public async Task<IResult> Update(Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
+    public async Task<IResult> Update([FromRoute] Guid orgId, [FromBody] UpdateOrganizationInviteLinkRequestModel model)
     {
         var result = await updateOrganizationInviteLinkCommand.UpdateAsync(
             model.ToCommandRequest(orgId));
@@ -116,7 +116,7 @@ public class OrganizationInviteLinksController(
     [HttpPut("support-confirm")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
-    public async Task<IResult> UpdateInviteSupportConfirm(Guid orgId, [FromBody] UpdateInviteSupportConfirmRequestModel model)
+    public async Task<IResult> UpdateInviteSupportConfirm([FromRoute] Guid orgId, [FromBody] UpdateInviteSupportConfirmRequestModel model)
     {
         var result = await updateInviteSupportConfirmCommand.UpdateAsync(
             model.ToCommandRequest(orgId));
@@ -128,7 +128,7 @@ public class OrganizationInviteLinksController(
     [HttpDelete("")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType((int)HttpStatusCode.NoContent)]
-    public async Task<IResult> Delete(Guid orgId)
+    public async Task<IResult> Delete([FromRoute] Guid orgId)
     {
         var result = await deleteOrganizationInviteLinkCommand.DeleteAsync(orgId);
         return Handle(result);
@@ -137,7 +137,7 @@ public class OrganizationInviteLinksController(
     [HttpPost("refresh")]
     [Authorize<ManageUsersRequirement>]
     [ProducesResponseType(typeof(OrganizationInviteLinkResponseModel), (int)HttpStatusCode.OK)]
-    public async Task<IResult> Refresh(Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
+    public async Task<IResult> Refresh([FromRoute] Guid orgId, [FromBody] RefreshOrganizationInviteLinkRequestModel model)
     {
         var result = await refreshOrganizationInviteLinkCommand.RefreshAsync(
             model.ToCommandRequest(orgId));

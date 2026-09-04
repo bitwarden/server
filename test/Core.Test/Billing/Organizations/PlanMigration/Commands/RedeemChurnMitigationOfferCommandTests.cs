@@ -91,11 +91,12 @@ public class RedeemChurnMitigationOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_ChurnOnlyCohort_SubscriptionDiscountMissingSourceCoupon_DropsItAndAppliesChurnCoupon()
+    public async Task Run_ChurnOnlyCohort_SubscriptionDiscountMissingSourceCoupon_CarriesItByDiscountIdAndAppliesChurnCoupon()
     {
         // A pre-existing subscription discount can reference a coupon deleted in Stripe (null Source.Coupon).
-        // The churn-only path reads subscription.Discounts, so it must skip the unresolvable coupon rather
-        // than NRE, and still write the churn coupon to the subscription.
+        // The churn-only path reads subscription.Discounts and must not NRE on the unresolvable coupon --
+        // it still carries that discount forward by its discount id (dropping it would delete a live
+        // discount from Stripe on the wholesale replace) and writes the churn coupon alongside it.
         var organization = CreateOrganization();
         SetupOfferEligible();
         SetupChurnOnlyCohortAssignment(organization);
@@ -109,7 +110,10 @@ public class RedeemChurnMitigationOfferCommandTests
         Assert.True(result.Success);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(
             subscription.Id,
-            Arg.Is<SubscriptionUpdateOptions>(opts => opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+            Arg.Is<SubscriptionUpdateOptions>(opts =>
+                opts.Discounts.Count == 2 &&
+                opts.Discounts[0].Discount == "di_deleted" &&
+                opts.Discounts[1].Coupon == ChurnCouponCode));
     }
 
     [Fact]
@@ -119,7 +123,15 @@ public class RedeemChurnMitigationOfferCommandTests
         SetupOfferEligible();
         SetupMigrationCohortAssignment(organization);
 
-        var subscription = CreateSubscription();
+        var subscription = CreateSubscription(customerDiscount: new Discount
+        {
+            Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
+        });
+        // The proactive discount is live on the subscription (phase 1 is the active phase), so it is
+        // carried forward by discount id -- not re-emitted from the phase's recorded coupon id. The
+        // customer coupon must not be injected onto the active phase.
+        subscription.Discounts =
+            [new Discount { Id = "di_proactive", Source = new DiscountSource { Coupon = new Coupon { Id = "proactive-coupon" } } }];
         SetupGetSubscription(organization, subscription);
 
         var phase1Start = DateTime.UtcNow.AddDays(-90);
@@ -176,8 +188,57 @@ public class RedeemChurnMitigationOfferCommandTests
                 opts.Phases[0].Items[0].Quantity == 10 &&
                 opts.Phases[0].Discounts != null &&
                 opts.Phases[0].Discounts.Count == 1 &&
-                opts.Phases[0].Discounts[0].Coupon == "proactive-coupon" &&
+                opts.Phases[0].Discounts[0].Discount == "di_proactive" &&
+                opts.Phases[0].Discounts[0].Coupon == null &&
+                opts.Phases[0].Discounts.All(d => d.Coupon != "customer-level-coupon") &&
                 opts.Phases[0].Metadata == phase1Metadata));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_Phase1CouponConsumed_NotReMintedOntoPhase1()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        // A `once`-duration coupon recorded on Phase 1 that has already been consumed on the current
+        // invoice: still on the phase's Discounts, but gone from subscription.Discounts. Re-emitting
+        // it by coupon id would re-mint the live discount, so Phase 1 must carry nothing.
+        var subscription = CreateSubscription();
+        subscription.Discounts = [];
+        SetupGetSubscription(organization, subscription);
+
+        var phase1End = DateTime.UtcNow.AddDays(180);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(-90), EndDate = phase1End,
+                    Items = [],
+                    Discounts = [new SubscriptionSchedulePhaseDiscount { CouponId = "consumed-once-coupon" }],
+                    ProrationBehavior = ProrationBehavior.None
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = phase1End, EndDate = phase1End.AddYears(1),
+                    Items = [], Discounts = [], ProrationBehavior = ProrationBehavior.None
+                }
+            ]
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Discounts == null));
     }
 
     [Fact]
@@ -227,6 +288,187 @@ public class RedeemChurnMitigationOfferCommandTests
                 opts.Phases[1].Discounts.Count == 2 &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == "proactive-phase2-coupon") &&
                 opts.Phases[1].Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_Phase2ItemDiscount_PreservedOnRebuild()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var phase1End = DateTime.UtcNow.AddDays(180);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(-90), EndDate = phase1End,
+                    Items = [], ProrationBehavior = ProrationBehavior.None
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = phase1End,
+                    EndDate = phase1End.AddYears(1),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = "new-seat-price",
+                            Quantity = 10,
+                            Discounts = [new SubscriptionSchedulePhaseItemDiscount { CouponId = "item-coupon" }]
+                        }
+                    ],
+                    ProrationBehavior = ProrationBehavior.None
+                }
+            ]
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[1].Items[0].Discounts != null &&
+                opts.Phases[1].Items[0].Discounts.Any(d => d.Coupon == "item-coupon")));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_Phase1ItemDiscount_PreservedByMirror()
+    {
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        SetupGetSubscription(organization, subscription);
+
+        var phase1End = DateTime.UtcNow.AddDays(180);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(-90),
+                    EndDate = phase1End,
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            PriceId = "old-seat-price",
+                            Quantity = 10,
+                            Discounts = [new SubscriptionSchedulePhaseItemDiscount { CouponId = "phase1-item-coupon" }]
+                        }
+                    ],
+                    ProrationBehavior = ProrationBehavior.None
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = phase1End, EndDate = phase1End.AddYears(1),
+                    Items = [], Discounts = [], ProrationBehavior = ProrationBehavior.None
+                }
+            ]
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items[0].Discounts != null &&
+                opts.Phases[0].Items[0].Discounts.Any(d => d.Coupon == "phase1-item-coupon")));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_LiveSubscriptionDiscount_CarriedOntoPhase2ByDiscountId()
+    {
+        // A discount that's currently live on the subscription (e.g. a "forever" discount from
+        // Phase 1) must be carried onto Phase 2 too, referenced by its discount id -- not
+        // re-granted as a new coupon, which would re-mint a `once`-duration coupon.
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        subscription.Discounts = [new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "live-coupon" } } }];
+        SetupGetSubscription(organization, subscription);
+        SetupActiveScheduleWithTwoPhases(subscription);
+
+        await _command.Run(organization);
+
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_123",
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[1].Discounts != null &&
+                opts.Phases[1].Discounts.Any(d => d.Discount == "di_live") &&
+                opts.Phases[1].Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+    }
+
+    [Fact]
+    public async Task Run_MigrationCohort_Phase2AlreadyHasChurnAndLiveDiscountCoupon_NoStripeCall()
+    {
+        // The footprint no-op check must resolve the live subscription discount (carried by
+        // discount id) back to its coupon id so it compares like-for-like against what Phase 2
+        // already shows (by coupon id, since Phase 2 is unactivated) -- otherwise the skip would
+        // never fire once a live discount is part of the rebuild.
+        var organization = CreateOrganization();
+        SetupOfferEligible();
+        SetupMigrationCohortAssignment(organization);
+
+        var subscription = CreateSubscription();
+        subscription.Discounts = [new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "live-coupon" } } }];
+        SetupGetSubscription(organization, subscription);
+
+        var phase1End = DateTime.UtcNow.AddDays(180);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_123",
+            SubscriptionId = subscription.Id,
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(-90), EndDate = phase1End,
+                    Items = [], ProrationBehavior = ProrationBehavior.None
+                },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = phase1End,
+                    EndDate = phase1End.AddYears(1),
+                    Items = [],
+                    Discounts =
+                    [
+                        new SubscriptionSchedulePhaseDiscount { CouponId = "live-coupon" },
+                        new SubscriptionSchedulePhaseDiscount { CouponId = ChurnCouponCode }
+                    ],
+                    ProrationBehavior = ProrationBehavior.None
+                }
+            ]
+        };
+        _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
+            .Returns(new StripeList<SubscriptionSchedule> { Data = [schedule] });
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
     }
 
     [Fact]
@@ -462,7 +704,9 @@ public class RedeemChurnMitigationOfferCommandTests
         {
             Source = new DiscountSource { Coupon = new Coupon { Id = "customer-level-coupon" } }
         });
-        subscription.Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }];
+        // The churn coupon is already a live discount on the subscription -- carried forward by
+        // discount id (not re-granted by coupon id) so a `once`-duration coupon isn't re-minted.
+        subscription.Discounts = [new Discount { Id = "di_churn_existing", Source = new DiscountSource { Coupon = new Coupon { Id = ChurnCouponCode } } }];
         SetupGetSubscription(organization, subscription);
 
         await _command.Run(organization);
@@ -471,7 +715,7 @@ public class RedeemChurnMitigationOfferCommandTests
             subscription.Id,
             Arg.Is<SubscriptionUpdateOptions>(opts =>
                 opts.Discounts.Any(d => d.Coupon == "customer-level-coupon") &&
-                opts.Discounts.Any(d => d.Coupon == ChurnCouponCode)));
+                opts.Discounts.Any(d => d.Discount == "di_churn_existing")));
     }
 
     [Fact]

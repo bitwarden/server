@@ -103,6 +103,88 @@ public class OrganizationBillingServiceTests
         Assert.Equal("cancel", capturedOptions.TrialSettings.EndBehavior.MissingPaymentMethod);
     }
 
+    // Literal strings on purpose: the initiation path sentence must match the clients-repo
+    // InitiationPath enum, and the metadata values are persisted in Stripe — changing either
+    // should fail this test.
+    [Theory]
+    [BitAutoData("Password Manager trial from marketing website", "marketing-initiated")]
+    [BitAutoData("Secrets Manager trial from marketing website", "marketing-initiated")]
+    [BitAutoData("Sales assisted trial from admin portal", "sales-assisted")]
+    [BitAutoData("New organization creation in-product", "product-initiated")]
+    [BitAutoData((string?)null, "product-initiated")]
+    public async Task Finalize_SetsTrialInitiationPathMetadata(
+        string? initiationPath,
+        string expectedMetadataValue,
+        Organization organization,
+        User owner,
+        SutProvider<OrganizationBillingService> sutProvider)
+    {
+        // Arrange
+        var plan = MockPlans.Get(PlanType.TeamsAnnually);
+        organization.PlanType = PlanType.TeamsAnnually;
+        organization.GatewayCustomerId = "cus_test123";
+        organization.GatewaySubscriptionId = null;
+
+        var subscriptionSetup = new SubscriptionSetup
+        {
+            PlanType = PlanType.TeamsAnnually,
+            PasswordManagerOptions = new SubscriptionSetup.PasswordManager
+            {
+                Seats = 5,
+                Storage = null,
+                PremiumAccess = false
+            },
+            SecretsManagerOptions = null,
+            SkipTrial = false,
+            InitiationPath = initiationPath
+        };
+
+        var sale = new OrganizationSale
+        {
+            Organization = organization,
+            SubscriptionSetup = subscriptionSetup,
+            Owner = owner
+        };
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsAnnually)
+            .Returns(plan);
+
+        sutProvider.GetDependency<IHasPaymentMethodQuery>()
+            .Run(organization)
+            .Returns(false);
+
+        var customer = new Customer
+        {
+            Id = "cus_test123",
+            Tax = new CustomerTax { AutomaticTax = StripeConstants.AutomaticTaxStatus.Supported }
+        };
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetCustomerOrThrow(organization, Arg.Any<CustomerGetOptions>())
+            .Returns(customer);
+
+        SubscriptionCreateOptions capturedOptions = null;
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(options => capturedOptions = options))
+            .Returns(new Subscription
+            {
+                Id = "sub_test123",
+                Status = StripeConstants.SubscriptionStatus.Trialing
+            });
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .ReplaceAsync(organization)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sutProvider.Sut.Finalize(sale);
+
+        // Assert
+        Assert.NotNull(capturedOptions);
+        Assert.Equal(expectedMetadataValue, capturedOptions.Metadata["trialInitiationPath"]);
+    }
+
     [Theory, BitAutoData]
     public async Task NoPaymentMethodButNoTrial_DoesNotSetMissingPaymentMethodBehavior(
         Organization organization,
