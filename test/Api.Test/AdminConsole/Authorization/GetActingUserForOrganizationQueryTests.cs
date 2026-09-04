@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -118,7 +119,6 @@ public class GetActingUserForOrganizationQueryTests
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
         currentContext.ProviderIdForOrg(organizationId).Returns((Guid?)null);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => sut.GetActingUserAsync(userId, organizationId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sut.GetActingUserAsync(userId, organizationId));
     }
 }
