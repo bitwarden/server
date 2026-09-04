@@ -180,7 +180,8 @@ public class UpdateOrganizationUserValidator(
 
     /// <summary>
     /// Delegates the role-change authority decision to
-    /// <see cref="IOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users skip the check.
+    /// <see cref="IOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users and provider users
+    /// hold authority above the organization role hierarchy and skip the check.
     /// </summary>
     private async Task<Error?> ValidateRoleChangeAsync(UpdateOrganizationUserRequest request)
     {
@@ -190,7 +191,7 @@ public class UpdateOrganizationUserValidator(
         }
 
         var actingUser = new OrganizationUserRole(
-            standardUser.OrganizationUserType!.Value,
+            standardUser.OrganizationUserType,
             request.OrganizationUserToUpdate.OrganizationId,
             standardUser.Permissions);
 

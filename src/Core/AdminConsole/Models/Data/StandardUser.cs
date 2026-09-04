@@ -8,8 +8,7 @@ public class StandardUser(Guid userId, bool isOrganizationOwner, OrganizationUse
 {
     public Guid? UserId { get; } = userId;
     public bool IsOrganizationOwnerOrProvider { get; } = isOrganizationOwner;
-    public OrganizationUserType? OrganizationUserType { get; } = orgUserType ?? (isOrganizationOwner ? Core.Enums.OrganizationUserType.Owner : Core.Enums.OrganizationUserType.User);
+    public OrganizationUserType OrganizationUserType { get; } = orgUserType ?? OrganizationUserType.User;
     public Permissions? Permissions { get; } = permissions;
     public EventSystemUser? SystemUserType => throw new Exception($"{nameof(StandardUser)} does not have a {nameof(SystemUserType)}");
-
 }
