@@ -138,6 +138,8 @@ public static class BuilderExtensions
                 ReferenceExpression.Create($"{ssoBaseUrl}/{orgId.Resource}/Acs"))
             .WithBindMount($"{builder.Required("WorkingDirectory")}/authsources.php",
                 "/var/www/simplesamlphp/config/authsources.php")
+            .WithBindMount($"{builder.Required("WorkingDirectory")}/saml20-sp-remote.php",
+                "/var/www/simplesamlphp/metadata/saml20-sp-remote.php")
             .WithExplicitStart();
     }
 
