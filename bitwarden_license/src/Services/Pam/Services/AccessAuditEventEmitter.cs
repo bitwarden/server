@@ -98,8 +98,15 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         AccessAuditEventKind.RequestSubmitted => EventType.Pam_AccessRequest_Submitted,
         AccessAuditEventKind.RequestApproved => EventType.Pam_AccessRequest_Approved,
         AccessAuditEventKind.RequestDenied => EventType.Pam_AccessRequest_Denied,
+        AccessAuditEventKind.RequestCancelled => EventType.Pam_AccessRequest_Cancelled,
         AccessAuditEventKind.LeaseActivated => EventType.Pam_AccessLease_Activated,
+        AccessAuditEventKind.LeaseActivationRejected => EventType.Pam_AccessLease_ActivationRejected,
+        AccessAuditEventKind.LeaseExtended => EventType.Pam_AccessLease_Extended,
         AccessAuditEventKind.LeaseRevoked => EventType.Pam_AccessLease_Revoked,
+        AccessAuditEventKind.LeaseExpired => EventType.Pam_AccessLease_Expired,
+        AccessAuditEventKind.RuleCreated => EventType.Pam_AccessRule_Created,
+        AccessAuditEventKind.RuleUpdated => EventType.Pam_AccessRule_Updated,
+        AccessAuditEventKind.RuleDeleted => EventType.Pam_AccessRule_Deleted,
         _ => null,
     };
 }

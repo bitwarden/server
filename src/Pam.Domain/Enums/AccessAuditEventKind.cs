@@ -28,7 +28,7 @@ public enum AccessAuditEventKind : byte
     LeaseExtended = 12,
     LeaseRevoked = 13,
 
-    /// <summary>Deferred: an active lease reaching its end. Time-derived; needs a sweep.</summary>
+    /// <summary>An active lease reaching its end; emitted by the lease-expiry sweep, so it has no human actor.</summary>
     LeaseExpired = 14,
 
     // Credential access

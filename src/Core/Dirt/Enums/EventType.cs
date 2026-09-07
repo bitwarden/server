@@ -179,4 +179,14 @@ public enum EventType : int
     Pam_AccessRequest_Denied = 2602,
     Pam_AccessLease_Activated = 2603,
     Pam_AccessLease_Revoked = 2604,
+    // Appended rather than slotted into the request/lease groups above, since the values are persisted.
+    Pam_AccessRequest_Cancelled = 2605,
+    Pam_AccessLease_Extended = 2606,
+    Pam_AccessLease_Expired = 2607,
+    Pam_AccessLease_ActivationRejected = 2608,
+    // Rule administration carries no subject id across: a rule governs many collections, and dbo.Event has no
+    // column for the rule itself. The actor and the timestamp are what an administrator reads these rows for.
+    Pam_AccessRule_Created = 2609,
+    Pam_AccessRule_Updated = 2610,
+    Pam_AccessRule_Deleted = 2611,
 }
