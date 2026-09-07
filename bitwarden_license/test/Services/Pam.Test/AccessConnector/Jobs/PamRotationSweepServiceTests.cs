@@ -46,8 +46,7 @@ public class PamRotationSweepServiceTests
         sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config1.Id, PamRotationSource.Scheduled)
             .Returns(Task.FromException<PamRotationJobCreateOutcome>(new InvalidOperationException("boom")));
 
-        // The due phase's own try/catch (plus the outer RunPhaseAsync) must swallow config1's failure and still
-        // process config2 -- and never let the phase's exception escape SweepAsync itself.
+        // config1's failure must not stop config2 from processing, or escape SweepAsync itself.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IOfferRotationCommand>().Received(1)
@@ -88,8 +87,7 @@ public class PamRotationSweepServiceTests
     public async Task SweepAsync_TimeoutPhase_ConfigWithoutASchedule_LeavesNextRotationAlone(PamRotationConfig config)
     {
         var sutProvider = Setup();
-        // On-demand / access-end only: writing a concrete NextRotationAt here would enrol it in the due sweep
-        // permanently, since only the success path (via the schedule calculator) ever clears the value again.
+        // A concrete NextRotationAt here would enrol this config in the due sweep permanently.
         config.ScheduleCron = null;
         var timedOutJob = new PamTimedOutJob
         {

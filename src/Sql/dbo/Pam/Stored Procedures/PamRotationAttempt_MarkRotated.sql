@@ -6,11 +6,7 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_MarkRotated]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- RecordRotationSucceeded -> MarkJobSucceeded. CipherUpdated = 1 is the VerifiedBeforeSuccess backstop: a success
-    -- report cannot resolve an attempt whose cipher write was never accepted. Guard failure (unknown/stale attempt,
-    -- wrong claimant, no cipher write, or the job already moved on) takes the RejectStaleSuccess path -- the caller
-    -- audits report_rejected, nothing changes. XACT_ABORT guarantees rollback (and a clean pooled connection) on any
-    -- error.
+    -- CipherUpdated = 1 backstops VerifiedBeforeSuccess; guard failure takes RejectStaleSuccess.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -39,8 +35,7 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AttemptId
 
-    -- Every transition out of Claimed nulls the claim fields; the executing daemon's identity for this try is
-    -- already permanently recorded on the attempt above.
+    -- Clears claim fields leaving Claimed; the attempt already recorded who worked it.
     UPDATE [dbo].[PamRotationJob]
     SET [Status] = 2, -- Succeeded
         [ClaimedByDaemonId] = NULL,

@@ -7,11 +7,7 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_AcceptCipherWrite]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- AcceptCipherUpdate's atomic write-capability check (security finding, plan §1): the job row is locked here
-    -- WITH (UPDLOCK) for the life of the transaction, so a concurrent release/timeout sweep -- which updates the same
-    -- job row -- blocks until this commits (or vice versa), closing the check-then-act window between "is this
-    -- attempt still allowed to write" and "write the cipher". XACT_ABORT guarantees rollback (and a clean pooled
-    -- connection) on any error.
+    -- WITH (UPDLOCK) closes the check-then-act window before the cipher write.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -35,17 +31,13 @@ BEGIN
 
     IF @VerifiedJobId IS NULL
     BEGIN
-        -- The complement of spec AcceptCipherUpdate: unknown attempt, wrong claimant, or the job/attempt has already
-        -- moved on (released/timed out/resolved). Audited by the caller as write_rejected.
+        -- Unknown attempt, wrong claimant, or an already-resolved job/attempt; caller audits as write_rejected.
         ROLLBACK TRANSACTION
         SELECT 0 -- Rejected
         RETURN
     END
 
-    -- Outside RejectCipherUpdate's exact complement (plan §10 divergence): a drifted LastKnownRevisionDate means the
-    -- vault item changed since the daemon last read it, so the write is rejected to protect a concurrent user edit
-    -- rather than silently clobbering it. The 1-second tolerance mirrors CipherService's own last-known-revision
-    -- check.
+    -- Drifted LastKnownRevisionDate means a concurrent edit; rejected, matching CipherService's tolerance.
     IF ABS(DATEDIFF_BIG(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
     BEGIN
         ROLLBACK TRANSACTION
@@ -62,8 +54,7 @@ BEGIN
     SET [CipherUpdated] = 1
     WHERE [Id] = @AttemptId
 
-    -- Every other writer of dbo.Cipher ends here (see Cipher_Update): without the bump a client that misses the
-    -- push sees an unchanged AccountRevisionDate, skips the sync, and keeps serving the pre-rotation password.
+    -- Other writers of dbo.Cipher bump here too, avoiding a stale password.
     EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
     COMMIT TRANSACTION

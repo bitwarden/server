@@ -6,23 +6,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Now defaults so a rolling deployment stays safe: an older server that predates this parameter calls the
-    -- procedure without it and gets the database clock, which filters the same way.
+    -- Lets older callers omit @Now during rolling deployment.
     SET @Now = COALESCE(@Now, GETUTCDATE())
 
-    -- The approver history, returned as two result sets so the caller can attach each request's full decision list
-    -- without an N+1:
-    --   1) the non-actionable requests -- an action recorded, or a window lapsed with none (derived Expired); the
-    --      exact complement of the pending inbox read -- created on or after @Since, for the supplied
-    --      (caller-manageable) collections, with the denormalized requester identity. Rows that produced a lease
-    --      carry the lease's id and raw columns so the client can target (and gate) the Revoke action; a request
-    --      produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one
-    --      row. Derived statuses are computed at the repository boundary -- see AccessRequest_ReadDetailsById.
-    --   2) every decision (human or automatic) for those requests, keyed by AccessRequestId and ordered oldest-first;
-    --      DeciderKind says which, and a human decision's identity is denormalized from [User].
-    --
-    -- The qualifying ids are materialized once so the history predicate is written once and both result sets are
-    -- bounded by exactly the same rows -- the request list and its decision list cannot drift.
+    -- Two result sets (requests, decisions); materialized ids let both share the same rows.
     DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
 
     INSERT INTO @RequestIds ([Id])
