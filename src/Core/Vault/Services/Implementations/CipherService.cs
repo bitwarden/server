@@ -93,8 +93,7 @@ public class CipherService : ICipherService
             throw new BadRequestException("You do not have permissions to edit this.");
         }
 
-        // Editing an existing leasing-gated cipher requires a valid active lease. New ciphers have no
-        // collection paths yet, so they are never gated; admin/internal flows skip the lease gate too.
+        // Editing an existing leasing-gated cipher requires a valid active lease; new ciphers are never gated.
         if (!skipPermissionCheck && cipher.Id != default(Guid))
         {
             await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);

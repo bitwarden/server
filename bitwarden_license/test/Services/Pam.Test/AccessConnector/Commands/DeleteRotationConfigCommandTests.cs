@@ -77,7 +77,7 @@ public class DeleteRotationConfigCommandTests
         var sutProvider = Setup();
         details.HasActiveJob = false;
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
-        // The repository's own guard re-checks under lock and refuses once a job has been offered in the window.
+        // The repository's own guard re-checks under lock, refusing a job offered in the window.
         sutProvider.GetDependency<IPamRotationConfigRepository>().DeleteWithJobsAsync(details.Id).Returns(false);
 
         await Assert.ThrowsAsync<BadRequestException>(

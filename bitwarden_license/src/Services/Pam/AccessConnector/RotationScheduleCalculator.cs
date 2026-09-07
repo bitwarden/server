@@ -27,8 +27,8 @@ public class RotationScheduleCalculator : IRotationScheduleCalculator
 
         var expression = Parse(cron);
 
-        // The schedule must occur at least twice so the interval floor can be checked; a cron that fires only once
-        // (or never) is rejected the same way a too-frequent one is.
+        // The schedule must occur at least twice so the interval floor can be checked; a cron firing once or
+        // never is rejected the same as a too-frequent one.
         var first = expression.GetNextValidTimeAfter(DateTimeOffset.UtcNow);
         if (first is null)
         {
