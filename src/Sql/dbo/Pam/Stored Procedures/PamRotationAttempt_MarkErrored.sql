@@ -9,12 +9,7 @@ CREATE PROCEDURE [dbo].[PamRotationAttempt_MarkErrored]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- RecordRotationFailed -> RetryJob / FailJob. @FailureReason is already bounded/truncated by the caller before
-    -- this call (the zero-knowledge failure-reason contract forbids forwarding raw target-system error output), so
-    -- this sproc only stores it. Guard failure (unknown/stale attempt, wrong claimant, or the job already moved on)
-    -- takes the RejectStaleFailureReport path -- the caller audits report_rejected, nothing changes. The result shape
-    -- mirrors PamRotationFailureResult (Outcome + JobStatus + ErroredAttemptCount) on every path, success or not.
-    -- XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- @FailureReason is pre-bounded by the caller's zero-knowledge contract; guard failure takes RejectStaleFailureReport.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -43,8 +38,7 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AttemptId
 
-    -- Retry-budget math: only Errored attempts count (Abandoned -- released/timed-out tries -- are never charged
-    -- against the budget, per the plan's success-wins-on-timeout+release semantics).
+    -- Only Errored attempts count toward the retry budget; Abandoned (released/timed-out) tries never do.
     DECLARE @ErroredCount INT
 
     SELECT @ErroredCount = COUNT(*)

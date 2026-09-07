@@ -1,30 +1,5 @@
--- Close the activation/retraction write skew (PM-41878).
---
--- Activating an approved request read [AccessRequest] and wrote only [AccessLease]; cancelling or denying one reads
--- [AccessLease] and writes only [AccessRequest]. Neither side wrote the table the other read, so both could commit
--- and leave a Cancelled/Denied request holding a live lease. Access is governed by the lease alone once it exists
--- (CipherLeaseGate hands over a gated cipher on lease existence), so that combination hands the requester the
--- credential their request was withdrawn from.
---
--- The retraction guards make it worse than a narrow window: their NOT EXISTS is correlated to @AccessRequestId
--- rather than to the row being updated, so it is an uncorrelated existence check that the optimizer may evaluate as
--- a start-up filter -- before [AccessRequest] is locked at all -- and a concurrent activation can then mint and
--- commit in the gap.
---
--- The fix makes both operations write and lock the same row, in the same order:
---
---   * [AccessLease_CreateFromApprovedRequest] claims the request row with a guarded UPDATE before it mints. The
---     write is semantically a no-op -- an activated request stays Approved, there is no 'activated' action -- but it
---     makes activation a writer of the row the retractions write, and folds every precondition into one CAS.
---     Positioned ahead of the singleton guard so both operations take [AccessRequest] before [AccessLease]; the
---     other order would deadlock (1205), which neither caller retries.
---   * [AccessRequest_Cancel] and [AccessRequest_CancelWithDecision] take that row under UPDLOCK before probing for a
---     produced lease, which takes the ordering out of the optimizer's hands. [AccessRequest_Cancel] gains an
---     explicit transaction to hold the lock across both statements; in autocommit it would be released at the end of
---     the claiming SELECT.
---
--- Neither guard's predicate changes, so no outcome that was already correct moves.
-
+-- Write skew fix: activation and retraction now both claim [AccessRequest] before writing [AccessLease].
+-- Claim order must match on both sides; reversed, it deadlocks (1205).
 CREATE OR ALTER PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
     @AccessLeaseId UNIQUEIDENTIFIER,
     @AccessRequestId UNIQUEIDENTIFIER,
@@ -34,34 +9,12 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessLease_CreateFromApprovedRequest]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- An explicit transaction is required so the claiming UPDATE's row lock and the singleton guard's range lock are
-    -- both held until the INSERT commits; XACT_ABORT guarantees the transaction is rolled back (and the pooled
-    -- connection left clean) if the unique-index backstop [IX_AccessLease_AccessRequestId] trips on a concurrent
-    -- activation of the same request.
+    -- Holds the claim's row lock and the singleton guard's range lock until INSERT commits.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
-    -- Claim the request row, then mint. Activation used to read [AccessRequest] and write only [AccessLease] while a
-    -- retraction reads [AccessLease] and writes only [AccessRequest] -- write skew across two tables, where neither
-    -- side writes what the other reads, so both could commit and leave a Cancelled/Denied request holding a live
-    -- lease. Access is governed by the lease alone once it exists, so that combination hands the requester the
-    -- credential their request was withdrawn from.
-    --
-    -- This UPDATE closes it from the activation side. It is semantically a no-op -- an activated request stays
-    -- Approved, there is no 'activated' action -- but it makes activation a *writer* of the row the retraction paths
-    -- write, so the two serialize on that row's exclusive lock, which is held until this transaction commits. The
-    -- other half is in [AccessRequest_Cancel] and [AccessRequest_CancelWithDecision], which take the same row under
-    -- UPDLOCK before they probe for a lease.
-    --
-    -- Every application-level precondition is re-checked here rather than only in the INSERT below, so the claim and
-    -- the guard are one statement and one CAS: a retraction that committed first has already moved [Action] off
-    -- Approved, which is a clean zero-row outcome rather than a lost update. Zero rows means a precondition no longer
-    -- held and the caller decides how to surface that.
-    --
-    -- Ordered before the singleton guard on purpose. The retraction paths lock [AccessRequest] and then read
-    -- [AccessLease]; the guard below locks a range of [AccessLease]. Taking the guard first would invert the two
-    -- operations' lock order and make them deadlock (error 1205), which neither caller retries.
+    -- Claims the request row first so activation/retraction serialize on it; reversed order deadlocks (1205).
     UPDATE [dbo].[AccessRequest]
     SET [Action] = 1 -- Approved: unchanged, the write is what matters
     WHERE
@@ -80,11 +33,7 @@ BEGIN
         RETURN
     END
 
-    -- Per-cipher singleton guard. When the governing rule(s) ask for a single active lease, activation is allowed
-    -- only if no other in-window lease with no early end exists for the same cipher across all users. The UPDLOCK, HOLDLOCK
-    -- range lock is held for the life of this transaction, so it serializes against the INSERT below: a concurrent
-    -- same-cipher activation blocks here until this transaction commits, then sees the new lease and is rejected.
-    -- Outcome -1 is distinct from the precondition-fail outcome (0) so the caller can surface a 409 conflict.
+    -- At most one active lease per cipher; the UPDLOCK, HOLDLOCK lock serializes concurrent activation.
     IF @EnforceSingleActiveLease = 1
         AND EXISTS (
             SELECT 1
@@ -100,10 +49,8 @@ BEGIN
         RETURN
     END
 
-    -- Activation of an approved request: mints the lease that authorizes access, spanning the request's
-    -- approved window. The preconditions are restated here as defence in depth -- the claim above already holds the
-    -- row, so they cannot have changed -- and zero rows inserted still means a precondition no longer held.
-    -- [IX_AccessLease_AccessRequestId] (unique) remains the backstop.
+    -- [NotBefore] is @Now, not AR.[NotBefore]: a lease is never backdated.
+    -- Preconditions are restated as defense in depth; the claim above already holds the row.
     INSERT INTO [dbo].[AccessLease]
     (
         [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
@@ -137,37 +84,18 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_Cancel]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- An explicit transaction is required: the claim below only holds its row lock until the transaction ends, and in
-    -- autocommit that is the end of the SELECT itself. XACT_ABORT keeps the pooled connection clean if either
-    -- statement fails.
+    -- Requires an explicit transaction; autocommit would release the claim's lock right after the SELECT.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION AccessRequest_Cancel
 
-    -- Claim the request row before probing for a produced lease. The UPDATE's NOT EXISTS is correlated to
-    -- @AccessRequestId rather than to the row being updated, so the optimizer may evaluate it as a start-up filter
-    -- *before* [AccessRequest] is ever locked -- and in that gap a concurrent [AccessLease_CreateFromApprovedRequest]
-    -- can mint and commit, leaving this UPDATE to stamp Cancelled over a request that now holds a live lease. Access
-    -- is governed by the lease alone once it exists, so that combination hands the requester the credential they
-    -- withdrew from.
-    --
-    -- Taking the row under UPDLOCK first removes the ordering from the optimizer's hands. Activation claims the same
-    -- row (see [AccessLease_CreateFromApprovedRequest]), so by the time the UPDATE runs there are only two states:
-    -- activation has not claimed yet, and now blocks behind this transaction until it can, then fails its own CAS on
-    -- [Action]; or it committed first, and the probe below sees the lease it minted. The value read is unused -- the
-    -- guarded UPDATE stays the single arbiter of the transition -- because reading the row is simply how T-SQL takes
-    -- a lock on it.
+    -- Claims the row before the lease probe so a concurrent activation can't mint meanwhile.
     DECLARE @Claimed TINYINT
     SELECT @Claimed = [Action]
     FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
     WHERE [Id] = @AccessRequestId
 
-    -- The requester withdraws their own not-yet-activated request (open, or an approval they have not activated).
-    -- Unlike [AccessRequest_CancelWithDecision], no AccessDecision is written: a cancellation is the requester acting
-    -- on their own request, not an approver verdict. The WHERE guard keeps the write idempotent under a race, refuses
-    -- a request that has already produced a lease (that access is governed by the lease, which must be revoked
-    -- instead), and refuses a lapsed window -- a row users saw as derived-Expired must not later restamp to
-    -- Cancelled.
+    -- Requester withdrawal of a not-yet-activated request; no AccessDecision, since it isn't an approver verdict.
     UPDATE [dbo].[AccessRequest]
     SET [Action] = 3, -- Cancelled
         [ActionDate] = @Now
@@ -190,24 +118,13 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    -- Both writes commit or roll back together (XACT_ABORT).
     SET XACT_ABORT ON
 
-    -- A managing approver retracts a not-yet-activated request (open, or an approval the requester has not
-    -- activated): record Denied and the approver's human decision, mirroring [AccessRequest_ResolveWithDecision] but
-    -- over the broader retractable set. The WHERE guard is race-safe, refuses a request that has produced a lease
-    -- (governed by the lease -- revoke instead), and refuses a lapsed window -- a row users saw as derived-Expired
-    -- must not later restamp to Denied. The decision is inserted only when the transition actually happened
-    -- (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
+    -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
-    -- Claim the request row before probing for a produced lease, exactly as [AccessRequest_Cancel] does and for the
-    -- same reason: the UPDATE's NOT EXISTS is correlated to @AccessRequestId rather than to the row being updated, so
-    -- without this the optimizer may evaluate it before [AccessRequest] is locked and a concurrent
-    -- [AccessLease_CreateFromApprovedRequest] can mint in the gap, leaving a Denied request holding a live lease.
-    -- Activation claims the same row, so the two serialize on it. The value read is unused -- the guarded UPDATE
-    -- stays the single arbiter of the transition -- because reading the row is simply how T-SQL takes a lock on it.
+    -- Claims the row first, like [AccessRequest_Cancel], to serialize against a concurrent activation's claim.
     DECLARE @Claimed TINYINT
     SELECT @Claimed = [Action]
     FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)

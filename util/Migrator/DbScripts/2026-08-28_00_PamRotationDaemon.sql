@@ -1,7 +1,4 @@
--- PAM credential rotation, daemon surface. Tables PamTargetSystem / PamDaemon /
--- PamDaemonTargetAssignment / PamRotationConfig / PamRotationJob / PamRotationAttempt and their procedures, the
--- rotation columns on the PAM access-audit event store, the ApiKey read the daemon's token issuance needs, and the
--- AccessLease natural-expiry sweep. AccessLease itself is untouched -- see src/Sql/dbo/Pam/Tables/AccessLease.sql.
+-- PAM rotation daemon surface: tables/procedures, AccessAuditEvent rotation columns, and the AccessLease expiry sweep.
 
 IF OBJECT_ID('[dbo].[PamTargetSystem]') IS NULL
 BEGIN
@@ -22,7 +19,6 @@ BEGIN
 END
 GO
 
--- PamDaemon
 IF OBJECT_ID('[dbo].[PamDaemon]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamDaemon] (
@@ -47,7 +43,6 @@ BEGIN
 END
 GO
 
--- PamDaemonTargetAssignment
 IF OBJECT_ID('[dbo].[PamDaemonTargetAssignment]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamDaemonTargetAssignment] (
@@ -62,7 +57,6 @@ BEGIN
         CONSTRAINT [FK_PamDaemonTargetAssignment_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
     );
 
-    -- OneAssignmentPerDaemonTarget.
     CREATE UNIQUE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_DaemonId_TargetSystemId]
         ON [dbo].[PamDaemonTargetAssignment] ([DaemonId] ASC, [TargetSystemId] ASC);
 
@@ -71,7 +65,6 @@ BEGIN
 END
 GO
 
--- PamRotationConfig
 IF OBJECT_ID('[dbo].[PamRotationConfig]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamRotationConfig] (
@@ -104,7 +97,6 @@ BEGIN
 END
 GO
 
--- PamRotationJob
 IF OBJECT_ID('[dbo].[PamRotationJob]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamRotationJob] (
@@ -132,7 +124,6 @@ BEGIN
 END
 GO
 
--- PamRotationAttempt
 IF OBJECT_ID('[dbo].[PamRotationAttempt]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamRotationAttempt] (
@@ -155,10 +146,7 @@ BEGIN
 END
 GO
 
--- The natural-expiry sweep's journal: one row per lease AccessLease_ExpireDue has already returned. Expiry is
--- derived at read time rather than stored (a lease whose window closed on its own keeps Action = None forever), so
--- there is no status flip to mark a lease as processed -- this journal is what keeps the LeaseExpired audit event
--- and the rotation access-end trigger to at most one firing per lease.
+-- One row per expired lease; LeaseExpired fires exactly one audit event per lease.
 IF OBJECT_ID('[dbo].[PamLeaseExpirySweep]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[PamLeaseExpirySweep] (
@@ -170,9 +158,7 @@ BEGIN
 END
 GO
 
--- OrganizationId indexes. Each of these three tables has a _ReadByOrganizationId procedure and an ON DELETE CASCADE
--- FK to Organization, both of which scan without one. Created as guarded standalone statements rather than inside
--- the CREATE TABLE blocks above so a database that already ran an earlier revision of this script still picks them up.
+-- OrganizationId indexes for these three tables' _ReadByOrganizationId procedures and cascade-delete FK scans.
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamTargetSystem_OrganizationId' AND [object_id] = OBJECT_ID('[dbo].[PamTargetSystem]'))
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_PamTargetSystem_OrganizationId]
@@ -194,8 +180,7 @@ BEGIN
 END
 GO
 
--- The daemon poll joins assignment -> config on TargetSystemId every few seconds per daemon, and
--- PamRotationConfig_AnyByTargetSystemWithTerminateSessions scans the same column.
+-- Backs the daemon poll's assignment -> config join and PamRotationConfig_AnyByTargetSystemWithTerminateSessions.
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationConfig_TargetSystemId' AND [object_id] = OBJECT_ID('[dbo].[PamRotationConfig]'))
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
@@ -312,8 +297,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- No cascade cleanup here: a target system with rotation configs or daemon assignments still referencing it is
-    -- blocked by their NO ACTION FKs (detach or delete those first). Deleting an already-gone row is a no-op.
+    -- No cascade cleanup; a referenced target system is blocked by its NO ACTION FKs.
     DELETE FROM [dbo].[PamTargetSystem]
     WHERE [Id] = @Id
 END
@@ -366,11 +350,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Name + Status only: ApiKeyId is set once at registration (reissue is deferred -- see the plan's deferrals),
-    -- OrganizationId/CreationDate never change, and LastHeartbeatAt has its own conditional-bump sproc
-    -- (PamDaemon_UpdateHeartbeat) so a routine admin edit never races a daemon's own poll. The repository must call
-    -- this with an explicit narrow parameter set rather than the generic whole-entity Update -- passing the full
-    -- PamDaemon entity here would fail (this sproc does not declare an ApiKeyId/LastHeartbeatAt/etc. parameter).
+    -- Name + Status only; LastHeartbeatAt is bumped separately (PamDaemon_UpdateHeartbeat) to avoid racing a poll.
     UPDATE
         [dbo].[PamDaemon]
     SET
@@ -414,10 +394,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Conditional bump: the daemon-facing request filter calls this on every request, so the WHERE guard turns
-    -- most calls into a no-op write instead of hammering the row -- only a poll arriving after @MinIntervalSeconds
-    -- since the last recorded heartbeat actually updates it. Never called by a sweep -- only by the daemon's own
-    -- requests.
+    -- Conditional bump: the WHERE guard no-ops calls within @MinIntervalSeconds of the last heartbeat.
     UPDATE [dbo].[PamDaemon]
     SET [LastHeartbeatAt] = @Now
     WHERE [Id] = @Id
@@ -431,8 +408,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The client provider's lookup at token-issuance time: the daemon row plus the two organization flags that gate
-    -- issuance (Enabled, UsePam) so a lapsed/disabled org's daemon cannot mint a token without an extra round trip.
+    -- Includes org Enabled/UsePam flags so a lapsed org can't mint a token.
     SELECT
         D.*,
         O.[Enabled] AS [OrganizationEnabled],
@@ -453,9 +429,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Id is a plain input, not OUTPUT: unlike the generic Create sprocs, the caller (IPamDaemonRepository.
-    -- CreateAssignmentAsync) always assigns the id before calling this. [IX_PamDaemonTargetAssignment_DaemonId_TargetSystemId]
-    -- is the unique-index backstop for OneAssignmentPerDaemonTarget if two callers race.
+    -- @Id is a plain input, not OUTPUT; the caller assigns it beforehand.
     INSERT INTO [dbo].[PamDaemonTargetAssignment]
     (
         [Id],
@@ -646,9 +620,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The config detail page's header projection (IPamRotationConfigRepository.GetDetailsByIdAsync): the target's
-    -- display name/method denormalized, plus a computed HasActiveJob so the caller can gate Delete/UpdateAccount
-    -- without a second round trip. "Active" mirrors PamRotationJob_Create's guard: Pending or Claimed.
+    -- Denormalizes target name/method and computes HasActiveJob to avoid a second round trip.
     SELECT
         C.*,
         T.[Name] AS [TargetSystemName],
@@ -670,9 +642,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The schedule-list view: every config for the org, with the target's display name/method denormalized (so the
-    -- client avoids an N+1) and a computed HasActiveJob so the UI can gate Delete/UpdateAccount without a second
-    -- round trip. "Active" mirrors PamRotationJob_Create's guard: Pending or Claimed.
+    -- Denormalizes the target's name/method and computes HasActiveJob for the org's schedule-list view.
     SELECT
         C.*,
         T.[Name] AS [TargetSystemName],
@@ -694,10 +664,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The sweep's due phase (spec RotationDue): enabled, automatic, active-target configs whose schedule has come
-    -- due, with no job already in flight (OfferRotation is the single creation point -- this feeds it, one
-    -- OfferRotationCommand call per row). Enabled + NextRotationAt IS NOT NULL matches
-    -- [IX_PamRotationConfig_NextRotationAt] so the scan is a narrow range seek, not a table scan.
+    -- Due phase: enabled, automatic, active-target configs past schedule with no job in flight.
     SELECT C.*
     FROM [dbo].[PamRotationConfig] C
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
@@ -719,17 +686,12 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationConfig_DeleteWithJobs]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DeleteRotationConfigCommand's cascade: the audit trail (AccessAuditEvent) is the durable history of a config's
-    -- rotations, so jobs/attempts are hard-deleted here rather than soft-retired. Order matters -- attempts reference
-    -- jobs, jobs reference the config, and both FKs are ON DELETE NO ACTION -- so children must go first.
+    -- Hard-deletes jobs/attempts before the config; both child FKs are ON DELETE NO ACTION.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
-    -- The caller's HasActiveJob read happened outside this transaction, so re-check under the same range lock
-    -- PamRotationJob_Create takes. Without it a job created and claimed in the window is hard-deleted mid-rotation:
-    -- the daemon changes the password on the target, then its accept-write and success report both find nothing,
-    -- leaving the vault holding the old secret with no attempt row to record the drift.
+    -- Re-checks under PamRotationJob_Create's range lock; caller's HasActiveJob read was outside this transaction.
     IF EXISTS (
         SELECT 1
         FROM [dbo].[PamRotationJob] WITH (UPDLOCK, HOLDLOCK)
@@ -765,8 +727,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- UpdateTargetSystemPolicyCommand's capability-withdrawal guard: SupportsSessionTermination may only be turned
-    -- off when no config on the target still opts into TerminateSessions.
+    -- Capability-withdrawal guard: blocks disabling SupportsSessionTermination while any config still uses TerminateSessions.
     SELECT 1
     FROM [dbo].[PamRotationConfig]
     WHERE [TargetSystemId] = @TargetSystemId AND [TerminateSessions] = 1
@@ -791,10 +752,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The config detail page's attempt history, returned as two result sets so the caller can zip each job to its
-    -- attempts (IPamRotationJobRepository.GetManyByConfigIdAsync, grouping the second set by JobId) without an N+1:
-    --   1) every job for the config, newest first.
-    --   2) every attempt belonging to those jobs, oldest-first within a job.
+    -- Two result sets let the caller zip jobs to attempts without an N+1.
     SELECT *
     FROM [dbo].[PamRotationJob]
     WHERE [RotationConfigId] = @RotationConfigId
@@ -827,10 +785,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The daemon poll: jobs this daemon may claim right now. Re-derives every eligibility condition
-    -- PamRotationJob_Claim itself re-checks (config enabled, target active, an assignment exists, the daemon is
-    -- Enabled, and -- defense in depth -- its own org matches the config's org) so the list a daemon sees and what
-    -- it can actually claim never diverge.
+    -- Mirrors every eligibility condition PamRotationJob_Claim checks, so the two can't diverge.
     SELECT J.*, C.[TargetSystemId]
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
@@ -857,19 +812,12 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_Create]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- IPamRotationJobRepository.CreateGuardedAsync passes an already fully-populated PamRotationJob (Status =
-    -- Pending, claim fields null, NextClaimableAt/ExpiresAt already computed by the caller) -- this sproc only
-    -- re-validates can_offer's eligibility half and the AtMostOneActiveJobPerConfig guard before inserting it as-is
-    -- (spec OfferRotation's single creation point). An explicit transaction is required so the range lock below is
-    -- held until the INSERT commits; XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- Re-validates eligibility and AtMostOneActiveJobPerConfig before inserting; the transaction holds the range lock until commit.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
-    -- can_offer's eligibility half, re-checked here (not just by the caller) so a config disabled or a target
-    -- disabled/switched to Manual between the caller's read and this write cannot mint a job. Outcome -1
-    -- (ConfigNotOfferable) is distinct from the active-job conflict (0, ActiveJobExists) so the caller can tell
-    -- "not offerable" apart from "already has one".
+    -- Re-checked so a config/target disabled between read and write can't mint a job.
     IF NOT EXISTS (
         SELECT 1
         FROM [dbo].[PamRotationConfig] C WITH (UPDLOCK, HOLDLOCK)
@@ -885,9 +833,7 @@ BEGIN
         RETURN
     END
 
-    -- AtMostOneActiveJobPerConfig. The UPDLOCK, HOLDLOCK range lock on [IX_PamRotationJob_RotationConfigId_Status] is
-    -- held for the life of this transaction, so a concurrent creation attempt for the same config blocks here until
-    -- this transaction commits, then sees the new job and is rejected.
+    -- AtMostOneActiveJobPerConfig: the range lock holds for the transaction, blocking concurrent creation.
     IF EXISTS (
         SELECT 1
         FROM [dbo].[PamRotationJob] WITH (UPDLOCK, HOLDLOCK)
@@ -926,12 +872,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_Claim]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- First-claim-wins is enforced by the UPDATE's own WHERE J.Status = 0 clause: SQL Server takes the row lock
-    -- needed to satisfy that predicate as part of the UPDATE itself, so two concurrent claims of the same job
-    -- serialize on the row and only the first can flip Status Pending -> Claimed. The result shape mirrors
-    -- PamRotationClaimResult exactly (an Outcome column plus the work-snapshot columns, null on any non-Claimed
-    -- outcome) so the caller can map every path with a single row read. XACT_ABORT guarantees rollback (and a clean
-    -- pooled connection) on any error.
+    -- First-claim-wins: the UPDATE's WHERE Status = 0 takes the row lock, serializing concurrent claims.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -944,8 +885,7 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamDaemonTargetAssignment] A ON A.[DaemonId] = @DaemonId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Defense in depth: the daemon must be Enabled AND in the same org as the config, even though the caller
-    -- (ClaimRotationJobCommand) already checked both from the bearer token's claims.
+    -- Defense in depth: re-checks Enabled and org match already checked by the caller's token.
     INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
         AND J.[Status] = 0 -- Pending
@@ -955,10 +895,7 @@ BEGIN
 
     IF @@ROWCOUNT = 0
     BEGIN
-        -- Eligibility is classified FIRST so a job that does not exist and a job this daemon may not claim
-        -- (unassigned target, cross-org, revoked daemon) produce the same NotEligible outcome -- the caller maps it
-        -- to 404, leaving no existence oracle. Only an eligible daemon that lost the race / hit backoff / hit the
-        -- paused-config or disabled-target hold gets NotClaimable (mapped to 409).
+        -- Unknown job or one outside this daemon's assignment share NotEligible; no existence oracle.
         DECLARE @Outcome INT = CASE
             WHEN NOT EXISTS (
                 SELECT 1
@@ -968,7 +905,7 @@ BEGIN
                 INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
                 WHERE J2.[Id] = @JobId
             ) THEN -1 -- NotEligible (unknown job, or a job outside this daemon's assignment/org)
-            ELSE 0 -- NotClaimable (eligible, but not pending / in backoff / held by a paused config or disabled target)
+            ELSE 0 -- NotClaimable: eligible, but not pending / in backoff / held
         END
 
         ROLLBACK TRANSACTION
@@ -989,8 +926,7 @@ BEGIN
         RETURN
     END
 
-    -- AtMostOneInFlightAttemptPerJob: the Executing attempt is created in the same transaction as the claim, so a
-    -- claimed job always has exactly one in-flight attempt from the moment it is claimed.
+    -- AtMostOneInFlightAttemptPerJob: the Executing attempt is created in the same transaction as the claim.
     INSERT INTO [dbo].[PamRotationAttempt]
     (
         [Id], [JobId], [ClaimedByDaemonId], [CipherUpdated], [Status], [FailureReason], [SyncState],
@@ -1004,7 +940,7 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    -- The work snapshot the daemon executes against; ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
+    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
     SELECT
         1 AS [Outcome], -- Claimed
         @AttemptId AS [AttemptId],
@@ -1034,11 +970,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_AcceptCipherWrite]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- AcceptCipherUpdate's atomic write-capability check (security finding, plan §1): the job row is locked here
-    -- WITH (UPDLOCK) for the life of the transaction, so a concurrent release/timeout sweep -- which updates the same
-    -- job row -- blocks until this commits (or vice versa), closing the check-then-act window between "is this
-    -- attempt still allowed to write" and "write the cipher". XACT_ABORT guarantees rollback (and a clean pooled
-    -- connection) on any error.
+    -- UPDLOCK on the job row closes the check-then-act window before the cipher write.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -1062,17 +994,13 @@ BEGIN
 
     IF @VerifiedJobId IS NULL
     BEGIN
-        -- The complement of spec AcceptCipherUpdate: unknown attempt, wrong claimant, or the job/attempt has already
-        -- moved on (released/timed out/resolved). Audited by the caller as write_rejected.
+        -- Unknown attempt, wrong claimant, or an already-resolved job; caller audits as write_rejected.
         ROLLBACK TRANSACTION
         SELECT 0 -- Rejected
         RETURN
     END
 
-    -- Outside RejectCipherUpdate's exact complement (plan §10 divergence): a drifted LastKnownRevisionDate means the
-    -- vault item changed since the daemon last read it, so the write is rejected to protect a concurrent user edit
-    -- rather than silently clobbering it. The 1-second tolerance mirrors CipherService's own last-known-revision
-    -- check.
+    -- A drifted LastKnownRevisionDate means a concurrent edit; rejected rather than clobbered.
     IF ABS(DATEDIFF_BIG(MILLISECOND, (SELECT [RevisionDate] FROM [dbo].[Cipher] WHERE [Id] = @CipherId), @LastKnownRevisionDate)) > 1000
     BEGIN
         ROLLBACK TRANSACTION
@@ -1089,8 +1017,7 @@ BEGIN
     SET [CipherUpdated] = 1
     WHERE [Id] = @AttemptId
 
-    -- Every other writer of dbo.Cipher ends here (see Cipher_Update): without the bump a client that misses the
-    -- push sees an unchanged AccountRevisionDate, skips the sync, and keeps serving the pre-rotation password.
+    -- Other writers of dbo.Cipher bump here too, so clients see the new password.
     EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
     COMMIT TRANSACTION
@@ -1107,11 +1034,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_MarkRotated]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- RecordRotationSucceeded -> MarkJobSucceeded. CipherUpdated = 1 is the VerifiedBeforeSuccess backstop: a success
-    -- report cannot resolve an attempt whose cipher write was never accepted. Guard failure (unknown/stale attempt,
-    -- wrong claimant, no cipher write, or the job already moved on) takes the RejectStaleSuccess path -- the caller
-    -- audits report_rejected, nothing changes. XACT_ABORT guarantees rollback (and a clean pooled connection) on any
-    -- error.
+    -- CipherUpdated = 1 backstops VerifiedBeforeSuccess so a success report can't resolve an unaccepted write.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -1140,8 +1063,7 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AttemptId
 
-    -- Every transition out of Claimed nulls the claim fields; the executing daemon's identity for this try is
-    -- already permanently recorded on the attempt above.
+    -- Clears claim fields leaving Claimed; the attempt already recorded who worked it.
     UPDATE [dbo].[PamRotationJob]
     SET [Status] = 2, -- Succeeded
         [ClaimedByDaemonId] = NULL,
@@ -1165,12 +1087,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationAttempt_MarkErrored]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- RecordRotationFailed -> RetryJob / FailJob. @FailureReason is already bounded/truncated by the caller before
-    -- this call (the zero-knowledge failure-reason contract forbids forwarding raw target-system error output), so
-    -- this sproc only stores it. Guard failure (unknown/stale attempt, wrong claimant, or the job already moved on)
-    -- takes the RejectStaleFailureReport path -- the caller audits report_rejected, nothing changes. The result shape
-    -- mirrors PamRotationFailureResult (Outcome + JobStatus + ErroredAttemptCount) on every path, success or not.
-    -- XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- @FailureReason is pre-bounded by the caller under the zero-knowledge contract.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -1199,8 +1116,7 @@ BEGIN
         [ResolvedDate] = @Now
     WHERE [Id] = @AttemptId
 
-    -- Retry-budget math: only Errored attempts count (Abandoned -- released/timed-out tries -- are never charged
-    -- against the budget, per the plan's success-wins-on-timeout+release semantics).
+    -- Only Errored attempts count against the retry budget; Abandoned (released/timed-out) tries never do.
     DECLARE @ErroredCount INT
 
     SELECT @ErroredCount = COUNT(*)
@@ -1240,12 +1156,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_TimeoutDue]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- JobTimesOut ("success wins"): a job with a Rotated attempt is excluded even if it is otherwise past ExpiresAt --
-    -- a slow-but-successful report still wins the race against the timeout sweep. OUTPUT can't reach through the
-    -- joins needed for the audit projection (config/org/cipher), so affected ids are captured in @Affected first and
-    -- joined afterward. The job update and its attempt's Abandoned transition commit together so a crash between the
-    -- two can never leave a stale Executing attempt behind a job that already moved on. XACT_ABORT guarantees
-    -- rollback (and a clean pooled connection) on any error.
+    -- Success wins: a Rotated attempt excludes the job past ExpiresAt; both commit together.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -1269,16 +1180,14 @@ BEGIN
             WHERE AT.[JobId] = J.[Id] AND AT.[Status] = 1 -- Rotated
         )
 
-    -- Abandon the executing attempt (if any) on each timed-out job; a Pending job that never got claimed has none.
-    -- Abandoned attempts are never charged against the retry budget.
+    -- Abandons any executing attempt; Abandoned attempts don't count against the retry budget.
     UPDATE [dbo].[PamRotationAttempt]
     SET [Status] = 3, -- Abandoned
         [ResolvedDate] = @Now
     WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
         AND [Status] = 0 -- Executing
 
-    -- One row per timed-out job for audit emission; AttemptCount distinguishes unroutable (never claimed, zero
-    -- attempts) from stuck (claimed at least once).
+    -- One row per timed-out job; AttemptCount tells unroutable (never claimed) from stuck (claimed).
     SELECT
         AF.[JobId],
         C.[Id] AS [RotationConfigId],
@@ -1302,13 +1211,7 @@ CREATE OR ALTER PROCEDURE [dbo].[PamRotationJob_ReleaseExpiredLeases]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DaemonConnectionDropsReleaseJobs -> ReleaseJob -> AbandonAttempt, with the lease-respecting timing from plan §5:
-    -- release only fires once BOTH the claim's lease has expired (now >= ExecuteBy, i.e. ClaimedAt + ReleaseDelay) AND
-    -- the claimant's heartbeat is stale -- never on daemon Status alone, so a revoked daemon's jobs release too once
-    -- its heartbeats actually stop. A job with a Rotated attempt is excluded ("success wins", same as the timeout
-    -- sweep): a slow-but-live daemon whose report lands inside its lease still wins. OUTPUT can't reach through the
-    -- joins needed for the audit projection, so affected ids are captured in @Affected first and joined afterward.
-    -- XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- Requires an expired lease and stale heartbeat, not Status alone; excludes Rotated (success wins).
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -1320,8 +1223,7 @@ BEGIN
 
     UPDATE J
     SET J.[Status] = 0, -- Pending
-        -- Computed from the pre-clear ClaimedAt (this UPDATE's FROM/JOIN still sees the old value here), so the
-        -- re-claim time is exactly ExecuteBy regardless of whether release fires at that instant or later.
+        -- Reads ClaimedAt before this UPDATE clears it, so the re-claim time is exactly ExecuteBy.
         J.[NextClaimableAt] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]),
         J.[ClaimedByDaemonId] = NULL,
         J.[ClaimedAt] = NULL
@@ -1344,8 +1246,7 @@ BEGIN
     WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
         AND [Status] = 0 -- Executing
 
-    -- One row per released job for audit emission. ClaimedByDaemonId here is the pre-clear claimant (always
-    -- non-null: only Claimed jobs are released).
+    -- One row per released job; ClaimedByDaemonId is the pre-clear claimant (always non-null).
     SELECT
         AF.[JobId],
         C.[Id] AS [RotationConfigId],
@@ -1367,12 +1268,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The lease natural-expiry sweep. Expiry is derived rather than stored (a lease whose window closed on its own
-    -- keeps [Action] = 0 forever), so there is no status flip to mark a lease as processed. The
-    -- [PamLeaseExpirySweep] journal is the once-only arbiter instead: the INSERT decides which run owns a lease, so
-    -- the LeaseExpired audit event and the rotation access-end trigger fire at most once per lease. UPDLOCK/HOLDLOCK
-    -- on the journal probe serializes concurrent sweeps over the same rows -- a losing run re-evaluates the probe
-    -- after the winner commits and skips the lease; the primary key backstops the pattern.
+    -- Expiry is derived, not stored; UPDLOCK/HOLDLOCK decides which sweep run owns a lease.
     DECLARE @Due TABLE ([AccessLeaseId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY);
 
     INSERT INTO [dbo].[PamLeaseExpirySweep] ([AccessLeaseId], [SweptDate])
@@ -1389,8 +1285,7 @@ BEGIN
             WHERE S.[AccessLeaseId] = AL.[Id]
         )
 
-    -- No join was needed for the projection under the old flip design, and none is for the columns here either --
-    -- everything the caller audits/triggers on lives on the lease row itself.
+    -- No join needed; everything the caller audits lives on the lease row.
     SELECT
         AL.[Id],
         AL.[OrganizationId],
@@ -1404,12 +1299,7 @@ BEGIN
 END
 GO
 
--- Extend the PAM append-only access-audit event store ([dbo].[AccessAuditEvent]) to carry credential-rotation
--- events (rotation lifecycle + fleet/target administration -- see Bit.Pam.Enums.AccessAuditEventKind). Same
--- self-contained model as the existing store: TargetSystemName/DaemonName are supplied by the rotation commands
--- (snapshotted at write, same pattern as RuleName), not JOINed -- a target system or daemon can be deleted in the
--- same action. RotationConfigId/RotationJobId/RotationSource/SyncState are stored as-is (SyncState/RotationSource
--- match Bit.Pam.Enums.PamRotationSyncState/PamRotationSource).
+-- Rotation columns snapshot TargetSystemName/DaemonName at write, like RuleName, rather than JOIN.
 
 IF COL_LENGTH('[dbo].[AccessAuditEvent]', 'TargetSystemId') IS NULL
 BEGIN
@@ -1455,12 +1345,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
-    -- rename cannot change what this event says. Actor/requester/cipher/collection names are resolved by id from the
-    -- live tables once, here, and frozen (cipher/collection names are encrypted EncString, stored as-is for the client
-    -- to decrypt); a name is NULL where its id is NULL or the row is gone. The rule/target-system/daemon names are
-    -- supplied by the caller (@RuleName/@TargetSystemName/@DaemonName), not JOINed -- those entities can be deleted or
-    -- renamed in the same action, so their names are captured by the command before then.
+    -- Names are caller-supplied, snapshotted at write, not JOINed since source rows can be deleted.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
@@ -1542,15 +1427,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Reads the PAM access-audit trail for an entire organization from the append-only [AccessAuditEvent] store: every
-    -- stored event on or after @Since, newest first. Fully SELF-CONTAINED -- the actor/requester/cipher/collection/rule/
-    -- target-system/daemon display names were resolved and frozen into the row at write time (see
-    -- AccessAuditEvent_Create), so this read touches no other table and a later delete or rename of a referenced entity
-    -- cannot erase or rewrite the event. Cipher/collection names are encrypted (EncString), decrypted client-side.
-    -- Org-scoped: the caller is authorized by the AccessEventLogs permission at the endpoint. Kind matches
-    -- Bit.Pam.Enums.AccessAuditEventKind; Phase matches Bit.Pam.Enums.AccessAuditEventPhase; RotationSource matches
-    -- Bit.Pam.Enums.PamRotationSource; SyncState matches Bit.Pam.Enums.PamRotationSyncState. Time-derived expiry kinds
-    -- are not written by any action yet (deferred).
+    -- Names are frozen at write time; a later delete or rename can't alter history.
     SELECT
         [Kind],
         [Phase],
@@ -1589,12 +1466,7 @@ BEGIN
 END
 GO
 
--- The generic Repository<T, TId>.GetByIdAsync convention calls [dbo].[{Table}_ReadById] -- [dbo].[ApiKey] never
--- had one (only ApiKey_ReadByServiceAccountId and the ServiceAccount-joined ApiKeyDetails_ReadById), because every
--- prior caller looked ApiKey up by ServiceAccountId or ApiKeyDetails. PAM's rotation-daemon credential is a bare
--- ApiKey row (ServiceAccountId NULL, owner link inverted via PamDaemon.ApiKeyId -- see Bit.Pam.Entities.PamDaemon),
--- and PamDaemonClientProvider resolves the daemon's OAuth client via IApiKeyRepository.GetByIdAsync(apiKeyId), so
--- this procedure is required for daemon token issuance to work at all.
+-- Added for Repository<T,TId>.GetByIdAsync; ApiKey had no _ReadById.
 
 CREATE OR ALTER PROCEDURE [dbo].[ApiKey_ReadById]
     @Id UNIQUEIDENTIFIER
@@ -1611,8 +1483,7 @@ BEGIN
 END
 GO
 
--- The daemon detail page's recent-activity history (GET organizations/{orgId}/rotation/daemons/{id}), plus the
--- index it seeks on.
+-- Backs the daemon detail page's recent-activity read (GET .../rotation/daemons/{id}).
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_PamRotationAttempt_ClaimedByDaemonId_JobId' AND [object_id] = OBJECT_ID('[dbo].[PamRotationAttempt]'))
 BEGIN
@@ -1628,14 +1499,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The daemon detail page's recent activity, returned as two result sets so the caller can zip each job to its
-    -- attempts (IPamRotationJobRepository.GetManyRecentByDaemonIdAsync, grouping the second set by JobId) without an
-    -- N+1:
-    --   1) the @Limit most recent jobs the daemon has attempted, newest first.
-    --   2) that daemon's attempts against those jobs, oldest-first within a job.
-    -- Membership is decided by PamRotationAttempt.ClaimedByDaemonId, not PamRotationJob.ClaimedByDaemonId: the job's
-    -- claim fields are cleared when it resolves, releases or times out, so only the attempt still records who worked
-    -- it. The attempt result set is filtered to @DaemonId too, so a job two daemons worked returns only this one's.
+    -- Membership is by PamRotationAttempt.ClaimedByDaemonId, not the job's own field, cleared after resolution.
     SELECT TOP (@Limit) J.*
     INTO #Jobs
     FROM [dbo].[PamRotationJob] J
@@ -1661,18 +1525,14 @@ BEGIN
 END
 GO
 
--- Daemon hard-delete, which the generic Repository<PamDaemon, Guid>.DeleteAsync convention invokes: the daemon's
--- target assignments, then the daemon row, then the dbo.ApiKey credential that authenticates it, in one
--- transaction.
+-- Daemon hard-delete, invoked by the generic Repository<PamDaemon, Guid>.DeleteAsync convention.
 
 CREATE OR ALTER PROCEDURE [dbo].[PamDaemon_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DeleteDaemonCommand's cascade, in one transaction. Two FKs into this daemon are ON DELETE NO ACTION --
-    -- PamDaemonTargetAssignment -> PamDaemon (Organization carries the only cascade path back to that table) and
-    -- PamDaemon -> ApiKey -- so the assignments go before the daemon row, and the daemon row before its credential.
+    -- Delete order: assignments, then daemon, then ApiKey (both FKs are NO ACTION).
     SET XACT_ABORT ON
 
     DECLARE @Now DATETIME2(7) = GETUTCDATE()
@@ -1685,10 +1545,7 @@ BEGIN
     FROM [dbo].[PamDaemon]
     WHERE [Id] = @Id
 
-    -- PamRotationJob.ClaimedByDaemonId has no FK back to PamDaemon, and PamRotationJob_ReleaseExpiredLeases inner
-    -- joins PamDaemon to find stale claimants -- so a job still claimed when its daemon disappears becomes invisible
-    -- to the release sweep and only clears at PamRotationJob_TimeoutDue's much later ExpiresAt, blocking any
-    -- replacement job for that config in the meantime. Release them here instead, while the claim is still visible.
+    -- No FK ties PamRotationJob to PamDaemon, so this clears the daemon's claimed jobs directly.
     UPDATE AT
     SET AT.[Status] = 3, -- Abandoned
         AT.[ResolvedDate] = @Now
