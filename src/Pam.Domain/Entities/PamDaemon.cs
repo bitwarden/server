@@ -6,11 +6,10 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// An on-prem rotation daemon registered against an organization (spec <c>DaemonRegistration</c>). The daemon's
-/// machine credential is a generic <c>dbo.ApiKey</c> row referenced by <see cref="ApiKeyId"/> — PAM reuses the
-/// Secrets Manager credential store rather than minting a parallel one; the owner link is inverted relative to
-/// <c>ApiKey.ServiceAccountId</c>. There is no persisted connection row: liveness is derived from
-/// <see cref="LastHeartbeatAt"/> (see <c>PamRotationRules.IsConnected</c>).
+/// An on-prem rotation daemon registered against an organization (spec <c>DaemonRegistration</c>). Its machine
+/// credential reuses the Secrets Manager <c>dbo.ApiKey</c> store via <see cref="ApiKeyId"/>, with the owner link
+/// inverted relative to <c>ApiKey.ServiceAccountId</c>. Liveness is derived from <see cref="LastHeartbeatAt"/>,
+/// not a persisted connection row.
 /// </summary>
 public class PamDaemon : ITableObject<Guid>
 {
@@ -26,8 +25,8 @@ public class PamDaemon : ITableObject<Guid>
     public PamAccessConnectorStatus Status { get; set; }
 
     /// <summary>
-    /// The last time the daemon polled or reported, bumped at most once per <c>HeartbeatMinInterval</c>. Null until
-    /// its first request. Never bumped by a sweep — only by the daemon's own requests.
+    /// The last time the daemon polled or reported, bumped at most once per <c>HeartbeatMinInterval</c>. Null
+    /// until its first request; never bumped by a sweep.
     /// </summary>
     public DateTime? LastHeartbeatAt { get; set; }
 

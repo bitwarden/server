@@ -57,10 +57,9 @@ public class PamDaemonRepository : Repository<CoreEntity, EfModel, Guid>, IPamDa
     }
 
     /// <remarks>
-    /// Narrowed to the same three columns PamDaemon_Update writes. ApiKeyId is set once at registration and
-    /// OrganizationId never changes, so persisting a caller-mutated value would let an admin edit move a daemon
-    /// between organizations; LastHeartbeatAt has its own conditional-bump path so a routine edit never races the
-    /// daemon's own poll. The generic whole-entity replace would write all of them.
+    /// Narrowed to the same three columns PamDaemon_Update writes: ApiKeyId and OrganizationId must not move via a
+    /// whole-entity replace, and LastHeartbeatAt has its own conditional-bump path so a routine edit doesn't race
+    /// the daemon's poll.
     /// </remarks>
     public override async Task ReplaceAsync(CoreEntity obj)
     {
@@ -90,8 +89,8 @@ public class PamDaemonRepository : Repository<CoreEntity, EfModel, Guid>, IPamDa
     }
 
     /// <remarks>
-    /// Mirrors PamDaemon_DeleteById: a job still claimed by this daemon has to be released before the daemon row
-    /// goes, because the release sweep finds stale claimants by joining PamDaemon and would never see it again.
+    /// Mirrors PamDaemon_DeleteById: releases the daemon's claimed jobs first, since the release sweep finds stale
+    /// claimants by joining PamDaemon and would miss them once the row is gone.
     /// </remarks>
     public override async Task DeleteAsync(CoreEntity obj)
     {

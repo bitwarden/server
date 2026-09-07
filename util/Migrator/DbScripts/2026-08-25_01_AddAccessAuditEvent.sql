@@ -1,11 +1,5 @@
--- Add the PAM access-audit log: the AccessAuditEvent store and its two stored procedures. Consolidated net-new
--- migration (the feature has not shipped), squashing the incremental steps the store went through during development.
---
--- The store is append-only and SELF-CONTAINED: AccessAuditEvent_Create snapshots the actor / requester / cipher /
--- collection / rule display names into the row at write time, so the trail read touches no other table and a later
--- delete or rename cannot erase or rewrite history. Subject ids are deliberately NOT foreign keyed for the same
--- reason -- an event outlives what it references. Only OrganizationId is, so the rows go when the org does.
-
+-- Adds the PAM access-audit log: append-only, names snapshotted at write.
+-- Only OrganizationId is foreign keyed among the subject ids.
 IF OBJECT_ID('[dbo].[AccessAuditEvent]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[AccessAuditEvent] (
@@ -39,8 +33,7 @@ BEGIN
 END
 GO
 
--- Serves AccessAuditEvent_ReadManyByOrganizationId, which is the only read: org-scoped, filtered on OccurredAt, and
--- returned newest first. The DESC key order lets the ORDER BY come straight off the index.
+-- Serves the only read; DESC key order lets ORDER BY come off the index.
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessAuditEvent_OrganizationId_OccurredAt' AND object_id = OBJECT_ID('[dbo].[AccessAuditEvent]'))
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredAt]
@@ -70,11 +63,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
-    -- rename cannot change what this event says. Actor/requester/cipher/collection names are resolved by id from the
-    -- live tables once, here, and frozen (cipher/collection names are encrypted EncString, stored as-is for the client
-    -- to decrypt); a name is NULL where its id is NULL or the row is gone. The rule name is supplied by the caller
-    -- (@RuleName), not JOINed -- a rule can be hard-deleted in the same action, so its name is captured before then.
+    -- Snapshots names at write; later deletes/renames can't change the event.
+    -- @RuleName is caller-supplied, not JOINed, since rules can be hard-deleted.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
@@ -140,13 +130,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Reads the PAM access-audit trail for an entire organization from the append-only [AccessAuditEvent] store: every
-    -- stored event on or after @Since, newest first. Fully SELF-CONTAINED -- the actor/requester/cipher/collection/rule
-    -- display names were resolved and frozen into the row at write time (see AccessAuditEvent_Create), so this read
-    -- touches no other table and a later delete or rename of a referenced entity cannot erase or rewrite the event.
-    -- Cipher/collection names are encrypted (EncString), decrypted client-side. Org-scoped: the caller is authorized by
-    -- the AccessEventLogs permission at the endpoint. Kind matches Bit.Pam.Enums.AccessAuditEventKind; Phase matches
-    -- Bit.Pam.Enums.AccessAuditEventPhase. Time-derived expiry kinds are not written by any action yet (deferred).
+    -- Reads every event on/after @Since, newest first; rows are self-contained.
+    -- Time-derived expiry kinds aren't written by any action yet.
     SELECT
         [Kind],
         [Phase],

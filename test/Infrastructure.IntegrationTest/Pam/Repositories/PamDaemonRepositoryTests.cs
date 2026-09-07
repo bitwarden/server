@@ -40,9 +40,7 @@ public class PamDaemonRepositoryTests
         Assert.Null(persisted.LastHeartbeatAt);
     }
 
-    // PamDaemonClientProvider's token-issuance lookup: the daemon plus its organization's licensing flags, keyed by
-    // the ApiKey credential rather than the daemon's own id. Enabled and UsePam are independent columns on
-    // Organization -- flip one without the other to prove the mapping does not swap or conflate them.
+    // PamDaemonClientProvider's token-issuance lookup, keyed by the ApiKey credential rather than the daemon's id.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByApiKeyIdAsync_ReturnsDaemonWithOrganizationLicensingFlags(
         IApiKeyRepository apiKeyRepository,
@@ -69,8 +67,7 @@ public class PamDaemonRepositoryTests
         Assert.True(details.OrganizationEnabled);
         Assert.True(details.OrganizationUsePam);
 
-        // Flip UsePam only: OrganizationEnabled must stay true while OrganizationUsePam flips, proving the two
-        // columns map independently rather than one driving both.
+        // Flip UsePam only: OrganizationEnabled must stay true, proving the two columns map independently.
         organization.UsePam = false;
         await organizationRepository.ReplaceAsync(organization);
 
@@ -87,9 +84,7 @@ public class PamDaemonRepositoryTests
         Assert.Null(await pamDaemonRepository.GetDetailsByApiKeyIdAsync(Guid.NewGuid()));
     }
 
-    // The daemon-facing request filter calls this on every request; the WHERE guard on the sproc turns a poll that
-    // arrives before MinInterval has elapsed into a no-op, and only a poll arriving after it actually bumps the
-    // column.
+    // The sproc's WHERE guard turns a poll before MinInterval into a no-op; only one after it bumps the column.
     [DatabaseTheory, DatabaseData]
     public async Task UpdateHeartbeatAsync_ConditionalBump(
         IApiKeyRepository apiKeyRepository,
@@ -181,9 +176,8 @@ public class PamDaemonRepositoryTests
         Assert.Empty(await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
     }
 
-    // PamDaemon_Update is narrow: only Name/Status/RevisionDate are declared sproc parameters. Mutate ApiKeyId and
-    // OrganizationId on the in-memory entity too before calling ReplaceAsync -- if the override were widened to a
-    // whole-entity write those garbage values would persist; instead they must be silently ignored.
+    // PamDaemon_Update only declares Name/Status/RevisionDate; ApiKeyId and OrganizationId must be ignored even
+    // if set on the in-memory entity before ReplaceAsync.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_OnlyPersistsNameStatusRevisionDate(
         IApiKeyRepository apiKeyRepository,

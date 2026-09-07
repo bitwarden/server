@@ -2,9 +2,8 @@
 
 /// <summary>
 /// Registers the PAM rotation Quartz sweep services and jobs. Kept separate from
-/// <c>Bit.Services.Pam.Utilities.ServiceCollectionExtensions.AddPamServices</c> because the jobs are commercial-gated
-/// (see <c>JobsHostedService</c>'s <c>#if !OSS</c> block) and registered from <c>Startup</c>'s non-OSS branch
-/// alongside <c>JobsHostedService.AddCommercialSecretsManagerJobServices</c>, not from <c>AddPamServices</c> itself.
+/// <c>Bit.Services.Pam.Utilities.ServiceCollectionExtensions.AddPamServices</c> since the jobs are commercial-gated
+/// (see <c>JobsHostedService</c>'s <c>#if !OSS</c> block) and registered from <c>Startup</c>'s non-OSS branch.
 /// </summary>
 public static class PamJobsServiceCollectionExtensions
 {

@@ -1,7 +1,5 @@
--- A registered rotation daemon: the credential itself lives on the shared dbo.ApiKey machine-credential store
--- (ApiKeyId, unique -- one credential per daemon), not duplicated here. LastHeartbeatAt is bumped on every daemon
--- poll; there is no separate connection-state table -- "connected" is derived (LastHeartbeatAt within
--- DaemonOfflineAfter of now).
+-- Credential lives on the shared dbo.ApiKey store (ApiKeyId, unique), not duplicated here.
+-- "Connected" is derived from LastHeartbeatAt; there's no separate state table.
 CREATE TABLE [dbo].[PamDaemon] (
     [Id]                UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
@@ -13,8 +11,7 @@ CREATE TABLE [dbo].[PamDaemon] (
     [RevisionDate]      DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_PamDaemon] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_PamDaemon_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
-    -- No cascade: it would fire the wrong way round, deleting the daemon when its credential goes.
-    -- PamDaemon_DeleteById deletes both rows, daemon first, in one transaction.
+    -- No cascade, since deleting the credential first would remove the daemon; both delete together.
     CONSTRAINT [FK_PamDaemon_ApiKey] FOREIGN KEY ([ApiKeyId]) REFERENCES [dbo].[ApiKey] ([Id]) ON DELETE NO ACTION
 );
 GO

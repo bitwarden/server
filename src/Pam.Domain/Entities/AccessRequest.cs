@@ -5,19 +5,14 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created with
-/// <see cref="Action"/> already <see cref="AccessRequestAction.Approved"/>; requests that require human approval are
-/// created with no action recorded and resolved later by an approver. Neither approval mints the lease — the
-/// requester activates the approved request within its window, and that activation produces the
-/// <see cref="AccessLease"/>.
+/// A request to lease a cipher in a leasing-governed collection, created Approved on the automatic path or open for
+/// an approver. The requester activates an approved request to mint its <see cref="AccessLease"/>.
 /// </summary>
 public class AccessRequest : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// NULL for original requests. Set only for extension requests, which point at the lease being extended.
-    /// </summary>
+    /// <summary>The lease an extension request extends; null otherwise.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }
 
     public Guid OrganizationId { get; set; }
@@ -26,55 +21,40 @@ public class AccessRequest : ITableObject<Guid>
     public Guid RequesterId { get; set; }
 
     /// <summary>
-    /// The requested access window. For automatic approval this is <c>now</c>; for human approval it is the
-    /// requester-supplied start.
+    /// The submission time on the automatic path, the requester's chosen start on the human path, or the lease's
+    /// current end for an extension.
     /// </summary>
     public DateTime NotBefore { get; set; }
 
     /// <summary>
-    /// The end of the requested access window. For automatic approval this is <c>now + duration</c>; for human
-    /// approval it is the requester-supplied end.
+    /// <c>NotBefore</c> plus the requested duration, or the requester's chosen end on the human path.
     /// </summary>
     public DateTime NotAfter { get; set; }
 
-    /// <summary>
-    /// Optional for automatic approval, required for human approval (enforced in the command).
-    /// </summary>
+    /// <summary>Required on the human and extension paths, optional on the automatic one.</summary>
     public string? Reason { get; set; }
 
-    /// <summary>
-    /// The action a party has taken on the request, if any. Facts about what was recorded, not about current
-    /// standing: what this means right now (the wire's <see cref="AccessRequestStatus"/>) is derived against the
-    /// clock at read time via <see cref="AccessStatusDerivation.ComputeStatus"/>, which is where Pending and Expired
-    /// come from. This column doubles as the concurrency token for the transition procedures, whose guarded UPDATEs
-    /// decide who gets to write the decision log.
-    /// </summary>
+    /// <summary>Doubles as the concurrency token the transition procedures' guarded UPDATEs key off.</summary>
     public AccessRequestAction Action { get; set; }
 
-    /// <summary>
-    /// When the request was submitted, stamped in UTC at construction.
-    /// </summary>
+    /// <summary>When the request was submitted.</summary>
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// When the current <see cref="Action"/> was recorded; null iff <see cref="Action"/> is
-    /// <see cref="AccessRequestAction.None"/>. Every transition stamps it in the same UPDATE, so a cancellation's
-    /// timestamp is simply this field when the action is Cancelled. On cancel-after-approval it is overwritten —
-    /// the approval time survives in the decision row, and the cancellation is also journaled by the audit trail.
+    /// When the current <see cref="Action"/> was recorded. A cancel or retraction after approval overwrites it; the
+    /// approval time survives on its decision row.
     /// </summary>
     public DateTime? ActionDate { get; set; }
 
     /// <summary>
-    /// The access rule that governed this request, resolved once at submit (oldest wins) and pinned here so every
-    /// downstream operation reads the same rule rather than re-resolving. Null for requests created before pinning
-    /// existed, or when the cipher was not leasing-gated through a stored rule.
+    /// The governing rule, resolved once at submit so later operations read the same rule. Null once the rule is
+    /// deleted, or when no stored rule gated the cipher.
     /// </summary>
     public Guid? RuleId { get; set; }
 
     /// <summary>
-    /// Whether the request's window can still produce anything as of <paramref name="asOf"/> — an answer while open
-    /// (<see cref="Action"/> None), an activation while approved. Write guards compose this with a check on
-    /// <see cref="Action"/> rather than consulting the derived status enum, which never appears on the write path.
+    /// Whether the window still allows an answer or an activation. Write guards pair this with an
+    /// <see cref="Action"/> check rather than the derived status, which never appears on the write path.
     /// </summary>
     public bool IsWindowOpen(DateTime asOf) => asOf < NotAfter;
 

@@ -15,15 +15,12 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- An explicit transaction holds the per-lease range lock until the writes commit, so concurrent extensions of
-    -- the same lease serialize. XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- Holds the per-lease range lock until writes commit, serializing concurrent extensions.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
-    -- Lock the parent lease row for the life of the transaction. A second concurrent extension of the same lease
-    -- blocks here until this transaction commits, then re-counts below and sees this extension. The lease must
-    -- have no early end recorded and be in-window to be extendable; outcome 0 is distinct from the cap conflict (-1).
+    -- Locks the parent lease; must have no early end and be in-window to extend.
     IF NOT EXISTS (
         SELECT 1
         FROM [dbo].[AccessLease] WITH (UPDLOCK, HOLDLOCK)
@@ -33,14 +30,7 @@ BEGIN
             AND [NotAfter] > @Now
     )
     BEGIN
-        -- There is nothing left to extend, but the attempt is still an answerable request: record it denied, with
-        -- an automatic verdict naming why, so the requester can find it instead of getting only a failed call
-        -- (PM-42632). The window stored is the one that was asked for -- it was never applied to the lease, which
-        -- is left untouched.
-        --
-        -- This row carries ExtensionOfLeaseId, so it counts toward the cap re-checked below and by
-        -- [AccessRequest_CountExtensionsByLeaseId]. That costs nothing: a lease only reaches this branch once it is
-        -- permanently un-extendable, so there is no later extension for it to consume.
+        -- Records a denied, answerable request that still counts toward the extension cap.
         INSERT INTO [dbo].[AccessRequest]
         (
             [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
@@ -68,8 +58,7 @@ BEGIN
         RETURN
     END
 
-    -- A lease may be extended exactly once. Counted under the lease lock, so it is race-safe against a concurrent
-    -- extension of the same lease.
+    -- Extension is capped at one per lease; counted under the same lock, race-safe.
     IF EXISTS (SELECT 1 FROM [dbo].[AccessRequest] WHERE [ExtensionOfLeaseId] = @ExtensionOfLeaseId)
     BEGIN
         ROLLBACK TRANSACTION
@@ -77,10 +66,7 @@ BEGIN
         RETURN
     END
 
-    -- Record the auto-approved extension request and its automatic verdict, then push the parent lease's end out in
-    -- place. No new lease is minted — extending reuses the existing lease, preserving the single-active-lease
-    -- invariant. The request's window spans the extension ([old lease end] .. [new lease end]); its NotAfter is the
-    -- lease's new end.
+    -- No new lease is minted; extending pushes the parent lease's NotAfter out in place.
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],

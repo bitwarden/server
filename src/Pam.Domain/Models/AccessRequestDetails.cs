@@ -43,8 +43,7 @@ public class AccessRequestDetails
 
     /// <summary>
     /// When a party resolved the request (<see cref="Entities.AccessRequest.ActionDate"/>); null while no action is
-    /// recorded — including for derived-Expired rows, whose end time is <see cref="NotAfter"/>. Keeps the wire's
-    /// <c>resolvedAt</c> name and meaning.
+    /// recorded, including for derived-Expired rows. Keeps the wire's <c>resolvedAt</c> name and meaning.
     /// </summary>
     public DateTime? ResolvedDate { get; set; }
 
@@ -57,22 +56,14 @@ public class AccessRequestDetails
     /// for revocation.
     /// </summary>
     /// <remarks>
-    /// Derived, not stored: <see cref="Entities.AccessLease.Action"/> only records an early end, so Active and
-    /// Expired exist only as derivations against the read clock — see
-    /// <see cref="Enums.AccessStatusDerivation.ComputeLeaseStatus"/>, applied at the repository boundary off the
-    /// lease's own <c>NotAfter</c> (an extension pushes the lease's end out in place, so the request's window would
-    /// report a live lease as expired). The reads that populate this take a <c>now</c> for exactly that reason.
+    /// Derived, not stored, off the lease's own <c>NotAfter</c> rather than the request's, since an extension
+    /// pushes the lease's end out in place. See <see cref="Enums.AccessStatusDerivation.ComputeLeaseStatus"/>.
     /// </remarks>
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>
-    /// Every decision recorded against this request, oldest first — one element per
-    /// <see cref="Entities.AccessDecision"/> row (human or automatic; identity denormalized from the User join for
-    /// human decisions). Empty while pending, and for the terminal states that record no verdict: a requester
-    /// cancellation (<c>IAccessRequestRepository.CancelAsync</c>) and
-    /// <see cref="AccessRequestStatus.Expired"/>. The resolved reads return the decisions as a second result
-    /// set that the repository groups onto this list; the constructed reads (decision result, cipher access-state
-    /// snapshot) set it directly.
+    /// Every decision recorded against this request, oldest first. Empty while pending, and for the terminal
+    /// states that record no verdict: a requester cancellation and <see cref="AccessRequestStatus.Expired"/>.
     /// </summary>
     public List<AccessRequestDecision> Decisions { get; set; } = new();
 
@@ -85,9 +76,7 @@ public class AccessRequestDetails
     /// <summary>
     /// Projects an <see cref="Entities.AccessRequest"/> the caller just wrote (or read scoped to itself) onto the
     /// read model, deriving <see cref="Status"/> against <paramref name="now"/> exactly as the repository reads do.
-    /// No produced lease can exist at any of the sites that project from the entity instead of re-reading (submit,
-    /// decide, extension, the cipher access-state snapshot), so the lease fields stay null; callers set only what is
-    /// genuinely theirs (<see cref="Decisions"/>, denormalized identity).
+    /// The lease fields stay null since no produced lease can exist at these call sites.
     /// </summary>
     public static AccessRequestDetails From(Entities.AccessRequest request, DateTime now)
     {
@@ -111,14 +100,10 @@ public class AccessRequestDetails
     }
 
     /// <summary>
-    /// Stamps the derived statuses from stored facts: the request's status from <paramref name="action"/> against
-    /// <paramref name="now"/>, and the produced lease's (when one exists) from the lease's <em>own</em> action and
-    /// NotAfter — the lease's, not the request's, because an extension pushes the lease's end out in place, so the
-    /// request's window would report a live lease as expired. The one derivation call every producer of this model
-    /// shares (both ORM boundaries and the write-path projections); the stored actions themselves never leave the
-    /// repository. <see cref="NotAfter"/> and <see cref="ExtensionOfLeaseId"/> must already be set. The produced
-    /// lease's facts travel as one optional tuple so a producer structurally cannot supply the lease's id without the
-    /// stored facts its status derives from.
+    /// Stamps the derived statuses from stored facts: the request's status from <paramref name="action"/>, and the
+    /// produced lease's (when one exists) from the lease's <em>own</em> action and NotAfter, since an extension
+    /// pushes the lease's end out in place. <see cref="NotAfter"/> and <see cref="ExtensionOfLeaseId"/> must already
+    /// be set.
     /// </summary>
     public void StampDerivedStatuses(AccessRequestAction action,
         (Guid Id, AccessLeaseAction Action, DateTime NotAfter)? producedLease, DateTime now)

@@ -9,9 +9,7 @@ public class AccessStatusDerivationTests
     private static readonly DateTime _open = new(2026, 8, 27, 13, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _lapsed = new(2026, 8, 27, 11, 0, 0, DateTimeKind.Utc);
 
-    // The full derivation table for requests: the recorded action interpreted against the clock, with the two sticky
-    // Approved carve-outs (activated, applied extension) and the two origins of Expired.
-
+    // Full derivation table: recorded action against the clock, with the sticky-Approved carve-outs.
     [Fact]
     public void ComputeStatus_NoneOpenWindow_IsPending() =>
         Assert.Equal(AccessRequestStatus.Pending,
@@ -40,8 +38,7 @@ public class AccessStatusDerivationTests
 
     [Fact]
     public void ComputeStatus_ApprovedExtension_CannotLapseOutOfApproved() =>
-        // An applied extension finished its work at creation (the parent lease's end moved in place). The client's
-        // extensionsByLeaseId folding filters on approved, so this carve-out is load-bearing.
+        // The client's extensionsByLeaseId folding filters on approved, so this carve-out is load-bearing.
         Assert.Equal(AccessRequestStatus.Approved,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.Approved, false, true, _lapsed, _now));
 

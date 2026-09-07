@@ -39,8 +39,8 @@ public class RenameTargetSystemCommand : IRenameTargetSystemCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // The rename is display-only (the id keys the daemon's connector resolver); the prior name is preserved in
-        // Detail since the target row itself will no longer carry it after the update.
+        // The rename is display-only (the id keys the daemon's connector resolver); the prior name is preserved
+        // in Detail since the target row won't carry it after the update.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemRenamed,
