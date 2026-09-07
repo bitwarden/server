@@ -5,11 +5,10 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// One offer of rotation work for a <see cref="PamRotationConfig"/>. Invariant <c>AtMostOneActiveJobPerConfig</c> —
+/// One offer of rotation work for a <see cref="PamRotationConfig"/>. Invariant <c>AtMostOneActiveJobPerConfig</c>:
 /// a config has at most one <see cref="PamRotationJobStatus.Pending"/> or <see cref="PamRotationJobStatus.Claimed"/>
-/// job at a time; <c>OfferRotationCommand</c> is the single creation point. Every transition out of
-/// <see cref="PamRotationJobStatus.Claimed"/> — retry, release, success, or timeout — clears
-/// <see cref="ClaimedByDaemonId"/> and <see cref="ClaimedAt"/>; the executing daemon's history lives on the
+/// job at a time. Every transition out of <see cref="PamRotationJobStatus.Claimed"/> clears
+/// <see cref="ClaimedByDaemonId"/> and <see cref="ClaimedAt"/>; the executing daemon's history lives on
 /// <see cref="PamRotationAttempt"/> instead.
 /// </summary>
 public class PamRotationJob : ITableObject<Guid>
@@ -22,10 +21,10 @@ public class PamRotationJob : ITableObject<Guid>
 
     public PamRotationJobStatus Status { get; set; }
 
-    /// <summary>The daemon currently holding this job's claim. Null unless <see cref="Status"/> is <see cref="PamRotationJobStatus.Claimed"/>.</summary>
+    /// <summary>The daemon holding this job's claim. Null outside <see cref="PamRotationJobStatus.Claimed"/>.</summary>
     public Guid? ClaimedByDaemonId { get; set; }
 
-    /// <summary>When the current claim was taken. Null unless <see cref="Status"/> is <see cref="PamRotationJobStatus.Claimed"/>.</summary>
+    /// <summary>When the current claim was taken. Null outside <see cref="PamRotationJobStatus.Claimed"/>.</summary>
     public DateTime? ClaimedAt { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -34,9 +33,8 @@ public class PamRotationJob : ITableObject<Guid>
     public DateTime NextClaimableAt { get; set; }
 
     /// <summary>
-    /// <c>CreationDate + JobTtl</c>, persisted at creation. Once past this point with the job still Pending or
-    /// Claimed and no <see cref="PamRotationAttemptStatus.Rotated"/> attempt, the sweep times the job out (spec
-    /// <c>JobTimesOut</c>).
+    /// <c>CreationDate + JobTtl</c>, persisted at creation. Past this point, a still Pending/Claimed job with no
+    /// <see cref="PamRotationAttemptStatus.Rotated"/> attempt is timed out by the sweep (spec <c>JobTimesOut</c>).
     /// </summary>
     public DateTime ExpiresAt { get; set; }
 

@@ -1,6 +1,5 @@
--- Add AccessRequestId and AccessLeaseId to Event so PAM access events can record which access request or
--- lease they concern. PAM's own AccessAuditEvent store remains the system of record for the full trail; these
--- columns carry the subject of the subset that is fanned out to the organization event log.
+-- Adds AccessRequestId/AccessLeaseId to Event so the org log names which request or lease.
+-- AccessAuditEvent stays the system of record; these columns cover only the fanned-out subset.
 IF COL_LENGTH('[dbo].[Event]', 'AccessRequestId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Event]

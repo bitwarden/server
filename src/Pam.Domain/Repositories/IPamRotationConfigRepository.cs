@@ -6,12 +6,11 @@ namespace Bit.Pam.Repositories;
 
 public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, Guid>
 {
-    /// <summary>Returns the config for the cipher (invariant <c>OneConfigPerCipher</c>), or null if none exists.</summary>
+    /// <summary>Returns the config for the cipher (invariant <c>OneConfigPerCipher</c>), or null.</summary>
     Task<PamRotationConfig?> GetByCipherIdAsync(Guid cipherId);
 
     /// <summary>
-    /// Returns a single config's <see cref="PamRotationConfigDetails"/> projection (target display fields plus
-    /// whether it has an active job), or null if no config has the id.
+    /// Returns a single config's <see cref="PamRotationConfigDetails"/> projection, or null.
     /// </summary>
     Task<PamRotationConfigDetails?> GetDetailsByIdAsync(Guid id);
 
@@ -39,10 +38,9 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
     Task<bool> AnyByTargetSystemWithTerminateSessionsAsync(Guid targetSystemId);
 
     /// <summary>
-    /// Deletes the config's jobs and attempts, then the config itself, in one transaction — the durable history
-    /// stays in the audit trail, not here. Re-checks under lock that the config still has no active job and returns
-    /// false without deleting when one appeared after the caller's own check, so a job claimed in that window is
-    /// never removed out from under the daemon executing it.
+    /// Deletes the config's jobs and attempts, then the config itself, in one transaction. Re-checks under lock
+    /// that the config still has no active job, returning false without deleting if one appeared after the
+    /// caller's own check.
     /// </summary>
     Task<bool> DeleteWithJobsAsync(Guid configId);
 }

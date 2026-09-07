@@ -42,8 +42,8 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
             throw new NotFoundException();
         }
 
-        // Both rows were just loaded against the same route organization, so daemon.OrganizationId ==
-        // target.OrganizationId == organizationId holds by construction (the cross-cutting same-org invariant).
+        // Both rows were just loaded against the same route organization, so the same-org invariant holds by
+        // construction.
         if (daemon.Status != PamAccessConnectorStatus.Enabled)
         {
             throw new BadRequestException("This daemon is disabled.");

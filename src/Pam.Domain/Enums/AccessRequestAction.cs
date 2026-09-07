@@ -2,10 +2,8 @@
 
 /// <summary>
 /// The action a party has taken on an <see cref="Entities.AccessRequest"/>, if any. Facts about what was recorded,
-/// not about current standing: <see cref="Approved"/> stays <see cref="Approved"/> forever, even after the window
-/// lapses or the lease it minted ends. Nothing here ever comes from the clock — what a recorded action <em>means
-/// right now</em> is the read model's job (<see cref="AccessRequestStatus"/>, produced by
-/// <see cref="AccessStatusDerivation.ComputeStatus"/>).
+/// not current standing: <see cref="Approved"/> stays <see cref="Approved"/> forever. Current standing is derived
+/// instead by <see cref="AccessStatusDerivation.ComputeStatus"/>.
 /// </summary>
 public enum AccessRequestAction : byte
 {

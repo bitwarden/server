@@ -48,8 +48,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): record the registration attempt before either row is written, then the outcome once
-        // both the credential and the daemon exist.
+        // Records the registration attempt before either row is written, then the outcome after both exist.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.DaemonRegistered,
@@ -60,9 +59,9 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // The daemon's machine credential is a generic dbo.ApiKey row (ServiceAccountId null) -- PAM reuses the
-        // Secrets Manager credential store rather than minting a parallel one. Hashing mirrors
-        // CreateAccessTokenCommand exactly, since the same provider-side verification reads this hash.
+        // The daemon's machine credential is a generic dbo.ApiKey row (ServiceAccountId null), reusing the Secrets
+        // Manager credential store. Hashing mirrors CreateAccessTokenCommand, since the same provider-side
+        // verification reads this hash.
         var clientSecret = CoreHelpers.SecureRandomString(ClientSecretLength);
         var apiKey = new ApiKey
         {
@@ -89,7 +88,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         await _accessAuditEventEmitter.EmitAsync(
             audit with { Phase = AccessAuditEventPhase.Outcome, DaemonId = createdDaemon.Id });
 
-        // The plaintext client secret is surfaced exactly once -- the server never persists or logs it again.
+        // The plaintext client secret is surfaced here only; the server never persists or logs it again.
         return new PamAccessConnectorRegistrationResult(createdDaemon, clientSecret);
     }
 

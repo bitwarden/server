@@ -1,9 +1,6 @@
--- One daemon's try at executing a PamRotationJob (invariant AtMostOneInFlightAttemptPerJob is enforced by
--- PamRotationJob_Claim, which inserts the Executing attempt in the same transaction as the claim). Unlike
--- PamRotationJob.ClaimedByDaemonId, this ClaimedByDaemonId is never cleared -- it is the permanent record of who
--- executed this particular try, kept even after the job moves on. FailureReason is bounded and truncated (never
--- rejected) by the caller before write -- the zero-knowledge failure-reason contract forbids forwarding raw
--- target-system error output, since it can echo credentials -- so this column only ever stores the bounded text.
+-- One daemon's try at a job (AtMostOneInFlightAttemptPerJob).
+-- ClaimedByDaemonId stays permanent here; the job's own field clears instead.
+-- FailureReason is bounded by the caller under the zero-knowledge contract.
 CREATE TABLE [dbo].[PamRotationAttempt] (
     [Id]                     UNIQUEIDENTIFIER    NOT NULL,
     [JobId]                  UNIQUEIDENTIFIER    NOT NULL,
@@ -20,8 +17,7 @@ CREATE TABLE [dbo].[PamRotationAttempt] (
 );
 GO
 
--- PamRotationJob_ReadManyByConfigId's attempt result set, and the "no Rotated attempt" checks in the timeout/release
--- sweeps.
+-- Backs PamRotationJob_ReadManyByConfigId and the "no Rotated attempt" timeout/release checks.
 CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Status]
     ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Status] ASC);
 GO
