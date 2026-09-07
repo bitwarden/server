@@ -82,7 +82,6 @@ public class UpdateRotationSettingsCommandTests
         var sutProvider = Setup();
         config.NextRotationAt = _now.AddDays(1);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        // A null cron is always valid (no scheduled rotation) and GetNextOccurrence returns null for it.
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(null, _now).Returns((DateTime?)null);
 
         var result = await sutProvider.Sut.UpdateAsync(config.OrganizationId, actingUserId, config.Id, null, false);

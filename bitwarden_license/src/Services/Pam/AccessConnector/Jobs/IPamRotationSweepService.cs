@@ -1,11 +1,9 @@
 ﻿namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
-/// Runs the three time-derived rotation sweeps (spec <c>RotationDue</c>, <c>JobTimesOut</c>,
-/// <c>DaemonConnectionDropsReleaseJobs</c>): offering due scheduled configs, timing out expired jobs, and releasing
-/// jobs whose claiming daemon has gone stale past its claim lease. Invoked on a Quartz cron by
-/// <see cref="PamRotationSweepJob"/>; kept separate from the job class so the sweep logic itself is testable without
-/// a <c>Quartz.IJobExecutionContext</c>.
+/// Runs the three time-derived rotation sweeps: offering due scheduled configs, timing out expired jobs, and
+/// releasing jobs whose claiming daemon has gone stale. Kept separate from <see cref="PamRotationSweepJob"/>
+/// so the sweep logic is testable without a <c>Quartz.IJobExecutionContext</c>.
 /// </summary>
 public interface IPamRotationSweepService
 {

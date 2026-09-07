@@ -128,8 +128,7 @@ public class ReportRotationSucceededCommandTests
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.ReportSucceededAsync(daemonId, attempt.Id, sessionTermination));
 
-        // Indistinguishable from an attempt that does not exist: no resolution attempted, and nothing written to
-        // the other organization's audit trail.
+        // Indistinguishable from an attempt that does not exist.
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
             .MarkAttemptRotatedAsync(default, default, default, default);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);

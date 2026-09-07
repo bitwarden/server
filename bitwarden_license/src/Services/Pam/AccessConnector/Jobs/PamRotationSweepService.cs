@@ -40,9 +40,7 @@ public class PamRotationSweepService : IPamRotationSweepService
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Each phase sweeps a disjoint set of rows -- a bug or transient failure in one (including the repository
-        // call itself) must never prevent the other two from running, mirroring BaseJob's swallow-and-log philosophy
-        // one level down.
+        // Each phase sweeps a disjoint set of rows; a failure in one must never prevent the other two from running.
         await RunPhaseAsync("due", () => SweepDueAsync(now));
         await RunPhaseAsync("timeouts", () => SweepTimeoutsAsync(now));
         await RunPhaseAsync("releases", () => SweepReleasesAsync(now));
@@ -89,10 +87,9 @@ public class PamRotationSweepService : IPamRotationSweepService
             {
                 var config = await _configRepository.GetByIdAsync(job.RotationConfigId);
 
-                // Only a config that actually has a schedule gets its next rotation pushed out. Writing a concrete
-                // NextRotationAt onto a cron-less config would enrol it in the due sweep permanently -- it has no
-                // cron to clear the value again on success -- and every subsequent offer would be tagged Scheduled
-                // on a config the admin set up as on-demand or access-end only.
+                // Only a config that actually has a schedule gets its next rotation pushed out. A cron-less
+                // config has nothing to clear the value again, so it would stay enrolled in the due sweep
+                // permanently.
                 if (config is { ScheduleCron: not null })
                 {
                     config.NextRotationAt = now + _options.Value.FailureRetryDelay;
