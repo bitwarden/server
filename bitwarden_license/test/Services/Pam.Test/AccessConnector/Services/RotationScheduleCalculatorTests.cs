@@ -13,9 +13,7 @@ public class RotationScheduleCalculatorTests
     [Fact]
     public void GetNextOccurrence_ValidSixFieldCron_ReturnsNextOccurrence()
     {
-        // Every 15 minutes; after 12:07 the next run is 12:15. A quarter-hour cadence is time-zone-proof (every
-        // real-world UTC offset is a multiple of 15 minutes), unlike a day-anchored cron -- see the skipped test
-        // below.
+        // Every 15 minutes; after 12:07 the next run is 12:15.
         var after = new DateTime(2026, 7, 6, 12, 7, 0, DateTimeKind.Utc);
 
         var next = _sut.GetNextOccurrence("0 0/15 * * * ?", after);
@@ -104,8 +102,7 @@ public class RotationScheduleCalculatorTests
     [Fact]
     public void ValidateSchedule_ScheduleThatNeverOccurs_ThrowsBadRequest()
     {
-        // A 7-field Quartz cron pinned to a year in the past never fires again; the floor cannot be checked, so it
-        // is rejected the same way a too-frequent schedule is.
+        // A cron pinned to a year in the past never fires again, so the floor cannot be checked.
         Assert.Throws<BadRequestException>(
             () => _sut.ValidateSchedule("0 0 0 1 1 ? 2001", TimeSpan.FromMinutes(15)));
     }

@@ -1,14 +1,7 @@
--- Bound the PAM access-audit trail read: one page at a time, filtered server-side, with the before/after collapse
--- moved into the store so it survives a page boundary. Adds
--- [dbo].[AccessAuditEvent_ReadPageByOrganizationId] and the two indexes it reads through.
---
--- [dbo].[AccessAuditEvent_ReadManyByOrganizationId] is deliberately left in place: it is the read an API instance
--- that has not yet rolled over still calls.
-
--- The trail's own read: org-scoped, ranged on [OccurredAt], newest first, one page at a time. [Id] carries the
--- ordering past a tie so a page boundary landing among events that share an instant can be resumed exactly, and the
--- two included columns are what the collapse tests each candidate row on. Named for its key columns, so adding [Id]
--- to them replaces IX_AccessAuditEvent_OrganizationId_OccurredAt rather than altering it.
+-- Adds a paged, server-filtered audit-trail read (AccessAuditEvent_ReadPageByOrganizationId) and two indexes.
+-- The old ReadManyByOrganizationId stays for instances not yet rolled over.
+-- Ranged on [OccurredAt] newest-first, one page at a time; [Id] breaks ties.
+-- Named for its key columns; adding [Id] replaces the old index, not alters it.
 IF NOT EXISTS (
     SELECT 1
     FROM [sys].[indexes]
@@ -21,12 +14,11 @@ BEGIN
 END
 GO
 
--- Superseded by the index above, which leads on the same two columns. Dropped only once its replacement exists, so a
--- server still running the unpaged read is never left without one.
+-- Superseded by the index above; dropped only after its replacement exists.
 DROP INDEX IF EXISTS [IX_AccessAuditEvent_OrganizationId_OccurredAt] ON [dbo].[AccessAuditEvent]
 GO
 
--- Serves the collapse, which asks "is there a further-along half of this action?" once per candidate row.
+-- Serves the collapse's per-row check for a further-along half of the same action.
 IF NOT EXISTS (
     SELECT 1
     FROM [sys].[indexes]
@@ -55,13 +47,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Reads one page of the PAM access-audit trail for an entire organization from the append-only
-    -- [AccessAuditEvent] store: the matching events between @StartDate and @EndDate, newest first, at most @PageSize
-    -- of them. Fully SELF-CONTAINED -- the display names were resolved and frozen into the row at write time (see
-    -- AccessAuditEvent_Create), so this read touches no other table. Org-scoped: the caller is authorized by the
-    -- AccessEventLogs permission at the endpoint.
-    --
-    -- The list parameters carry JSON arrays ([1,13,30], ["<guid>", ...]); NULL means the dimension is unfiltered.
+    -- Pages the audit store between @StartDate/@EndDate, newest first; rows are self-contained.
+    -- List params are JSON arrays; NULL means unfiltered.
     SELECT TOP (@PageSize)
         [Id],
         [Kind],
@@ -98,15 +85,13 @@ BEGIN
     WHERE E.[OrganizationId] = @OrganizationId
         AND E.[OccurredAt] >= @StartDate
         AND E.[OccurredAt] <= @EndDate
-        -- Resume where the previous page stopped, keyed on ([OccurredAt], [Id]): an action writes its before/after
-        -- halves at one instant, so a date-only key would drop every row tied with the boundary.
+        -- Resumes on ([OccurredAt], [Id]); a date-only key would drop rows tied at the boundary.
         AND (
             @BeforeDate IS NULL
             OR E.[OccurredAt] < @BeforeDate
             OR (E.[OccurredAt] = @BeforeDate AND E.[Id] < @BeforeId)
         )
-        -- Collapse each action's before/after pair (shared CorrelationId) into one row: the Outcome when it landed,
-        -- otherwise the lone Attempt -- which the response flags as in-doubt. Scoped to the same range as the page.
+        -- Collapses each CorrelationId pair to its Outcome, or an in-doubt Attempt unresolved.
         AND NOT EXISTS (
             SELECT 1
             FROM [dbo].[AccessAuditEvent] P
@@ -119,8 +104,7 @@ BEGIN
                     OR (P.[Phase] = E.[Phase] AND P.[Id] < E.[Id])
                 )
         )
-        -- Applied AFTER the collapse, to the row that survived it: the two halves of one action need not agree, since
-        -- a refused activation writes its Attempt as LeaseActivated and its Outcome as LeaseActivationRejected.
+        -- Applied after the collapse, since an action's two halves can disagree.
         AND (
             @Kinds IS NULL
             OR E.[Kind] IN (SELECT CAST([value] AS TINYINT) FROM OPENJSON(@Kinds))

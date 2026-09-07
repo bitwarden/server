@@ -120,9 +120,7 @@ def derive_daemon_key(seed16: bytes) -> bytes:
 
 
 def main():
-    # Known-answer self-check (CONTRACT C1 test vector, from token.rs).
-    # seed = base64-decode("X8vbvA0bduihIDe/qrzIQQ==")
-    # derived key must equal "H9/oIRLtL9nGCQOVDjSMoEbJsjWXSOCb3qeyDt6ckzS3FhyboEDWyTP/CQfbIszNmAVg2ExFganG1FVFGXO/Jg=="
+    # Known-answer check: CONTRACT C1 test vector from token.rs.
     _kac_seed = base64.b64decode("X8vbvA0bduihIDe/qrzIQQ==")
     _kac_expected = "H9/oIRLtL9nGCQOVDjSMoEbJsjWXSOCb3qeyDt6ckzS3FhyboEDWyTP/CQfbIszNmAVg2ExFganG1FVFGXO/Jg=="
     _kac_actual = base64.b64encode(derive_daemon_key(_kac_seed)).decode()
@@ -166,10 +164,8 @@ def main():
     assert len(org_key) == 64, f"unexpected org key length {len(org_key)}"
     org_key_b64 = base64.b64encode(org_key).decode()
 
-    # Mirror the SM access-token layout (CONTRACT C1): generate a 16-byte random
-    # seed; derive the 64-byte symmetric key from it; encrypt the payload under
-    # that derived key; and store the base64-encoded seed (not the key itself) in
-    # the Key field and after the ':' in the final token.
+    # Mirrors the SM access-token layout (CONTRACT C1): the 16-byte seed derives the key, and only the
+    # seed (not the key) is stored, base64-encoded.
     seed = os.urandom(16)
     seed_b64 = base64.b64encode(seed).decode()
     k = derive_daemon_key(seed)
