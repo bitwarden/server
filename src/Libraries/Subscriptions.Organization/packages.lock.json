@@ -906,7 +906,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.2, )"
+          "HttpExtensions": "[2026.9.0, )"
         }
       },
       "httpextensions": {
@@ -917,14 +917,14 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
-          "Core": "[2026.8.2, )",
+          "Core": "[2026.9.0, )",
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.2, )"
+          "Core": "[2026.9.0, )"
         }
       },
       "serilogfilelogging": {

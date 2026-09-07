@@ -1256,7 +1256,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.2, )"
+          "HttpExtensions": "[2026.9.0, )"
         }
       },
       "httpextensions": {
@@ -1265,7 +1265,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.2, )",
+          "Core": "[2026.9.0, )",
           "Microsoft.Extensions.Logging": "[10.0.10, 10.0.10]",
           "dbup-sqlserver": "[7.2.0, 7.2.0]"
         }
