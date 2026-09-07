@@ -1,10 +1,9 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The phase of a PAM audit event under the before/after (write-ahead) emission model. A state-changing action records
-/// an <see cref="Attempt"/> immediately before its point of no return and an <see cref="Outcome"/> immediately after it
-/// completes. Because emission is not transactional, an <see cref="Attempt"/> with no matching <see cref="Outcome"/>
-/// marks an in-doubt action (the process died mid-write) rather than a silently lost event.
+/// The phase of a PAM audit event under the before/after (write-ahead) emission model. Emission is not
+/// transactional, so an <see cref="Attempt"/> with no matching <see cref="Outcome"/> marks an in-doubt action
+/// rather than a silently lost event.
 /// </summary>
 public enum AccessAuditEventPhase : byte
 {

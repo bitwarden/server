@@ -38,10 +38,8 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
         rule.CreationDate = now;
         rule.RevisionDate = now;
 
-        // audit (before/after): the actor is the editor the handler stamped on the rule. The attempt cannot name the
-        // rule -- Repository.CreateAsync assigns the id, so before the write there is no rule to name -- and the
-        // outcome is emitted only once the collection links are written too, so an attempt with no outcome flags a
-        // half-created rule rather than reading as a clean create.
+        // The attempt cannot name the rule, since CreateAsync assigns the id; the outcome is emitted only once
+        // the collection links are written too, so an attempt with no outcome flags a half-created rule.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleCreated,

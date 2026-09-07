@@ -3,12 +3,10 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// What one page of the PAM access-audit trail is narrowed to: a time range, the dimensions an auditor can select on,
-/// and where the previous page stopped. Every dimension is independent, and an unset one matches everything.
-///
-/// The bounds arrive already clamped to the shared retention window (<c>AccessHistoryWindow</c>) — the store holds no
-/// promise about anything older, so the read never asks for it. The organization is not on here: it is the resource
-/// being read, not a filter, and it is what the endpoint authorized.
+/// What one page of the PAM access-audit trail is narrowed to: a time range, selectable dimensions, and where the
+/// previous page stopped. Every dimension is independent, and an unset one matches everything. The bounds arrive
+/// already clamped to the shared retention window (<c>AccessHistoryWindow</c>); the organization is not a filter
+/// here since it is what the endpoint authorized.
 /// </summary>
 public class AccessAuditTrailFilter
 {
@@ -32,9 +30,8 @@ public class AccessAuditTrailFilter
     public IReadOnlyCollection<Guid> ActorIds { get; init; } = [];
 
     /// <summary>
-    /// Whether to keep events with no actor — the system / automatic ones, which the trail renders as "System" and
-    /// which therefore have no id to select by. Unions with <see cref="ActorIds"/> rather than narrowing it: an auditor
-    /// following one approver and the automatic decisions alongside them is asking for both sets.
+    /// Whether to keep events with no actor, shown in the trail as "System". Unions with <see cref="ActorIds"/>
+    /// rather than narrowing it.
     /// </summary>
     public bool IncludeAutomatedActor { get; init; }
 
@@ -47,13 +44,8 @@ public class AccessAuditTrailFilter
     public IReadOnlyCollection<Guid> CipherIds { get; init; } = [];
 
     /// <summary>
-    /// The subject access rules to keep.
-    ///
-    /// Two lists rather than one, because a rule-administration event names a rule and no cipher: they are different
-    /// columns, and an id matched against the wrong one would silently match nothing. But they UNION with each other
-    /// rather than narrowing, which is the one place two dimensions here are OR-ed: they are the two halves of a single
-    /// Item selection, and an auditor picking one credential and one rule is asking for both, not for the empty
-    /// intersection of the two.
+    /// The subject access rules to keep. Separate from <see cref="CipherIds"/> since a rule-administration event
+    /// has no cipher; the two UNION rather than narrow.
     /// </summary>
     public IReadOnlyCollection<Guid> RuleIds { get; init; } = [];
 
@@ -65,6 +57,6 @@ public class AccessAuditTrailFilter
     /// </summary>
     public DateTime? BeforeOccurredAt { get; init; }
 
-    /// <summary>The previous page's last row id. Set whenever <see cref="BeforeOccurredAt"/> is.</summary>
+    /// <summary>The previous page's last row id, paired with <see cref="BeforeOccurredAt"/>.</summary>
     public Guid? BeforeId { get; init; }
 }

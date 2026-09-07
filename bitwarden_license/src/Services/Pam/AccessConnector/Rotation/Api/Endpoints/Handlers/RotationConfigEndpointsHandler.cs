@@ -10,16 +10,14 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/configs</c> resource. Authority over the
-/// organization is already settled by the time a handler runs -- <c>PamEndpointsExtensions</c> gates the whole
-/// connector admin group on <c>ManageAccessConnectorRequirement</c> through the authorization middleware. What is
-/// left is resource scoping: the commands underneath re-verify every id argument belongs to the route organization.
+/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/configs</c> resource. Organization
+/// authority is already settled by <c>PamEndpointsExtensions</c>'s authorization middleware; the commands
+/// underneath re-verify every id argument belongs to the route organization.
 ///
 /// <see cref="ICreateRotationConfigCommand"/> and <see cref="IUpdateRotationSettingsCommand"/>/
 /// <see cref="IUpdateRotationAccountCommand"/> return the bare entity, not the list/detail projection, so this
 /// handler re-reads through <see cref="IGetRotationConfigDetailsQuery"/> after a write to respond with the same
-/// shape <c>GET rotation/configs/{id}</c> uses -- one extra round trip on writes, in exchange for a single
-/// enrichment path.
+/// shape <c>GET rotation/configs/{id}</c> uses.
 /// </summary>
 public class RotationConfigEndpointsHandler(
     ICurrentContext currentContext,

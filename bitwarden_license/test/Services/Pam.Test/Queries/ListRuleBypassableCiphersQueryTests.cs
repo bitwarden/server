@@ -13,9 +13,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Queries;
 
 /// <summary>
-/// The union model is the whole subject here: a cipher is gated only when EVERY collection it can be
-/// reached through gates, so these tests are mostly about which combinations of collection membership
-/// leave a credential exposed — and which collection is then reported as the gap.
+/// A cipher is gated only where every reachable collection gates it; these tests cover which
+/// combinations leave it exposed, and which collection is the reported gap.
 /// </summary>
 [SutProviderCustomize]
 public class ListRuleBypassableCiphersQueryTests
@@ -197,8 +196,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A gap is reported once however many exposed ciphers share it — the admin fixes the collection,
-    /// not each cipher.
+    /// A gap is reported a single time no matter how many exposed ciphers share it.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_DeduplicatesAcrossCiphers(
@@ -277,7 +275,6 @@ public class ListRuleBypassableCiphersQueryTests
                 GovernedCollection(ungatedCollectionId, organizationId, accessRuleId: null)
             ],
             [
-                // Exposed: one gated path, one ungated.
                 Mapping(gatedCollectionId, exposedCipherId), Mapping(ungatedCollectionId, exposedCipherId),
                 // Protected: both paths gated, by two different enabled rules.
                 Mapping(gatedCollectionId, protectedCipherId), Mapping(otherGatedCollectionId, protectedCipherId)

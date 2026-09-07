@@ -5,11 +5,10 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created with
-/// <see cref="Action"/> already <see cref="AccessRequestAction.Approved"/>; requests that require human approval are
-/// created with no action recorded and resolved later by an approver. Neither approval mints the lease — the
-/// requester activates the approved request within its window, and that activation produces the
-/// <see cref="AccessLease"/>.
+/// A request to lease access to a cipher in a leasing-governed collection. Auto-approved requests are created
+/// with <see cref="Action"/> already <see cref="AccessRequestAction.Approved"/>; requests requiring human
+/// approval are created with no action, resolved later by an approver. Neither mints the lease — the requester
+/// activates the approved request within its window, which produces the <see cref="AccessLease"/>.
 /// </summary>
 public class AccessRequest : ITableObject<Guid>
 {
@@ -43,11 +42,10 @@ public class AccessRequest : ITableObject<Guid>
     public string? Reason { get; set; }
 
     /// <summary>
-    /// The action a party has taken on the request, if any. Facts about what was recorded, not about current
-    /// standing: what this means right now (the wire's <see cref="AccessRequestStatus"/>) is derived against the
-    /// clock at read time via <see cref="AccessStatusDerivation.ComputeStatus"/>, which is where Pending and Expired
-    /// come from. This column doubles as the concurrency token for the transition procedures, whose guarded UPDATEs
-    /// decide who gets to write the decision log.
+    /// The action a party has taken on the request, if any — a record of what happened, not current standing;
+    /// the wire's <see cref="AccessRequestStatus"/> is derived from it against the clock via
+    /// <see cref="AccessStatusDerivation.ComputeStatus"/>. Doubles as the concurrency token the transition
+    /// procedures' guarded UPDATEs key off.
     /// </summary>
     public AccessRequestAction Action { get; set; }
 
@@ -58,9 +56,8 @@ public class AccessRequest : ITableObject<Guid>
 
     /// <summary>
     /// When the current <see cref="Action"/> was recorded; null iff <see cref="Action"/> is
-    /// <see cref="AccessRequestAction.None"/>. Every transition stamps it in the same UPDATE, so a cancellation's
-    /// timestamp is simply this field when the action is Cancelled. On cancel-after-approval it is overwritten —
-    /// the approval time survives in the decision row, and the cancellation is also journaled by the audit trail.
+    /// <see cref="AccessRequestAction.None"/>. Overwritten on cancel-after-approval; the approval time survives
+    /// in the decision row instead.
     /// </summary>
     public DateTime? ActionDate { get; set; }
 

@@ -28,10 +28,9 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Snapshot the display names into the row, the same way AccessAuditEvent_Create does with LEFT JOINs: resolve
-        // them once here and freeze them, so a later delete or rename cannot change what this event says. A name stays
-        // null where its id is null or the referenced row is gone. The rule name arrives on the payload rather than
-        // being resolved -- a rule can be hard-deleted in the same action, so the command captures it beforehand.
+        // Snapshots display names into the row (as AccessAuditEvent_Create's LEFT JOINs do): resolved once and frozen,
+        // so a later delete or rename can't change what this event says. The rule name arrives pre-resolved on the
+        // payload since a rule can be hard-deleted in the same action.
         var actor = await ReadUserAsync(dbContext, auditEvent.ActorId);
         var requester = await ReadUserAsync(dbContext, auditEvent.RequesterId);
 
@@ -87,9 +86,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         var query = dbContext.AccessAuditEvents
             .Where(e => e.OrganizationId == organizationId && e.OccurredAt >= since && e.OccurredAt <= until);
 
-        // Resume where the previous page stopped. Keyed on (OccurredAt, Id) rather than OccurredAt alone: an action
-        // writes its before/after halves at one instant, so a boundary landing inside a group of events sharing a
-        // timestamp is ordinary here, and a date-only key would drop every row tied with it.
+        // Resumes on (OccurredAt, Id), not OccurredAt alone, since a boundary landing inside a same-instant group is
+        // ordinary here and a date-only key would drop rows tied with it.
         if (filter.BeforeOccurredAt is { } beforeOccurredAt)
         {
             var beforeId = filter.BeforeId ?? Guid.Empty;
@@ -98,10 +96,9 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 || (e.OccurredAt == beforeOccurredAt && e.Id.CompareTo(beforeId) < 0));
         }
 
-        // Collapse each action's before/after pair (shared CorrelationId) into one row -- the Outcome when it landed,
-        // otherwise the lone Attempt. Expressed as "no further-along half of this action exists" rather than as a
-        // GroupBy, which is what the Dapper procedure's NOT EXISTS does and what translates to SQL here. Scoped to the
-        // page's own range, so an action straddling a bound reads as in-doubt at that edge rather than disappearing.
+        // Collapses each before/after pair (shared CorrelationId) into one row: Outcome if landed, else the lone
+        // Attempt. Expressed as "no further-along half exists" (translates to SQL as NOT EXISTS), scoped to the
+        // page's own range.
         query = query.Where(e => !dbContext.AccessAuditEvents.Any(p =>
             p.CorrelationId == e.CorrelationId
             && p.OrganizationId == organizationId
@@ -109,9 +106,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             && p.OccurredAt <= until
             && (p.Phase > e.Phase || (p.Phase == e.Phase && p.Id.CompareTo(e.Id) < 0))));
 
-        // The dimensions are applied AFTER the collapse, to the row that survived it, because the two halves of one
-        // action need not agree: a refused activation writes its Attempt as LeaseActivated and its Outcome as
-        // LeaseActivationRejected (ActivateAccessRequestCommand).
+        // Applied after the collapse, since an action's two halves can disagree (e.g. Attempt LeaseActivated, Outcome
+        // LeaseActivationRejected).
         if (filter.Kinds.Count > 0)
         {
             var kinds = filter.Kinds.ToList();
@@ -134,8 +130,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             query = query.Where(e => e.RequesterId != null && requesterIds.Contains(e.RequesterId.Value));
         }
 
-        // The Item dimension is two columns, and they UNION rather than narrow: a rule-administration event names a
-        // rule and no cipher, so one selection spanning both is asking for either, not for the empty intersection.
+        // The Item dimension is two columns that UNION rather than narrow: a rule-administration event has no cipher.
         if (filter.CipherIds.Count > 0 || filter.RuleIds.Count > 0)
         {
             var cipherIds = filter.CipherIds.ToList();
@@ -197,10 +192,9 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             .Where(e => e.OrganizationId == organizationId && e.OccurredAt >= since && e.OccurredAt <= until)
             .AsNoTracking();
 
-        // Grouped and ordered rather than aggregated so each subject carries its MOST RECENT context: a renamed rule
-        // reads in the menu the way the newest rows read in the table, and a cipher's collection is the one it was
-        // last gated through. Expressed as GroupBy + First rather than the procedure's ROW_NUMBER because that is what
-        // translates across the three providers; the answer is the same.
+        // Grouped and ordered, not aggregated, so each subject carries its most recent context (current rule name,
+        // last-gated collection). Uses GroupBy + First rather than the procedure's ROW_NUMBER since that's what
+        // translates across all three providers.
         var ciphers = await inRange
             .Where(e => e.CipherId != null)
             .GroupBy(e => e.CipherId!.Value)

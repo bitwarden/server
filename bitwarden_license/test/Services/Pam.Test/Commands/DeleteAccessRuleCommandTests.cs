@@ -60,7 +60,7 @@ public class DeleteAccessRuleCommandTests
             .DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
-    // The delete is hard, so the name has to be captured from the row before it goes -- nothing can resolve it after.
+    // The delete is hard, so the name must be captured from the row before it's gone.
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmitsAttemptThenOutcome_CarryingTheNameAndActor(AccessRule existing, Guid actorId)
     {

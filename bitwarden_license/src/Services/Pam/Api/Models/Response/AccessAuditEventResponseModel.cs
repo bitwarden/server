@@ -6,10 +6,8 @@ namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
 /// One row of the PAM access-audit trail, as the governance client renders it. Read from the dedicated audit store,
-/// where each event was written self-contained (display names snapshotted at write time). <see cref="Kind"/> carries
-/// the outcome (string vocabulary); <see cref="ActorId"/> is who performed it, null for a system / automatic event
-/// (see <see cref="Automated"/>). Subject ids are populated according to the kind. <see cref="Detail"/> is an approver
-/// comment or a revoke reason.
+/// where each event was written self-contained with display names snapshotted at write time. Subject ids are
+/// populated according to <see cref="Kind"/>.
 /// </summary>
 public class AccessAuditEventResponseModel : ResponseModel
 {
@@ -78,7 +76,7 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>Whether a failed attempt left the target system's password changed; set on failure/report events.</summary>
     public PamRotationSyncState? SyncState { get; }
 
-    /// <summary>An approver comment or a revoke reason, if the source carried one.</summary>
+    /// <summary>An approver comment or a revoke reason.</summary>
     public string? Detail { get; }
 
     public DateTime? LeaseNotBefore { get; }
@@ -105,12 +103,11 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>The daemon's name — plaintext org configuration, snapshotted at write, for rotation/daemon events.</summary>
     public string? DaemonName { get; }
 
-    /// <summary>True when there is no human actor — a system / automatic event.</summary>
+    /// <summary>True for a system/automatic event with no human actor.</summary>
     public bool Automated { get; }
 
     /// <summary>
-    /// True when this row is an action whose outcome never landed — only the write-ahead Attempt was recorded, so it is
-    /// in-doubt (may have failed or been interrupted). False for a normal completed action.
+    /// True when only the write-ahead Attempt was recorded and no outcome landed; the action is in-doubt.
     /// </summary>
     public bool Incomplete { get; }
 }

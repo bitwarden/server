@@ -7,14 +7,11 @@ using Bit.Pam.Enums;
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
 /// <summary>
-/// The EF persistence model for one row of the PAM audit store.
-///
-/// Unlike the other PAM models this does not derive from a domain entity: the store's write payload
-/// (<see cref="Bit.Pam.Models.AccessAuditEventData"/>) and its read model (<see cref="Bit.Pam.Models.AccessAuditEvent"/>)
-/// are deliberately different shapes and neither carries an <c>Id</c>, so the stored row is its own type. It mirrors
-/// [dbo].[AccessAuditEvent]: the event's own facts, plus the display names snapshotted at write time so each row is
-/// self-contained. There is no mapper profile — the repository maps both directions explicitly, because the write side
-/// resolves the snapshot names and the read side does not.
+/// The EF persistence model for one row of the PAM audit store. Unlike the other PAM models this doesn't derive
+/// from a domain entity: the write payload and read model are deliberately different shapes and neither carries
+/// an <c>Id</c>, so the stored row is its own type.
+/// Mirrors [dbo].[AccessAuditEvent] (the event's facts plus names snapshotted at write time); there's no mapper
+/// profile since the repository maps each direction explicitly.
 /// </summary>
 public class AccessAuditEvent
 {
@@ -58,8 +55,8 @@ public class AccessAuditEvent
     [MaxLength(256)]
     public string? RuleName { get; set; }
 
-    // Rotation context. Like the subject ids above these are deliberately not foreign keys, and the target and
-    // daemon names are snapshotted so the row still reads once the rows they came from are gone.
+    // Rotation context; like the subject ids above, deliberately not foreign keyed, with names snapshotted so
+    // the row still reads after the source rows are gone.
     public Guid? TargetSystemId { get; set; }
 
     [MaxLength(200)]

@@ -1,13 +1,10 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// One subject the access-audit trail names within a range — a cipher, or an access rule — as the trail's Item filter
-/// offers it.
-///
-/// Exactly one of the two pairs is set. They are not interchangeable: a rule's name is plaintext organization
-/// configuration and travels with it, while a cipher's is Vault Data the caller may well be unable to decrypt, so no
-/// name is carried for one. The client resolves cipher names from its own vault and drops the ones it cannot read —
-/// which is the whole reason this is a list of ids rather than a list of labels.
+/// One subject the access-audit trail names within a range — a cipher, or an access rule — as the trail's Item
+/// filter offers it. Exactly one of the two pairs is set. A rule's name travels with it as plaintext organization
+/// configuration; a cipher's does not, since it is Vault Data the caller may be unable to decrypt, so the client
+/// resolves cipher names itself from its own vault.
 /// </summary>
 public class AccessAuditItem
 {

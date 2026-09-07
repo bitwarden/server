@@ -5,9 +5,7 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Queries;
 
 /// <summary>
-/// The trail's page position. It carries the last row's id alongside its instant because the instant alone does not
-/// identify a row here: an action writes its before/after halves at one instant, so events sharing a timestamp are
-/// ordinary in this store rather than a remote tie.
+/// The trail's page position; carries the last row's id, since a shared timestamp is ordinary in this store.
 /// </summary>
 public class AccessAuditTrailContinuationTokenTests
 {
@@ -29,7 +27,7 @@ public class AccessAuditTrailContinuationTokenTests
         Assert.Equal(row.Id, id);
     }
 
-    // Two rows recorded at the same instant produce different tokens, which is the whole reason the id is on there.
+    // Two rows at the same instant still produce different tokens, via the id.
     [Fact]
     public void From_TwoRowsSharingAnInstant_ProducesDistinctTokens()
     {

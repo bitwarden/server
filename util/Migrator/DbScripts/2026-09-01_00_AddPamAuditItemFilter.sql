@@ -1,14 +1,6 @@
--- Give the PAM audit log its Item filter back, now that the trail read is paged. The menu cannot come from a page
--- (fifty rows name only some of the items in range) nor from the caller's vault (which holds credentials the trail
--- never mentions), so the store answers "which subjects does the trail name in this range" directly, and the client
--- keeps the ones it can label.
---
--- Adds [dbo].[AccessAuditEvent_ReadItemsByOrganizationId], widens the trail index to cover it, and reworks the page
--- read's cipher filter into the two-column, multi-value Item selection that menu produces.
-
--- The four subject columns join the INCLUDE so the item read is covered rather than paying a key lookup on every row
--- of the range. They ride on this index rather than one of their own because the page read is a TOP-N seek and barely
--- notices a wider leaf row, where a second index would cost every insert.
+-- Restores the Item filter now that the trail read is paged.
+-- Adds AccessAuditEvent_ReadItemsByOrganizationId; reworks the cipher filter into a two-column Item.
+-- Subject columns ride this index's INCLUDE rather than their own.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredAt_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredAt] DESC, [Id] DESC)
     INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName])
@@ -23,18 +15,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The distinct subjects the organization's access-audit trail names between @StartDate and @EndDate: one row per
-    -- cipher, one per access rule. This is what the trail's Item filter is built from, and it exists because neither
-    -- of the two obvious sources works -- a page of the trail holds fifty rows and cannot name every item in range,
-    -- and the caller's own vault would offer every credential they hold whether the trail mentions it or not.
-    --
-    -- No cipher NAME is returned. [CipherName] is Vault Data (an EncString) that an auditor generally cannot decrypt,
-    -- so the caller resolves names from its own vault and drops the ones it cannot read. [RuleName] IS returned:
-    -- plaintext organization configuration, snapshotted per event, so it travels with the id.
-    --
-    -- Ranked rather than aggregated so each subject carries its MOST RECENT context -- a renamed rule reads in the
-    -- menu the way the newest rows read in the table, and a cipher's collection is the one it was last gated through.
-    -- MIN/MAX would pick alphabetically, which for a rename is simply the wrong name.
+    -- One row per cipher/rule; CipherName is withheld (encrypted), RuleName (plaintext) is returned.
+    -- Ranked, not aggregated, so each subject keeps its most recent name.
     ;WITH [Ciphers] AS (
         SELECT
             [CipherId],
@@ -94,25 +76,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Reads one page of the PAM access-audit trail for an entire organization from the append-only
-    -- [AccessAuditEvent] store: the matching events between @StartDate and @EndDate, newest first, at most @PageSize
-    -- of them. Fully SELF-CONTAINED -- the actor/requester/cipher/collection/rule/target-system/daemon display names
-    -- were resolved and frozen into the row at write time (see AccessAuditEvent_Create), so this read touches no other
-    -- table and a later delete or rename of a referenced entity cannot erase or rewrite the event. Cipher/collection
-    -- names are encrypted (EncString), decrypted client-side. Org-scoped: the caller is authorized by the
-    -- AccessEventLogs permission at the endpoint. Kind matches Bit.Pam.Enums.AccessAuditEventKind; Phase matches
-    -- Bit.Pam.Enums.AccessAuditEventPhase; RotationSource matches Bit.Pam.Enums.PamRotationSource; SyncState matches
-    -- Bit.Pam.Enums.PamRotationSyncState. Time-derived expiry kinds are not written by any action yet (deferred).
-    --
-    -- Replaces the unpaged AccessAuditEvent_ReadManyByOrganizationId, which returned the organization's whole
-    -- retention window in one response and left the before/after collapse to the caller. Collapsing in the caller
-    -- cannot survive paging -- it could not tell an Attempt whose Outcome sits on the next page from one that never
-    -- landed -- so the collapse happens here, before the page is cut.
-    --
-    -- The list parameters carry JSON arrays ([1,13,30], ["<guid>", ...]); NULL means the dimension is unfiltered.
-    -- OPENJSON rather than a table-valued parameter because Kind is a TINYINT, and only the GuidIdArray /
-    -- TwoGuidIdArray / EmailArray user-defined types exist -- one mechanism for all three lists beats inventing a
-    -- fourth type for one of them.
+    -- Pages the org's audit trail, newest first; rows are self-contained (names frozen at write).
+    -- Collapses each before/after pair here, since paging breaks a caller-side collapse.
     SELECT TOP (@PageSize)
         [Id],
         [Kind],
@@ -149,19 +114,13 @@ BEGIN
     WHERE E.[OrganizationId] = @OrganizationId
         AND E.[OccurredAt] >= @StartDate
         AND E.[OccurredAt] <= @EndDate
-        -- Resume where the previous page stopped. Keyed on ([OccurredAt], [Id]) rather than [OccurredAt] alone: an
-        -- action writes its before/after halves at one instant, so a boundary landing inside a group of events sharing
-        -- a timestamp is ordinary here, and a date-only key would drop every row tied with it.
+        -- Resumes on ([OccurredAt], [Id]); ties on one instant are ordinary here.
         AND (
             @BeforeDate IS NULL
             OR E.[OccurredAt] < @BeforeDate
             OR (E.[OccurredAt] = @BeforeDate AND E.[Id] < @BeforeId)
         )
-        -- Collapse each action's before/after pair (shared CorrelationId) into one row: the Outcome when it landed,
-        -- otherwise the lone Attempt -- which the response flags as in-doubt. Scoped to the same range as the page, so
-        -- the collapse is a function of what the range holds; an action straddling a bound reads as in-doubt at that
-        -- edge rather than disappearing from both sides of it. The [Id] arm keeps the choice deterministic if a pair
-        -- ever arrives with its phase written twice.
+        -- Collapses each CorrelationId pair to its Outcome, or an in-doubt Attempt unresolved.
         AND NOT EXISTS (
             SELECT 1
             FROM [dbo].[AccessAuditEvent] P
@@ -174,15 +133,12 @@ BEGIN
                     OR (P.[Phase] = E.[Phase] AND P.[Id] < E.[Id])
                 )
         )
-        -- The dimensions are applied AFTER the collapse, to the row that survived it, because the two halves of one
-        -- action need not agree: a refused activation writes its Attempt as LeaseActivated and its Outcome as
-        -- LeaseActivationRejected (ActivateAccessRequestCommand), so filtering before the collapse would answer
-        -- "activated" with an action that was turned down.
+        -- Applied after the collapse, since an action's two halves can disagree.
         AND (
             @Kinds IS NULL
             OR E.[Kind] IN (SELECT CAST([value] AS TINYINT) FROM OPENJSON(@Kinds))
         )
-        -- An actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
+        -- Unions the chosen identities with the automatic bucket (no id of its own).
         AND (
             (@ActorIds IS NULL AND @IncludeAutomatedActor = 0)
             OR (@IncludeAutomatedActor = 1 AND E.[ActorId] IS NULL)
@@ -195,8 +151,7 @@ BEGIN
             @RequesterIds IS NULL
             OR E.[RequesterId] IN (SELECT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@RequesterIds))
         )
-        -- The Item dimension is two columns, and they UNION rather than narrow: a rule-administration event names a
-        -- rule and no cipher, so one selection spanning both is asking for either, not for the empty intersection.
+        -- The Item dimension is two columns since a rule-administration event has no cipher.
         AND (
             (@CipherIds IS NULL AND @RuleIds IS NULL)
             OR (

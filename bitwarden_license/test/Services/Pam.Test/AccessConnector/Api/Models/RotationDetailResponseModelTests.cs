@@ -10,10 +10,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Models;
 
 /// <summary>
-/// Locks the wire shape of the two rotation detail reads: the subject's fields on the response itself, not nested
-/// under a property, and the history under the timestamp names the server emits. Property lookup on the client is
-/// insensitive to the first character's case, so these assertions are about the names and the nesting, not the
-/// casing.
+/// Locks the wire shape of both rotation detail reads: subject fields un-nested, history under the server's
+/// timestamp names. Client lookup is case-insensitive, so casing itself isn't asserted here.
 /// </summary>
 public class RotationDetailResponseModelTests
 {

@@ -853,9 +853,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        // Re-filing or favouriting a leasing-gated cipher needs a valid active lease, the same as moving it
-        // in bulk through CipherService.MoveManyAsync. This endpoint writes straight to the repository, so
-        // it is the one mutation path the service-level gate does not cover.
+        // Writes straight to the repository, so this is the one mutation path the service-level gate doesn't cover.
         await _cipherLeaseGate.EnsureCanMutateAsync(user.Id, cipher);
 
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);

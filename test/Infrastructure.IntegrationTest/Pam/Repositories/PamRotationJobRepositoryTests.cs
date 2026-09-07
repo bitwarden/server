@@ -33,8 +33,7 @@ public class PamRotationJobRepositoryTests
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
 
-        // The seed already created a Pending job for the config -- a second offer must be refused as ActiveJobExists,
-        // and only the first job may exist.
+        // A second offer for the same config must be refused as ActiveJobExists.
         var second = BuildPendingJob(fixture.Config.Id, fixture.Now);
         Assert.Equal(PamRotationJobCreateOutcome.ActiveJobExists,
             await pamRotationJobRepository.CreateGuardedAsync(second));
@@ -63,9 +62,7 @@ public class PamRotationJobRepositoryTests
         Assert.Null(await pamRotationJobRepository.GetByIdAsync(job.Id));
     }
 
-    // First-claim-wins under real contention: two daemons race the same Pending job on concurrent connections.
-    // Exactly one wins with the full work snapshot; the loser sees NotClaimable (the job left Pending), and only the
-    // winner's Executing attempt exists.
+    // First-claim-wins under real contention: two daemons race the same Pending job.
     [DatabaseTheory, DatabaseData]
     public async Task ClaimAsync_ConcurrentDoubleClaim_ExactlyOneWinner(
         IOrganizationRepository organizationRepository,
@@ -120,9 +117,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptStatus.Executing, attempt.Status);
     }
 
-    // The claim sproc's Daemon.OrganizationId = Config.OrganizationId join is defense in depth: even a forged
-    // assignment row linking an org-B daemon to an org-A target (the assignment FKs do not enforce same-org) must not
-    // let the foreign daemon claim -- and the poll must not surface the job to it either.
+    // Defense in depth: a forged cross-org assignment must not let the foreign daemon claim.
     [DatabaseTheory, DatabaseData]
     public async Task ClaimAsync_CrossOrganizationDaemonWithForgedAssignment_NotEligibleAndZeroEffect(
         IOrganizationRepository organizationRepository,
@@ -222,9 +217,7 @@ public class PamRotationJobRepositoryTests
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
 
-        // Pause the config after the job was offered: EligibleClaimsOnly's capability half fails. The daemon is
-        // still assigned to the target, so this is a transient hold (409) rather than the 404 a job it may never
-        // touch would get -- PamRotationJob_Claim classifies eligibility on assignment and daemon org/status only.
+        // Config paused after offer: a transient hold (409), not the 404 for an unreachable job.
         fixture.Config.Enabled = false;
         await pamRotationConfigRepository.ReplaceAsync(fixture.Config);
         Assert.Equal(PamRotationClaimOutcome.NotClaimable,
@@ -325,8 +318,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.Daemon.Id, fixture.Now, _releaseDelay);
 
-        // Drift beyond the 1-second tolerance: a concurrent user edit would have bumped the revision date since the
-        // daemon last read the cipher.
+        // Drift beyond the 1-second tolerance simulates a concurrent user edit.
         var outcome = await pamRotationJobRepository.AcceptCipherWriteAsync(
             claim.AttemptId!.Value, fixture.Daemon.Id, "{\"rotated\":true}",
             fixture.Cipher.RevisionDate.AddSeconds(-5), fixture.Now);
@@ -338,8 +330,7 @@ public class PamRotationJobRepositoryTests
         Assert.False(attempt!.CipherUpdated);
     }
 
-    // A millisecond drift wider than int.MaxValue (~24.8 days): MSSQL's DATEDIFF(MILLISECOND, ...) raised an
-    // overflow error here instead of classifying the drift as a mismatch, diverging from the EF providers.
+    // A drift wider than int.MaxValue overflows MSSQL's DATEDIFF, diverging from EF providers.
     [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_DriftBeyondDateDiffIntRange_RevisionMismatch(
         IOrganizationRepository organizationRepository,
@@ -366,9 +357,7 @@ public class PamRotationJobRepositoryTests
         Assert.False(attempt!.CipherUpdated);
     }
 
-    // The release-sweep vs cipher-write interleaving: once the sweep has released the job (status back to Pending,
-    // attempt Abandoned), the daemon's late write must be refused -- the atomic accept sproc re-verifies the claim
-    // under the same job-row lock the sweep takes.
+    // After the release sweep reclaims the job, the daemon's late write must be refused.
     [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_AfterJobReleased_Rejected(
         IOrganizationRepository organizationRepository,
@@ -493,8 +482,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationSyncState.TargetUnchanged, attempt.SyncState);
         Assert.Equal(errorNow, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
 
-        // The job goes back to Pending with the claim fields cleared and the first backoff step applied:
-        // NextClaimableAt = now + retryBaseDelay * 2^(1-1).
+        // First backoff step: NextClaimableAt = now + retryBaseDelay * 2^(1-1).
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobStatus.Pending, job!.Status);
         Assert.Null(job.ClaimedByDaemonId);
@@ -532,9 +520,7 @@ public class PamRotationJobRepositoryTests
         Assert.Null(job.ClaimedAt);
     }
 
-    // Abandoned attempts are never charged against the retry budget: after a release (attempt Abandoned) and a
-    // re-claim, the first *errored* attempt with maxAttempts = 2 still takes the retry branch -- if the abandoned
-    // attempt were counted the budget would already be exhausted and the job would fail.
+    // Abandoned attempts are never charged against the retry budget.
     [DatabaseTheory, DatabaseData]
     public async Task MarkAttemptErroredAsync_AbandonedAttemptsNotCounted(
         IOrganizationRepository organizationRepository,
@@ -559,8 +545,7 @@ public class PamRotationJobRepositoryTests
         var abandoned = await pamRotationJobRepository.GetAttemptByIdAsync(firstClaim.AttemptId!.Value);
         Assert.Equal(PamRotationAttemptStatus.Abandoned, abandoned!.Status);
 
-        // Second claim errors with maxAttempts = 2: errored count is 1 (the abandoned attempt is not charged), so
-        // the retry branch is taken instead of failing the job.
+        // Errored count is 1 (abandoned isn't charged), so retry, not failure.
         var secondClaim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.Daemon.Id, now, _releaseDelay);
         Assert.Equal(PamRotationClaimOutcome.Claimed, secondClaim.Outcome);
@@ -639,10 +624,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(now, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
     }
 
-    // Success wins: a job whose attempt reached Rotated is never timed out, no matter how far past ExpiresAt it is.
-    // (A Rotated attempt only ever exists on a job MarkAttemptRotatedAsync atomically moved to Succeeded, so the
-    // observable surface is a Succeeded job the sweep must leave alone; the sproc's NOT-EXISTS-Rotated guard is
-    // defense in depth for the same rule.)
+    // Success wins: a Rotated attempt's job is never timed out, no matter its ExpiresAt.
     [DatabaseTheory, DatabaseData]
     public async Task TimeoutDueAsync_JobWithRotatedAttempt_NotTimedOut(
         IOrganizationRepository organizationRepository,
@@ -700,7 +682,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Config.Id, row.RotationConfigId);
         Assert.Equal(fixture.Organization.Id, row.OrganizationId);
         Assert.Equal(fixture.Cipher.Id, row.CipherId);
-        // The pre-clear claimant survives on the audit row even though the job's own field is nulled.
+        // The pre-clear claimant survives on the audit row despite the job's own field clearing.
         Assert.Equal(fixture.Daemon.Id, row.ClaimedByDaemonId);
 
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
@@ -732,8 +714,7 @@ public class PamRotationJobRepositoryTests
             now: claimTime);
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.Daemon.Id, claimTime, _releaseDelay);
-        // ...but the daemon is slow, not gone: a fresh heartbeat keeps the claim alive (success wins for a
-        // slow-but-live daemon whose report may still land).
+        // Slow, not gone: a fresh heartbeat keeps the claim alive.
         await pamDaemonRepository.UpdateHeartbeatAsync(fixture.Daemon.Id, now, TimeSpan.FromSeconds(15));
 
         var released = await pamRotationJobRepository.ReleaseExpiredLeasesAsync(now, _offlineAfter, _releaseDelay);
@@ -759,8 +740,7 @@ public class PamRotationJobRepositoryTests
         var now = DateTime.UtcNow;
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository, now: now);
-        // Claimed just now: the daemon is heartbeat-stale (it never beat), but ExecuteBy is still releaseDelay away --
-        // release fires at lease expiry, never at stale detection.
+        // Release fires at lease expiry, never merely at stale-heartbeat detection.
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.Daemon.Id, now, _releaseDelay);
 
@@ -773,8 +753,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptStatus.Executing, attempt!.Status);
     }
 
-    // Success wins on the release path too: a job whose attempt reached Rotated is never released. As with the
-    // timeout sweep, the reachable surface is the Succeeded job the atomic success report produced.
+    // Success wins on the release path too: a Rotated attempt's job is never released.
     [DatabaseTheory, DatabaseData]
     public async Task ReleaseExpiredLeasesAsync_JobWithRotatedAttempt_NotReleased(
         IOrganizationRepository organizationRepository,
@@ -869,8 +848,7 @@ public class PamRotationJobRepositoryTests
             pamDaemonRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository, now: older);
         await pamRotationJobRepository.ClaimAsync(fixture.Job.Id, fixture.Daemon.Id, older, _releaseDelay);
 
-        // A second config on the same target: AtMostOneActiveJobPerConfig rules out a second job on the first one, and
-        // the daemon's assignment is to the target, so it can work both.
+        // AtMostOneActiveJobPerConfig is per-config; the daemon can still work a second config on the same target.
         var newerCipher = await CreateCipherAsync(cipherRepository, fixture.Organization.Id);
         var newerConfig = await pamRotationConfigRepository.CreateAsync(
             BuildConfig(fixture.Organization.Id, newerCipher.Id, fixture.Target.Id, now));
@@ -896,11 +874,8 @@ public class PamRotationJobRepositoryTests
         DateTime Now);
 
     /// <summary>
-    /// Seeds the full eligibility graph for a claimable job: org, active automatic target, enrolled+assigned daemon,
-    /// org cipher, enabled config, and a Pending job created through the guarded sproc. <paramref name="now"/> lets
-    /// sweep tests place the whole graph in the past; <paramref name="expiresAt"/>/<paramref name="nextClaimableAt"/>
-    /// override the job's window (defaults keep it claimable now and far from any concurrently-running sweep test's
-    /// cutoff).
+    /// Seeds the full eligibility graph for a claimable job: org, target, daemon, cipher, config, and job.
+    /// <paramref name="now"/> lets sweep tests place the graph in the past; defaults keep the job claimable now.
     /// </summary>
     private static async Task<ClaimableJobFixture> SeedClaimableJobAsync(
         IOrganizationRepository organizationRepository,
@@ -997,8 +972,7 @@ public class PamRotationJobRepositoryTests
             RevisionDate = now,
         };
 
-    // ExpiresAt defaults far into the future so a concurrently-running timeout-sweep test (the sweeps are set-based
-    // across the whole table) never times this job out from under its own test.
+    // Defaults far into the future so a concurrent timeout-sweep test can't time this job out.
     private static PamRotationJob BuildPendingJob(
         Guid configId, DateTime now, DateTime? expiresAt = null, DateTime? nextClaimableAt = null) => new()
         {

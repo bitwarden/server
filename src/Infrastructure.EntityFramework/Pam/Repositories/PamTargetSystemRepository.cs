@@ -38,8 +38,8 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable so the config re-check and the deletes are one indivisible step: a config created between
-        // them would otherwise be left naming a target that no longer exists.
+        // Serializable makes the config re-check and the deletes one indivisible step, so a config created in
+        // between can't end up naming a deleted target.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 

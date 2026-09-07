@@ -27,9 +27,8 @@ public class AuditEndpointsHandler(
     public async Task<ListResponseModel<AccessAuditEventResponseModel>> GetTrail(
         Guid orgId, AccessAuditTrailFilterRequestModel filter)
     {
-        // The kill switch stops the writes (see AccessAuditEventEmitter), so serving the trail while it is on would
-        // hand an auditor a record that silently omits everything that happened since the flip. Withdrawing the
-        // resource is the honest answer; the same 404 the permission check gives, so a caller learns nothing extra.
+        // While the kill switch is on, the trail silently omits recent activity, so withdraw it with the same 404
+        // the permission check gives rather than serve an incomplete record.
         if (featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
         {
             throw new NotFoundException();
@@ -49,9 +48,8 @@ public class AuditEndpointsHandler(
     /// <summary>
     /// The distinct subjects the trail names in <paramref name="range"/> — what the Item filter's menu is built from.
     ///
-    /// Unpaged, and deliberately so: the result is one row per subject, bounded by how many credentials and rules the
-    /// organization governs rather than by how much activity there has been. Guarded exactly as the trail is, because
-    /// it describes the same records: the same kill switch and the same permission, so it cannot become a way to learn
+    /// Unpaged: one row per subject, bounded by how many credentials and rules the organization governs. Guarded
+    /// exactly as the trail is, so it cannot become a way to learn
     /// what the trail itself would not disclose.
     /// </summary>
     public async Task<ListResponseModel<AccessAuditItemResponseModel>> GetItems(
