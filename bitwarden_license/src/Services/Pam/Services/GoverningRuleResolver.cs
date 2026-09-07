@@ -36,24 +36,29 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var collectionIds = collectionCiphers.Select(cc => cc.CollectionId).ToHashSet();
         var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        var governedCollections = collections
-            .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
+        var paths = collections.Where(c => collectionIds.Contains(c.Id)).ToList();
 
-        // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule is dropped — so it stops governing — when it is disabled (Enabled is false;
-        // the admin has switched it off, and a disabled rule does not gate access) or no longer loads (deleted after
-        // the collection was read; deletes clear the link, so a missing rule is only a race). Dropping a disabled rule
-        // also stops it shadowing a newer active rule under the oldest-wins selection below.
+        // Gating is a union: every path the caller can reach the cipher through must gate. A path carrying no rule,
+        // a disabled one, or one that no longer loads is an escape releasing the credential in full, so nothing
+        // governs — matching CipherLeaseGate's bulk read and SingleActiveLeaseEvaluator (PM-42916).
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
-        foreach (var collection in governedCollections)
+        foreach (var collection in paths)
         {
-            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is { Enabled: true })
+            if (!collection.AccessRuleId.HasValue)
             {
-                candidates.Add((collection, accessRule));
+                return null;
             }
+
+            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId.Value);
+            if (accessRule is not { Enabled: true })
+            {
+                return null;
+            }
+
+            candidates.Add((collection, accessRule));
         }
 
+        // Only reachable when no mapped collection loaded: no path is left to gate.
         if (candidates.Count == 0)
         {
             return null;
@@ -76,9 +81,9 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     {
         var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
 
-        // Dropped for the same two reasons ResolveAsync drops a candidate, and to the same effect: a disabled rule does
-        // not gate access, and a rule that no longer loads has been deleted. Either way the pin points at nothing that
-        // governs any more, so the caller is left ungated rather than held to a rule the admin took out of service.
+        // Dropped for the same reasons ResolveAsync treats a path as an escape: a disabled rule does not gate access,
+        // and a rule that no longer loads has been deleted. Either way the pin no longer points at anything that
+        // governs, so the caller is left ungated.
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
     }
 
