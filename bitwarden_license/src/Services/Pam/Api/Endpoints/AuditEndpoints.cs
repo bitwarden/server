@@ -18,8 +18,7 @@ internal static class AuditEndpoints
                     handler.GetTrail(orgId, filter))
             .WithName("Pam_Audit_GetTrail");
 
-        // A sibling of the trail rather than a shape of it: same resource and same authorization, but it answers what
-        // the trail could be filtered BY, not what it holds.
+        // Same resource and authorization as the trail, but answers what it could be filtered by, not what it holds.
         group.MapGet("items",
                 (AuditEndpointsHandler handler, Guid orgId, [AsParameters] AccessAuditRangeRequestModel range) =>
                     handler.GetItems(orgId, range))

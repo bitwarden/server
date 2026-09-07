@@ -113,7 +113,6 @@ def main():
     pw = sql_password()
     api = args.api_base.rstrip("/")
 
-    # --- admin bearer (seeded user's ApiKey via client_credentials) ---
     uk = query1(args.container, pw,
                 f"SELECT CAST(U.Id AS varchar(64))+'|'+U.ApiKey FROM [User] U WHERE U.Email='{args.admin_email}';")
     if not uk:
@@ -121,7 +120,6 @@ def main():
     uid, ukey = uk.split("|")
     admin = admin_token(args.identity_base, args.client_version, uid, ukey)
 
-    # --- pick a cipher with no existing rotation config ---
     cipher_id = args.cipher_id or query1(args.container, pw,
         f"""SELECT TOP 1 CAST(Id AS varchar(64)) FROM Cipher
             WHERE OrganizationId='{org}' AND Type=1
@@ -130,7 +128,6 @@ def main():
         raise SystemExit("No org login cipher available without an existing rotation config.")
     print(f"cipher to rotate = {cipher_id}")
 
-    # === ADMIN SETUP ===
     if args.target_id:
         target_id = args.target_id
         print(f"\n[1] reusing target system {target_id}")
@@ -165,7 +162,6 @@ def main():
     http("POST", f"{api}/organizations/{org}/rotation/configs/{config_id}/rotate", admin)
     print("    triggered (204)")
 
-    # --- show the pending job the real daemon will claim ---
     job = query1(args.container, pw,
                  f"""SELECT TOP 1 CAST(Id AS varchar(64))+' status='+CAST(Status AS varchar)
                      FROM PamRotationJob WHERE RotationConfigId='{config_id}' ORDER BY CreationDate DESC;""")

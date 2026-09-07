@@ -4,9 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The config detail page's header projection (IPamRotationConfigRepository.GetDetailsByIdAsync): the target's
-    -- display name/method denormalized, plus a computed HasActiveJob so the caller can gate Delete/UpdateAccount
-    -- without a second round trip. "Active" mirrors PamRotationJob_Create's guard: Pending or Claimed.
+    -- Header projection: denormalizes target name/method, computes HasActiveJob to avoid a second round trip.
     SELECT
         C.*,
         T.[Name] AS [TargetSystemName],

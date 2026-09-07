@@ -67,10 +67,8 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationConfigRepository.GetByCipherIdAsync(Guid.NewGuid()));
     }
 
-    // OneConfigPerCipher (IX_PamRotationConfig_CipherId): a second config for a cipher that already has one hits the
-    // unique index and throws -- PamRotationConfigRepository does not catch this the way AccessLeaseRepository does
-    // for its own unique-index backstop, so the caller (CreateRotationConfigCommand) is expected to have already
-    // guarded against it via GetByCipherIdAsync. Both ORMs enforce it; only the exception type differs.
+    // IX_PamRotationConfig_CipherId enforces one config per cipher; unlike AccessLeaseRepository, this repo does not
+    // catch the violation, so the caller is expected to have already guarded via GetByCipherIdAsync.
     [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_SecondConfigForSameCipher_Throws(
         IOrganizationRepository organizationRepository,
@@ -85,15 +83,13 @@ public class PamRotationConfigRepositoryTests
 
         await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
-        // The exception type is provider-specific (SqlException on MSSQL, DbUpdateException through EF), so assert
-        // the invariant rather than the type: the write fails and the cipher still has exactly its first config.
+        // Exception type is provider-specific; assert the invariant instead.
         await Assert.ThrowsAnyAsync<Exception>(() =>
             pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now)));
         Assert.NotNull(await pamRotationConfigRepository.GetByCipherIdAsync(cipher.Id));
     }
 
-    // The sweep's due phase: enabled + automatic + active-target configs whose schedule has come due, with no active
-    // job already in flight. Paused, disabled-target, not-yet-due, and manual configs are all excluded.
+    // Due = enabled + automatic + active-target + schedule due + no active job in flight.
     [DatabaseTheory, DatabaseData]
     public async Task GetManyDueAsync_ReturnsOnlyEnabledAutomaticActiveDueConfigs(
         IOrganizationRepository organizationRepository,
@@ -135,8 +131,7 @@ public class PamRotationConfigRepositoryTests
             BuildConfig(organization.Id, (await CreateCipherAsync(cipherRepository, organization.Id)).Id, activeTarget.Id, now,
                 nextRotationAt: null));
 
-        // The sweep is deliberately global -- it runs across every organization -- so scope the assertion to this
-        // test's own rows rather than to the whole result, which any other seeded organization would perturb.
+        // The sweep is global, so scope the assertion to this test's own rows.
         var dueConfigs = await pamRotationConfigRepository.GetManyDueAsync(now);
 
         var row = Assert.Single(dueConfigs, c => c.OrganizationId == organization.Id);
@@ -160,8 +155,7 @@ public class PamRotationConfigRepositoryTests
         var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
         await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
-        // Unlike the WithTerminateSessions sibling, the target-delete guard does not care what a config opts into:
-        // any config naming the target keeps it.
+        // Unlike the WithTerminateSessions sibling, any config naming the target keeps it.
         Assert.True(await pamRotationConfigRepository.AnyByTargetSystemAsync(target.Id));
         Assert.False(await pamRotationConfigRepository.AnyByTargetSystemAsync(otherTarget.Id));
     }
@@ -215,13 +209,12 @@ public class PamRotationConfigRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(job.Id, daemon.Id, now, TimeSpan.FromMinutes(15));
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
 
-        // While a daemon holds the claim the delete is refused outright: tearing the job out from under it would
-        // leave the target rotated and the vault holding the old secret, with no attempt row to record the drift.
+        // Delete is refused while a daemon holds the claim.
         Assert.False(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
         Assert.NotNull(await pamRotationConfigRepository.GetByIdAsync(config.Id));
         Assert.NotNull(await pamRotationJobRepository.GetByIdAsync(job.Id));
 
-        // Once the job reaches a terminal state the config and its whole job/attempt history cascade away.
+        // A terminal job status lets the config and its job/attempt history cascade away.
         var failure = await pamRotationJobRepository.MarkAttemptErroredAsync(claim.AttemptId!.Value, daemon.Id,
             "boom", PamRotationSyncState.TargetUnchanged, now, maxAttempts: 1, retryBaseDelay: TimeSpan.FromMinutes(1));
         Assert.Equal(PamRotationJobStatus.Failed, failure.JobStatus);
@@ -233,8 +226,7 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value));
     }
 
-    // The config detail page's header projection: target display fields denormalized, plus a computed HasActiveJob
-    // that flips back to false once the job leaves Pending/Claimed (here, once it succeeds).
+    // HasActiveJob is computed and flips back to false once the job leaves Pending/Claimed.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByIdAsync_ProjectsTargetFieldsAndHasActiveJob(
         IOrganizationRepository organizationRepository,

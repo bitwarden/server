@@ -134,7 +134,7 @@ public class AccessRuleEndpointsHandlerTests
 
         await sutProvider.Sut.Delete(organizationId, id);
 
-        // The caller is passed through because the delete is hard: the audit event is the only record of who did it.
+        // The audit event is the only record of who deleted it.
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
             .DeleteAsync(organizationId, id, userId);
     }

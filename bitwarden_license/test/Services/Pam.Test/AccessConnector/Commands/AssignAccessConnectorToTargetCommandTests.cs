@@ -69,7 +69,7 @@ public class AssignAccessConnectorToTargetCommandTests
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
 
-        // Same org as the daemon, but not the caller's route org -- target.OrganizationId is unrelated to daemon.OrganizationId too.
+        // target.OrganizationId is not the caller's route org either.
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.AssignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id));
 

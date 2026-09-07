@@ -1,7 +1,5 @@
--- A target system is where a managed credential's password is rotated: either automatically by a daemon (Method =
--- Automatic, Kind identifies which connector) or manually by a person (Method = Manual, Kind/PasswordPolicy null --
--- there is no connector to configure). PasswordPolicy is opaque JSON (the PasswordPolicy value object) the daemon
--- applies when generating a new secret; the server never inspects it.
+-- Automatic (daemon-driven) or Manual (person-driven, Kind/PasswordPolicy null).
+-- PasswordPolicy is opaque JSON the daemon applies; the server never inspects it.
 CREATE TABLE [dbo].[PamTargetSystem] (
     [Id]                            UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]                UNIQUEIDENTIFIER    NOT NULL,

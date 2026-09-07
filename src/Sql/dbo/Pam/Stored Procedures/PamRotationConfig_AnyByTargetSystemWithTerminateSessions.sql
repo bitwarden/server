@@ -4,8 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- UpdateTargetSystemPolicyCommand's capability-withdrawal guard: SupportsSessionTermination may only be turned
-    -- off when no config on the target still opts into TerminateSessions.
+    -- UpdateTargetSystemPolicyCommand's guard: can't disable SupportsSessionTermination while a config opts in.
     SELECT 1
     FROM [dbo].[PamRotationConfig]
     WHERE [TargetSystemId] = @TargetSystemId AND [TerminateSessions] = 1

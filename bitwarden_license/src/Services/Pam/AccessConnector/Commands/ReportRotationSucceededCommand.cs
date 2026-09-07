@@ -37,10 +37,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
     public async Task<PamRotationAttempt> ReportSucceededAsync(
         Guid daemonId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
     {
-        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
-        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
-        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
-        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);

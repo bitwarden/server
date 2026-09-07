@@ -37,14 +37,12 @@ public class AccessAuditTrailQueryOptions
     /// <summary>Where the previous page stopped, already read back off the wire. Null starts at the newest event.</summary>
     public DateTime? BeforeOccurredAt { get; init; }
 
-    /// <summary>The previous page's last row id. Set whenever <see cref="BeforeOccurredAt"/> is.</summary>
+    /// <summary>The previous page's last row id, paired with <see cref="BeforeOccurredAt"/>.</summary>
     public Guid? BeforeId { get; init; }
 }
 
 /// <summary>
-/// Reads the distinct subjects the trail names in a range, which is what the Item filter's menu is built from.
-/// Separate from <see cref="IListAccessAuditTrailQuery"/> because it answers a different question about the same
-/// resource: not "what happened" but "what could you ask about".
+/// Reads the distinct subjects the trail names in a range; builds the Item filter's menu, not the trail itself.
 /// </summary>
 public interface IListAccessAuditItemsQuery
 {
@@ -59,15 +57,9 @@ public interface IListAccessAuditItemsQuery
 public interface IListAccessAuditTrailQuery
 {
     /// <summary>
-    /// Returns one page of the org-wide access-audit trail for <paramref name="organizationId"/>, newest first — the
-    /// access-request, access-lease, rule-administration and rotation events in the organization that match
-    /// <paramref name="options"/>. Authorization (the AccessEventLogs permission) is enforced at the endpoint before
-    /// this runs. Events are read from the dedicated append-only audit store, where each was written (self-contained)
-    /// at the moment it happened, and each action's before/after pair is collapsed there rather than here — the
-    /// collapse has to happen before the page is cut to survive a page boundary.
-    ///
-    /// The requested bounds are clamped to the shared history window, so no parameter reaches further back than the
-    /// store promises to hold. The result's continuation token is set only while more pages remain.
+    /// Returns one page of the org-wide access-audit trail for <paramref name="organizationId"/>, newest first,
+    /// matching <paramref name="options"/>. Authorization is enforced at the endpoint, not here. Requested bounds
+    /// are clamped to the shared history window; the continuation token is set only while more pages remain.
     /// </summary>
     Task<PagedResult<AccessAuditEvent>> GetTrailAsync(Guid organizationId, AccessAuditTrailQueryOptions options);
 }

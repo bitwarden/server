@@ -26,22 +26,22 @@ public class PamRotationAttempt : ITableObject<Guid>
     public PamRotationAttemptStatus Status { get; set; }
 
     /// <summary>
-    /// A bounded, human-readable failure reason, truncated to 500 characters server-side (never rejected). The
-    /// contract forbids forwarding raw target-system error output, since it can echo credentials. Null unless
-    /// <see cref="Status"/> is <see cref="PamRotationAttemptStatus.Errored"/>.
+    /// A bounded, human-readable failure reason, truncated to 500 characters server-side. Set only on
+    /// <see cref="PamRotationAttemptStatus.Errored"/>; forwarding raw target-system error output is forbidden
+    /// since it can echo credentials.
     /// </summary>
     [MaxLength(500)]
     public string? FailureReason { get; set; }
 
-    /// <summary>Whether the target system's password was left changed by a failed attempt. Null unless <see cref="Status"/> is Errored.</summary>
+    /// <summary>Whether the target system's password was left changed by a failed attempt, set only on Errored.</summary>
     public PamRotationSyncState? SyncState { get; set; }
 
-    /// <summary>The outcome of the requested session termination, if any. Set only when a Rotated attempt reports it.</summary>
+    /// <summary>The outcome of the requested session termination, set only by a Rotated attempt that reports it.</summary>
     public PamSessionTerminationOutcome? SessionTermination { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
-    /// <summary>When the attempt left <see cref="PamRotationAttemptStatus.Executing"/>. Null while still executing.</summary>
+    /// <summary>When the attempt left <see cref="PamRotationAttemptStatus.Executing"/>, or null while still executing.</summary>
     public DateTime? ResolvedDate { get; set; }
 
     public void SetNewId()
