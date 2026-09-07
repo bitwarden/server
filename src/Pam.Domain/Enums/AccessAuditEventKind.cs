@@ -18,7 +18,7 @@ public enum AccessAuditEventKind : byte
     LeaseActivationRejected = 11,
     LeaseExtended = 12,
     LeaseRevoked = 13,
-    LeaseExpired = 14, // not emitted yet
+    LeaseExpired = 14,
 
     // Credential access
     CredentialAccessed = 20, // not emitted yet
