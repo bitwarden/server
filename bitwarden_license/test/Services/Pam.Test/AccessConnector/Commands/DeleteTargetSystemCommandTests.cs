@@ -86,7 +86,7 @@ public class DeleteTargetSystemCommandTests
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        // The repository's own guard re-checks under lock and refuses once a config has been created in the window.
+        // The repository's own guard re-checks under lock and refuses after a config is created in the window.
         sutProvider.GetDependency<IPamTargetSystemRepository>().DeleteWithAssignmentsAsync(target.Id).Returns(false);
 
         await Assert.ThrowsAsync<BadRequestException>(

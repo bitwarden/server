@@ -2,9 +2,8 @@
 
 /// <summary>
 /// The result of resolving a <see cref="Entities.PamRotationAttempt"/> (the <c>_MarkRotated</c> / <c>_MarkErrored</c>
-/// stored procedures). Both guard on the attempt still being <see cref="PamRotationAttemptStatus.Executing"/> and
-/// claimed by the reporting daemon (spec <c>RejectStaleSuccess</c> / <c>RejectStaleFailureReport</c>) and return a
-/// distinct integer code so the caller takes the reject-stale path instead of resolving.
+/// stored procedures), which guard on the attempt still being <see cref="PamRotationAttemptStatus.Executing"/> and
+/// claimed by the reporting daemon.
 /// </summary>
 public enum PamRotationAttemptResolveOutcome
 {

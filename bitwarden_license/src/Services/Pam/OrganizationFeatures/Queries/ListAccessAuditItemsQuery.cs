@@ -21,14 +21,12 @@ public class ListAccessAuditItemsQuery : IListAccessAuditItemsQuery
     public async Task<ICollection<AccessAuditItem>> GetItemsAsync(
         Guid organizationId, DateTime? start, DateTime? end)
     {
-        // The same clamp the page read applies, from the same place, because the two have to agree exactly: a menu
-        // built over a wider range than the page it filters would offer options the page can never match.
+        // The same clamp the page read applies, from the same place, so the two agree exactly.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var (since, until) = AccessHistoryWindow.ResolveRange(start, end, now);
 
-        // Authorization is the AccessEventLogs permission, enforced at the endpoint, so this is org-wide -- the same
-        // scope as the trail it describes. No page size: the result is one row per distinct subject, which is bounded
-        // by how many credentials and rules the organization governs rather than by how much activity there has been.
+        // Org-wide, the same scope as the trail it describes. No page size: bounded by the organization's
+        // credential and rule count rather than by activity volume.
         return await _accessAuditEventRepository.GetItemsByOrganizationIdAsync(organizationId, since, until);
     }
 }

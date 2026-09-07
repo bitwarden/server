@@ -7,14 +7,8 @@ namespace Bit.Services.Pam.Api.Models.Response;
 /// without a lease.
 /// </summary>
 /// <remarks>
-/// Collection ids only. The affected ciphers are deliberately not reported — naming one means
-/// decrypting it, which only works from the caller's own vault, and an admin outside the collection
-/// (precisely the one being warned) has none of its ciphers there. The collections are both reliably
-/// nameable by any admin and what remediation actually acts on.
-/// <para>
-/// A non-empty list IS the warning condition, so there is no separate flag to keep in step. The list
-/// is de-duplicated and bounded by the organization's collection count.
-/// </para>
+/// Collection ids only. The affected ciphers are deliberately not reported, since naming one means decrypting
+/// it, which only works from the caller's own vault. A non-empty list is itself the warning condition.
 /// </remarks>
 public class RuleBypassableCiphersResponseModel : ResponseModel
 {

@@ -15,19 +15,14 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the audit wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint body just delegates; the contract (route, name, method, return type) is the
-/// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
-/// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
+/// Locks the audit wire contract (route, name, method, return type) the OpenAPI spec and client bindings depend on.
 /// </summary>
 public class AuditEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // The handlers must be known services so Minimal API binding treats the handler parameter as injected
-        // (not an inferred request body) — the same registration AddPamServices performs in the app.
-        // MapPamEndpoints maps every PAM group, so each group's handler has to be resolvable here.
+        // Handlers must be registered services, or Minimal API binds the parameter as a request body instead.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -42,16 +37,14 @@ public class AuditEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints — applying the route group's prefix, metadata, and
-        // conventions — without starting the request pipeline, the same set the OpenAPI generator discovers.
+        // Enumerating the data sources builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .ToList();
     }
 
-    // Two reads over the one resource: the trail itself, and the subjects it names -- which is what the Item filter's
-    // menu is built from, and cannot be derived from a page of the trail.
+    // Two reads over one resource: the trail itself, and the subjects its Item filter menu names.
     [Fact]
     public void MapPamEndpoints_RegistersTheAuditRoutes_InTheInternalDoc()
     {

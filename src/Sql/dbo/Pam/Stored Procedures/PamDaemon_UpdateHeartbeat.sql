@@ -5,11 +5,8 @@ CREATE PROCEDURE [dbo].[PamDaemon_UpdateHeartbeat]
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Conditional bump: the daemon-facing request filter calls this on every request, so the WHERE guard turns
-    -- most calls into a no-op write instead of hammering the row -- only a poll arriving after @MinIntervalSeconds
-    -- since the last recorded heartbeat actually updates it. Never called by a sweep -- only by the daemon's own
-    -- requests.
+    -- Conditional bump: WHERE guard no-ops most calls, updating only after @MinIntervalSeconds.
+    -- Called only by the daemon's own requests, never by a sweep.
     UPDATE [dbo].[PamDaemon]
     SET [LastHeartbeatAt] = @Now
     WHERE [Id] = @Id

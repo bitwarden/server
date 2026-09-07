@@ -4,10 +4,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The sweep's due phase (spec RotationDue): enabled, automatic, active-target configs whose schedule has come
-    -- due, with no job already in flight (OfferRotation is the single creation point -- this feeds it, one
-    -- OfferRotationCommand call per row). Enabled + NextRotationAt IS NOT NULL matches
-    -- [IX_PamRotationConfig_NextRotationAt] so the scan is a narrow range seek, not a table scan.
+    -- The sweep's due phase; feeds OfferRotationCommand, one call per row.
+    -- Matches [IX_PamRotationConfig_NextRotationAt] for a range seek, not a scan.
     SELECT C.*
     FROM [dbo].[PamRotationConfig] C
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]

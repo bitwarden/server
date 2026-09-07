@@ -88,10 +88,8 @@ public enum AccessAuditEventKind : byte
 
     // 67-69 reserved for rotation-lifecycle growth.
 
-    // Deferred: no kind is allocated yet for the spec's access_end_deferred (the pending-access-end latch),
-    // auto_paused (§6.8 failure-policy auto-pause), or daemon_credential_reissued (ReissueDaemonCredential) outcomes —
-    // all out of scope this pass. Values are intentionally left unassigned rather than reserved, since the shape of
-    // that work (and which range it belongs in) isn't settled yet.
+    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or daemon_credential_reissued.
+    // Left unassigned rather than reserved.
 
     // Fleet / target administration
     /// <summary>A rotation daemon was registered. Spec outcome <c>daemon_registered</c>.</summary>

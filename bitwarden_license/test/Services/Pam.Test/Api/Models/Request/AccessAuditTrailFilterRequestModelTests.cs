@@ -45,8 +45,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Empty(Validate(model));
     }
 
-    // Named rather than ignored: a filter the server did not understand would otherwise be reported as a trail with
-    // nothing in it, which on an audit surface reads as "this never happened".
+    // Named rather than ignored, since an unrecognized filter reporting an empty trail reads as "never happened".
     [Theory]
     [InlineData("requestapproved")]
     [InlineData("RequestApproved")]
@@ -96,8 +95,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Empty(Validate(model));
     }
 
-    // A caller walking every page -- the CSV export does -- must not be handed the first page when it asked for the
-    // fifth: that loops forever, or writes a file of repeats.
+    // A caller paging through every page must not be handed page one for a request of page five.
     [Theory]
     [InlineData("not-a-token")]
     [InlineData("638000000000000000")]
@@ -114,9 +112,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Throws<BadRequestException>(() => model.ToQueryOptions());
     }
 
-    // A bound spelled with an explicit offset deserializes as Local and would otherwise shift the window by the
-    // host's UTC offset; one spelled with no designator at all is already the instant the caller meant, and is only
-    // relabelled. Both must land on the same stored instant whatever the host's timezone.
+    // An explicit-offset bound and a designator-less one must land on the same stored instant regardless of host timezone.
     [Theory]
     [InlineData(DateTimeKind.Utc)]
     [InlineData(DateTimeKind.Unspecified)]

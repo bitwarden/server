@@ -58,8 +58,7 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(auditEvent.RuleName, model.RuleName);
     }
 
-    // Dapper materializes the stored timestamps with an unspecified kind; the response has to mark them UTC or a
-    // client east/west of UTC parses them as local time and the instant shifts.
+    // Dapper materializes stored timestamps with an unspecified kind; the response must mark them UTC.
     [Fact]
     public void Constructor_MarksTimestampsAsUtc()
     {
@@ -94,7 +93,7 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(!hasActor, model.Automated);
     }
 
-    // A row that is still an Attempt is an action whose outcome never landed: in doubt, not merely pending.
+    // Still an Attempt means the outcome never landed: in doubt, not merely pending.
     [Theory]
     [InlineData(AccessAuditEventPhase.Attempt, true)]
     [InlineData(AccessAuditEventPhase.Outcome, false)]
@@ -116,7 +115,7 @@ public class AccessAuditEventResponseModelTests
         Assert.Throws<ArgumentNullException>(() => new AccessAuditEventResponseModel(null!));
     }
 
-    // Every kind in the domain enum has a wire name — the projection must not throw on a kind it can already store.
+    // Every domain kind must have a wire name.
     [Fact]
     public void KindNames_CoverEveryDomainKind()
     {

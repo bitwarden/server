@@ -25,11 +25,7 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
     {
         var rule = await _accessRuleRepository.GetDetailsByIdAsync(ruleId);
 
-        // A rule that does not gate cannot be bypassed. That covers the rule being absent or another
-        // organization's — resource scoping the endpoint has already applied, repeated here so the
-        // query is safe to call directly — and, deliberately, the rule being switched off: a disabled
-        // rule governs collections that gate nothing, so every collection under it would otherwise be
-        // reported as a gap and the warning would be pure noise.
+        // A rule that does not gate cannot be bypassed: absent, another organization's, or disabled.
         if (rule is null || rule.OrganizationId != organizationId || !rule.Enabled)
         {
             return [];
@@ -44,17 +40,13 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
         var gatingCollectionIds = await GetGatingCollectionIdsAsync(organizationId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
-        // One pass, and the two lookups are sets on purpose: `Contains` below runs once per mapping,
-        // so a list here would turn the whole thing quadratic in the organization's size without any
-        // test noticing.
+        // Sets, not lists: `Contains` below runs once per mapping, which would be quadratic otherwise.
         return collectionCiphers
             .GroupBy(cc => cc.CipherId)
             // Under this rule at all: reachable through at least one collection it governs.
             .Where(g => g.Any(cc => ruleCollectionIds.Contains(cc.CollectionId)))
-            // …but not actually gated. The negation of `CipherLeaseGate.IsGated`, and tested against
-            // every gating collection in the organization rather than only this rule's: a cipher
-            // shared with a collection some OTHER enabled rule governs is still fully gated, and
-            // warning about it would send an admin chasing a bypass that does not exist.
+            // …but not actually gated. The negation of `CipherLeaseGate.IsGated`, tested against every
+            // gating collection in the organization rather than only this rule's.
             .Where(g => !g.All(cc => gatingCollectionIds.Contains(cc.CollectionId)))
             // The gaps themselves. Taken from the bypassable ciphers only, so a fully gated cipher's
             // collections can never appear here.
@@ -65,13 +57,12 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
     }
 
     /// <summary>
-    /// The organization's collection ids that gate: those governed by a rule that is currently switched on.
+    /// The organization's collection ids gated by an enabled rule.
     /// </summary>
     /// <remarks>
-    /// Derived from the organization's rules and collections, the same way
-    /// <c>CipherLeaseGate.GetLeasingCollectionIdsAsync</c> derives it, and for the same reason: the
-    /// organization-scoped collection read returns <c>Collection</c>, which carries the
-    /// <c>AccessRuleId</c> association but not the computed <c>HasEnabledAccessRule</c> projection.
+    /// Derived from the organization's rules and collections the same way
+    /// <c>CipherLeaseGate.GetLeasingCollectionIdsAsync</c> does, since the organization-scoped collection
+    /// read returns <c>Collection</c>, not the computed <c>HasEnabledAccessRule</c> projection.
     /// </remarks>
     private async Task<ISet<Guid>> GetGatingCollectionIdsAsync(Guid organizationId)
     {

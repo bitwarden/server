@@ -6,8 +6,8 @@ public interface IDeleteAccessRuleCommand
     /// Hard-deletes an access rule and clears its collection links.
     /// </summary>
     /// <param name="userId">
-    /// The caller, recorded as the audit event's actor. Null only if the request had no resolvable user; the event is
-    /// then recorded as a system action rather than dropped.
+    /// The caller, recorded as the audit event's actor. Null only if the request had no resolvable user, in
+    /// which case the event is recorded as a system action.
     /// </param>
     Task DeleteAsync(Guid organizationId, Guid id, Guid? userId);
 }

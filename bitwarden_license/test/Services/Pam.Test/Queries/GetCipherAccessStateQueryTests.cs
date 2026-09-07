@@ -20,8 +20,7 @@ namespace Bit.Services.Pam.Test.Queries;
 [SutProviderCustomize]
 public class GetCipherAccessStateQueryTests
 {
-    // A pinned clock far from the wall clock on purpose: a derivation that accidentally reads the real clock instead
-    // of the query's TimeProvider lands on the wrong side of every window built from _now and fails loudly.
+    // Pinned far from the wall clock, so a derivation reading the real clock instead of TimeProvider fails loudly.
     private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
@@ -76,7 +75,7 @@ public class GetCipherAccessStateQueryTests
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(activeLease);
-        // Access rule since removed: resolver returns null, but the held lease must not be hidden.
+        // Access rule since removed; the held lease must still surface.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -154,7 +153,7 @@ public class GetCipherAccessStateQueryTests
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, _now)
             .Returns(approved);
-        // Access rule since removed: resolver returns null, but the startable approval must not be hidden.
+        // Access rule since removed; the startable approval must still surface.
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -229,7 +228,7 @@ public class GetCipherAccessStateQueryTests
                 AllowsExtensions = true,
                 MaxExtensionDurationSeconds = 2 * 60 * 60,
             });
-        // A lease may be extended once; an existing extension means no more are allowed.
+        // A lease extends only a single time; an existing extension blocks another.
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(1);
 

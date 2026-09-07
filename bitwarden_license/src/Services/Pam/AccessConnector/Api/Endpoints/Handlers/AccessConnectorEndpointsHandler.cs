@@ -9,10 +9,9 @@ namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the <c>organizations/{orgId}/access-connectors</c> resource: fleet registration, enable/disable,
-/// deletion, and target assignment. Authority over the organization is already settled by the time a handler runs --
-/// <c>PamEndpointsExtensions</c> gates the whole connector admin group on <c>ManageAccessConnectorRequirement</c>
-/// through the authorization middleware. What is left is resource scoping: the commands underneath re-verify every
-/// id argument belongs to the route organization (404, never 403 -- no existence oracle over comb GUIDs).
+/// deletion, and target assignment. Organization authority is already settled by
+/// <c>ManageAccessConnectorRequirement</c>; the commands underneath still re-verify every id argument belongs to
+/// the route organization (404, never 403).
 /// </summary>
 public class AccessConnectorEndpointsHandler(
     ICurrentContext currentContext,

@@ -4,14 +4,14 @@ using Bit.Pam.Enums;
 namespace Bit.Pam;
 
 /// <summary>
-/// Derived predicates over PAM rotation entities, implemented once so admin commands, the daemon-facing endpoints,
-/// and the sweep jobs cannot drift on a guard's definition (mirrors the Allium spec's own predicate refactor).
+/// Derived predicates over PAM rotation entities, shared so admin commands, the daemon-facing endpoints, and the
+/// sweep jobs cannot drift on a guard's definition.
 /// </summary>
 public static class PamRotationRules
 {
     /// <summary>
-    /// Spec <c>DaemonConnection</c>: a daemon is connected when it has heartbeated within <paramref name="offlineAfter"/>
-    /// of <paramref name="now"/>. A daemon that has never heartbeated is never connected.
+    /// Spec <c>DaemonConnection</c>: connected means heartbeated within <paramref name="offlineAfter"/> of
+    /// <paramref name="now"/>. A daemon that has never heartbeated is not connected.
     /// </summary>
     public static bool IsConnected(PamDaemon daemon, DateTime now, TimeSpan offlineAfter) =>
         daemon.LastHeartbeatAt is { } lastHeartbeatAt && lastHeartbeatAt >= now - offlineAfter;
@@ -33,17 +33,16 @@ public static class PamRotationRules
         config.Enabled && method == PamTargetSystemMethod.Automatic && targetStatus == PamTargetSystemStatus.Active;
 
     /// <summary>
-    /// Spec <c>awaiting_manual_rotation</c>: a manual-target config surfaces an operator obligation once its
-    /// schedule comes due, since there is no daemon to offer a job to.
+    /// Spec <c>awaiting_manual_rotation</c>: a manual-target config surfaces an operator obligation on its schedule,
+    /// since there is no daemon to offer a job to.
     /// </summary>
     public static bool AwaitingManualRotation(PamRotationConfig config, PamTargetSystemMethod method, DateTime now) =>
         method == PamTargetSystemMethod.Manual && config.Enabled
         && config.NextRotationAt is { } nextRotationAt && nextRotationAt <= now;
 
     /// <summary>
-    /// The claim's lease deadline — <see cref="PamRotationJob.ClaimedAt"/> plus <paramref name="releaseDelay"/> —
-    /// the point at which the release sweep may reclaim the job from a daemon whose heartbeat has gone stale. Null
-    /// unless the job is currently claimed.
+    /// The point at which the release sweep may reclaim the job from a stale daemon: <see cref="PamRotationJob.ClaimedAt"/>
+    /// plus <paramref name="releaseDelay"/>. Null if the job is not claimed.
     /// </summary>
     public static DateTime? ExecuteBy(PamRotationJob job, TimeSpan releaseDelay) =>
         job.ClaimedAt is { } claimedAt ? claimedAt + releaseDelay : null;
