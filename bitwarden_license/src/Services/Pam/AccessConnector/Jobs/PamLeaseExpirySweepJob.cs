@@ -7,13 +7,8 @@ namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
 /// Quartz entry point for <see cref="IPamLeaseExpirySweepService"/> (the lease natural-expiry sweep). Gated on
-/// <see cref="FeatureFlagKeys.Pam"/> rather than <see cref="FeatureFlagKeys.PamAccessConnector"/>: noticing a lease whose
-/// window closed on its own and emitting the deferred
-/// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseExpired"/> event is a leasing fix that belongs to PAM v0, not
-/// rotation; the rotation trigger it also fires (via <see cref="IPamLeaseExpirySweepService"/> calling
-/// <see cref="Bit.Services.Pam.AccessConnector.Commands.Interfaces.IHandleAccessGrantEndedCommand"/>) self-gates on
-/// <see cref="FeatureFlagKeys.PamAccessConnector"/> further down. Registered from <c>JobsHostedService</c> inside
-/// <c>#if !OSS</c>, since the sweep depends on commercial PAM commands.
+/// <see cref="FeatureFlagKeys.Pam"/>, not <see cref="FeatureFlagKeys.PamAccessConnector"/>: the rotation trigger it
+/// also fires self-gates on that flag further down. Registered from <c>JobsHostedService</c> inside <c>#if !OSS</c>.
 /// </summary>
 public class PamLeaseExpirySweepJob : BaseJob
 {

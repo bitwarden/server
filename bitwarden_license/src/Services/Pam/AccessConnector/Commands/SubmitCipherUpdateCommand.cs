@@ -40,10 +40,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
 
     public async Task SubmitAsync(Guid daemonId, Guid attemptId, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
-        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
-        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
-        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
-        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
@@ -82,9 +79,8 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
                 : "This attempt can no longer write to the cipher.");
         }
 
-        // Accepted has no dedicated audit kind of its own -- the eventual success/failure report is what the trail
-        // records. Push a resync so open clients pick up the rotated secret; the durable signal for clients that
-        // miss it is the account revision date PamRotationAttempt_AcceptCipherWrite bumps in the same transaction.
+        // Push a resync so open clients pick up the rotated secret; the durable fallback is the account revision
+        // date bumped in the same transaction.
         var cipher = await _cipherRepository.GetByIdAsync(config.CipherId);
         if (cipher is not null)
         {

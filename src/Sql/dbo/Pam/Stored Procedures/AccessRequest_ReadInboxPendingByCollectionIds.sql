@@ -5,17 +5,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Now defaults so a rolling deployment stays safe: an older server that predates this parameter calls the
-    -- procedure without it and gets the database clock, which filters the same way.
+    -- Lets older callers omit @Now during rolling deployment.
     SET @Now = COALESCE(@Now, GETUTCDATE())
 
-    -- The approver inbox: actionable requests for the supplied (caller-manageable) collections, joined with the
-    -- denormalized requester identity the client needs so it avoids an N+1. Actionable means no action recorded AND a
-    -- window still open -- a lapsed unanswered row is derived Expired, leaves this inbox, and lands in the history
-    -- read instead. An open request has not been decided by anyone yet, so it carries no approvers (the caller leaves
-    -- the request's approvers list empty); only the resolved reads return a second decision result set. No AccessLease
-    -- join: a lease is only ever minted from an approved request, so an open row cannot have one -- the produced-lease
-    -- columns are simply absent and hydrate as no-lease (the EF read skips the same lookup for the same reason).
+    -- Actionable rows have no action and an open window; lapsed rows derive Expired instead.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],

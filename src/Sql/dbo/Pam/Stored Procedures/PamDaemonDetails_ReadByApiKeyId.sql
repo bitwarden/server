@@ -4,8 +4,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The client provider's lookup at token-issuance time: the daemon row plus the two organization flags that gate
-    -- issuance (Enabled, UsePam) so a lapsed/disabled org's daemon cannot mint a token without an extra round trip.
+    -- Token-issuance lookup: includes the org's Enabled/UsePam flags.
+    -- A lapsed org can't mint a token this way.
     SELECT
         D.*,
         O.[Enabled] AS [OrganizationEnabled],

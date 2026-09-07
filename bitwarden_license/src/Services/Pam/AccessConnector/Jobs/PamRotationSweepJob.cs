@@ -6,11 +6,9 @@ using Quartz;
 namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
-/// Quartz entry point for <see cref="IPamRotationSweepService"/> (spec <c>RotationDue</c>, <c>JobTimesOut</c>,
-/// <c>DaemonConnectionDropsReleaseJobs</c>). Gated on <see cref="FeatureFlagKeys.PamAccessConnector"/> -- when the flag is
-/// off the job no-ops on its first line, matching every other rotation entry point (see
-/// <see cref="Bit.Services.Pam.AccessConnector.Commands.HandleAccessGrantEndedCommand"/>). Registered from
-/// <c>JobsHostedService</c> inside <c>#if !OSS</c>, since the sweep depends on commercial PAM commands.
+/// Quartz entry point for <see cref="IPamRotationSweepService"/>. Gated on
+/// <see cref="FeatureFlagKeys.PamAccessConnector"/>: the job no-ops on its first line if the flag is off.
+/// Registered from <c>JobsHostedService</c> inside <c>#if !OSS</c>.
 /// </summary>
 public class PamRotationSweepJob : BaseJob
 {
