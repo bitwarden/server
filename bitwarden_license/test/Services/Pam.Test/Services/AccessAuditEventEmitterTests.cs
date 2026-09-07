@@ -20,7 +20,7 @@ public class AccessAuditEventEmitterTests
 {
     /// <summary>An event of a kind with no organization event log equivalent, so only the PAM store is exercised.</summary>
     private static AccessAuditEventData AnEvent(Guid organizationId) =>
-        AnEventOfKind(organizationId, AccessAuditEventKind.RuleCreated);
+        AnEventOfKind(organizationId, AccessAuditEventKind.RotationOffered);
 
     private static AccessAuditEventData AnEventOfKind(Guid organizationId, AccessAuditEventKind kind) => new()
     {
@@ -77,8 +77,15 @@ public class AccessAuditEventEmitterTests
     [BitAutoData(AccessAuditEventKind.RequestSubmitted, EventType.Pam_AccessRequest_Submitted)]
     [BitAutoData(AccessAuditEventKind.RequestApproved, EventType.Pam_AccessRequest_Approved)]
     [BitAutoData(AccessAuditEventKind.RequestDenied, EventType.Pam_AccessRequest_Denied)]
+    [BitAutoData(AccessAuditEventKind.RequestCancelled, EventType.Pam_AccessRequest_Cancelled)]
     [BitAutoData(AccessAuditEventKind.LeaseActivated, EventType.Pam_AccessLease_Activated)]
+    [BitAutoData(AccessAuditEventKind.LeaseActivationRejected, EventType.Pam_AccessLease_ActivationRejected)]
+    [BitAutoData(AccessAuditEventKind.LeaseExtended, EventType.Pam_AccessLease_Extended)]
     [BitAutoData(AccessAuditEventKind.LeaseRevoked, EventType.Pam_AccessLease_Revoked)]
+    [BitAutoData(AccessAuditEventKind.LeaseExpired, EventType.Pam_AccessLease_Expired)]
+    [BitAutoData(AccessAuditEventKind.RuleCreated, EventType.Pam_AccessRule_Created)]
+    [BitAutoData(AccessAuditEventKind.RuleUpdated, EventType.Pam_AccessRule_Updated)]
+    [BitAutoData(AccessAuditEventKind.RuleDeleted, EventType.Pam_AccessRule_Deleted)]
     public async Task EmitAsync_WithAMappedKind_WritesToTheOrganizationEventLog(
         AccessAuditEventKind kind, EventType expectedType, Guid organizationId,
         SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -122,6 +129,33 @@ public class AccessAuditEventEmitterTests
                 c.SystemUser == null));
     }
 
+    // A rule governs many collections and dbo.Event has no column for the rule itself, so the row records who
+    // changed rules and when, and nothing more. Asserted so the empty subject reads as intended, not as a drop.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_WithARuleKind_CarriesTheActorButNoSubject(
+        Guid organizationId, Guid actorId, Guid accessRuleId,
+        SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEventOfKind(organizationId, AccessAuditEventKind.RuleUpdated) with
+        {
+            ActorId = actorId,
+            AccessRuleId = accessRuleId,
+            RuleName = "Production database",
+        };
+
+        await sutProvider.Sut.EmitAsync(auditEvent);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogPamAccessEventAsync(
+            EventType.Pam_AccessRule_Updated,
+            Arg.Is<PamAccessEventContext>(c =>
+                c.OrganizationId == organizationId &&
+                c.ActingUserId == actorId &&
+                c.CipherId == null &&
+                c.CollectionId == null &&
+                c.AccessRequestId == null &&
+                c.AccessLeaseId == null));
+    }
+
     // No actor means PAM acted on its own; the org log needs it named as the system user.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithNoActor_AttributesTheEventToPam(
@@ -157,13 +191,14 @@ public class AccessAuditEventEmitterTests
             .LogPamAccessEventAsync(default, default!);
     }
 
-    // Most kinds are PAM-internal detail (rotation and daemon lifecycle) and are deliberately not reported org-wide.
+    // The rotation and fleet kinds stay PAM-internal: their subjects (config, job, daemon, target) have no
+    // column in dbo.Event, so a fan-out would file high-volume machinery rows with nothing to identify them.
     [Theory]
-    [BitAutoData(AccessAuditEventKind.RuleCreated)]
-    [BitAutoData(AccessAuditEventKind.RequestCancelled)]
-    [BitAutoData(AccessAuditEventKind.LeaseExtended)]
     [BitAutoData(AccessAuditEventKind.RotationOffered)]
+    [BitAutoData(AccessAuditEventKind.RotationSucceeded)]
+    [BitAutoData(AccessAuditEventKind.ManualRotationDue)]
     [BitAutoData(AccessAuditEventKind.DaemonRegistered)]
+    [BitAutoData(AccessAuditEventKind.TargetSystemRegistered)]
     public async Task EmitAsync_WithAnUnmappedKind_WritesOnlyToTheStore(
         AccessAuditEventKind kind, Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
     {
