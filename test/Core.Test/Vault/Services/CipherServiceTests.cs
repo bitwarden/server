@@ -2498,15 +2498,6 @@ public class CipherServiceTests
         }
     }
 
-    // --- PAM credential-leasing write gate ------------------------------------------------------------
-    //
-    // CipherService is the choke point every vault mutation passes through, so this is where a leased
-    // cipher is protected from being edited, deleted, restored, or re-filed without a valid lease. These
-    // tests pin two things per call site: that a refusal from the gate stops the mutation before it
-    // persists, and that the paths deliberately left ungated (a brand-new cipher, an org admin acting
-    // through org-wide permissions, an internal flow passing skipPermissionCheck) never consult the gate
-    // at all. The decision itself is the gate's; these only assert that it is asked, and obeyed.
-
     private static void RefusesMutation(SutProvider<CipherService> sutProvider) =>
         sutProvider.GetDependency<ICipherLeaseGate>()
             .EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>())
@@ -2601,8 +2592,7 @@ public class CipherServiceTests
     public async Task DeleteAsync_OrgAdmin_DoesNotConsultTheGate(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, Guid deletingUserId)
     {
-        // An admin acts through org-wide permissions, not a collection-membership path, so leasing — which
-        // only ever gates a collection path — has nothing to say about the delete.
+        // An admin acts through org-wide permissions, not the collection path leasing gates.
         await sutProvider.Sut.DeleteAsync(cipher, deletingUserId, orgAdmin: true);
 
         await DidNotGate(sutProvider).EnsureCanMutateAsync(default, default!);
@@ -2638,7 +2628,6 @@ public class CipherServiceTests
     public async Task SaveCollectionsAsync_GatedCipher_ThrowsAndDoesNotReassign(
         SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
     {
-        // Re-assigning a leased credential's collections could move it out from under its own rule.
         // Only an org-owned cipher has collections to reassign, and only an org collection can be gated.
         cipher.OrganizationId = Guid.NewGuid();
         sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
@@ -2657,8 +2646,7 @@ public class CipherServiceTests
     {
         cipher.OrganizationId = null;
         var deletingUserId = cipher.UserId!.Value;
-        // The attachment has to really be on the cipher, or the missing-attachment NotFoundException further
-        // down would make this pass whether or not the gate is consulted at all.
+        // Must really be on the cipher, or the missing-attachment NotFoundException masks the gate check.
         cipher.Attachments = JsonSerializer.Serialize(
             new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, new CipherAttachment.MetaData() } });
         RefusesMutation(sutProvider);
@@ -2679,8 +2667,7 @@ public class CipherServiceTests
         // Attaching a file to a leased credential is a mutation like any other.
         cipher.OrganizationId = null;
         var savingUserId = cipher.UserId!.Value;
-        // Enough storage plumbing that the validation would succeed outright without the gate — otherwise the
-        // NotFoundException for a missing user would stand in for a refusal that never happened.
+        // Enough storage plumbing that validation succeeds without the gate.
         var user = new User { Id = savingUserId, Premium = true, MaxStorageGb = 100, Storage = 0 };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(savingUserId).Returns(user);
         sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);

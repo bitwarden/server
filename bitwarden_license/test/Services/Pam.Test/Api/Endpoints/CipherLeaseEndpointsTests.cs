@@ -14,10 +14,7 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the cipher-lease wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies just delegate; the contract (routes, names, methods, return types) is the
-/// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
-/// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
+/// Locks the cipher-lease wire contract (routes, names, methods, return types) the OpenAPI spec depends on.
 /// </summary>
 public class CipherLeaseEndpointsTests
 {

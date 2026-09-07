@@ -7,12 +7,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_Claim]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- First-claim-wins is enforced by the UPDATE's own WHERE J.Status = 0 clause: SQL Server takes the row lock
-    -- needed to satisfy that predicate as part of the UPDATE itself, so two concurrent claims of the same job
-    -- serialize on the row and only the first can flip Status Pending -> Claimed. The result shape mirrors
-    -- PamRotationClaimResult exactly (an Outcome column plus the work-snapshot columns, null on any non-Claimed
-    -- outcome) so the caller can map every path with a single row read. XACT_ABORT guarantees rollback (and a clean
-    -- pooled connection) on any error.
+    -- First-claim-wins: the UPDATE's WHERE Status = 0 takes the row lock, serializing concurrent claims.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -25,8 +20,7 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamDaemonTargetAssignment] A ON A.[DaemonId] = @DaemonId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Defense in depth: the daemon must be Enabled AND in the same org as the config, even though the caller
-    -- (ClaimRotationJobCommand) already checked both from the bearer token's claims.
+    -- Defense in depth: re-checks Enabled and org match already checked by the caller's token.
     INNER JOIN [dbo].[PamDaemon] D ON D.[Id] = @DaemonId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
         AND J.[Status] = 0 -- Pending
@@ -36,10 +30,7 @@ BEGIN
 
     IF @@ROWCOUNT = 0
     BEGIN
-        -- Eligibility is classified FIRST so a job that does not exist and a job this daemon may not claim
-        -- (unassigned target, cross-org, revoked daemon) produce the same NotEligible outcome -- the caller maps it
-        -- to 404, leaving no existence oracle. Only an eligible daemon that lost the race / hit backoff / hit the
-        -- paused-config or disabled-target hold gets NotClaimable (mapped to 409).
+        -- Unknown job or one outside this daemon's assignment share NotEligible; no existence oracle.
         DECLARE @Outcome INT = CASE
             WHEN NOT EXISTS (
                 SELECT 1
@@ -49,7 +40,7 @@ BEGIN
                 INNER JOIN [dbo].[PamDaemon] D2 ON D2.[Id] = @DaemonId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
                 WHERE J2.[Id] = @JobId
             ) THEN -1 -- NotEligible (unknown job, or a job outside this daemon's assignment/org)
-            ELSE 0 -- NotClaimable (eligible, but not pending / in backoff / held by a paused config or disabled target)
+            ELSE 0 -- NotClaimable: eligible, but not pending / in backoff / held
         END
 
         ROLLBACK TRANSACTION
@@ -70,8 +61,7 @@ BEGIN
         RETURN
     END
 
-    -- AtMostOneInFlightAttemptPerJob: the Executing attempt is created in the same transaction as the claim, so a
-    -- claimed job always has exactly one in-flight attempt from the moment it is claimed.
+    -- AtMostOneInFlightAttemptPerJob: the Executing attempt is created in the same transaction as the claim.
     INSERT INTO [dbo].[PamRotationAttempt]
     (
         [Id], [JobId], [ClaimedByDaemonId], [CipherUpdated], [Status], [FailureReason], [SyncState],
@@ -85,7 +75,7 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    -- The work snapshot the daemon executes against; ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
+    -- ExecuteBy is this claim's lease end (ClaimedAt + ReleaseDelay).
     SELECT
         1 AS [Outcome], -- Claimed
         @AttemptId AS [AttemptId],

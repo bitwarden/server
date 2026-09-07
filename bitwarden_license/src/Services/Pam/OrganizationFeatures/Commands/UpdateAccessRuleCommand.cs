@@ -64,9 +64,8 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             LastEditedBy = update.LastEditedBy,
         };
 
-        // audit (before/after): RuleName is the name the rule carries after the edit, so a rename is read by comparing
-        // consecutive events rather than from one. The outcome waits for the collection links, so an attempt with no
-        // outcome flags an edit that may have applied to the rule but not its governed collections.
+        // audit (before/after): RuleName is the name after the edit. The outcome waits for the collection
+        // links, so an attempt with no outcome flags an edit that may not have applied to them.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleUpdated,

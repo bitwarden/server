@@ -59,12 +59,9 @@ public static class PamEndpointsExtensions
 
     /// <summary>
     /// The connector-facing surface: <see cref="Policies.PamRotationDaemon"/> instead of the user-token
-    /// <see cref="Policies.Application"/>, and <see cref="AccessConnectorHeartbeatEndpointFilter"/> on every route so
-    /// any connector request counts as a sign of life. The filter goes on last, after the feature and validation
-    /// filters, so a disabled flag or a malformed body short-circuits ahead of the heartbeat write.
-    ///
-    /// These routes carry no {orgId} and no organization requirement: a connector's organization comes from its
-    /// token, and the work queries scope every read and write to it.
+    /// <see cref="Policies.Application"/>, and <see cref="AccessConnectorHeartbeatEndpointFilter"/> on every
+    /// route, added last so a disabled flag or malformed body short-circuits ahead of the heartbeat write.
+    /// These routes carry no {orgId}; a connector's organization comes from its token instead.
     ///
     /// TODO(PM-39040): rate-limit this group by client_id.
     /// </summary>

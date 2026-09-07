@@ -44,8 +44,8 @@ public class TriggerRotationCommand : ITriggerRotationCommand
             throw new NotFoundException();
         }
 
-        // Surface guard can_offer: enabled, automatic, target active, and no active job (the last of which is not
-        // part of the pure PamRotationRules.CanOffer predicate, since it needs a repository lookup).
+        // Surface guard can_offer: enabled, automatic, target active, plus no active job, checked separately
+        // since it needs a repository lookup.
         var canOffer = PamRotationRules.CanOffer(details, details.TargetSystemMethod, target.Status)
             && !details.HasActiveJob;
         if (!canOffer)

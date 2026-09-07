@@ -8,12 +8,10 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
-/// How a read of the organization's access-audit trail is narrowed, as query parameters. Every dimension is optional
-/// and an unset one matches everything, so a bare <c>GET</c> still reads the trail — one page of it, newest first.
-///
-/// The dimensions mirror the Admin Console's filter chips, and each is a list because those chips are multi-select:
-/// an auditor reconstructing an incident is usually following two or three people, not one. Values within a dimension
-/// are OR-ed, dimensions are AND-ed together.
+/// How a read of the organization's access-audit trail is narrowed, as query parameters. Every dimension is
+/// optional and an unset one matches everything, so a bare <c>GET</c> still reads the trail. Each dimension
+/// is a list (mirroring the Admin Console's multi-select filter chips); values within a dimension are OR-ed,
+/// dimensions are AND-ed together.
 /// </summary>
 public class AccessAuditTrailFilterRequestModel : IValidatableObject
 {
@@ -37,12 +35,12 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
     public Guid[]? ActorId { get; set; }
 
     /// <summary>
-    /// Whether to also keep the system / automatic events, which have no actor id to be selected by. Unions with
-    /// <see cref="ActorId"/> rather than narrowing it, and on its own selects the automatic events alone.
+    /// Whether to also keep the system / automatic events, which have no actor id to be selected by. Unions
+    /// with <see cref="ActorId"/> rather than narrowing it.
     /// </summary>
     /// <remarks>
-    /// Nullable so the parameter stays optional: <c>[AsParameters]</c> treats a non-nullable value type as required
-    /// and answers a request that omits it with a 400, which would make a bare read of the trail impossible.
+    /// Nullable so the parameter stays optional: <c>[AsParameters]</c> treats a non-nullable value type as
+    /// required and answers a request that omits it with a 400.
     /// </remarks>
     public bool? IncludeAutomatedActor { get; set; }
 
@@ -79,9 +77,8 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
     /// The validated read this describes.
     /// </summary>
     /// <remarks>
-    /// <c>PamValidationEndpointFilter</c> has already run <see cref="Validate"/> by the time a handler calls
-    /// this, so the throw is unreachable from the endpoint; it is here so the same guarantee holds for any other
-    /// caller rather than being silently assumed.
+    /// <c>PamValidationEndpointFilter</c> already runs <see cref="Validate"/> before a handler calls this, so
+    /// the throw is unreachable from the endpoint; it exists for any other caller.
     /// </remarks>
     public AccessAuditTrailQueryOptions ToQueryOptions()
     {
@@ -107,8 +104,8 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
             }
             else
             {
-                // Named rather than ignored: a filter the server did not understand would otherwise be reported as a
-                // trail with nothing in it, which on an audit surface reads as "this never happened".
+                // Named rather than ignored, since an audit surface reporting an empty trail reads as
+                // "this never happened".
                 errors.Add(new ValidationResult($"'{name}' is not a known audit event kind.", [nameof(Kind)]));
             }
         }

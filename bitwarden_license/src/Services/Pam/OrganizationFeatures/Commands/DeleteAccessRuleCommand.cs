@@ -31,9 +31,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
             throw new NotFoundException();
         }
 
-        // audit (before/after): the rule name is captured from the row we still hold, because the delete is hard and
-        // AccessAuditEvent_Create takes @RuleName rather than joining it -- after this runs there is nothing left to
-        // resolve the name from.
+        // Rule name captured from the row now, since the delete is hard and nothing is left to resolve it from after.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleDeleted,

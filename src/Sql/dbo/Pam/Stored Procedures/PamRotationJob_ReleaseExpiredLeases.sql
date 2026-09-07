@@ -5,13 +5,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_ReleaseExpiredLeases]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DaemonConnectionDropsReleaseJobs -> ReleaseJob -> AbandonAttempt, with the lease-respecting timing from plan §5:
-    -- release only fires once BOTH the claim's lease has expired (now >= ExecuteBy, i.e. ClaimedAt + ReleaseDelay) AND
-    -- the claimant's heartbeat is stale -- never on daemon Status alone, so a revoked daemon's jobs release too once
-    -- its heartbeats actually stop. A job with a Rotated attempt is excluded ("success wins", same as the timeout
-    -- sweep): a slow-but-live daemon whose report lands inside its lease still wins. OUTPUT can't reach through the
-    -- joins needed for the audit projection, so affected ids are captured in @Affected first and joined afterward.
-    -- XACT_ABORT guarantees rollback (and a clean pooled connection) on any error.
+    -- Releases require an expired lease and a stale heartbeat, never Status alone; excludes Rotated.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -23,8 +17,7 @@ BEGIN
 
     UPDATE J
     SET J.[Status] = 0, -- Pending
-        -- Computed from the pre-clear ClaimedAt (this UPDATE's FROM/JOIN still sees the old value here), so the
-        -- re-claim time is exactly ExecuteBy regardless of whether release fires at that instant or later.
+        -- Uses the pre-clear ClaimedAt, still visible here, so re-claim time is exactly ExecuteBy.
         J.[NextClaimableAt] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]),
         J.[ClaimedByDaemonId] = NULL,
         J.[ClaimedAt] = NULL
@@ -47,8 +40,7 @@ BEGIN
     WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
         AND [Status] = 0 -- Executing
 
-    -- One row per released job for audit emission. ClaimedByDaemonId here is the pre-clear claimant (always
-    -- non-null: only Claimed jobs are released).
+    -- One row per released job; ClaimedByDaemonId is the pre-clear claimant, always non-null.
     SELECT
         AF.[JobId],
         C.[Id] AS [RotationConfigId],

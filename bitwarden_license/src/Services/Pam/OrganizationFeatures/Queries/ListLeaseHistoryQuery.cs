@@ -26,11 +26,8 @@ public class ListLeaseHistoryQuery : IListLeaseHistoryQuery
             return new List<AccessLease>();
         }
 
-        // Shares the one history window (AccessHistoryWindow) so request history and lease history reach equally
-        // far back. `now` is the caller's read clock: it additionally decides which leases count as ended at all --
-        // a lapsed lease is only Expired relative to a clock (see
-        // IAccessLeaseRepository.GetManyEndedByCollectionIdsAsync) -- and the caller derives response statuses
-        // against the same instant.
+        // Shares the one history window (AccessHistoryWindow) so request and lease history reach equally far back.
+        // `now` also decides which leases count as ended, and the caller derives response statuses against it too.
         return await _accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
             manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

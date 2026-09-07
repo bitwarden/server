@@ -16,9 +16,7 @@ public class AccessDecisionRequestModel
     [EnumDataType(typeof(AccessDecisionVerdict))]
     public AccessDecisionVerdict? Verdict { get; set; }
 
-    /// <summary>
-    /// A note recorded with the decision — for example the reason for a denial. Surfaced to the requester.
-    /// </summary>
+    /// <summary>A note recorded with the decision, such as a denial's reason. Surfaced to the requester.</summary>
     public string? Comment { get; set; }
 
     public AccessDecisionSubmission ToSubmission() => new()

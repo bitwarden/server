@@ -921,8 +921,7 @@ public class EventServiceTests
             e.OrganizationId == organizationId &&
             e.ActingUserId == actingUserId &&
             e.UserId == requesterId &&
-            // The item and its gated collection cross over as first-class fields, which is also what files the
-            // event under the item's own event history.
+            // Cipher/collection are first-class fields, which files the event under the item's own history.
             e.CipherId == cipherId &&
             e.CollectionId == collectionId &&
             e.AccessRequestId == accessRequestId &&
@@ -936,8 +935,7 @@ public class EventServiceTests
             e.Date == occurredAt));
     }
 
-    // PAM records every action in its own audit store regardless of the organization's plan, so the fan-out is the one
-    // place the event entitlement has to be enforced.
+    // PAM's own audit store is unconditional; this fan-out is where event entitlement is enforced.
     [Theory]
     [BitAutoData(false, true)]
     [BitAutoData(true, false)]
@@ -972,8 +970,7 @@ public class EventServiceTests
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { Id = organizationId, Enabled = true, UseEvents = true });
-        // A sweep or an automatic decision has no request behind it; anything the ambient context still holds must not
-        // be attributed to it.
+        // A system-user action has no request behind it; the ambient context must not be attributed to it.
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
 

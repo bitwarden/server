@@ -65,14 +65,10 @@ public class AccessRuleEndpointsHandler(
         await deleteCommand.DeleteAsync(orgId, id, currentContext.UserId);
     }
 
-    /// <summary>
-    /// Where this rule fails to gate: the collections letting the ciphers it governs through without
-    /// a lease. A non-empty list is what drives the admin warning.
-    /// </summary>
+    /// <summary>Where this rule fails to gate: the collections letting its ciphers through without a lease.</summary>
     /// <remarks>
-    /// Unlike <see cref="Get"/> this does not 404 a rule belonging to another organization: the query
-    /// scopes on the organization itself and answers "nothing is bypassable", which is what an
-    /// informational warning wants. There is no rule state to disclose either way.
+    /// Unlike <see cref="Get"/>, this does not 404 a rule belonging to another organization: the query scopes on
+    /// the organization itself and answers "nothing is bypassable".
     /// </remarks>
     public async Task<RuleBypassableCiphersResponseModel> GetBypassableCiphers(Guid orgId, Guid id)
     {

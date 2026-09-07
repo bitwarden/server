@@ -7,17 +7,15 @@ namespace Bit.Services.Pam.Models;
 /// <summary>
 /// The result of submitting an access request. Neither path mints a lease at submit: the
 /// <see cref="AccessApprovalMode.Automatic"/> path creates an already-<see cref="AccessRequestStatus.Approved"/>
-/// <see cref="AccessRequest"/> the requester then activates to start the lease, while the
-/// <see cref="AccessApprovalMode.Human"/> path creates a <see cref="AccessRequestStatus.Pending"/> request to await
-/// an approver. <see cref="ApprovalMode"/> tells the client which workflow to present.
+/// request the requester then activates, while the <see cref="AccessApprovalMode.Human"/> path creates a
+/// <see cref="AccessRequestStatus.Pending"/> request awaiting an approver.
 /// </summary>
 /// <param name="ApprovalMode">Which workflow resolved the submission.</param>
 /// <param name="Request">The request that was created.</param>
 /// <param name="Decision">
 /// The automatic verdict recorded alongside an auto-approved request, or null on the
-/// <see cref="AccessApprovalMode.Human"/> path (which records no decision until an approver acts). Carried here
-/// because the submission response reports the request's decision log, and this decision is written in the same
-/// operation as the request rather than read back.
+/// <see cref="AccessApprovalMode.Human"/> path. Carried here since it's written in the same operation as the
+/// request rather than read back.
 /// </param>
 public sealed record AccessRequestResult(
     AccessApprovalMode ApprovalMode,

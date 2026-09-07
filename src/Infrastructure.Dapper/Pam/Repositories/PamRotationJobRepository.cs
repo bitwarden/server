@@ -26,9 +26,8 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     public async Task<PamRotationJobCreateOutcome> CreateGuardedAsync(PamRotationJob job)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        // job's property names line up 1:1 with the sproc's parameters (including the plain, non-OUTPUT @Id --
-        // the caller has already assigned the job's id), so it is passed straight through like the generic
-        // Repository<T, TId> base does for a whole-entity write.
+        // Property names line up 1:1 with the sproc's parameters (including plain, non-OUTPUT @Id, since the
+        // caller already assigned it), passed straight through like the generic base.
         var result = await connection.ExecuteScalarAsync<int>(
             "[dbo].[PamRotationJob_Create]",
             job,
@@ -169,10 +168,8 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        // Mapped through a nullable-safe intermediate row rather than straight onto PamRotationFailureResult: on the
-        // stale-report (Rejected) path the sproc returns NULL for JobStatus *and* ErroredAttemptCount, but
-        // PamRotationFailureResult.ErroredAttemptCount is a non-nullable int -- Dapper cannot bind a DB NULL onto
-        // that member. Coalesce to 0, matching "no errored-attempt count applies to a rejected report".
+        // Mapped through a nullable-safe row since the Rejected path returns NULL for ErroredAttemptCount, and
+        // PamRotationFailureResult's is non-nullable; coalesced to 0.
         var row = await connection.QuerySingleAsync<MarkErroredRow>(
             "[dbo].[PamRotationAttempt_MarkErrored]",
             new

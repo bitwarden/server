@@ -47,11 +47,8 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
-        // Four independent reads (each repository/resolver call opens its own connection/scope), fetched
-        // concurrently: this snapshot runs per gated cipher on the vault path. The resolver's result goes unused in
-        // the rare pending/approved states, but starting it eagerly saves its round trips on the two common paths
-        // (active lease: extension eligibility; nothing at all: the gated-or-not verdict) and awaiting it inside the
-        // WhenAll keeps any resolver failure observed.
+        // Four independent reads, fetched concurrently. The resolver's result goes unused in the rare
+        // pending/approved states, but starting it eagerly saves its round trip on the two common paths.
         var activeLeaseTask = _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pendingTask = _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, now);
         var approvedTask = _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
@@ -65,9 +62,8 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         int? maxExtensionDurationSeconds = null;
         if (activeLease is not null)
         {
-            // Extension eligibility drives the banner's "Extend" control. A lease may be extended once, so it is
-            // extendable only while the rule opts in and no extension has been recorded yet; surface the rule's max
-            // length so the client can cap its duration picker.
+            // Extension eligibility drives the banner's "Extend" control: extendable only while the rule opts in
+            // and no extension has been recorded yet.
             var rule = await ruleTask;
             if (rule?.AllowsExtensions == true)
             {
@@ -78,15 +74,13 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         }
         else if (pending is null && approved is null && await ruleTask is null)
         {
-            // Nothing to report and the cipher isn't leasing-gated. (When a lease or request exists we still return a
-            // snapshot even if the rule was since removed, so the caller's state isn't hidden.)
+            // Nothing to report and the cipher isn't leasing-gated. A lease or request still returns a snapshot
+            // even if the rule was since removed.
             throw new NotFoundException();
         }
 
-        // Neither a pending nor an approved-unactivated request has produced a lease (the approved read excludes
-        // activated rows), and the approver identity/comment and inbox display-name fields aren't needed for this
-        // caller-scoped snapshot, so they stay null. The status derives against the same clock that filtered the
-        // reads, so it lands on Pending/Approved by construction.
+        // The approver identity/comment and inbox display-name fields aren't needed for this caller-scoped
+        // snapshot, so they stay null.
         return new CipherAccessState(
             cipherId,
             now,

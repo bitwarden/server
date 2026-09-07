@@ -654,8 +654,7 @@ public class CurrentContextTests
         Guid orgId)
     {
         // Arrange
-        // Unlike Secrets Manager, PAM grants no machine-principal escape hatch: the rotation connector authenticates
-        // under its own policy and never travels the leasing paths this guards.
+        // PAM grants no machine-principal escape hatch, unlike Secrets Manager.
         sutProvider.Sut.ServiceAccountOrganizationId = orgId;
 
         // Act

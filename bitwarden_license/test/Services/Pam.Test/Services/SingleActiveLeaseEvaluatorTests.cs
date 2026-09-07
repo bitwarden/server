@@ -123,8 +123,7 @@ public class SingleActiveLeaseEvaluatorTests
     private static void SetupGovernedCollection(
         SutProvider<SingleActiveLeaseEvaluator> sutProvider, Collection collection, AccessRule rule)
     {
-        // Pinned rather than left to the fixture: whether the rule is switched on decides whether the path
-        // governs at all, so a test that means "governed" has to say so.
+        // Pinned rather than left to the fixture: enabled decides whether the path governs at all.
         rule.Enabled = true;
         collection.AccessRuleId = rule.Id;
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);

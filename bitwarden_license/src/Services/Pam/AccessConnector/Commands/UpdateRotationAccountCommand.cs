@@ -78,8 +78,7 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         // Persist a plain PamRotationConfig: the PamRotationConfigDetails projection carries extra display-only
-        // properties (TargetSystemName, TargetSystemMethod, HasActiveJob) that the base ReplaceAsync would otherwise
-        // forward.
+        // properties the base ReplaceAsync must not forward.
         var toPersist = new PamRotationConfig
         {
             Id = details.Id,

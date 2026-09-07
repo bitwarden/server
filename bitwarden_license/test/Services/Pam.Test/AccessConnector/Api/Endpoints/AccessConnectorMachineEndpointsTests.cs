@@ -117,9 +117,7 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public void MapPamEndpoints_DoesNotGateTheConnectorSurfaceOnAnOrganizationRequirement()
     {
-        // The access connector routes carry no {orgId}, and OrganizationRequirementHandler reads the id off the
-        // route — attaching an IOrganizationRequirement here would throw rather than deny. The connector is
-        // authorized by Policies.PamRotationDaemon, and scoped to its own organization by the queries underneath.
+        // No {orgId} in these routes; authorized by Policies.PamRotationDaemon instead of an org requirement.
         var endpoints = ConnectorEndpoints();
 
         Assert.NotEmpty(endpoints);
@@ -134,10 +132,8 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public async Task MapPamEndpoints_RunsHeartbeatFilterAheadOfEveryConnectorRoute()
     {
-        // An access connector that reaches any of these routes is alive, so every one of them has to record the
-        // heartbeat -- miss one and a connector looks offline while it is working. AddEndpointFilter<T>() leaves no
-        // metadata to assert on, so drive the built endpoint instead: with no PamDaemonId the filter 404s, whereas
-        // an endpoint that had lost its filter would reach its handler and fail some other way.
+        // AddEndpointFilter<T>() leaves no metadata to assert on, so drive the built endpoint instead: with no
+        // PamDaemonId the filter 404s, whereas a route missing the filter reaches its handler and fails differently.
         var endpoints = ConnectorEndpoints();
         Assert.NotEmpty(endpoints);
 

@@ -4,9 +4,7 @@ CREATE PROCEDURE [dbo].[AccessLease_ReadManyActiveByCollectionIds]
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Governance view: every currently-active lease (no early end recorded, window containing @Now) on the supplied
-    -- (caller-manageable) collections, across all members -- not just the caller's own.
+    -- Governance view: every active lease across all members in the caller-manageable collections.
     SELECT
         L.*
     FROM

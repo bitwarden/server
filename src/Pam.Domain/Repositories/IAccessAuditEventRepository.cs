@@ -13,34 +13,25 @@ public interface IAccessAuditEventRepository
 
     /// <summary>
     /// Returns one page of the PAM access-audit trail for an entire organization: the stored events matching
-    /// <paramref name="filter"/>, newest first, at most <see cref="AccessAuditTrailFilter.PageSize"/> of them, with
-    /// display names joined on read. The trail is org-wide (the caller is authorized by the AccessEventLogs permission
-    /// at the endpoint, not by collection management), so the access-request, access-lease, and rule-administration
-    /// kinds are all included.
-    ///
-    /// Each action's before/after pair is already collapsed here, in the store, rather than by the caller: the caller
-    /// sees one page and could not tell an <c>Attempt</c> whose <c>Outcome</c> sits on the next page from one that
-    /// never landed. What survives the collapse is the <c>Outcome</c> where the action completed, and the lone
-    /// <c>Attempt</c> where it did not — which the response then flags as in-doubt. The collapse is scoped to the
-    /// filter's own range, so an action straddling a range bound reads as in-doubt at that edge rather than vanishing.
-    ///
-    /// Ordered by <c>OccurredAt</c> descending and broken by row id, which is the order
-    /// <see cref="AccessAuditTrailFilter.BeforeOccurredAt"/> resumes from.
+    /// <paramref name="filter"/>, newest first, at most <see cref="AccessAuditTrailFilter.PageSize"/> of them,
+    /// with display names joined on read.
     /// </summary>
+    /// <remarks>
+    /// Each action's before/after pair is collapsed here, in the store, rather than by the caller, since the
+    /// caller sees only one page and cannot tell an <c>Attempt</c> whose <c>Outcome</c> sits on the next page
+    /// from one that never landed. What survives is the <c>Outcome</c> if the action completed, otherwise the
+    /// lone <c>Attempt</c>, flagged in-doubt by the response. The collapse is scoped to the filter's own range,
+    /// so an action straddling a range bound reads as in-doubt at that edge rather than vanishing. Ordered by
+    /// <c>OccurredAt</c> descending, broken by row id — the order <see cref="AccessAuditTrailFilter.BeforeOccurredAt"/>
+    /// resumes from.
+    /// </remarks>
     Task<ICollection<AccessAuditEvent>> GetPageByOrganizationIdAsync(
         Guid organizationId, AccessAuditTrailFilter filter);
 
     /// <summary>
     /// Returns the distinct subjects — ciphers and access rules — the organization's trail names between
-    /// <paramref name="since"/> and <paramref name="until"/>, one row per subject.
-    ///
-    /// This is what the trail's Item filter is built from. It cannot come from a page of the trail: a page holds fifty
-    /// rows and the menu has to offer every item in range, and it cannot come from the caller's vault either, since
-    /// that would offer every credential they hold whether or not the trail ever mentions it. Reading the distinct
-    /// subjects and letting the caller keep the ones it can name is the only version that offers exactly the items
-    /// that both occur and can be labelled.
-    ///
-    /// Scoped to the same range the page read uses, so the menu cannot offer an option the page can never match.
+    /// <paramref name="since"/> and <paramref name="until"/>, one row per subject. This is what the trail's
+    /// Item filter menu is built from, scoped to the same range the page read uses.
     /// </summary>
     Task<ICollection<AccessAuditItem>> GetItemsByOrganizationIdAsync(
         Guid organizationId, DateTime since, DateTime until);

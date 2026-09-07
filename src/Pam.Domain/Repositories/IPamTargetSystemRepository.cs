@@ -9,8 +9,7 @@ public interface IPamTargetSystemRepository : IRepository<PamTargetSystem, Guid>
 
     /// <summary>
     /// Deletes the target's access connector assignments, then the target itself, in one transaction. Re-checks
-    /// under lock that no rotation config still names the target and returns false without deleting when one
-    /// appeared after the caller's own check, so the delete can never orphan a config's credential.
+    /// under lock that no rotation config still names the target, so the delete can never orphan a credential.
     /// </summary>
     Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId);
 }

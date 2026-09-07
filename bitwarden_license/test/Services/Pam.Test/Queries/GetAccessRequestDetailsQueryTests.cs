@@ -61,16 +61,15 @@ public class GetAccessRequestDetailsQueryTests
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetDetailsByIdAsync(details.Id, _now).Returns(details);
-        // userId is neither the requester nor a manager (CanManageCollectionAsync defaults to false).
+        // userId is neither the requester nor a manager.
 
         // A request the caller can't see is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetDetailsAsync(userId, details.Id, _now));
     }
 
     /// <summary>
-    /// The read is handed the current time so the produced lease's status can be projected against it: nothing
-    /// writes AccessLeaseStatus.Expired, so a lapsed lease reads as Active unless a clock reinterprets it
-    /// (PM-42355).
+    /// The read is handed the current time so the produced lease's status can be projected against it, since
+    /// nothing writes AccessLeaseStatus.Expired.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetDetailsAsync_PassesCurrentTimeAsTheProjectionClock(AccessRequestDetails details)

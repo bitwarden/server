@@ -100,8 +100,8 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public DateTime SubmittedAt { get; set; }
 
     /// <summary>
-    /// When a party approved, denied, or cancelled the request (UTC); null while pending — and null for expired
-    /// rows, which no party resolved (their end time is <see cref="LeaseNotAfter"/>).
+    /// When a party approved, denied, or cancelled the request (UTC). Null while pending, and null for
+    /// expired rows, whose end time is <see cref="LeaseNotAfter"/> instead.
     /// </summary>
     public DateTime? ResolvedAt { get; set; }
 

@@ -64,11 +64,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             return null;
         }
 
-        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id so the choice is total
-        // and stable. Selection is purely structural — it does NOT depend on how a rule's conditions evaluate for the
-        // current signals — so a newer path never pre-empts an older one, whichever is the more permissive. This is a
-        // deliberate trade of determinism over least-restriction: a member may be routed to an approver even though a
-        // newer path would have auto-granted, because the older rule governs.
+        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id, regardless of
+        // whether a newer path would have been more permissive.
         var (governingCollection, governingRule) = candidates
             .OrderBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
@@ -81,29 +78,23 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     {
         var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
 
-        // Dropped for the same reasons ResolveAsync treats a path as an escape: a disabled rule does not gate access,
-        // and a rule that no longer loads has been deleted. Either way the pin no longer points at anything that
-        // governs, so the caller is left ungated.
+        // Dropped as ResolveAsync drops an escape path: a disabled or deleted rule leaves the pin governing
+        // nothing, so the caller is left ungated rather than held to a rule the admin took out of service.
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
     }
 
     /// <summary>
     /// Projects a stored rule onto the shape its callers evaluate. Shared by both resolution paths so a rule reached
-    /// through the caller's collections and the same rule reached through a request's pin can never be described
-    /// differently — the pinned path exists precisely so a later operation sees the rule that decided, and that
-    /// guarantee is worth nothing if the two paths read its fields differently.
+    /// through the caller's collections and the same rule reached through a request's pin are always described
+    /// identically.
     /// </summary>
     private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
     {
         var (conditions, unreadable) = Parse(rule.Conditions);
 
-        // Whether the rule routes to a human is structural too: it is carried by a HumanApprovalCondition among the
-        // rule's conditions, not by how those conditions evaluate for these signals. Reading it off the engine's
-        // verdict asked the wrong question — Combine gives deny precedence over requires-approval, so one denying
-        // condition (an IP outside the allowlist, a request outside the time windows) folded the whole rule to Deny
-        // and reported "no approval needed", sending a human-gated rule down the automatic path to be refused
-        // outright instead of to an approver (PM-42256). The conditions ride along on the returned rule; the
-        // automatic path is where they are evaluated.
+        // Whether the rule routes to a human is structural: carried by a HumanApprovalCondition among the rule's
+        // conditions, not by how those conditions evaluate for these signals (Combine gives deny precedence over
+        // requires-approval, which would fold a human-gated rule to an outright Deny).
         var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
@@ -123,12 +114,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
 
     /// <summary>
     /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>, reporting whether it had
-    /// to fall back. A malformed or unparseable document fails safe to a single human-approval condition so access is
-    /// never silently auto-approved on conditions the server could not understand; the human-approval path then routes
-    /// it to an approver rather than issuing an automatic lease. The flag rides alongside because that stand-in is
-    /// indistinguishable from a genuine <c>[human_approval]</c> rule, and a caller that strips the approval gate
-    /// before evaluating (see <see cref="GoverningRule.AutomatedConditions"/>) is left with an empty list, which the
-    /// engine reads as vacuously satisfied — the fail-safe would become a fail-open without something to mark it.
+    /// to fall back. A malformed or unparseable document fails safe to a single human-approval condition, since the
+    /// flag is needed to tell that stand-in apart from a genuine <c>[human_approval]</c> rule.
     /// </summary>
     private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) Parse(string conditionsJson)
     {

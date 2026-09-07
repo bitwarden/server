@@ -15,8 +15,7 @@ public record PamAccessEventContext
     public required Guid OrganizationId { get; init; }
 
     /// <summary>
-    /// When the action occurred, as recorded by PAM — not when the fan-out ran. Passed through so the two trails agree
-    /// on a timestamp even though the org event log is written after the fact.
+    /// The action's own timestamp as recorded by PAM, not the fan-out's, so the two trails agree on a timestamp.
     /// </summary>
     public required DateTime Date { get; init; }
 
@@ -42,6 +41,6 @@ public record PamAccessEventContext
     public Guid? AccessRequestId { get; init; }
     public Guid? AccessLeaseId { get; init; }
 
-    /// <summary>Set in place of <see cref="ActingUserId"/> when PAM itself performed the action.</summary>
+    /// <summary>Set in place of <see cref="ActingUserId"/> for an action PAM itself performed.</summary>
     public EventSystemUser? SystemUser { get; init; }
 }

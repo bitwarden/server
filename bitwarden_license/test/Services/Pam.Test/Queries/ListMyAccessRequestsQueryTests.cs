@@ -17,8 +17,7 @@ public class ListMyAccessRequestsQueryTests
     public async Task GetMineAsync_QueriesWithSharedRetentionWindow(Guid userId, AccessRequestDetails row)
     {
         var sutProvider = Setup();
-        // The window is the same one the approver-side history reads use; that agreement is the point (PM-42614), so
-        // the expectation is derived from the shared constant rather than restating 90 days here.
+        // Shares the same window the approver-side history reads use.
         var expectedSince = _now.AddDays(-AccessHistoryWindow.RetentionDays);
         sutProvider.GetDependency<IAccessRequestRepository>()
             .GetManyByRequesterIdAsync(userId, expectedSince, _now).Returns([row]);
@@ -26,9 +25,7 @@ public class ListMyAccessRequestsQueryTests
         var result = await sutProvider.Sut.GetMineAsync(userId, _now);
 
         Assert.Single(result);
-        // `now` is passed alongside `since` because it does two further jobs the window bound does not: it decides
-        // which approved requests still have an unlapsed window (and so survive the window), and it is the clock each
-        // row's produced-lease status is projected against (PM-42355).
+        // `now` also decides unlapsed windows and is the clock lease status is projected against.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .GetManyByRequesterIdAsync(userId, expectedSince, _now);
     }
@@ -46,9 +43,7 @@ public class ListMyAccessRequestsQueryTests
     [Theory, BitAutoData]
     public async Task GetMineAsync_DoesNotWindowAwayLiveRows_LeavingThatToTheRead(Guid userId)
     {
-        // The live-row exemption belongs to the read, not to this query: the query hands down one `since` and never
-        // filters the rows it gets back. Asserting that here pins the split, so a later "helpful" post-filter on the
-        // returned collection cannot quietly reintroduce the bug for pending requests older than the window.
+        // The live-row exemption belongs to the read; this query hands down one `since` and never post-filters.
         var sutProvider = Setup();
         var aged = new AccessRequestDetails
         {

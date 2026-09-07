@@ -90,8 +90,7 @@ public class AccessRuleWriteValidatorTests
         Assert.Contains("maximum lease duration must be a positive value", ex.Message);
     }
 
-    // PM-39858's misconfiguration: a rule saved with a 1h default but a 15m cap pre-fills every request under it with
-    // a duration submit then refuses. The edit form couples its two pickers; a direct API write bypassed that.
+    // A saved default above the cap pre-fills requests with a duration submit then refuses.
     [Theory, BitAutoData]
     public async Task ValidateAsync_DefaultLeaseDurationAboveMax_ThrowsBadRequest(AccessRule rule)
     {
@@ -292,8 +291,7 @@ public class AccessRuleWriteValidatorTests
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
         rule.Name = "rule";
         rule.Conditions = """[{"kind":"human_approval"}]""";
-        // Pin the lease durations so the outcome does not depend on AutoFixture's int sequence, which is free to hand
-        // out a default above the max and trip the bounds check a test is not exercising.
+        // Pins the lease durations so AutoFixture's int sequence can't trip an unrelated bounds check.
         rule.DefaultLeaseDurationSeconds = null;
         rule.MaxLeaseDurationSeconds = null;
         sutProvider.GetDependency<IAccessRuleValidator>()

@@ -41,7 +41,7 @@ public class RequestLeaseExtensionCommandTests
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
 
-        // Someone else's lease is indistinguishable from a missing one, so ids can't be probed.
+        // A lease owned by another user is indistinguishable from a missing one.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ExtendAsync(userId, Submission(lease.Id)));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateApprovedExtensionAsync(default!, default!, default, default);
@@ -56,8 +56,7 @@ public class RequestLeaseExtensionCommandTests
         SetupExtendableLease(sutProvider, lease);
         lease.Action = action;
 
-        // No pre-check on the lease's liveness: whether there is anything left to extend is settled once, under the
-        // lease lock, by the write itself — which answers it with a denied request rather than a refusal (PM-42632).
+        // No liveness pre-check; the guarded write itself answers with a denied request, not a refusal.
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
         await sutProvider.GetDependency<IAccessRequestRepository>().ReceivedWithAnyArgs(1)
@@ -162,7 +161,7 @@ public class RequestLeaseExtensionCommandTests
     {
         var sutProvider = Setup();
         SetupExtendableLease(sutProvider, lease);
-        // A lease may be extended once; an existing extension request blocks another.
+        // An existing extension request blocks another.
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CountExtensionsByLeaseIdAsync(lease.Id).Returns(1);
 
@@ -214,8 +213,7 @@ public class RequestLeaseExtensionCommandTests
             _now,
             Arg.Any<string?>());
 
-        // The widened lease window must reach both the approvers (active-leases / history views) and the requester's
-        // other devices (banner / badge countdown).
+        // The widened window notifies both approvers and the requester.
         await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
             .NotifyCollectionApproversAsync(lease.CollectionId);
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
@@ -233,8 +231,7 @@ public class RequestLeaseExtensionCommandTests
         var result = await sutProvider.Sut.ExtendAsync(
             lease.RequesterId, Submission(lease.Id, duration, "incident"));
 
-        // The lease ended under the request, so the extension resolves denied rather than failing the call: the
-        // requester gets a request they can find, carrying the window they asked for (PM-42632).
+        // A lease that ended under the request resolves denied rather than failing the call.
         Assert.Equal(AccessRequestStatus.Denied, result.Status);
         Assert.Equal(lease.Id, result.ExtensionOfLeaseId);
         Assert.Equal(lease.NotAfter, result.NotBefore);
@@ -259,8 +256,7 @@ public class RequestLeaseExtensionCommandTests
 
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
-        // The comment is the command's to supply — the repository records it on the Deny it writes, so the projection
-        // above and the stored decision cannot drift.
+        // The repository records the command-supplied comment on the Deny it writes.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, _leaseEndedComment);
     }
@@ -274,8 +270,7 @@ public class RequestLeaseExtensionCommandTests
 
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
-        // The attempt is closed out rather than left in doubt: the outcome carries the denial, against the lease's
-        // own (unchanged) end.
+        // Outcome carries the denial, against the lease's own unchanged end.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(e =>
                 e.Kind == AccessAuditEventKind.RequestDenied
@@ -284,8 +279,7 @@ public class RequestLeaseExtensionCommandTests
                 && e.LeaseNotAfter == lease.NotAfter
                 && e.Detail == _leaseEndedComment));
 
-        // No collection-wide lease state changed, so the approver inbox has nothing to re-fetch; only the
-        // requester's own devices need to see the new row.
+        // No collection-wide lease state changed; only the requester's own devices are notified.
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1).NotifyRequesterAsync(lease.RequesterId);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
@@ -315,8 +309,7 @@ public class RequestLeaseExtensionCommandTests
         return sutProvider;
     }
 
-    // An active, in-window lease owned by its BitAutoData requester, governed by an extension-enabled rule with no
-    // extension used yet, and a repo that extends successfully. Tests override the precondition they exercise.
+    // An active, in-window lease with no extension used yet; tests override the precondition they exercise.
     private static void SetupExtendableLease(
         SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, bool allowsExtensions = true,
         Guid ruleId = default)
@@ -324,8 +317,7 @@ public class RequestLeaseExtensionCommandTests
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
-        // Licensed by default: every guard below this one is about the lease or the rule, not the holder's
-        // entitlement, so the licensing test is the only one that overrides it.
+        // Licensed by default; the licensing test overrides it.
         sutProvider.GetDependency<ICurrentContext>().AccessPam(lease.OrganizationId).Returns(true);
 
         // A human-approval rule still yields automatic extensions — the approval gate never applies to extensions.

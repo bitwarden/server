@@ -45,7 +45,7 @@ public class RevokeAccessLeaseCommandTests
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
-        // The caller IS the lease's own holder, but cannot Manage the collection — they may still end their own access.
+        // The caller holds the lease but cannot Manage the collection; they may still end their own access.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(lease.RequesterId, lease.CollectionId).Returns(false);
@@ -110,9 +110,7 @@ public class RevokeAccessLeaseCommandTests
     public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
         Guid userId, AccessLease lease)
     {
-        // A lease whose window has closed carries no early end -- expiry is never stored -- so ending it here would
-        // restate a lease that ran out on its own as an operator revocation, stamping RevokedDate/RevokedBy and
-        // appending a Deny decision for an end that already happened (PM-42355).
+        // A lease whose window has closed carries no early end; revoking it would restamp an end that already happened.
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddMinutes(-1);
@@ -129,8 +127,7 @@ public class RevokeAccessLeaseCommandTests
     [Theory, BitAutoData]
     public async Task RevokeAsync_WindowClosesExactlyNow_ThrowsConflict(Guid userId, AccessLease lease)
     {
-        // NotAfter is exclusive everywhere else (the active reads use NotAfter > now), so the boundary instant is
-        // already outside the window.
+        // NotAfter is exclusive everywhere (active reads use NotAfter > now), so the boundary instant is outside it.
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now;

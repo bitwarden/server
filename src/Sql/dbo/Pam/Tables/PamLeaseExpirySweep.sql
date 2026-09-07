@@ -1,7 +1,5 @@
--- The natural-expiry sweep's journal: one row per lease AccessLease_ExpireDue has already returned. Expiry is
--- derived at read time rather than stored (a lease whose window closed on its own keeps Action = None forever), so
--- there is no status flip to mark a lease as processed -- this journal is what keeps the LeaseExpired audit event
--- and the rotation access-end trigger to at most one firing per lease.
+-- Journal of leases AccessLease_ExpireDue has already returned; expiry is derived, not stored.
+-- Ensures the LeaseExpired audit event and access-end trigger fire a single time per lease.
 CREATE TABLE [dbo].[PamLeaseExpirySweep] (
     [AccessLeaseId] UNIQUEIDENTIFIER    NOT NULL,
     [SweptDate]     DATETIME2 (7)       NOT NULL,

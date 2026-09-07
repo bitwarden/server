@@ -8,24 +8,13 @@ CREATE PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    -- Both writes commit or roll back together (XACT_ABORT).
     SET XACT_ABORT ON
 
-    -- A managing approver retracts a not-yet-activated request (open, or an approval the requester has not
-    -- activated): record Denied and the approver's human decision, mirroring [AccessRequest_ResolveWithDecision] but
-    -- over the broader retractable set. The WHERE guard is race-safe, refuses a request that has produced a lease
-    -- (governed by the lease -- revoke instead), and refuses a lapsed window -- a row users saw as derived-Expired
-    -- must not later restamp to Denied. The decision is inserted only when the transition actually happened
-    -- (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
+    -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
-    -- Claim the request row before probing for a produced lease, exactly as [AccessRequest_Cancel] does and for the
-    -- same reason: the UPDATE's NOT EXISTS is correlated to @AccessRequestId rather than to the row being updated, so
-    -- without this the optimizer may evaluate it before [AccessRequest] is locked and a concurrent
-    -- [AccessLease_CreateFromApprovedRequest] can mint in the gap, leaving a Denied request holding a live lease.
-    -- Activation claims the same row, so the two serialize on it. The value read is unused -- the guarded UPDATE
-    -- stays the single arbiter of the transition -- because reading the row is simply how T-SQL takes a lock on it.
+    -- Claims the row first, like [AccessRequest_Cancel], to serialize against a concurrent activation.
     DECLARE @Claimed TINYINT
     SELECT @Claimed = [Action]
     FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)

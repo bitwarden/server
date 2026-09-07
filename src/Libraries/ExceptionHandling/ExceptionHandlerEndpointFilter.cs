@@ -86,10 +86,8 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
 
         var errorModel = validationModel ?? new ErrorResponseModel(message);
 
-        // Development diagnostics ride only on the unhandled branch. Every other branch above answers a modelled
-        // outcome the caller asked for, so its throw site is not the answer to anything — attaching one only puts
-        // the server's call stack and absolute source paths on the wire, where the client re-logs them verbatim
-        // (PM-42634). A 500 is the case where the throw site IS the answer, so it keeps them.
+        // Development diagnostics ride only on the unhandled branch; a modelled outcome's throw site is never
+        // the answer, so attaching a stack trace to it would only put internals on the wire.
         if (unhandled && _environment.IsDevelopment())
         {
             errorModel.ExceptionMessage = exception.Message;

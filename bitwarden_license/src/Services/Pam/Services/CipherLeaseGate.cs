@@ -16,26 +16,15 @@ namespace Bit.Services.Pam.Services;
 /// <summary>
 /// The commercial <see cref="ICipherLeaseGate" />, replacing <c>UnrestrictedCipherLeaseGate</c> in builds that
 /// include this library. Registered by <c>AddPamServices</c> after <c>AddBaseServices</c> so last-one-wins
-/// overrides the open-source default; an OSS build never reaches this type and so never gates.
+/// overrides the open-source default.
 /// </summary>
 /// <remarks>
-/// This type decides, and only decides. It shapes no response and mutates nothing: it hands back a
-/// <see cref="FullCipherAccess" /> witness (or <c>null</c>) and leaves the controller to turn that into a
-/// response shape. See <see cref="FullCipherAccess" /> for why that division matters.
-///
-/// Two decisions with deliberately different strictness live here. A single read releases a gated cipher's
-/// secrets to a caller holding a valid active lease. A bulk read never does — it strips every gated cipher
-/// whatever the lease state — because a sync or a list is not the act of using a credential, and letting one
-/// through there would leak it into every client's local store for as long as that store lives.
-///
-/// The mutation decisions sit with the single read rather than the bulk one, in both their single and bulk
-/// forms: a lease-holder may edit, delete, restore, or re-file the credential they hold. That asymmetry is
-/// not an inconsistency — a mutation's request emits no secret, so there is nothing for strictness to
-/// protect there, while refusing the holder would break the very access the lease was issued to grant.
-///
-/// What a mutation <em>returns</em> is strict again, and sits with the bulk read rather than the single one:
-/// a client persists a write-return exactly as it persists a sync, so the copy would outlive the lease that
-/// justified it. The caller already holds what it submitted, which makes the echo free to reduce.
+/// Decides only: hands back a <see cref="FullCipherAccess" /> witness (or <c>null</c>) and leaves the
+/// controller to shape the response. A single read releases a gated cipher's secrets to a caller holding a
+/// valid active lease; a bulk read never does, since a sync or list would leak the secret into every client's
+/// local store for as long as it persists there. Mutation follows the single-read strictness (a lease-holder
+/// may edit, delete, restore, or re-file), but a mutation's write-return follows the bulk strictness, since
+/// the client would otherwise persist the echoed secret past the lease that justified it.
 /// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
@@ -128,9 +117,8 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <remarks>
-    /// Resolves gated-ness from the organization's collections for the reason
-    /// <see cref="AuthorizeAdminReadAsync" /> does, and stops there: no lease read, because a lease does not
-    /// unlock a write-return for an administrator any more than it does for a member.
+    /// Resolves gated-ness from the organization's collections like <see cref="AuthorizeAdminReadAsync" />,
+    /// but does no lease read: a lease does not unlock a write-return for an administrator either.
     /// </remarks>
     public async Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(
         Guid userId, Guid organizationId, Cipher cipher)
@@ -173,8 +161,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.ForCiphers([]);
         }
 
-        // One lease read for the whole batch, so a caller who holds leases pays for them once rather than
-        // per cipher.
+        // One lease read for the whole batch, not per cipher.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
             .Select(l => l.CipherId)
@@ -192,9 +179,8 @@ public class CipherLeaseGate : ICipherLeaseGate
 
             if (await _resolver.ResolveAsync(userId, cipherId, signals) is not null)
             {
-                // Gated with no lease. Refusing the whole batch rather than the one cipher keeps a bulk
-                // mutation all-or-nothing: a partially applied delete leaves the caller unable to tell what
-                // happened, and mirrors how the service hides inaccessible ciphers entirely.
+                // Gated with no lease. Refuses the whole batch rather than the one cipher, keeping a bulk
+                // mutation all-or-nothing.
                 throw new NotFoundException();
             }
         }
@@ -216,10 +202,8 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.ForCipher(cipher.Id);
         }
 
-        // Gated, so this releases secrets only to a lease the caller actually holds — the same test the
-        // member single read applies, and the reason an administrator assigned to nothing sees nothing:
-        // a lease is issued against a collection they can reach. An administrator is subject to licensing like
-        // anyone else, so an unlicensed one holds no usable lease either (see LeaseCanRelease).
+        // Gated: releases secrets only to a lease the caller actually holds, the same test the member
+        // single read applies. An unlicensed administrator holds no usable lease either.
         if (!LeaseCanRelease(organizationId))
         {
             return null;
@@ -263,23 +247,13 @@ public class CipherLeaseGate : ICipherLeaseGate
         FullCipherAccess.Unrestricted();
 
     /// <summary>
-    /// The organization's collection ids that gate: those governed by an access rule that is currently
-    /// switched on.
+    /// The organization's collection ids gated by a currently-enabled access rule.
     /// </summary>
     /// <remarks>
-    /// Resolved from the organization's rules and collections rather than the caller's, which is the whole
-    /// difference between the administrative decisions and the member ones. Both member paths start from
-    /// the caller — <c>GetGatedCipherIds</c> from collections they are assigned to, and
-    /// <c>GoverningRuleResolver.ResolveAsync</c> from
-    /// <c>GetManyByUserIdCipherIdAsync</c> — so an administrator assigned to none of them resolves nothing
-    /// and reads as ungated. Reusing either here would fail open for precisely the ciphers an
-    /// administrator reaches without an assignment.
-    ///
-    /// Enabled-ness is derived from the rules directly rather than read off
-    /// <see cref="CollectionDetails.HasEnabledAccessRule" />, because the organization-scoped collection
-    /// read returns <see cref="Collection" />, which carries the <c>AccessRuleId</c> association but not
-    /// that computed projection. Loading the rules and filtering on <c>Enabled</c> asks the same question
-    /// the projection answers, and matches how <c>GoverningRuleResolver</c> drops a disabled rule.
+    /// Resolved from the organization's rules and collections rather than the caller's, unlike the member
+    /// paths, so an administrator assigned to nothing still resolves the full gated set. The organization-scoped
+    /// collection read returns <see cref="Collection" />, not <see cref="CollectionDetails" />, so enabled-ness
+    /// is derived from the rules directly instead of read off <c>HasEnabledAccessRule</c>.
     /// </remarks>
     private async Task<ISet<Guid>> GetLeasingCollectionIdsAsync(Guid organizationId)
     {
@@ -300,9 +274,8 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// Whether a cipher reachable through <paramref name="collectionIds" /> is gated: it is, only when
-    /// every collection it can be reached through gates. A cipher also sitting in a plain collection is
-    /// readable in full by that path anyway, and one in no collection at all is user-owned.
+    /// A cipher reachable through <paramref name="collectionIds" /> is gated only if every one of those
+    /// collections gates. A cipher also in a plain collection, or in none, is not gated.
     /// </summary>
     private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
         collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
@@ -322,37 +295,15 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// The cipher ids reachable <em>only</em> through leasing-enabled collections — those governed by an
-    /// access rule that is currently switched on, per
+    /// The cipher ids reachable <em>only</em> through leasing-enabled collections, per
     /// <see cref="CollectionDetails.HasEnabledAccessRule" />.
     /// </summary>
     /// <remarks>
-    /// "Only" is what makes this safe to compute structurally, without evaluating a rule. A cipher also
-    /// reachable through a plain collection is not gated: the caller can already read it in full by that
-    /// other path, so withholding it here would hide a credential leasing does not actually protect. By the
-    /// same token a user-owned cipher — reachable through no collection at all — is never gated.
-    ///
-    /// "Governed by an enabled rule", not merely carrying a <see cref="Collection.AccessRuleId" />: a
-    /// disabled rule gates nothing, which is the same reading <c>GoverningRuleResolver</c> applies on the
-    /// single-cipher path. Keying off the bare association instead let a cipher governed only by a disabled
-    /// rule sync as partial while every other surface treated it as ungated — the item rendered with no
-    /// credentials and no gating prompt either, because the banner's access-state read resolved no rule and
-    /// so had nothing to offer (PM-42274). Enabled-ness is derived by the collection read paths rather than
-    /// stored, so a caller supplying <paramref name="collections" /> must load them through one of those
-    /// paths; a bare <see cref="Collection" /> cannot answer this.
-    ///
-    /// That derivation is a schema dependency, and it fails <em>open</em>: the flag arrives from a projection
-    /// added by <c>2026-08-21_00_AddPamCollectionReads.sql</c>, and a read path that does not select it leaves
-    /// the property at its default of false, which reads here as "no enabled rule" and so gates nothing at
-    /// all. Dapper does not error on a column missing from the result set, so the only symptom is silently
-    /// absent gating. The migration must therefore land before this code does, and a change to any collection
-    /// read path has to carry the projection with it — the integration coverage that pins this is
-    /// <c>CollectionRepositoryHasEnabledAccessRuleTests</c>, which exercises the real read rather than a
-    /// substituted repository.
-    ///
-    /// A null <paramref name="collections" /> or <paramref name="collectionCiphersByCipher" /> means "not
-    /// loaded, because the caller has no organizations", which is equivalent to empty: with no collection to
-    /// reach a cipher through, nothing is gated.
+    /// A cipher also reachable through a plain collection is not gated, since the caller can already read it
+    /// in full that way; a user-owned cipher is never gated. <c>HasEnabledAccessRule</c> is a projection added
+    /// by <c>2026-08-21_00_AddPamCollectionReads.sql</c> — a collection read path that omits it silently gates
+    /// nothing, since Dapper does not error on a missing column, so any new read path must carry it. A null
+    /// <paramref name="collections" /> or <paramref name="collectionCiphersByCipher" /> is treated as empty.
     /// </remarks>
     private ISet<Guid> GetGatedCipherIds(
         IEnumerable<CollectionDetails>? collections,
@@ -385,10 +336,8 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// True when the cipher is leasing-gated for the caller and they hold no valid active lease — the
-    /// condition behind both the single-cipher read decision ("withhold full data") and the single-cipher
-    /// mutation decision ("refuse"). Resolves the governing rule first so a non-gated cipher, the common
-    /// case, costs no lease query.
+    /// True if the cipher is leasing-gated for the caller and they hold no valid active lease. Resolves the
+    /// governing rule first so a non-gated cipher, the common case, costs no lease query.
     /// </summary>
     private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId, Guid? organizationId)
     {
@@ -408,22 +357,13 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     /// <summary>
-    /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything — that is, whether the
-    /// holder is still licensed (PM-39423).
+    /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything — whether the
+    /// holder is still licensed.
     /// </summary>
     /// <remarks>
-    /// Withdrawing a member's seat withdraws the access their outstanding leases were carrying: the organization has
-    /// decided this member is not to use privileged credentials, and a lease minted before that decision is not an
-    /// exemption from it. Without this a de-licensed member would keep reading the credential until the lease lapsed
-    /// on its own, which for a long window is indistinguishable from not having been de-licensed at all.
-    ///
-    /// Checked BEFORE the lease read, so an unlicensed caller costs one fewer query rather than one more.
-    ///
-    /// Claims-based like every other entitlement here, so it takes effect at the holder's next token refresh. An
-    /// operator who needs the credential closed off sooner revokes the lease, which is immediate.
-    ///
-    /// A cipher with no organization cannot be gated, so this is unreachable for one — it reads as "cannot release"
-    /// only because there is no subscription to license against, and the gated test above has already returned.
+    /// A de-licensed member's outstanding leases stop working immediately, rather than lasting until they lapse.
+    /// Checked before the lease read so an unlicensed caller costs one fewer query. Claims-based, so it takes
+    /// effect at the holder's next token refresh; revoking the lease is immediate instead.
     /// </remarks>
     private bool LeaseCanRelease(Guid? organizationId) =>
         organizationId is { } id && _currentContext.AccessPam(id);

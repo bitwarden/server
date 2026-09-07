@@ -246,8 +246,7 @@ public class ExceptionHandlerEndpointFilterTests
     public async Task DevelopmentEnvironment_DoesNotExposeExceptionDetailsForAHandledException(
         string exceptionName)
     {
-        // A modelled rejection is an answer, not a defect, so it carries no throw site even locally: the stack
-        // trace's absolute source paths used to reach the caller's console verbatim (PM-42634).
+        // A modelled rejection carries no throw site, since its stack trace held absolute source paths.
         await using var app = await TestApp.CreateAsync(Throwing(exceptionName), isDevelopment: true);
 
         var response = await app.Client.GetAsync("/test");
@@ -260,8 +259,7 @@ public class ExceptionHandlerEndpointFilterTests
     [Fact]
     public async Task DevelopmentEnvironment_DoesNotExposeExceptionDetailsForAValidationFailure()
     {
-        // The validation branch builds its own ErrorResponseModel, so it needs pinning separately from the
-        // branches that fall through to the message-only one.
+        // The validation branch builds its own ErrorResponseModel, separate from the message-only one.
         var modelState = new ModelStateDictionary();
         modelState.AddModelError("email", "Email is required.");
         await using var app = await TestApp.CreateAsync(

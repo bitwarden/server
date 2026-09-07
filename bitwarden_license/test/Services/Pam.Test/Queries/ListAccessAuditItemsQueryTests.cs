@@ -31,7 +31,7 @@ public class ListAccessAuditItemsQueryTests
         Assert.Equal((RetentionFloor, _now), Assert.Single(ranges));
     }
 
-    // The menu follows the time period the auditor chose, because that is what changes which items exist.
+    // The menu follows the time period the auditor chose.
     [Theory, BitAutoData]
     public async Task GetItemsAsync_WithBounds_PassesThemThrough(Guid organizationId)
     {
@@ -67,8 +67,7 @@ public class ListAccessAuditItemsQueryTests
             organizationId, _now.AddDays(-AccessHistoryWindow.RetentionDays - 1), _now));
     }
 
-    // Unpaged on purpose: the result is one row per subject, bounded by what the organization governs rather than by
-    // how much has happened.
+    // Unpaged: one row per subject, bounded by what the organization governs.
     [Theory, BitAutoData]
     public async Task GetItemsAsync_ReturnsEverySubjectTheStoreNames(Guid organizationId, Guid cipherId, Guid ruleId)
     {

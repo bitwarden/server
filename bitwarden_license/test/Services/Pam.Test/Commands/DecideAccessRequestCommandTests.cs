@@ -50,9 +50,7 @@ public class DecideAccessRequestCommandTests
         Guid userId, AccessRequest request, Guid parentLeaseId)
     {
         var sutProvider = Setup();
-        // An open extension is unreachable today, so this pins the guard against a future human-approved
-        // extension path rather than a shape the server can currently produce: were one routed here, resolving it
-        // would leave an activatable approval and reopen the second-lease hole.
+        // An open extension is unreachable today; this pins the guard against a future human-approved path.
         request.Action = AccessRequestAction.None;
         SetupManageableRequest(sutProvider, userId, request);
         request.ExtensionOfLeaseId = parentLeaseId;
@@ -126,10 +124,7 @@ public class DecideAccessRequestCommandTests
         request.NotAfter = _now.AddHours(-1);
         SetupManageableRequest(sutProvider, userId, request);
 
-        // The clock closed the request: it reads as Expired everywhere, and neither verdict may restamp it -- a
-        // denial would rewrite a row users already saw as Expired. (This retires the old "denial still closes the
-        // audit trail out" behavior.) Denied without a reason on purpose: a lapsed request is refused for having
-        // lapsed, not sent back to be resubmitted with a reason that would change nothing.
+        // A lapsed request reads as Expired everywhere; neither verdict may restamp it.
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny()));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -185,8 +180,7 @@ public class DecideAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny(comment)));
         Assert.Contains("reason is required", ex.Message);
-        // Nothing is written and nobody is told: a denial the requester cannot be given a reason for must leave the
-        // request pending so the approver can resubmit it with one.
+        // A denial without a reason must leave the request pending, not written or notified.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
@@ -251,17 +245,14 @@ public class DecideAccessRequestCommandTests
 
     private static void SetupManageableRequest(SutProvider<DecideAccessRequestCommand> sutProvider, Guid userId, AccessRequest request)
     {
-        // BitAutoData fills every nullable, ExtensionOfLeaseId included. An extension is never decided, so a fixture
-        // left as generated models a request no approver can act on -- pin it null so these tests exercise an ordinary
-        // request, and set it explicitly in the test that is about extensions.
+        // An extension is never decided; pin null so this models an ordinary request.
         request.ExtensionOfLeaseId = null;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, request.CollectionId).Returns(true);
     }
 
-    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window guard
-    // doesn't trip in tests that aren't about it.
+    // Pins a window containing _now so the lapsed-window guard doesn't trip incidentally.
     private static void SetOpenWindow(AccessRequest request)
     {
         request.NotBefore = _now.AddMinutes(-5);

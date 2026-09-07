@@ -44,13 +44,8 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             throw new NotFoundException();
         }
 
-        // An extension is decided when it is created: RequestLeaseExtensionCommand writes it already Approved with its
-        // automatic verdict and pushes the parent lease's end out in place. No approver route reaches one today -- the
-        // Pending check below already refuses it -- so this guard is a backstop, and a deliberate one. The spec models
-        // human-approved extensions (ExtensionApprovedExtendsParentLease fires for both kinds, and
-        // ExtensionDeniedParentGone exists only for the human case), and the day one is routed here it must extend the
-        // parent in place rather than resolve into an activatable approval. Failing loudly now means that work cannot
-        // silently reopen the second-lease hole this ordering closes.
+        // An extension is decided at creation (RequestLeaseExtensionCommand), so no approver route reaches one; this
+        // guard is a deliberate backstop against reopening the second-lease hole that ordering closes.
         if (request.ExtensionOfLeaseId is not null)
         {
             throw new BadRequestException("An extension is approved when it is requested and cannot be decided.");
@@ -63,17 +58,14 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Once the window has lapsed the clock has closed the request: it is derived Expired everywhere it is read,
-        // and neither verdict may restamp it -- an approval would mint a dead "approved" state, and a denial would
-        // rewrite a row users already saw as Expired. 409 like already-resolved, because the clock resolved it.
-        // (This deliberately retires the earlier "denial is still allowed to close out the audit trail" behavior.)
+        // A lapsed window is derived Expired everywhere it's read; neither verdict may restamp it, so this is 409
+        // like already-resolved.
         if (!request.IsWindowOpen(now))
         {
             throw new ConflictException("This request's window has already ended.");
         }
 
-        // Self-approval is blocked server-side even though the client disables the buttons. Surfaced as 400 rather
-        // than 403 because Bitwarden clients treat 403 as a forced logout.
+        // 400 rather than 403: Bitwarden clients treat 403 as a forced logout.
         if (request.RequesterId == userId)
         {
             throw new BadRequestException("You cannot decide your own request.");
@@ -81,10 +73,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         var approved = submission.Verdict == AccessDecisionVerdict.Approve;
 
-        // A denial must say why: the reason is what the requester's "denied" notification carries and what the audit
-        // record explains the refusal with, and once the request is resolved there is no second chance to supply it.
-        // Whitespace is refused alongside null for the same reason the comment is nulled below. Enforced here and
-        // not only by the client's disabled confirm button, because every caller writes to the same audit trail.
+        // A denial's reason feeds the requester notification and the audit record, and there's no later chance to add it.
         if (!approved && string.IsNullOrWhiteSpace(submission.Comment))
         {
             throw new BadRequestException("A reason is required when denying a request.");
@@ -103,8 +92,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         decision.SetNewId();
 
-        // audit (before/after): the verdict is known up front, so both phases carry the resulting kind (approved or
-        // denied). Record the attempt, then the outcome around the point of no return.
+        // Audit before/after: the verdict is known up front, so both phases carry the resulting kind.
         var auditKind = approved ? AccessAuditEventKind.RequestApproved : AccessAuditEventKind.RequestDenied;
         var audit = new AccessAuditEventData
         {
@@ -120,9 +108,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Approval records the verdict only. The lease that actually authorizes access is minted when the requester
-        // activates the approved request (ActivateAccessRequestCommand) — until then they hold a startable approval,
-        // not access. The automatic path still mints instantly at submit, where the requester is present and asking.
+        // Approval records the verdict only; the lease is minted separately when the requester activates it.
         await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
@@ -134,12 +120,8 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // an approval becomes activatable without a manual refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
-        // The client repaints the row from Status, ResolvedAt, and the single Decisions element (verdict + comment),
-        // so those must be accurate; the approver's denormalized name/email is resolved on the next read. Project
-        // from what we just wrote rather than re-reading: the repository stamped Action/ActionDate in the guarded
-        // UPDATE, so the entity is brought to match before projecting. No lease exists yet, the extension guard
-        // above excluded extensions, and the window guard proved it open, so the derived status lands on Approved
-        // or Denied.
+        // The repository stamped Action/ActionDate in the guarded UPDATE; bring the entity to match before projecting
+        // rather than re-reading.
         request.Action = action;
         request.ActionDate = now;
         var details = AccessRequestDetails.From(request, now);

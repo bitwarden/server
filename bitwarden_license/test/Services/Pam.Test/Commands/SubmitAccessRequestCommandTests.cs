@@ -24,7 +24,7 @@ public class SubmitAccessRequestCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>The organization {@link SetupCipher} puts the cipher in unless a test names its own.</summary>
+    /// <summary>Default organization for <see cref="SetupCipher"/>.</summary>
     private static readonly Guid _defaultOrganizationId = Guid.NewGuid();
 
     [Theory, BitAutoData]
@@ -49,8 +49,7 @@ public class SubmitAccessRequestCommandTests
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("Privileged Controls license is required", ex.Message);
 
-        // Refused before the rule is consulted, so the message cannot tell an unlicensed caller whether the item is
-        // governed at all, by which rule, or who could approve it.
+        // Refused before the rule is consulted.
         await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
             .ResolveAsync(default, default, default!);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -75,8 +74,7 @@ public class SubmitAccessRequestCommandTests
     public async Task SubmitAsync_UserOwnedCipher_SkipsTheLicenseGate(Guid userId, Guid cipherId)
     {
         var sutProvider = Setup();
-        // No organization to hold a license in. Such a cipher is never gated, so it must fall through to the ungated
-        // refusal rather than being told it needs a license it could not obtain.
+        // No organization to hold a license in, so this falls through to the ungated refusal.
         SetupCipher(sutProvider, userId, cipherId, userOwned: true);
         sutProvider.GetDependency<IGoverningRuleResolver>().ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
@@ -111,8 +109,7 @@ public class SubmitAccessRequestCommandTests
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600, Reason = "deploy" });
 
-        // The automatic path no longer mints a lease at submit; it produces a startable, already-approved request the
-        // requester activates explicitly. The window spans the requested duration from now.
+        // The automatic path produces a startable, approved request; the requester activates it explicitly.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
         Assert.Equal(AccessRequestAction.Approved, result.Request.Action);
         Assert.Equal(_now, result.Request.NotBefore);
@@ -166,8 +163,7 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("maximum", ex.Message);
     }
 
-    // PM-39858: the rule's own MaxLeaseDurationSeconds was persisted and shown in the admin console but never read at
-    // submit, so only the global 24h ceiling applied and an over-cap duration was granted in full.
+    // The rule's own MaxLeaseDurationSeconds must be read at submit, not just the global 24h ceiling.
     [Theory, BitAutoData]
     public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -266,8 +262,7 @@ public class SubmitAccessRequestCommandTests
             .NotifyRequesterAsync(userId);
     }
 
-    // The human path pins the window at submit and the approver can only act on what was pinned, so the rule's cap has
-    // to be refused here too — not left for the approver to catch.
+    // The window is pinned at submit, so the rule's cap must be refused here, not left for the approver.
     [Theory, BitAutoData]
     public async Task SubmitAsync_HumanWindowExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -325,8 +320,7 @@ public class SubmitAccessRequestCommandTests
 
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
-        // The auto path mints no approval gate, but the requester's other devices still learn of the new approved
-        // request.
+        // No approval gate on the auto path, but other devices still learn of the new request.
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(userId);
     }
@@ -378,8 +372,7 @@ public class SubmitAccessRequestCommandTests
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
 
-        // A well-formed window (start < end) that has already closed would persist a born-Expired row: invisible to
-        // the approver inbox's clock filter and refused by both Decide and Cancel. Refused at submit instead.
+        // A window that has already closed would persist a born-Expired row, so it's refused at submit.
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId,
                 new AccessRequestSubmission { Start = _now.AddHours(-2), End = _now.AddHours(-1), Reason = "x" }));
@@ -451,10 +444,7 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
 
-    // Defaults to the realistic shape: an organization-owned cipher whose caller is licensed, since only an
-    // organization cipher can ever be leasing-gated. Tests about the license gate override it -- pass
-    // `licensed: false` for the refusal, or `organizationId: null` for the user-owned cipher that has no
-    // organization to be licensed in.
+    // Defaults to an organization-owned, licensed cipher; pass `licensed: false` or `organizationId: null` to override.
     private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
         Guid? organizationId = null, bool licensed = true, bool userOwned = false)
     {

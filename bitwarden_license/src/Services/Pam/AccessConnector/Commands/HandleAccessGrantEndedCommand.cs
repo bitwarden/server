@@ -48,8 +48,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             return;
         }
 
-        // Paused/disabled is a no-op this iteration -- the deferred access-end latch (pending_access_end) would
-        // otherwise remember this and discharge it on Enable/Resume.
+        // Paused/disabled is a no-op; the deferred access-end latch discharges it on Enable/Resume instead.
         if (!config.Enabled)
         {
             return;
@@ -63,8 +62,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
 
         if (target.Method == PamTargetSystemMethod.Automatic)
         {
-            // OfferRotationCommand re-checks can_offer (including target Active and no active job) and no-ops
-            // silently when it no longer holds -- no need to duplicate that guard here.
+            // OfferRotationCommand re-checks can_offer itself and no-ops silently if it doesn't hold.
             await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.AccessEnd);
             return;
         }

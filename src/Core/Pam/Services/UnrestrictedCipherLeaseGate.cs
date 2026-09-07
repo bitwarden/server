@@ -6,10 +6,9 @@ using Bit.Core.Vault.Entities;
 namespace Bit.Core.Pam.Services;
 
 /// <summary>
-/// Open-source fallback for <see cref="ICipherLeaseGate"/>. PAM credential leasing is a commercial
-/// feature, so in builds without the commercial implementation the gate never gates: every cipher is
-/// fully readable and freely mutable, matching the behaviour when the PAM feature flag is off. The real
-/// gating logic lives in the commercial Pam library.
+/// Open-source fallback for <see cref="ICipherLeaseGate"/>. Every cipher is fully readable and freely
+/// mutable, matching the behaviour when the PAM feature flag is off. The real gating logic lives in the
+/// commercial Pam library.
 /// </summary>
 public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 {

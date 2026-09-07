@@ -791,9 +791,8 @@ public class EventService : IEventService
             return;
         }
 
-        // A system-performed action (an automatic decision, a background sweep) has no request behind it to take an IP
-        // address or device type from, so it is attributed to the PAM system user and recorded as a server-side action
-        // instead of carrying a half-populated request context.
+        // A system-performed action has no request to take an IP address or device type from, so it's recorded
+        // as a server-side action rather than a half-populated request context.
         var e = context.SystemUser.HasValue
             ? new EventMessage { SystemUser = context.SystemUser, DeviceType = DeviceType.Server }
             : new EventMessage(_currentContext) { ActingUserId = context.ActingUserId };

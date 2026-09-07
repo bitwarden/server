@@ -53,11 +53,8 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                     LeaseNotBefore = lease.NotBefore,
                     LeaseNotAfter = lease.NotAfter,
                 };
-                // Emitting the audit and firing the access-end trigger are independent, so they get independent
-                // try blocks: ExpireDueAsync has already journaled the whole batch as swept, so a lease is never
-                // returned twice. Sharing one block meant an audit-store hiccup silently swallowed the rotation
-                // trigger for that lease -- and RotateOnAccessEnd is the control that stops a credential the user
-                // just held from staying valid.
+                // Independent try blocks: sharing one meant an audit-store hiccup silently swallowed the
+                // rotation trigger, which is the control that stops the credential the user just held.
                 try
                 {
                     await _accessAuditEventEmitter.EmitAsync(audit);

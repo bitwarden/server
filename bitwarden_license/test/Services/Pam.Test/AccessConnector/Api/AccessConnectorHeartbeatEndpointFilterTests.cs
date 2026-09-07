@@ -14,9 +14,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Api;
 
 /// <remarks>
-/// The filter's whole job is the heartbeat write, so these cover the write and its one guard. Daemon eligibility
-/// is not tested here because the filter does not check it: token issuance and the job queries do, and they have
-/// their own coverage (PamDaemonClientProviderTests, PamRotationJobRepositoryTests).
+/// Covers the heartbeat write and its one guard. The filter does not check daemon eligibility, so that is covered
+/// by PamDaemonClientProviderTests and PamRotationJobRepositoryTests instead.
 /// </remarks>
 public class AccessConnectorHeartbeatEndpointFilterTests
 {

@@ -13,9 +13,8 @@ namespace Bit.Pam.Repositories;
 public interface IPamRotationJobRepository
 {
     /// <summary>
-    /// Guarded insert-if-no-active-job for the job's config, under <c>UPDLOCK, HOLDLOCK</c> (invariant
-    /// <c>AtMostOneActiveJobPerConfig</c>; spec <c>OfferRotation</c>'s single creation point). The job must already
-    /// have its id assigned.
+    /// Guarded insert for the job's config, under <c>UPDLOCK, HOLDLOCK</c> (invariant
+    /// <c>AtMostOneActiveJobPerConfig</c>). The job must already have its id assigned.
     /// </summary>
     Task<PamRotationJobCreateOutcome> CreateGuardedAsync(PamRotationJob job);
 
@@ -24,9 +23,7 @@ public interface IPamRotationJobRepository
     /// <summary>
     /// Atomic first-claim-wins update: flips the job Pending → Claimed and inserts its Executing
     /// <see cref="PamRotationAttempt"/> in the same transaction (invariant <c>AtMostOneInFlightAttemptPerJob</c>).
-    /// Re-checks <c>EligibleClaimsOnly</c> (config enabled, target active, the daemon is assigned to the target, and
-    /// the daemon's organization matches the config's) before claiming. On success the result carries the work
-    /// snapshot (spec <c>ClaimRotation</c>), including <c>ExecuteBy = now + releaseDelay</c>.
+    /// Re-checks eligibility (config enabled, target active, daemon assigned) before claiming.
     /// </summary>
     Task<PamRotationClaimResult> ClaimAsync(Guid jobId, Guid daemonId, DateTime now, TimeSpan releaseDelay);
 
@@ -41,22 +38,19 @@ public interface IPamRotationJobRepository
     Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId);
 
     /// <summary>
-    /// Returns the <paramref name="limit"/> most recent jobs this daemon has worked, newest first, each carrying only
-    /// the attempts the daemon itself recorded — the daemon detail page's recent activity. Matching is on the attempts
-    /// rather than on <see cref="PamRotationJob.ClaimedByDaemonId"/>: the job's claim fields are cleared when it
-    /// resolves, releases or times out, so the attempt is the only durable record of which daemon worked it.
+    /// Returns the <paramref name="limit"/> most recent jobs this daemon has worked, newest first — the daemon
+    /// detail page's recent activity. Matches on the attempts, not <see cref="PamRotationJob.ClaimedByDaemonId"/>,
+    /// since a job's claim fields are cleared once it resolves, releases, or times out.
     /// </summary>
     Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit);
 
     Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId);
 
     /// <summary>
-    /// Atomic write-capability check and write: under one lock, re-verifies the job is Claimed by
-    /// <paramref name="daemonId"/>, the attempt is Executing, and <paramref name="lastKnownRevisionDate"/> still
-    /// matches the cipher's current revision date, then replaces the cipher's <c>Data</c>, bumps its revision date,
-    /// and sets <see cref="PamRotationAttempt.CipherUpdated"/>. Serializes against the release/timeout sweeps so
-    /// there is no check-then-act window between them and this write (spec <c>AcceptCipherUpdate</c> /
-    /// <c>RejectCipherUpdate</c>, plus the revision-date guard added to protect concurrent user edits).
+    /// Atomic write-capability check and write: re-verifies the job is Claimed by <paramref name="daemonId"/>, the
+    /// attempt is Executing, and <paramref name="lastKnownRevisionDate"/> still matches the cipher's current
+    /// revision date, then writes the cipher's data. Serializes against the release/timeout sweeps so there is no
+    /// check-then-act window between them and this write.
     /// </summary>
     Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid daemonId, string cipherData,
         DateTime lastKnownRevisionDate, DateTime now);
@@ -71,33 +65,26 @@ public interface IPamRotationJobRepository
         PamSessionTerminationOutcome sessionTermination, DateTime now);
 
     /// <summary>
-    /// Resolves a failed attempt (guards: Executing ∧ claimed by <paramref name="daemonId"/>). On success, marks the
-    /// attempt Errored with the (already truncated) <paramref name="failureReason"/> and <paramref name="syncState"/>,
-    /// then either retries the job — back to Pending, claim fields cleared,
-    /// <c>NextClaimableAt = now + retryBaseDelay·2^(erroredCount−1)</c> — when the errored-attempt count is under
-    /// <paramref name="maxAttempts"/>, or fails it outright once the budget is exhausted. Guard failure is a stale
-    /// report (spec <c>RejectStaleFailureReport</c>) — nothing changes, audit it as <c>report_rejected</c>.
+    /// Resolves a failed attempt (guards: Executing, claimed by <paramref name="daemonId"/>). On success, retries
+    /// the job with <c>NextClaimableAt = now + retryBaseDelay·2^(erroredCount−1)</c> if under
+    /// <paramref name="maxAttempts"/>, otherwise fails it outright. A stale report is a no-op audited as
+    /// <c>report_rejected</c>.
     /// </summary>
     Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid daemonId, string? failureReason,
         PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay);
 
     /// <summary>
-    /// Set-based sweep (spec <c>JobTimesOut</c>): moves every job still Pending or Claimed past
-    /// <see cref="PamRotationJob.ExpiresAt"/> with no Rotated attempt to <see cref="PamRotationJobStatus.TimedOut"/>
-    /// (clearing claim fields) and abandons any Executing attempt against it. Returns one row per timed-out job for
-    /// audit emission — <see cref="PamTimedOutJob.AttemptCount"/> distinguishes unroutable (never claimed) from
-    /// stuck (claimed at least once).
+    /// Set-based sweep: moves every job still Pending or Claimed past <see cref="PamRotationJob.ExpiresAt"/> with no
+    /// Rotated attempt to <see cref="PamRotationJobStatus.TimedOut"/>, clearing claim fields and abandoning any
+    /// Executing attempt. Returns one row per timed-out job for audit emission.
     /// </summary>
     Task<IReadOnlyList<PamTimedOutJob>> TimeoutDueAsync(DateTime now);
 
     /// <summary>
-    /// Set-based sweep: releases claimed jobs back to Pending when their daemon's heartbeat has gone stale
-    /// (<paramref name="offlineAfter"/>) AND their claim lease has expired
-    /// (<c>now &gt;= ClaimedAt + releaseDelay</c>) AND no Rotated attempt exists — releasing only at lease expiry,
-    /// not at stale detection, preserves success-wins for a slow-but-live daemon. <c>NextClaimableAt</c> is set to
-    /// the pre-clear <c>ClaimedAt + releaseDelay</c> in the same update; claim fields are cleared and the Executing
-    /// attempt is abandoned (budget not charged). Keys on heartbeat staleness only, never on daemon status, so a
-    /// revoked daemon's jobs release too. Returns one row per released job for audit emission.
+    /// Set-based sweep: releases claimed jobs back to Pending once the daemon's heartbeat is stale and the claim
+    /// lease has expired, preserving success-wins for a slow-but-live daemon. Keys on heartbeat staleness only,
+    /// never daemon status, so a revoked daemon's jobs release too. Returns one row per released job for audit
+    /// emission.
     /// </summary>
     Task<IReadOnlyList<PamReleasedJob>> ReleaseExpiredLeasesAsync(DateTime now, TimeSpan offlineAfter,
         TimeSpan releaseDelay);

@@ -72,7 +72,7 @@ public class AccessPreCheckQueryTests
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
         Assert.True(result.HasActiveLease);
-        // The approval path is irrelevant once a lease is held, so the rule resolver is never consulted.
+        // The approval path is irrelevant while a lease is held.
         await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default);
     }
 
@@ -90,8 +90,7 @@ public class AccessPreCheckQueryTests
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
     }
 
-    // PM-39858: the pre-check shapes the requester's duration picker, so it has to publish the same bounds submit
-    // enforces. Publishing only the approval mode left the client offering its own hardcoded presets.
+    // Pre-check publishes the same duration bounds submit enforces.
     [Theory, BitAutoData]
     public async Task PreCheckAsync_RuleWithDurationBounds_PublishesThem(
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -160,8 +159,7 @@ public class AccessPreCheckQueryTests
 
         Assert.True(result.CanStartLease);
         Assert.Null(result.SlotFreesAt);
-        // The short-circuit is the contract, not an optimization: an unconstrained caller must read as startable
-        // however many leases are live, so the cipher must not even be consulted.
+        // Contract, not optimization: an unconstrained caller must read as startable without the cipher being consulted.
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceive()
             .GetActiveByCipherIdAsync(Arg.Any<Guid>(), Arg.Any<DateTime>());
@@ -201,7 +199,7 @@ public class AccessPreCheckQueryTests
 
         Assert.False(result.CanStartLease);
         Assert.Equal(blockingLease.NotAfter, result.SlotFreesAt);
-        // Nothing about the holder travels with the answer -- PM-42446 Alternative A.
+        // Nothing about the holder travels with the answer.
         Assert.Equal(AccessApprovalMode.Automatic, result.ApprovalMode);
     }
 

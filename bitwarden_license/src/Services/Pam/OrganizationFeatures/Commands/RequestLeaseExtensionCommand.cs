@@ -15,9 +15,8 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 {
     /// <summary>
-    /// Recorded on the automatic Deny decision when the parent lease ended before the extension could apply. Stored,
-    /// not translated: it is the reason the denial happened, and it has to mean one thing to whoever reads the
-    /// request later. The client renders its own copy from the request's status.
+    /// Recorded on the automatic Deny decision if the parent lease ended before the extension could apply.
+    /// Stored, not translated, so it has to mean one thing to whoever reads the request later.
     /// </summary>
     private const string LeaseEndedDenialComment = "The lease being extended has ended";
 
@@ -54,23 +53,20 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(submission.LeaseId);
 
-        // 404 for both missing and someone else's lease, so the caller can't probe for leases they don't own.
+        // 404 for both missing and someone else's lease; the caller can't probe for leases they don't own.
         if (lease is null || lease.RequesterId != userId)
         {
             throw new NotFoundException();
         }
 
-        // An extension buys new access, so it needs the license the original lease was taken under. The lease already
-        // running is untouched — the holder keeps it to its approved end, and may still end it early.
+        // An extension buys new access, so it needs the license the original lease was taken under. The
+        // lease already running is untouched.
         _currentContext.RequireLicense(lease.OrganizationId);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // No pre-check that the lease is still live. That question is settled once, under the per-lease lock in
-        // CreateApprovedExtensionAsync, which answers it by recording a denied request rather than by refusing the
-        // call — so the requester whose lease ran out while the Extend dialog was open gets something to inspect
-        // (PM-42632). A pre-check here would only reproduce that verdict as a 409 in the common case and leave the
-        // raced case behaving differently.
+        // No pre-check that the lease is still live: that question is settled under the per-lease lock in
+        // CreateApprovedExtensionAsync, which records a denied request rather than refusing the call.
 
         // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
         // gated only by the rule opting in and the per-lease maximum.
@@ -91,8 +87,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // The rule's max extension length is the cap (the admin picks it from presets); it is always set when
-        // AllowsExtensions is true. A missing cap is treated as zero so a misconfigured rule denies.
+        // The rule's max extension length is the cap. A missing cap is treated as zero so a misconfigured
+        // rule denies.
         if (submission.DurationSeconds > (governingRule.MaxExtensionDurationSeconds ?? 0))
         {
             throw new BadRequestException("The requested duration exceeds the maximum extension length for this item.");
@@ -103,7 +99,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
             throw new BadRequestException("A justification is required to extend a lease.");
         }
 
-        // A lease may be extended exactly once. Friendly early check; the mint proc re-counts under a per-lease lock
+        // A lease may be extended once. Friendly early check; the mint proc re-counts under a per-lease lock
         // and is the race-safe authority.
         if (await _accessRequestRepository.CountExtensionsByLeaseIdAsync(lease.Id) >= 1)
         {
@@ -137,10 +133,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
-        // audit (before/after): record the extension attempt, then the outcome around the point of no return. A
-        // refused extension still records an outcome when the refusal itself was written (the denial below); only
-        // AlreadyExtended throws with nothing persisted, leaving the attempt as an in-doubt entry with no outcome.
-        // AccessLeaseId is the parent lease; LeaseNotAfter is its new end.
+        // audit (before/after): records the attempt, then the outcome around the point of no return. Only
+        // AlreadyExtended throws with nothing persisted, leaving the attempt with no outcome.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseExtended,
@@ -167,10 +161,8 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         if (outcome == AccessLeaseExtendOutcome.LeaseNotActive)
         {
-            // The lease ran out or was ended under the request — typically while the Extend dialog sat open. The
-            // repository recorded that as a denied request rather than refusing the write, so this is a resolved
-            // outcome to report, not an error to throw (PM-42632). The pair's kind flips to RequestDenied, mirroring
-            // how a refused activation reports LeaseActivationRejected against a LeaseActivated attempt.
+            // The lease ran out or was ended under the request. The repository recorded that as a denied request
+            // rather than refusing the write, so this is a resolved outcome to report, not an error to throw.
             await _accessAuditEventEmitter.EmitAsync(
                 audit with
                 {
@@ -190,9 +182,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The parent lease's window just grew. Tell every approver of the collection to re-fetch (their active-leases
-        // and history views show the new end), and tell the requester's other devices so the banner/badge countdown
-        // reflects the longer window without a manual refresh.
+        // The parent lease's window just grew: notify the collection's approvers and the requester's other devices.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
@@ -202,12 +192,9 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     }
 
     /// <summary>
-    /// Projects the extension state the client renders from what was just written: <c>ExtensionOfLeaseId</c> set, plus
-    /// the automatic decision that resolved it. <paramref name="action"/> and <paramref name="verdict"/> come from the
-    /// repository's outcome rather than from <paramref name="request"/>, which carries the approved shape the caller
-    /// asked for; a lease that ended under the request is written Denied, and only the comment says why. The entity is
-    /// brought to match what was written before it is projected, so the derived status (Approved by the applied-
-    /// extension carve-out, or terminal Denied) matches every later read of this row.
+    /// Projects the extension state the client renders from what was just written. <paramref name="action"/> and
+    /// <paramref name="verdict"/> come from the repository's outcome rather than <paramref name="request"/>, since a
+    /// lease that ended under the request is written Denied.
     /// </summary>
     private static AccessRequestDetails Project(AccessRequest request, AccessRequestAction action,
         AccessDecisionVerdict verdict, string? comment, DateTime now)

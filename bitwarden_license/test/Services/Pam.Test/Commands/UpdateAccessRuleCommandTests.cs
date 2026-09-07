@@ -160,8 +160,7 @@ public class UpdateAccessRuleCommandTests
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
-    // RuleName is the name after the edit, so a rename shows as the new name -- the previous one is read from the
-    // preceding event in the trail, not from this one.
+    // RuleName is the name after the edit; the previous name is read from the preceding trail event.
     [Theory, BitAutoData]
     public async Task UpdateAsync_EmitsAttemptThenOutcome_WithTheNewNameAndEditorAsActor(
         AccessRuleDetails existing, AccessRule update, Guid editorId)

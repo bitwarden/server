@@ -56,10 +56,9 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
     public Guid ApiKeyId { get; set; }
 
     /// <summary>
-    /// WARNING: shown exactly once. The plaintext client secret for the access connector's credential -- store it now;
-    /// the server hashes it for storage and never persists or returns the plaintext again. Pair with the client-wrapped
-    /// org key you already hold locally to assemble the access connector's token
-    /// (<c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
+    /// WARNING: shown exactly once. The plaintext client secret for the access connector's credential; the server
+    /// hashes it for storage and never returns it again. Pair with the client-wrapped org key to assemble the
+    /// token (<c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
     /// </summary>
     public string ClientSecret { get; set; } = null!;
 }

@@ -22,7 +22,7 @@ public class LeaseDurationBoundsTests
     [InlineData(900, LeaseDurationBounds.GlobalMaxSeconds, 900)]
     [InlineData(0, LeaseDurationBounds.GlobalMaxSeconds, LeaseDurationBounds.GlobalDefaultSeconds)]
     [InlineData(-1, LeaseDurationBounds.GlobalMaxSeconds, LeaseDurationBounds.GlobalDefaultSeconds)]
-    // PM-39858's shape: a rule left at a 1h default but capped at 15m must not pre-fill 1h.
+    // A default above its own cap must not pre-fill above the cap.
     [InlineData(3600, 900, 900)]
     // A cap below the global default clamps it too, even with no rule default stored.
     [InlineData(null, 900, 900)]

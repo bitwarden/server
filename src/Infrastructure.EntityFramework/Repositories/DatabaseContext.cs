@@ -200,10 +200,9 @@ public class DatabaseContext : DbContext
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
         eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
         eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Action });
-        // (CollectionId, Action, NotAfter) mirrors the pending-inbox read's full filter: under derived status nothing
-        // writes Expired, so lapsed unanswered rows pile up at Action = 0 and NotAfter has to be a key column to keep
-        // them out of the seek. The two CreationDate indexes carry the history reads, whose action/clock OR cannot
-        // seek -- the retention bound is the only predicate left that can bound them. See PM-42655.
+        // (CollectionId, Action, NotAfter) mirrors the pending-inbox filter, since lapsed unanswered rows pile up at
+        // Action = 0 and NotAfter must be a key column to seek them out. The CreationDate indexes carry the history
+        // reads, whose action/clock OR can't seek; the retention bound is the only predicate left to bound them.
         eAccessRequest.HasIndex(p => new { p.CollectionId, p.Action, p.NotAfter });
         eAccessRequest.HasIndex(p => new { p.CollectionId, p.CreationDate });
         eAccessRequest.HasIndex(p => new { p.RequesterId, p.CreationDate });
@@ -248,21 +247,16 @@ public class DatabaseContext : DbContext
             .HasForeignKey(d => d.AccessRequestId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // The audit store is append-only and self-contained. Only OrganizationId is a foreign key -- the subject ids
-        // (actor, requester, cipher, collection, request, lease, rule) deliberately are not, so an event outlives what
-        // it references. The first index serves the trail read: org-scoped, ranged on OccurredAt, newest first, one
-        // page at a time, with Id carrying the order past a tie so a page boundary landing among events that share an
-        // instant resumes exactly. The second serves the before/after collapse, which asks once per candidate row
-        // whether a further-along half of that action exists.
+        // Append-only and self-contained; only OrganizationId is a foreign key, so an event outlives the other
+        // subject rows it references. First index serves the paged trail read (org, OccurredAt, Id for tie-breaking);
+        // second serves the before/after collapse's per-row check.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
         eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredAt, p.Id })
             .IsDescending(false, true, true);
         eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
-        // PAM rotation. The MSSQL schema is the reference (src/Sql/dbo/Pam/Tables); these mirror its keys, indexes
-        // and delete behaviour so the four supported databases agree. Organization carries the only cascade into
-        // this subtree -- every other relationship is NO ACTION, since a target system or daemon that still has
-        // rotation work attached must not be removable out from under it.
+        // PAM rotation: mirrors the MSSQL schema's keys/indexes/delete behavior so all four databases agree.
+        // Organization is the only cascade; everything else is NO ACTION so attached rotation work blocks removal.
         ePamTargetSystem.Property(p => p.Id).ValueGeneratedNever();
         ePamTargetSystem.HasIndex(p => p.OrganizationId);
         ePamTargetSystem
@@ -286,7 +280,6 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.NoAction);
 
         ePamDaemonTargetAssignment.Property(p => p.Id).ValueGeneratedNever();
-        // OneAssignmentPerDaemonTarget.
         ePamDaemonTargetAssignment.HasIndex(p => new { p.DaemonId, p.TargetSystemId }).IsUnique();
         ePamDaemonTargetAssignment.HasIndex(p => p.TargetSystemId);
         ePamDaemonTargetAssignment.HasIndex(p => p.OrganizationId);

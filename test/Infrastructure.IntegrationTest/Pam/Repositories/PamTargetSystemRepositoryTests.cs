@@ -49,8 +49,7 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(PamTargetSystemStatus.Active, persisted.Status);
     }
 
-    // A manual target carries no connector: Kind/PasswordPolicy stay null through the round trip, and the narrow
-    // fields a rename/status-change touches (Name, Status, RevisionDate) persist via the generic ReplaceAsync.
+    // A manual target carries no connector; Kind/PasswordPolicy stay null through the round trip.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_UpdatesFields(
         IOrganizationRepository organizationRepository,
@@ -143,16 +142,14 @@ public class PamTargetSystemRepositoryTests
             RevisionDate = now,
         });
 
-        // While a config names the target the delete is refused outright: the config -- and the credential it
-        // manages -- would be left pointing at nothing.
+        // Delete is refused while a config names the target.
         Assert.False(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
         Assert.NotNull(await pamTargetSystemRepository.GetByIdAsync(target.Id));
         Assert.True(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
 
         Assert.True(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
 
-        // With nothing configured against it the target goes, and its assignment -- only the connector-to-target
-        // edge -- goes with it rather than blocking on the NO ACTION FK.
+        // The assignment (connector-to-target edge) cascades with the target rather than blocking on the NO ACTION FK.
         Assert.True(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
 
         Assert.Null(await pamTargetSystemRepository.GetByIdAsync(target.Id));

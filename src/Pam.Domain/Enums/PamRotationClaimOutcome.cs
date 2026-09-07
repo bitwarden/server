@@ -1,9 +1,8 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The result of the atomic first-claim-wins <c>PamRotationJob_Claim</c> update. The stored procedure returns a
-/// distinct integer code so <c>ClaimRotationJobCommand</c> can tell a lost race apart from a daemon that was never
-/// eligible to claim the job.
+/// The result of the atomic first-claim-wins <c>PamRotationJob_Claim</c> update: a lost race, vs. a daemon that
+/// was never eligible to claim the job.
 /// </summary>
 public enum PamRotationClaimOutcome
 {
@@ -14,8 +13,8 @@ public enum PamRotationClaimOutcome
     Claimed = 1,
 
     /// <summary>
-    /// The job was not Pending, or its <see cref="Entities.PamRotationJob.NextClaimableAt"/> had not yet arrived,
-    /// when the update ran (stored proc returned 0) — another daemon likely won the race.
+    /// The job was not Pending, or its <see cref="Entities.PamRotationJob.NextClaimableAt"/> had not arrived
+    /// (stored proc returned 0) — another daemon likely won the race.
     /// </summary>
     NotClaimable = 0,
 

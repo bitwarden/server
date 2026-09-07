@@ -124,11 +124,8 @@ public class ServerContextBuilder : IContextBuilder
             case IdentityClientType.RotationDaemon:
                 {
                     // A PAM rotation daemon's bearer token carries no device/user/organization claim recognized by
-                    // the other branches above, so without this case the multi-context builder ends up empty --
-                    // BoolVariation then receives an invalid Context and silently falls back to defaultValue (false)
-                    // for every flag, on every daemon-facing request. That looked like the PamRotation flag being
-                    // off even when explicitly enabled, so give the daemon its own context kind (mirrors
-                    // ServiceAccount's organization-keyed fallback).
+                    // the other branches above, so it needs its own context kind or every flag falls back to
+                    // defaultValue on every daemon-facing request (mirrors ServiceAccount's fallback).
                     if (currentContext.PamDaemonId.HasValue)
                     {
                         var ldDaemon = LaunchDarkly.Sdk.Context.Builder(currentContext.PamDaemonId.Value.ToString());

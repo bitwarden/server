@@ -44,8 +44,7 @@ public class RegisterAccessConnectorCommandTests
 
         var result = await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key);
 
-        // The ApiKey row is the generic machine credential: ServiceAccountId stays null (this is not an SM key),
-        // the scope is the fixed rotation scope, and the stored value is a hash, never the plaintext secret.
+        // Not an SM key: ServiceAccountId stays null, scope is the fixed rotation scope, value is a hash.
         await sutProvider.GetDependency<IApiKeyRepository>().Received(1).CreateAsync(Arg.Is<ApiKey>(k =>
             k.ServiceAccountId == null
             && k.Name == name

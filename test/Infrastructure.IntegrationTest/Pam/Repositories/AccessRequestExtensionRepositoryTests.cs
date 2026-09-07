@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessRequestExtensionRepositoryTests
 {
-    /// <summary>The comment the command records on the automatic Deny when the parent lease has already ended.</summary>
+    /// <summary>Comment the command records on the automatic Deny for an already-ended parent lease.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
 
     [DatabaseTheory, DatabaseData]
@@ -104,8 +104,7 @@ public class AccessRequestExtensionRepositoryTests
 
         Assert.Equal(AccessLeaseExtendOutcome.LeaseNotActive, outcome);
 
-        // The refusal is recorded rather than dropped: the request exists, denied, carrying the window that was asked
-        // for and an automatic verdict naming why (PM-42632).
+        // The refusal is recorded, not dropped: the request exists, denied, with an automatic verdict naming why.
         var denied = await accessRequestRepository.GetDetailsByIdAsync(extension.Id, now);
         Assert.NotNull(denied);
         Assert.Equal(AccessRequestStatus.Denied, denied!.Status);
@@ -203,9 +202,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
             await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now, _leaseEndedComment));
 
-        // Inside the extension's own window, when every other precondition holds: it is Approved, owned by the
-        // requester, in-window, and has produced no lease. Only ExtensionOfLeaseId refuses the mint. This is the
-        // window the parent lease is extended over, so nothing else here would.
+        // Every other precondition holds here; only ExtensionOfLeaseId refuses the mint.
         var duringExtension = lease.NotAfter.AddMinutes(1);
 
         Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed,
@@ -237,9 +234,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessLeaseExtendOutcome.Extended,
             await accessRequestRepository.CreateApprovedExtensionAsync(extension, BuildAutoDecision(now), now, _leaseEndedComment));
 
-        // Revoking the parent is the case that matters: it clears the single-active-lease contention that was the
-        // only thing refusing this mint, so a revoked requester could otherwise re-grant themselves the rest of the
-        // window. Enforcement is on here to prove the refusal is the extension predicate, not the singleton guard.
+        // Revoking the parent clears the singleton guard, so this proves the refusal is the extension predicate.
         var duringExtension = lease.NotAfter.AddMinutes(1);
         await accessLeaseRepository.RevokeAsync(
             lease, AccessLeaseAction.Revoked, BuildHumanDecision(lease.AccessRequestId, duringExtension),

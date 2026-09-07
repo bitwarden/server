@@ -1,22 +1,17 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The one place a derived status comes from. The database stores facts — what a party did to a record, and when;
-/// what a record <em>means right now</em> is an interpretation of those facts against the clock, computed here at
-/// read time. Nothing clock-dependent is ever stored, so nothing stored can go stale. The stored-procedure WHERE
-/// clauses carry the same plain clock comparisons where filtering requires them; the two must not drift.
+/// The one place a derived status comes from. Nothing clock-dependent is ever stored; status is computed here at
+/// read time against the same clock comparisons the stored-procedure WHERE clauses use.
 /// </summary>
 public static class AccessStatusDerivation
 {
     /// <summary>
-    /// A request's status as of <paramref name="now"/>, derived from its stored <see cref="AccessRequestAction"/>.
-    /// Recorded facts beat the clock (Denied/Cancelled are terminal whatever the window says); only the open and
-    /// approved-unactivated cases consult it, and Expired exists nowhere else.
+    /// A request's status derived from its stored <see cref="AccessRequestAction"/>. Recorded facts beat the
+    /// clock (Denied/Cancelled are terminal); only the open and approved-unactivated cases consult it.
     /// </summary>
-    /// <param name="hasLease">Whether the request has produced a lease. An activated request's story continues on
-    /// its lease, so it stays Approved and cannot lapse.</param>
-    /// <param name="isExtension">Whether the request extends an existing lease. An applied extension finished its
-    /// work at creation (the parent lease's end moved in place), so it stays Approved and cannot lapse.</param>
+    /// <param name="hasLease">Whether the request has produced a lease; an activated request stays Approved and cannot lapse.</param>
+    /// <param name="isExtension">Whether the request extends an existing lease; an applied extension stays Approved and cannot lapse.</param>
     public static AccessRequestStatus ComputeStatus(
         AccessRequestAction action, bool hasLease, bool isExtension, DateTime notAfter, DateTime now)
     {
@@ -42,16 +37,11 @@ public static class AccessStatusDerivation
 
     /// <summary>
     /// A lease's status as of <paramref name="now"/>, derived from its stored <see cref="AccessLeaseAction"/>. An
-    /// early end beats the clock — ended early ended early, whatever <paramref name="notAfter"/> says; only an
-    /// untouched lease is the clock's to judge.
+    /// early end beats the clock; only an untouched lease is the clock's to judge.
     /// </summary>
     /// <remarks>
-    /// <c>NotBefore</c> is deliberately absent (load-bearing invariant): a lease's <c>NotBefore</c> is in the past
-    /// from the moment the row exists — activation rejects a future start and the mint procedure re-guards it — so
-    /// there is no "minted but not yet started" lease. Authorization is stricter than display and checks both window
-    /// ends in its reads; those checks are vacuous by this invariant and correct by construction. If scheduled
-    /// requests ever grow auto-activation at window start, pre-start leases begin to exist and the derived enum
-    /// needs a new value (scheduled, from action None with a future start) — never fix that by storing a status.
+    /// <c>NotBefore</c> is deliberately absent: a lease's <c>NotBefore</c> is always in the past by the time the
+    /// row exists, so there is no "minted but not yet started" lease.
     /// </remarks>
     public static AccessLeaseStatus ComputeLeaseStatus(AccessLeaseAction action, DateTime notAfter, DateTime now) =>
         action switch

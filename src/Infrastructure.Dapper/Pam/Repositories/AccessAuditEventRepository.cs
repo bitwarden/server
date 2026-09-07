@@ -106,9 +106,8 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     }
 
     /// <summary>
-    /// A selection as the JSON array the procedure's OPENJSON reads, or null when nothing is selected — which is how
-    /// the procedure is told the dimension is unfiltered, and is not the same as an empty array (which would match
-    /// nothing).
+    /// A selection as the JSON array the procedure's OPENJSON reads, or null if nothing is selected -- the signal
+    /// that the dimension is unfiltered, distinct from an empty array (which matches nothing).
     /// </summary>
     private static string? JsonList<T>(IEnumerable<T> values)
     {
