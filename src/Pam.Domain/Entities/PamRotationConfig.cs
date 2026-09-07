@@ -5,10 +5,9 @@ using Bit.Core.Utilities;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// The rotation setup for a single vault cipher (invariant <c>OneConfigPerCipher</c> — a cipher has at most one
-/// config): which <see cref="PamTargetSystem"/> it rotates against, the account it rotates, and when it is next due.
-/// A null <see cref="ScheduleCron"/> means the config never rotates on a schedule (on-demand and/or access-end only,
-/// or — on a manual target — awaiting a human to record a rotation).
+/// The rotation setup for a single vault cipher (invariant <c>OneConfigPerCipher</c>): which
+/// <see cref="PamTargetSystem"/> it rotates against, the account it rotates, and when it is next due. A null
+/// <see cref="ScheduleCron"/> means no scheduled rotation.
 /// </summary>
 public class PamRotationConfig : ITableObject<Guid>
 {
@@ -28,8 +27,8 @@ public class PamRotationConfig : ITableObject<Guid>
     public string AccountIdentity { get; set; } = null!;
 
     /// <summary>
-    /// Whether a successful rotation should also terminate the account's existing sessions on the target. May only
-    /// be true when the target is automatic and reports <see cref="PamTargetSystem.SupportsSessionTermination"/>.
+    /// Whether a successful rotation should also terminate the account's existing sessions. Only valid on an
+    /// automatic target that reports <see cref="PamTargetSystem.SupportsSessionTermination"/>.
     /// </summary>
     public bool TerminateSessions { get; set; }
 
@@ -41,15 +40,14 @@ public class PamRotationConfig : ITableObject<Guid>
     public bool RotateOnAccessEnd { get; set; }
 
     /// <summary>
-    /// When this config is next due. On an automatic target, the sweep offers a job once this is reached (spec
-    /// <c>RotationDue</c>). On a manual target, reaching this instead marks the config
-    /// <c>awaiting_manual_rotation</c> — there is no job, only an operator obligation. Null means nothing is due.
+    /// When this config is next due. On an automatic target the sweep offers a job once reached; on a manual
+    /// target it instead marks the config <c>awaiting_manual_rotation</c>. Null means nothing is due.
     /// </summary>
     public DateTime? NextRotationAt { get; set; }
 
     public bool Enabled { get; set; } = true;
 
-    /// <summary>When the last rotation for this config completed successfully. Null until the first success.</summary>
+    /// <summary>Timestamp of the last successful rotation for this config. Null until the first success.</summary>
     public DateTime? LastRotationAt { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

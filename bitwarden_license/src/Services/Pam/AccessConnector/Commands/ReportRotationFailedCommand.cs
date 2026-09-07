@@ -40,14 +40,10 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
     public async Task<PamRotationAttempt> ReportFailedAsync(
         Guid daemonId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
     {
-        // Truncate before anything else -- the contract forbids forwarding raw target-system error output (it can
-        // echo credentials), and truncation never rejects the report.
+        // Truncated first: raw target-system error output can echo credentials and must never be forwarded.
         var truncatedReason = Truncate(failureReason);
 
-        // Unknown attempt id: nothing to audit against (spec's `exists attempt` precondition). The attempt id is a
-        // bare route value the daemon supplies, so an attempt in another organization has to be indistinguishable
-        // from one that does not exist -- otherwise the reject audit below lands in the victim organization's trail
-        // carrying this daemon's name, and the 404-vs-409 split tells the caller which foreign ids are real.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
@@ -88,9 +84,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
 
         if (result.JobStatus == PamRotationJobStatus.Failed)
         {
-            // Retry budget exhausted: the job failed outright, so the config's next rotation is pushed out rather
-            // than immediately retried. Only for a config that has a schedule -- see PamRotationSweepService's
-            // timeout phase for why a cron-less config must keep a null NextRotationAt.
+            // Retry budget exhausted: push the next rotation out instead of retrying immediately, if scheduled.
             if (config.ScheduleCron is not null)
             {
                 config.NextRotationAt = now + _options.Value.FailureRetryDelay;

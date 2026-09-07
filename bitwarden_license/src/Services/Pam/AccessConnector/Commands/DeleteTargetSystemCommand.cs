@@ -56,9 +56,8 @@ public class DeleteTargetSystemCommand : IDeleteTargetSystemCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Cascades the target's access connector assignments in the same transaction. The repository re-checks the
-        // rotation-config guard under lock, so a config created since the read above blocks the delete rather than
-        // being left naming a target that no longer exists.
+        // Cascades the target's access connector assignments in the same transaction. The repository re-checks
+        // the rotation-config guard under lock, so a config created since the read above blocks the delete.
         if (!await _targetSystemRepository.DeleteWithAssignmentsAsync(targetSystemId))
         {
             throw new BadRequestException(

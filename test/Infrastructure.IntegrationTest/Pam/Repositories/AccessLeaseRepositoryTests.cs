@@ -201,15 +201,11 @@ public class LeaseRepositoryTests
         Assert.NotNull(produced);
         Assert.Equal(lease.Id, produced!.Id);
         Assert.Equal(AccessLeaseAction.None, produced.Action);
-        // The minted lease starts at the activation moment, not at the request's window start an hour earlier
-        // (PM-42596) — both providers must agree on that, which is why it is asserted here and not only in the
-        // command's unit tests. Its end is still the approved one; compare that against the persisted request,
-        // since the in-memory entity keeps tick precision the driver's datetime parameters do not.
+        // Lease starts at activation, not the request's window start; compare against the persisted request for tick tolerance.
         var persistedRequest = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotEqual(persistedRequest!.NotBefore, produced.NotBefore);
         Assert.Equal(persistedRequest.NotAfter, produced.NotAfter);
-        // The mint's own @Now, round-tripped through datetime2 — compare on the same tolerance the window
-        // assertions above rely on rather than on exact ticks.
+        // @Now round-trips through datetime2; compare on the same tolerance, not exact ticks.
         Assert.Equal(now, produced.NotBefore, TimeSpan.FromSeconds(1));
         Assert.Equal(produced.CreationDate, produced.NotBefore, TimeSpan.FromSeconds(1));
 
@@ -395,9 +391,7 @@ public class LeaseRepositoryTests
         // A free cipher reads as free.
         Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now));
 
-        // Someone else's lease on the cipher. BuildAutoApproved mints a fresh collection per lease, so this is also
-        // the cross-collection case: the read must find it without being told which collection it sits on -- that is
-        // the whole reason this method is cipher-scoped rather than reusing the collection-scoped governance read.
+        // Another member's lease, in a different collection; the cipher-scoped read must find it regardless.
         var (req1, dec1, lease1) = BuildAutoApproved(
             organization.Id, cipherId, Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req1, dec1, lease1, now);
@@ -406,8 +400,7 @@ public class LeaseRepositoryTests
         Assert.NotNull(found);
         Assert.Equal(lease1.Id, found.Id);
 
-        // A second, longer, concurrent lease on the same cipher through a different collection -- reachable whenever
-        // one member has an escape path. The slot frees when the LAST one ends, so the later NotAfter must win.
+        // A second, longer, concurrent lease on the same cipher; the later NotAfter must win.
         var (req2, dec2, lease2) = BuildAutoApproved(
             organization.Id, cipherId, Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(3));
         await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, req2, dec2, lease2, now);
@@ -416,8 +409,7 @@ public class LeaseRepositoryTests
         Assert.NotNull(latest);
         Assert.Equal(lease2.Id, latest.Id);
 
-        // Out-of-window leases do not hold the slot: asked about a moment after both windows close, the cipher is
-        // free again.
+        // Out-of-window leases don't hold the slot; the cipher frees after both windows close.
         Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now.AddHours(4)));
 
         // Nor do leases on other ciphers leak in.
@@ -430,11 +422,7 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // The pre-check's answer is only useful if it agrees with the mint guard. The two carry the same predicate in
-        // two places -- this read's WHERE, and AccessLease_CreateFromApprovedRequest's EXISTS under UPDLOCK/HOLDLOCK
-        // -- held in step by nothing but comments, and a divergence reproduces exactly the bug PM-42446 exists to fix
-        // ("the form said you could start, then activation returned 409"). So assert both together rather than in two
-        // tests that never meet.
+        // Pins the pre-check and mint guard's shared predicate together, so a divergence between them fails one test.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var cipherId = Guid.NewGuid();
@@ -454,9 +442,7 @@ public class LeaseRepositoryTests
         Assert.Equal(AccessLeaseMintOutcome.SingleActiveLeaseConflict,
             await accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(contender, now), now, true));
 
-        // Past the blocker's own SlotFreesAt the slot is free: the read says so, and the very mint that was just
-        // refused now succeeds. Read and guard flip together -- that is the property worth pinning, and it also
-        // proves SlotFreesAt is the instant activation actually becomes possible rather than an approximation.
+        // Past SlotFreesAt, the read and the guard flip together; the refused mint now succeeds.
         var afterSlotFrees = blocker.NotAfter;
         Assert.Null(await accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, afterSlotFrees));
         Assert.Equal(AccessLeaseMintOutcome.Minted,
@@ -506,10 +492,7 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // A lease whose window simply closed records no early end -- expiry is unrepresentable in storage -- so
-        // matching this view on the recorded action alone would hide every naturally expired lease: out of the
-        // active read (its window has closed) and never into this one (PM-42355). Ended-ness is derived against
-        // `now` instead.
+        // A naturally closed lease records no early end; ended-ness here is derived against `now`.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
 
@@ -561,9 +544,7 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // The end is guarded on no-early-end-yet, so a repeat (or losing) revoke must leave both halves alone: the first
-        // revoker's identity survives, and no second Deny is appended to a lease this call did not end. Without the
-        // guard the decision log would accumulate a verdict for every attempt.
+        // Guarded on no-early-end-yet, so a repeat revoke leaves the first revoker's identity and decision alone.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var firstRevokerId = Guid.NewGuid();
@@ -649,9 +630,7 @@ public class LeaseRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // Cancelled is the recorded action when the holder ended their own lease, as opposed to Revoked when an
-        // operator did. Both travel the same write path, so the action must round-trip rather than being forced to
-        // Revoked.
+        // Cancelled (holder-ended) vs Revoked (operator-ended) must round-trip, not collapse to one action.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var requesterId = Guid.NewGuid();
