@@ -310,15 +310,11 @@ public class PriceIncreaseScheduler(
                 Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                 {
                     Price = i.PriceId,
-                    Quantity = i.Quantity
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                        i.Discounts?.Select(d => d.CouponId) ?? [])
                 })],
-                Discounts = phase1.Discounts is null ? null :
-                [
-                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                    {
-                        Coupon = d.CouponId
-                    })
-                ],
+                Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                 ProrationBehavior = ProrationBehavior.None
             };
 
@@ -445,9 +441,8 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription, [CouponIDs.Milestone2SubscriptionDiscount]);
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -496,10 +491,9 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
-            .ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? [CouponIDs.Milestone3SubscriptionDiscount] : []);
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -515,7 +509,7 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -607,10 +601,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Source.Coupon.Id),
-            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
+        // BuildPhaseLevelDiscounts de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
@@ -627,7 +621,7 @@ public class PriceIncreaseScheduler(
             StartDate = currentEnd,
             EndDate = currentEnd + periodLength,
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }

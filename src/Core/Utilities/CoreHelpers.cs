@@ -493,6 +493,20 @@ public static class CoreHelpers
     }
 
     /// <summary>
+    /// Keeps a display value from being auto-linked by mail clients (e.g. Gmail turning
+    /// "Client.Org" into a hyperlink) by inserting a zero-width non-joiner after each "."
+    /// and "@". The visible text is unchanged, unlike <see cref="SanitizeForEmail"/> which
+    /// rewrites it to "[dot]"/"[at]".
+    /// </summary>
+    public static string PreventEmailAutoLinking(string value)
+    {
+        const string zeroWidthNonJoiner = "\u200C";
+        return value
+            .Replace(".", $".{zeroWidthNonJoiner}")
+            .Replace("@", $"@{zeroWidthNonJoiner}");
+    }
+
+    /// <summary>
     /// Sanitizes a value for display in an email by neutralizing anything that looks like an
     /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
     /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated

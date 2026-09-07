@@ -143,6 +143,21 @@ public class UserTests
         Assert.Equal("test@email.com", emailMetaDataEmail);
     }
 
+    [Theory]
+    [InlineData("not-json-at-all")]
+    [InlineData("TwoFactorProviders" + "a0c30e2f-0ac1-4ffe-bc3a-47830b829a4f")]
+    [InlineData("{ unterminated")]
+    [InlineData("{ \"7\": \"not-a-provider-object\" }")]
+    public void GetTwoFactorProviders_InvalidJson_ReturnsNull(string invalidJson)
+    {
+        var user = new User
+        {
+            TwoFactorProviders = invalidJson,
+        };
+
+        Assert.Null(user.GetTwoFactorProviders());
+    }
+
     [Fact]
     public void SetUserKeyId_RoundTripsThroughTheColumn()
     {
