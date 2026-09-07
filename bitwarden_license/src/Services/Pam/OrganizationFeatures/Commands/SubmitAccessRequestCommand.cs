@@ -16,9 +16,8 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 {
     /// <summary>
-    /// The global maximum lease window length, applied to both the automatic duration and the human-requested window
-    /// when the governing rule sets no narrower cap of its own. A rule's <c>MaxLeaseDurationSeconds</c> only narrows
-    /// this — see <see cref="LeaseDurationBounds"/>, which folds the two together.
+    /// The global maximum lease window length. A rule's <c>MaxLeaseDurationSeconds</c> only narrows it; see
+    /// <see cref="LeaseDurationBounds"/>.
     /// </summary>
     public const int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
@@ -65,9 +64,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new NotFoundException();
         }
 
-        // Before the rule is resolved, so the refusal is about the caller's license and never leaks whether the item
-        // is governed, by what, or who could approve it. A user-owned cipher has no organization to be licensed in
-        // and is never gated; it falls through to the "does not require a lease" refusal below.
+        // Checked before rule resolution so a license refusal never leaks whether the item is governed.
         if (cipher.OrganizationId is { } organizationId)
         {
             _currentContext.RequireLicense(organizationId);
@@ -120,17 +117,14 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // The governing rule's own cap, narrowed by the global ceiling. Enforced here rather than at activation because
-        // activation mints exactly the window pinned at submit, so this is the only gate the duration passes through.
+        // The rule's own cap, narrowed by the global ceiling; enforced here since activation mints exactly this window.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if (durationSeconds > maxDurationSeconds)
         {
             throw new BadRequestException($"The requested duration exceeds the maximum of {maxDurationSeconds} seconds.");
         }
 
-        // The cipher must satisfy its access rule's conditions (source IP, time of day, ...) before the request is
-        // auto-approved. The resolver only routes a rule here when it carries no human-approval gate, so the engine
-        // never asks for approval on this path; any non-allow outcome is a denial we surface to the caller.
+        // The resolver only routes rules with no human-approval gate here, so any non-allow outcome is a denial.
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
@@ -164,9 +158,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
-        // audit (before/after): the request is auto-approved in one write, so the outcome is two events -- the
-        // submission and the automatic approval (no human actor). Record the attempt, then both outcomes around the
-        // point of no return.
+        // Audit before/after the point of no return: one attempt, then submission and auto-approval outcomes.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
@@ -181,15 +173,11 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Auto-approval records only the request and its automatic verdict — no lease. The requester explicitly
-        // activates the approved request (ActivateAccessRequestCommand) to start the lease, exactly like the human
-        // path after approval. Deferring the mint means the per-cipher single-active-lease guard runs at activation,
-        // the one place a lease is now minted, rather than here.
+        // No lease minted here; the requester activates separately, which is where the single-active-lease guard runs.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
-        // The automatic approval is a distinct event from the submission (it has no attempt of its own), so it gets
-        // its own correlation id rather than sharing the submit pair's.
+        // Distinct event from the submission, with no attempt of its own, so it gets its own correlation id.
         await _accessAuditEventEmitter.EmitAsync(
             audit with
             {
@@ -231,17 +219,13 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A window that has already closed can never produce access: the row would be born derived-Expired --
-        // filtered out of the approver's pending inbox by its clock predicate, and refused by both Decide and
-        // Cancel -- so it is refused here, where the requester can fix the dates. This guard is also what lets the
-        // submit response derive against an open window by construction (AccessRequestResultResponseModel).
+        // Refused here, where the requester can fix the dates, rather than born derived-Expired.
         if (end <= now)
         {
             throw new BadRequestException("The end date must be in the future.");
         }
 
-        // Same per-rule cap as the automatic path: an approver can only act on the window pinned here, so a window that
-        // exceeds the rule's maximum has to be refused at submit rather than left for the approver to notice.
+        // Same per-rule cap as the automatic path, enforced at submit rather than left for the approver to notice.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if ((end - start).TotalSeconds > maxDurationSeconds)
         {
@@ -262,8 +246,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CreationDate = now,
         };
 
-        // audit (before/after): record the submission attempt (the request has no id until it is created), then the
-        // outcome carrying the new request id, around the point of no return.
+        // Audit before/after the point of no return: attempt now, outcome once the request has an id.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,

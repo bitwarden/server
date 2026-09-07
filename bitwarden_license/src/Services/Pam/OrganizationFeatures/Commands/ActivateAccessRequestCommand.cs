@@ -50,28 +50,19 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
-        // 404 for both missing and someone else's request, so the caller can't probe for requests they don't own.
+        // 404 for both missing and requests belonging to another user.
         if (request is null || request.RequesterId != userId)
         {
             throw new NotFoundException();
         }
 
-        // An extension never activates. It applied itself when it was approved -- AccessRequest_CreateApprovedExtension
-        // pushed the parent lease's end out in place -- and the request row it leaves behind exists to carry the
-        // justification, anchor the automatic decision, and cap the lease at one extension. That row is written
-        // Approved and stays Approved (the status enum has no 'activated'; the produced lease is what records an
-        // activation), so without this guard every remaining check below passes for it and a second, independent lease
-        // mints for a credential the requester already holds one for. The window it would mint over is exactly the
-        // extension period, when the parent is still live -- and revoking that parent is what clears the
-        // single-active-lease guard, so a revoked requester could re-mint their own access. Refused here rather than
-        // deferred to the mint proc so the caller gets the reason, not an opaque precondition failure.
+        // An extension never activates; it applied itself at approval by extending the parent lease's end.
         if (request.ExtensionOfLeaseId is not null)
         {
             throw new BadRequestException("This request extended an existing lease and cannot start a new one.");
         }
 
-        // Activation is idempotent while the produced lease is live (double-click, a second tab racing the
-        // auto-activating open flow); a revoked or lapsed lease is final — a request authorizes access at most once.
+        // Idempotent while the produced lease is live; a revoked or lapsed lease is final.
         var existing = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         if (existing is not null)
         {
@@ -82,13 +73,8 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new ConflictException("This request's access has already been used and is no longer active.");
         }
 
-        // Below the idempotency and extension guards on purpose. A grant approved while the requester was licensed
-        // does not survive the license being withdrawn -- activation is what mints the lease, so this is the last
-        // point at which the entitlement still decides anything -- but re-activating a lease that is ALREADY running
-        // must keep returning it (the early return above), because a live lease survives de-licensing and a
-        // double-click or a second tab must not turn it into a refusal. Sitting below the extension guard likewise
-        // keeps that request's own, more accurate reason. The request itself is left standing rather than denied:
-        // restoring the license makes it startable again.
+        // Deliberately below the idempotency and extension guards: a live lease survives de-licensing, but minting
+        // a new one still requires a valid license.
         _currentContext.RequireLicense(request.OrganizationId);
 
         if (request.Action != AccessRequestAction.Approved)
@@ -115,35 +101,18 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            // No Action is set: the lease is born running, and only an early end ever records one.
-            //
-            // The lease starts NOW, at activation, and is never backdated to the approved window's start. A lease
-            // records when access actually began; the request already records what was asked for and granted. The
-            // window start is only ever an upper bound on how early access may begin -- the guard above refuses an
-            // activation before it -- so carrying it onto the lease claimed access that had not happened yet, for a
-            // span that could be the whole approval latency on the on-demand path, or the whole pre-activation part
-            // of a scheduled window. It is the requester's own "My access" row and the audit trail's
-            // LeaseNotBefore that read it back, and both were overstating the lease.
-            //
-            // The end is untouched: activating late shortens the lease rather than sliding its end out, because
-            // NotAfter is the promise the approver made about when access stops.
-            //
-            // Authorization is unaffected either way -- activation requires request.NotBefore <= now, so a lease's
-            // start is already in the past the instant it is minted (see AccessLeaseRepository.LiveAt).
+            // NotBefore is now, not backdated to the approved window's start; NotAfter stays the approved end.
             NotBefore = now,
             NotAfter = request.NotAfter,
             CreationDate = now,
         };
         lease.SetNewId();
 
-        // The per-cipher singleton binds only when every path the caller reaches the cipher through is governed by a
-        // singleton rule; an escape path leaves them unconstrained. The mint proc enforces it under a range lock.
+        // Binds only where every cipher path is singleton-governed; enforced under a range lock in the mint proc.
         var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
 
-        // audit (before/after): record the activation attempt, then the outcome around the point of no return. The
-        // outcome kind follows the mint result -- a minted lease, or a recorded rejection (single-active-lease
-        // conflict or a lost race). A race won by another activation is a no-op for this caller and emits nothing,
-        // leaving the attempt as an in-doubt entry.
+        // Records the attempt, then the outcome around the mint. A race lost to another activation emits nothing,
+        // leaving the attempt in-doubt.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseActivated,
@@ -160,12 +129,8 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // The last gate before the point of no return: the rule's automated conditions have to still hold, now, at
-        // the moment the lease is minted. Approval is a decision about *this* requester and window; a source-IP
-        // allowlist is a standing condition on the network they reach the credential from, and nothing downstream
-        // re-asks it -- CipherLeaseGate hands over a gated cipher on the existence of an active lease alone. Checking
-        // only at submit meant an approval, once obtained, carried a caller across a narrowed allowlist or onto a
-        // network the rule never admitted, for the whole approved window (PM-42273).
+        // Final check before minting: automated conditions (e.g. an IP allowlist) must still hold now, not just at
+        // submit time, since CipherLeaseGate only checks that a lease exists.
         var denial = await FindConditionDenialAsync(userId, request, now);
         if (denial is not null)
         {
@@ -175,8 +140,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
                     Kind = AccessAuditEventKind.LeaseActivationRejected,
                     Phase = AccessAuditEventPhase.Outcome,
                     AccessLeaseId = null,
-                    // The reason, not the copy shown to the requester: wording is presentation and will be
-                    // translated, while the reason stays queryable and means one thing to whoever reads the trail.
+                    // The internal reason code, not requester-facing copy; stable across translations.
                     Detail = denial.Reason.ToString(),
                 });
             throw new BadRequestException(AccessDenialMessage.For(denial));
@@ -193,9 +157,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         if (outcome == AccessLeaseMintOutcome.PreconditionFailed)
         {
-            // Lost a race: the guarded insert re-checks every precondition, so a miss means another activation won
-            // or the request changed underneath us. If the winner's lease is live, activation still succeeded from
-            // this caller's point of view.
+            // Lost the race to another activation; a live winner lease still counts as success.
             var winner = await _accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
             if (winner?.IsLive(now) == true)
             {
@@ -212,27 +174,17 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // approver of this collection to re-fetch, mirroring decide and revoke.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
 
-        // Tell the requester's other devices the approved request just minted a lease, so their "My requests" view
-        // and any open partial cipher pick up the live lease without a manual refresh.
+        // Tell the requester's other devices so their "My requests" view picks up the live lease without a refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;
     }
 
     /// <summary>
-    /// Re-evaluates the governing rule's automated conditions against the caller's signals right now. Returns the
-    /// denial to refuse with, or null when the conditions still admit the caller — or when there are none left to
-    /// apply.
+    /// Re-evaluates the governing rule's automated conditions against the caller's signals at activation time.
     /// </summary>
     /// <remarks>
-    /// The rule pinned on the request is the one consulted, not whichever rule governs the cipher today: a request is
-    /// held to the rule that approved it, and re-resolving could hand it a rule created or re-pointed since. Requests
-    /// predating pinning fall back to resolution so the gate still covers them rather than waving them through.
-    ///
-    /// The approval gate itself is stripped (<see cref="GoverningRule.AutomatedConditions"/>) — an approver's verdict
-    /// has already settled it, and re-asking would refuse every human-approved activation outright. That is also why a
-    /// rule the server cannot parse is refused here rather than deferred: its fail-safe stand-in is an approval gate,
-    /// and stripping that leaves nothing, which the engine reads as vacuously satisfied.
+    /// Uses the rule pinned on the request, not whichever rule governs the cipher today; the approval gate is stripped.
     /// </remarks>
     private async Task<AccessEvaluation?> FindConditionDenialAsync(Guid userId, AccessRequest request, DateTime now)
     {
@@ -242,9 +194,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             ? await _resolver.ResolvePinnedAsync(ruleId, request.CollectionId)
             : await _resolver.ResolveAsync(userId, request.CipherId, signals);
 
-        // No rule left to enforce: the admin disabled or deleted it, or the cipher is no longer reachable through a
-        // gated collection. Leasing has stopped governing this credential, so there is nothing to hold the caller to
-        // and the approved request activates.
+        // No rule left to enforce: the cipher is no longer gated, so the approved request activates unconditionally.
         if (governingRule is null)
         {
             return null;
@@ -259,9 +209,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         return evaluation.Outcome switch
         {
             AccessEvaluationOutcome.Allow => null,
-            // No condition kind asks for approval outside the gate stripped above, but if one ever did it would be
-            // asking for something this gate cannot deliver — the request is already approved and there is no second
-            // approver to route to. Recorded as unsupported rather than passed off as a plain deny with no reason.
+            // No condition kind asks for approval here; the request is already approved with no second approver to route to.
             AccessEvaluationOutcome.RequiresApproval => AccessEvaluation.Deny(DenyReason.UnsupportedCondition),
             _ => evaluation,
         };

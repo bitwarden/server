@@ -4,9 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The schedule-list view: every config for the org, with the target's display name/method denormalized (so the
-    -- client avoids an N+1) and a computed HasActiveJob so the UI can gate Delete/UpdateAccount without a second
-    -- round trip. "Active" mirrors PamRotationJob_Create's guard: Pending or Claimed.
+    -- Schedule-list view: denormalizes target name/method, computes HasActiveJob to avoid an N+1/round trip.
     SELECT
         C.*,
         T.[Name] AS [TargetSystemName],

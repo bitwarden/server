@@ -1,9 +1,6 @@
--- Which daemon is responsible for rotating credentials on which target system (invariant OneAssignmentPerDaemonTarget).
--- DaemonId and TargetSystemId are deliberately ON DELETE NO ACTION: both already reach Organization via their own
--- cascading FK, and also letting this table cascade from either of them would create multiple cascade paths back to
--- Organization -- a combination SQL Server refuses at CREATE TABLE time. OrganizationId therefore carries the only
--- cascade path, so deleting an organization still removes its assignments; a PamDaemon/PamTargetSystem row that still
--- has an assignment must be detached first (or its own delete will hit this table's NO ACTION FK).
+-- Which daemon rotates which target (OneAssignmentPerDaemonTarget).
+-- DaemonId/TargetSystemId are NO ACTION; multiple cascade paths to Organization aren't allowed.
+-- OrganizationId carries the only cascade; detach an assignment before deleting its daemon/target.
 CREATE TABLE [dbo].[PamDaemonTargetAssignment] (
     [Id]                UNIQUEIDENTIFIER    NOT NULL,
     [DaemonId]          UNIQUEIDENTIFIER    NOT NULL,
@@ -17,13 +14,11 @@ CREATE TABLE [dbo].[PamDaemonTargetAssignment] (
 );
 GO
 
--- OneAssignmentPerDaemonTarget.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_DaemonId_TargetSystemId]
     ON [dbo].[PamDaemonTargetAssignment] ([DaemonId] ASC, [TargetSystemId] ASC);
 GO
 
--- Supports the reverse lookup (which daemons cover a given target) and the claim sproc's join from target ->
--- assignment -> daemon.
+-- Supports the reverse lookup and the claim sproc's target -> assignment -> daemon join.
 CREATE NONCLUSTERED INDEX [IX_PamDaemonTargetAssignment_TargetSystemId]
     ON [dbo].[PamDaemonTargetAssignment] ([TargetSystemId] ASC);
 GO

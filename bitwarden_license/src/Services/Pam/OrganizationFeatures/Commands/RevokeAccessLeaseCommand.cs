@@ -44,10 +44,9 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
-        // Who may end a lease early: the lease's own holder (ending their own access), or anyone who can Manage its
-        // collection (a managing approver or org admin). The recorded action is the manner — the holder ending
-        // their own access settles to Cancelled, an operator ending it settles to Revoked — while RevokedBy records the
-        // actor either way. 404 covers both missing and not-authorized, so a caller can't probe for leases they can't touch.
+        // Who may end a lease early: the holder, or anyone who can Manage its collection. The holder ending their
+        // own access settles to Cancelled; an operator ending it settles to Revoked. 404 covers both missing and
+        // not-authorized so a caller can't probe for leases they can't touch.
         var isHolder = lease is not null && lease.RequesterId == userId;
         if (lease is null ||
             (!isHolder && !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId)))
@@ -57,10 +56,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Judged against the clock, not just the recorded action: a lease whose window has closed carries no early
-        // end (nothing ever writes expiry), so ending one here would restate a lease that ran out on its own as an
-        // operator action -- stamping RevokedDate/RevokedBy and appending a Deny decision for an end that already
-        // happened.
+        // A lease whose window has closed carries no early end; nothing ever writes expiry, so ending one here
+        // would misrepresent a lease that ran out on its own as an operator action.
         if (!lease.IsLive(now))
         {
             throw new ConflictException("This lease is not active.");
@@ -68,7 +65,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         var endAction = isHolder ? AccessLeaseAction.Cancelled : AccessLeaseAction.Revoked;
 
-        // The reason has no dedicated column, so it is preserved as a human decision against the originating request.
+        // The reason has no dedicated column; it is preserved as a human decision against the originating request.
         var auditDecision = new AccessDecision
         {
             AccessRequestId = lease.AccessRequestId,
@@ -80,8 +77,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
-        // audit (before/after): record the revoke attempt, then the outcome around the point of no return. A holder
-        // ending their own lease and an operator revoking both settle to the single LeaseRevoked kind.
+        // A holder self-end and an operator revoke both settle to the single LeaseRevoked kind.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseRevoked,
@@ -103,9 +99,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // Both a holder self-end and an operator revoke are grant-ends (spec RotateOnAccessEnd /
-        // RaiseManualObligationOnAccessEnd); the handler self-gates on the PamRotation flag. A failure here must
-        // never fail the revoke itself -- the lease has already ended -- so it is logged and swallowed.
+        // A failure here must never fail the revoke itself, since the lease has already ended, so it is logged
+        // and swallowed.
         try
         {
             await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
@@ -120,8 +115,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         // The active lease just drained; tell every approver of this collection to re-fetch.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
 
-        // Tell the lease holder their access ended, so an open cipher re-locks and the banner/badges drop the lease
-        // — whether an operator revoked it or the holder ended it from another device.
+        // Tell the lease holder their access ended, so an open cipher re-locks and the badges drop the lease.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
     }
 }

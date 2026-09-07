@@ -25,9 +25,8 @@ public class GetAccessRequestDetailsQuery : IGetAccessRequestDetailsQuery
         // AccessRequestDetails.ProducedLeaseStatus.
         var details = await _accessRequestRepository.GetDetailsByIdAsync(requestId, now);
 
-        // 404 when the request is missing or the caller is neither its requester nor a managing approver, so the caller
-        // can't probe for requests they have no business seeing. Mirrors the cancel/decide surfaces. Being a read, this
-        // does NOT block the requester from viewing their own request (decide does, to forbid self-approval).
+        // 404 when the request is missing or the caller is neither its requester nor a managing approver. Unlike
+        // decide, this does not block the requester from viewing their own request.
         if (details is null)
         {
             throw new NotFoundException();

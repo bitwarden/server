@@ -44,8 +44,7 @@ public class ListLeaseHistoryQueryTests
         var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Single(result);
-        // The caller's clock is passed alongside `since`: it is what decides a lapsed lease has ended at all, since
-        // nothing writes Expired (PM-42355), and the caller derives response statuses against the same instant.
+        // The caller's clock is passed alongside `since`, since nothing writes Expired.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetManyEndedByCollectionIdsAsync(manageable, expectedSince, _now);
     }

@@ -4,11 +4,10 @@ using Bit.Pam.Models;
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// One subject the access-audit trail names within a range, as the trail's Item filter offers it. Exactly one of the
-/// two pairs is set, and which one is how the client tells a credential from an access rule.
+/// One subject the access-audit trail names within a range, as the trail's Item filter offers it. Exactly one of
+/// the two pairs is set, distinguishing a credential from an access rule.
 ///
-/// No cipher name is here, deliberately. A cipher's name is Vault Data — an EncString an auditor generally cannot
-/// decrypt — so the client resolves names from its own vault and drops the items it cannot label. A rule's name is
+/// No cipher name is here: it's Vault Data, so the client resolves it from its own vault instead. A rule's name is
 /// plaintext organization configuration, so it travels with the id.
 /// </summary>
 public class AccessAuditItemResponseModel : ResponseModel

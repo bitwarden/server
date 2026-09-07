@@ -117,14 +117,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Caller-scoped self-read: the cipher/collection/requester display-name joins are intentionally omitted
-        // (those names come from the caller's local vault, and the requester is the caller).
-        //
-        // Bounded the same way as AccessRequest_ReadManyByRequesterId: history rows are held to the shared retention
-        // window, but anything the caller can still act on stays visible at any age -- an open request with an
-        // unlapsed window is still answerable, and an approved one with an unlapsed window can still be activated.
-        // A lapsed unanswered row needs no exemption: it is derived Expired, which is history, and it ages out with
-        // the rest.
+        // Caller-scoped self-read: cipher/collection/requester names are omitted since they come from the caller's
+        // own vault. Bounded like AccessRequest_ReadManyByRequesterId: history is retention-windowed, but anything
+        // still actionable (open or approved, unlapsed) stays visible regardless of age.
         var requests = await dbContext.AccessRequests
             .Where(r => r.RequesterId == requesterId
                 && (since == null
@@ -163,9 +158,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Actionable only: no action recorded and a window still open -- a lapsed row is derived Expired and belongs
-        // to the history read instead. An open request has not been decided by anyone yet, so it carries no approvers
-        // (the decisions list stays at its default empty value); only the resolved reads populate a decision list.
+        // Actionable only: no action recorded and window still open; a lapsed row is derived Expired and belongs
+        // to history instead. An open request carries no approvers yet.
         var requests = await dbContext.AccessRequests
             .Where(r => ids.Contains(r.CollectionId)
                 && r.Action == AccessRequestAction.None
@@ -180,8 +174,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         var usersById = await GetUsersByIdAsync(dbContext, requests.Select(r => r.RequesterId));
 
-        // No lease lookup: an open request (Action None) has never been activated -- a lease is only ever minted
-        // from Approved -- so there is no produced lease to find (the stored procedure documents the same).
+        // No lease lookup: an open request has never been activated (a lease is only ever minted from Approved),
+        // so there's nothing to find.
         return requests
             .Select(request => ProjectDetails(request, lease: null, now, usersById))
             .ToList();
@@ -231,10 +225,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // The caller has already verified (and the application enforces) that no action is recorded yet; the WHERE
-        // guard keeps the write idempotent under a race so a second approver can't move an already-resolved request.
-        // The decision is recorded only when the transition actually happened, so a losing approver's verdict is
-        // never appended to a request they did not resolve.
+        // The WHERE guard keeps the write idempotent under a race, so a second approver can't move an
+        // already-resolved request; the decision is recorded only when the transition actually happened.
         var rowsAffected = await dbContext.AccessRequests
             .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None)
             .ExecuteUpdateAsync(s => s
@@ -265,8 +257,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A transaction is required so the claim below holds its row lock across both statements; without one each
-        // statement commits on its own and the lock is gone before the guarded update runs.
+        // Requires a transaction so the claim's row lock holds across both statements, not just its own.
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         await ClaimRequestRowAsync(dbContext, id);
@@ -290,8 +281,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await ClaimRequestRowAsync(dbContext, request.Id);
 
-        // The decision is inserted only when the transition actually happened, so a no-op never orphans an
-        // AccessDecision.
+        // Inserted only alongside an actual transition, so a no-op never orphans a decision.
         var rowsAffected = await RetractableRequests(dbContext, request.Id, now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, AccessRequestAction.Denied)
@@ -316,29 +306,20 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// Takes the request row's write lock, so a retraction's probe for a produced lease cannot be evaluated before
-    /// the row is held. Both retraction writes below test lease existence with a subquery correlated to the captured
-    /// id rather than to the row being updated, which leaves the provider free to evaluate it as a start-up filter
-    /// ahead of touching AccessRequest at all -- and in that gap a concurrent
+    /// Takes the request row's write lock so a retraction's lease probe can't run before the row is held; both
+    /// retraction writes test lease existence via a subquery the provider could otherwise evaluate before touching
+    /// AccessRequest at all, letting a concurrent
     /// <see cref="Bit.Infrastructure.EntityFramework.Pam.Repositories.AccessLeaseRepository.CreateFromApprovedRequestAsync"/>
-    /// can mint and commit, leaving a Cancelled/Denied request holding a live lease. Access is governed by the lease
-    /// alone once it exists, so that combination hands the requester the credential they withdrew from.
+    /// mint and commit in the gap.
     /// </summary>
     /// <remarks>
-    /// Activation claims the same row, so by the time the guarded update runs there are only two states: activation
-    /// has not claimed yet, and now blocks behind this transaction until it can, then fails its own CAS on Action; or
-    /// it committed first, and the probe sees the lease it minted. EF has no portable UPDLOCK hint, so the lock is
-    /// taken the only portable way -- by writing the row. The write is a no-op (Action is set to what it already is);
-    /// the lock is the point. Stands in for the <c>WITH (UPDLOCK, ROWLOCK)</c> read that AccessRequest_Cancel and
-    /// AccessRequest_CancelWithDecision use. Must run inside a transaction, or the lock is released before the
-    /// guarded update runs.
+    /// By the time the guarded update runs, activation either is still blocked behind this transaction (and then
+    /// fails its own CAS), or already committed and the probe sees the lease it minted. EF has no portable UPDLOCK
+    /// hint, so the lock is taken by writing the row (a no-op write); this must run inside a transaction.
     ///
-    /// It also has to stay a <em>separate statement</em> rather than being folded into the guard, which is what makes
-    /// this work on PostgreSQL. A single statement that blocks on a concurrently-updated row resumes under
-    /// ReadCommitted by re-checking the target row against the new version while its subqueries still run on the
-    /// original snapshot, so the guard would re-read Action but not the lease that appeared alongside it -- the
-    /// inconsistent snapshot the manual calls out for updating commands. Absorbing the block here means the guarded
-    /// update starts afterwards on a fresh snapshot, with the lease visible.
+    /// Must stay a separate statement, not folded into the guard: on PostgreSQL, a single statement that blocks on a
+    /// concurrently-updated row resumes under ReadCommitted with its subqueries still on the original snapshot, so
+    /// the guard would miss the lease that appeared alongside the row it re-reads.
     /// </remarks>
     private static Task ClaimRequestRowAsync(DatabaseContext dbContext, Guid id)
         => dbContext.AccessRequests
@@ -346,12 +327,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.Action, r => r.Action));
 
     /// <summary>
-    /// The requests a retraction (requester cancel, or a manager's cancel-with-decision) may still settle: still open
-    /// or approved-unactivated, window not yet lapsed, and no produced lease. Excludes a request that has produced a
-    /// lease (that access is governed by the lease, which must be revoked instead) and one whose window has lapsed --
-    /// a row users saw as derived-Expired must not later restamp. Shared by both cancel writes so the guarded set
-    /// cannot drift between them; mirrors the guard text AccessRequest_Cancel and AccessRequest_CancelWithDecision
-    /// share.
+    /// The requests a retraction may still settle: open or approved-unactivated, window not lapsed, no produced
+    /// lease. Excludes a request with a produced lease (revoke that instead) or a lapsed window (already
+    /// derived-Expired). Shared by both cancel writes so the guarded set can't drift between them.
     /// </summary>
     private static IQueryable<EfModel> RetractableRequests(DatabaseContext dbContext, Guid id, DateTime now)
         => dbContext.AccessRequests
@@ -391,9 +369,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         if (lease is null)
         {
-            // Nothing left to extend, but the attempt is still an answerable request: record it denied, with an
-            // automatic verdict naming why, so the requester can inspect it (PM-42632). The window stored is the one
-            // that was asked for; no lease is touched.
+            // Nothing left to extend, but still recorded as an answerable denied request; the requested window is
+            // stored though never applied to any lease.
             await WriteExtensionAsync(dbContext, request, decision, now,
                 AccessRequestAction.Denied, AccessDecisionVerdict.Deny, denialComment);
 
@@ -427,10 +404,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// Stages the extension request and its automatic decision for insert. The caller supplies one set of entities for
-    /// both outcomes, so the recorded action -- approved and applied, or denied because the parent lease is gone -- is
-    /// decided here rather than trusted from the caller's copy. The stored action, never the derived status enum: the
-    /// write path records facts (see AccessStatusDerivation).
+    /// Stages the extension request and its automatic decision for insert. The caller supplies one set of entities
+    /// for both outcomes; the recorded action (approved, or denied since the parent lease is gone) is decided here,
+    /// not trusted from the caller.
     /// </summary>
     private async Task WriteExtensionAsync(DatabaseContext dbContext, CoreEntity request, AccessDecision decision,
         DateTime now, AccessRequestAction action, AccessDecisionVerdict verdict, string? comment)
@@ -489,10 +465,9 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
     }
 
     /// <summary>
-    /// The one path from a raw EF row to the read model: maps the scalars, stamps the derived statuses, and attaches
-    /// the optional denormalized identity and decision log. Every read materializes through here so a projection
-    /// cannot silently skip the stamping -- an unstamped row would render as the enum default, Pending, with nothing
-    /// failing. Mirrors the Dapper side, where every read funnels through DetailsRow.Derive.
+    /// The one path from a raw EF row to the read model: maps scalars, stamps derived statuses, and attaches
+    /// identity/decisions. Every read funnels through here so a projection can't silently skip stamping.
+    /// Mirrors the Dapper side's DetailsRow.Derive.
     /// </summary>
     private AccessRequestDetails ProjectDetails(EfModel request, EfLease? lease, DateTime now,
         Dictionary<Guid, (string? Name, string? Email)>? usersById = null,

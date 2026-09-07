@@ -36,28 +36,15 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
 );
 GO
 
--- Append-only audit store. State-changing PAM actions insert here via AccessAuditEvent_Create, which snapshots the
--- actor/requester/cipher/collection/rule display names into the row at write time so each event is SELF-CONTAINED; the
--- trail is then read back org-scoped and newest-first with no joins. Subject ids are deliberately NOT foreign keyed so
--- an event survives deletion of what it references, and the frozen names mean a later delete or rename cannot rewrite
--- history. Cipher/collection names are encrypted (EncString), decrypted client-side.
--- The trail's own read: org-scoped, ranged on [OccurredAt], newest first, one page at a time. [Id] carries the
--- ordering past a tie so a page boundary landing among events that share an instant can be resumed exactly.
---
--- [CorrelationId] and [Phase] are what the before/after collapse tests each candidate row on -- without them every row
--- considered for a page, not just the ones returned, would cost a key lookup. The four subject columns after them
--- cover AccessAuditEvent_ReadItemsByOrganizationId, which reads the whole range rather than a page and would otherwise
--- pay that lookup on every row of it. They ride here rather than on an index of their own because the page read is a
--- TOP-N seek -- it stops as soon as it has filled a page -- so a wider leaf row costs it almost nothing, where a
--- second index would cost every insert, and INCLUDE has no Entity Framework equivalent to mirror onto the other three
--- databases.
+-- Append-only; names snapshot at write, so rows stay self-contained.
+-- Subject ids aren't FKed; a row survives deletion of what it references.
+-- Serves the org-scoped page read; INCLUDEs avoid extra key lookups for the collapse.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredAt_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredAt] DESC, [Id] DESC)
     INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName]);
 GO
 
--- Serves the collapse itself, which asks "is there a further-along half of this action?" once per candidate row. A
--- correlation holds one or two rows, so this is a point lookup; without it the question would be a scan.
+-- Serves the collapse's per-row lookup for a correlation's other half (1-2 rows).
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_CorrelationId]
     ON [dbo].[AccessAuditEvent] ([CorrelationId] ASC)
     INCLUDE ([OrganizationId], [OccurredAt], [Phase]);

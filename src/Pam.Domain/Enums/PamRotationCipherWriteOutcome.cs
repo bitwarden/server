@@ -8,8 +8,8 @@
 public enum PamRotationCipherWriteOutcome
 {
     /// <summary>
-    /// The write capability held and the cipher's <c>Data</c> and revision date were replaced (stored proc returned
-    /// 1). <see cref="Entities.PamRotationAttempt.CipherUpdated"/> is set.
+    /// The write capability held: the cipher's <c>Data</c> and revision date were replaced and
+    /// <see cref="Entities.PamRotationAttempt.CipherUpdated"/> is set (stored proc returned 1).
     /// </summary>
     Accepted = 1,
 

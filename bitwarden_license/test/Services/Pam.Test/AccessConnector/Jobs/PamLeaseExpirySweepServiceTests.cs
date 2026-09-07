@@ -56,8 +56,7 @@ public class PamLeaseExpirySweepServiceTests
         sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(lease1.CipherId)
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
-        // lease1's failure (raised from the HandleAsync call the sweep awaits after its own audit emit) must be
-        // logged and swallowed per-lease, never preventing lease2 from being processed.
+        // lease1's failure must be logged and swallowed per-lease, never blocking lease2.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
@@ -78,8 +77,7 @@ public class PamLeaseExpirySweepServiceTests
 
         await sutProvider.Sut.SweepAsync();
 
-        // ExpireDueAsync has already flipped the lease out of Active, so it is never returned again -- letting an
-        // audit hiccup swallow the rotation trigger would silently leave the credential the user just held valid.
+        // A losing audit hiccup must not swallow the rotation trigger and leave the credential valid.
         await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease.CipherId);
     }
 

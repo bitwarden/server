@@ -34,8 +34,6 @@ public class CipherLeaseGateTests
     /// </summary>
     private static readonly Guid _organizationId = Guid.NewGuid();
 
-    // --- AuthorizeReadAsync ------------------------------------------------------------------------
-
     [Fact]
     public async Task AuthorizeReadAsync_FlagOff_AuthorizesWithoutQuerying()
     {
@@ -98,13 +96,10 @@ public class CipherLeaseGateTests
 
         await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
-        // Lease expiry is evaluated against TimeProvider, not DateTime.UtcNow, so an expired lease cannot
-        // be kept alive by a stale clock read.
+        // Lease expiry is evaluated against TimeProvider, not DateTime.UtcNow.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now);
     }
-
-    // --- AuthorizeReadManyAsync (supplied collections) ---------------------------------------------
 
     [Fact]
     public async Task AuthorizeReadManyAsync_FlagOff_AuthorizesEverything()
@@ -152,8 +147,7 @@ public class CipherLeaseGateTests
             [LeasingCollection(leasingCollectionId)],
             Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
 
-        // A bulk read is not the act of using a credential. Secrets are only ever released through the
-        // single-cipher decision, so a held lease does not widen a sync or a list.
+        // A held lease does not widen a bulk read.
         Assert.False(access.Authorizes(gatedCipherId));
     }
 
@@ -172,8 +166,7 @@ public class CipherLeaseGateTests
                 new CollectionCipher { CipherId = cipherId, CollectionId = leasingCollectionId },
                 new CollectionCipher { CipherId = cipherId, CollectionId = plainCollectionId }));
 
-        // The caller can already read it in full by the ungoverned path, so withholding it here would only
-        // hide a credential leasing does not protect.
+        // Reachable through an ungoverned path, so nothing to withhold.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -182,7 +175,7 @@ public class CipherLeaseGateTests
     {
         var (sutProvider, userId, cipherId) = Setup();
 
-        // Null means "not loaded, because the caller has no organizations" — equivalent to empty.
+        // Null means not loaded, equivalent to empty.
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
             userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }], null, null);
 
@@ -217,9 +210,7 @@ public class CipherLeaseGateTests
             [DisabledRuleCollection(disabledRuleCollectionId)],
             Group(new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
 
-        // A switched-off rule gates nothing, which is the reading the single-cipher path already took: the
-        // resolver drops a disabled rule, so gating here withheld the credential while offering no way to
-        // request it — no data and no prompt either (PM-42274).
+        // The resolver drops a disabled rule, so it gates nothing here either.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -238,12 +229,9 @@ public class CipherLeaseGateTests
                 new CollectionCipher { CipherId = cipherId, CollectionId = leasingCollectionId },
                 new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
 
-        // The disabled path is an escape for the same reason a plain collection is: it gates nothing, so the
-        // caller can already read the cipher in full through it.
+        // A disabled rule's collection is as ungoverned as a plain one.
         Assert.True(access.Authorizes(cipherId));
     }
-
-    // --- AuthorizeReadManyAsync (self-loading) ----------------------------------------------------
 
     [Fact]
     public async Task AuthorizeReadManyAsync_SelfLoading_FlagOff_LoadsNothing()
@@ -294,8 +282,6 @@ public class CipherLeaseGateTests
 
         Assert.True(access.Authorizes(cipherId));
     }
-
-    // --- AuthorizeWriteReturnAsync -----------------------------------------------------------------
 
     [Fact]
     public async Task AuthorizeWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
@@ -363,8 +349,6 @@ public class CipherLeaseGateTests
             .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
     }
 
-    // --- AuthorizeAdminWriteReturnAsync ------------------------------------------------------------
-
     [Fact]
     public async Task AuthorizeAdminWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
     {
@@ -427,8 +411,6 @@ public class CipherLeaseGateTests
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
     }
-
-    // --- EnsureCanMutateAsync ---------------------------------------------------------------------
 
     [Fact]
     public async Task EnsureCanMutateAsync_FlagOff_AuthorizesWithoutQuerying()
@@ -494,8 +476,6 @@ public class CipherLeaseGateTests
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now);
     }
-
-    // --- EnsureCanMutateManyAsync -----------------------------------------------------------------
 
     [Fact]
     public async Task EnsureCanMutateManyAsync_FlagOff_AuthorizesWithoutQuerying()
@@ -612,8 +592,6 @@ public class CipherLeaseGateTests
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>());
     }
 
-    // --- UnrestrictedForWholeVaultExport ----------------------------------------------------------
-
     [Fact]
     public void UnrestrictedForWholeVaultExport_AuthorizesAnyCipher()
     {
@@ -623,8 +601,6 @@ public class CipherLeaseGateTests
 
         Assert.True(access.Authorizes(Guid.NewGuid()));
     }
-
-    // --- AuthorizeAdminReadAsync -------------------------------------------------------------------
 
     [Fact]
     public async Task AuthorizeAdminReadAsync_FlagOff_AuthorizesWithoutQuerying()
@@ -684,8 +660,7 @@ public class CipherLeaseGateTests
         HasActiveLease(sutProvider, userId, cipherId);
         Unlicensed(sutProvider);
 
-        // Withdrawing the seat withdraws what the lease was carrying: the organization has decided this member is
-        // not to use privileged credentials, and a lease minted before that decision is not an exemption (PM-39423).
+        // A lease minted before the seat was withdrawn is not an exemption.
         Assert.Null(await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
     }
 
@@ -740,7 +715,7 @@ public class CipherLeaseGateTests
         HasActiveLease(sutProvider, userId, cipherId);
         Unlicensed(sutProvider);
 
-        // An administrator is subject to licensing like anyone else.
+        // Licensing applies to admins too.
         Assert.Null(await sutProvider.Sut.AuthorizeAdminReadAsync(
             userId, _organizationId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
     }
@@ -761,10 +736,7 @@ public class CipherLeaseGateTests
     }
 
     /// <remarks>
-    /// An unassigned organization cipher sits in no collection, so there is no leasing-enabled collection
-    /// to reach it through and nothing to gate. The "/admin" endpoints reach these — <c>Admin</c> and
-    /// <c>Owner</c> pass <c>CanAccessUnassignedCiphersAsync</c> — so the administrative decision has to
-    /// answer for them.
+    /// An unassigned cipher sits in no collection, so nothing gates it; the admin endpoints reach it via <c>CanAccessUnassignedCiphersAsync</c>.
     /// </remarks>
     [Fact]
     public async Task AuthorizeAdminReadAsync_UnassignedCipher_Authorizes()
@@ -794,8 +766,6 @@ public class CipherLeaseGateTests
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
     }
-
-    // --- AuthorizeAdminReadManyAsync ---------------------------------------------------------------
 
     /// <remarks>
     /// The bulk decision strips every gated cipher whatever the lease state, matching the member bulk rule:
@@ -846,11 +816,8 @@ public class CipherLeaseGateTests
             .GetManyByOrganizationIdAsync(default);
     }
 
-    // --- helpers ----------------------------------------------------------------------------------
-
     /// <summary>
-    /// Points the organization-scoped reads at a single collection governed by a rule, so the gate resolves
-    /// it as leasing-enabled (or not, when <paramref name="ruleEnabled" /> is false).
+    /// Points the organization-scoped reads at a single collection, governed by a rule per <paramref name="ruleEnabled" />.
     /// </summary>
     private static void OrganizationLeasingCollection(SutProvider<CipherLeaseGate> sutProvider,
         Guid organizationId, Guid collectionId, bool ruleEnabled = true)

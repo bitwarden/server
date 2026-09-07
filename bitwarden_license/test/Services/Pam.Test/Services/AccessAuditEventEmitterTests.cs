@@ -42,8 +42,7 @@ public class AccessAuditEventEmitterTests
         await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
     }
 
-    // PM-42480: the kill switch has to stop the write itself, not merely hide the trail — the point of it is that a
-    // deployment under audit-store pressure can shed those inserts without taking PAM down with them.
+    // The kill switch stops the write itself, not merely hides the trail, shedding inserts under store pressure.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithSqlAuditLoggingDisabled_WritesNothing(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -59,8 +58,7 @@ public class AccessAuditEventEmitterTests
             .CreateAsync(default!);
     }
 
-    // The kill switch is scoped to the store it names. The organization event log is a separate sink with its own
-    // capacity, so shedding audit-store inserts must not silently stop organization-wide reporting as well.
+    // The kill switch is scoped to its own store; the organization event log is a separate sink.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithSqlAuditLoggingDisabled_StillWritesToTheOrganizationEventLog(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -124,8 +122,7 @@ public class AccessAuditEventEmitterTests
                 c.SystemUser == null));
     }
 
-    // An event with no actor is PAM acting on its own (an automatic decision, or a sweep). The PAM trail renders that
-    // as Automated; the organization event log needs it named as the system user or its member column is blank.
+    // No actor means PAM acted on its own; the org log needs it named as the system user.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithNoActor_AttributesTheEventToPam(
         Guid organizationId, Guid requesterId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -143,8 +140,7 @@ public class AccessAuditEventEmitterTests
             Arg.Is<PamAccessEventContext>(c => c.SystemUser == EventSystemUser.Pam && c.ActingUserId == null));
     }
 
-    // dbo.Event has no phase or correlation column, so emitting the Attempt as well would double every action in the
-    // organization event log. The in-doubt Attempt an interrupted action leaves behind stays visible in the PAM trail.
+    // dbo.Event has no phase/correlation column, so emitting the Attempt too would double every action.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithAnAttempt_WritesOnlyToTheStore(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -180,8 +176,7 @@ public class AccessAuditEventEmitterTests
             .LogPamAccessEventAsync(default, default!);
     }
 
-    // The PAM store is the system of record and has already been written by the time the fan-out runs. Letting the
-    // fan-out throw would undo nothing and would turn an event-pipeline hiccup into a failed access decision.
+    // The PAM store is already written by fan-out time; a fan-out throw shouldn't fail the access decision.
     [Theory, BitAutoData]
     public async Task EmitAsync_WhenTheOrganizationEventLogFails_DoesNotDisturbTheCaller(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)

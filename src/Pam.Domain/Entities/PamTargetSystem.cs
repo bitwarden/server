@@ -33,8 +33,8 @@ public class PamTargetSystem : ITableObject<Guid>
 
     /// <summary>
     /// Whether the target can terminate an account's existing sessions after a rotation. Null until a daemon
-    /// reports its capability; a <see cref="PamRotationConfig"/> may only set
-    /// <see cref="PamRotationConfig.TerminateSessions"/> once this is true.
+    /// reports its capability; required true for a <see cref="PamRotationConfig"/> to set
+    /// <see cref="PamRotationConfig.TerminateSessions"/>.
     /// </summary>
     public bool? SupportsSessionTermination { get; set; }
 

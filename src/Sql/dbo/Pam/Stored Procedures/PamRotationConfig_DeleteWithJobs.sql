@@ -3,17 +3,12 @@ CREATE PROCEDURE [dbo].[PamRotationConfig_DeleteWithJobs]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- DeleteRotationConfigCommand's cascade: the audit trail (AccessAuditEvent) is the durable history of a config's
-    -- rotations, so jobs/attempts are hard-deleted here rather than soft-retired. Order matters -- attempts reference
-    -- jobs, jobs reference the config, and both FKs are ON DELETE NO ACTION -- so children must go first.
+    -- Cascade: hard-deletes attempts, then jobs, then config, since both FKs are NO ACTION.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
-    -- The caller's HasActiveJob read happened outside this transaction, so re-check under the same range lock
-    -- PamRotationJob_Create takes. Without it a job created and claimed in the window is hard-deleted mid-rotation:
-    -- the daemon changes the password on the target, then its accept-write and success report both find nothing,
-    -- leaving the vault holding the old secret with no attempt row to record the drift.
+    -- Re-checks under PamRotationJob_Create's range lock so a mid-window claim can't be hard-deleted.
     IF EXISTS (
         SELECT 1
         FROM [dbo].[PamRotationJob] WITH (UPDLOCK, HOLDLOCK)

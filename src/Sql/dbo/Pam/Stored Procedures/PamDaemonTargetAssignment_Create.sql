@@ -8,9 +8,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Id is a plain input, not OUTPUT: unlike the generic Create sprocs, the caller (IPamDaemonRepository.
-    -- CreateAssignmentAsync) always assigns the id before calling this. [IX_PamDaemonTargetAssignment_DaemonId_TargetSystemId]
-    -- is the unique-index backstop for OneAssignmentPerDaemonTarget if two callers race.
+    -- @Id is a plain input, not OUTPUT; caller assigns it first.
+    -- Unique index backstops OneAssignmentPerDaemonTarget on a race.
     INSERT INTO [dbo].[PamDaemonTargetAssignment]
     (
         [Id],

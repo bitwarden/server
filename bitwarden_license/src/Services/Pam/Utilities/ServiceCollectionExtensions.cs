@@ -43,11 +43,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
 
-        // The read decision point Vault code consults before releasing a cipher's secrets. AddBaseServices
-        // registers the open-source UnrestrictedCipherLeaseGate, which gates nothing; this overrides it by
-        // last-one-wins, which holds because Startup calls AddPamServices after AddBaseServices and both
-        // registrations are a plain Add. A TryAdd on either side would silently leave leasing ungated, so
-        // keep this an AddScoped — CipherLeaseGateRegistrationTests pins both halves of that contract.
+        // Overrides AddBaseServices' open-source UnrestrictedCipherLeaseGate by last-one-wins registration order.
+        // Must stay a plain AddScoped, not TryAdd, or leasing silently goes ungated; see CipherLeaseGateRegistrationTests.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
@@ -91,19 +88,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
-        // Side channels the commands emit through. The two notifiers send the RefreshApproverInbox and
-        // RefreshAccessRequest pushes; the audit emitter appends to the PAM audit store. Registering them is not
-        // optional — every command above takes all three, so dropping one turns each PAM request into a DI
-        // resolution failure at runtime rather than a compile error.
+        // Side channels the commands emit through: two push notifiers and the PAM audit store appender.
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
-        // Runs on every connector-facing route (see PamEndpointsExtensions.WithPamAccessConnectorMachineDefaults).
-        // Its
-        // parameterless constructor would let AddEndpointFilter<T>() construct it unregistered, as
-        // PamExceptionHandlerEndpointFilter/PamValidationEndpointFilter are -- registering it anyway keeps a filter
-        // that resolves services of its own visible in the container.
+        // Registered explicitly, unlike a parameterless-constructor filter, since it resolves services of its own.
         services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
 
         services.AddPamRotationServices(configuration);

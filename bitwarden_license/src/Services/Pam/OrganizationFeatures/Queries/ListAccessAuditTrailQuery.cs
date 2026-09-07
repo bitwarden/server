@@ -52,9 +52,7 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
         var page = new PagedResult<AccessAuditEvent>();
         page.Data.AddRange(events);
 
-        // A full page is the only reason to offer another one. A short page has reached the end of the range, and a
-        // full page that happens to be the last costs the caller one more read that comes back empty -- the same
-        // bargain the organization event log makes, and the only one available without counting the whole range.
+        // A full page is the only reason to offer another one; a short page has reached the end of the range.
         if (events.Count >= PageSize)
         {
             page.ContinuationToken = AccessAuditTrailContinuationToken.From(page.Data[^1]);

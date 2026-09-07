@@ -19,10 +19,8 @@ public class AccessRequestCreateRequestModelTests
             $$"""{"start":"{{start}}","end":"{{end}}","reason":"audit"}""", _webDefaults)!;
 
     /// <summary>
-    /// The regression behind PM-42275. chrono's <c>to_rfc3339</c> — what the Rust SDK sends — writes a zero offset as
-    /// <c>+00:00</c> rather than <c>Z</c>, and System.Text.Json resolves any explicit offset against the host's
-    /// timezone, handing back a <see cref="DateTimeKind.Local"/> value. Persisted as-is, that shifted the window by
-    /// the host's UTC offset. A non-zero offset is used here so the conversion is exercised on a UTC host too.
+    /// A zero offset written as <c>+00:00</c> rather than <c>Z</c> resolves to <see cref="DateTimeKind.Local"/>,
+    /// shifting the window by the host's UTC offset, absent conversion.
     /// </summary>
     [Theory]
     [InlineData("2026-06-15T13:00:00+00:00", "2026-06-15T14:00:00+00:00")]
@@ -34,8 +32,7 @@ public class AccessRequestCreateRequestModelTests
 
         Assert.Equal(new DateTime(2026, 6, 15, 13, 0, 0, DateTimeKind.Utc), submission.Start);
         Assert.Equal(new DateTime(2026, 6, 15, 14, 0, 0, DateTimeKind.Utc), submission.End);
-        // DateTime equality ignores Kind, so the values above pass on a UTC host even unconverted. The kind is what
-        // proves the conversion ran, and is what the DATETIME2 column's readers rely on.
+        // DateTime equality ignores Kind, so only this assertion proves the conversion ran.
         Assert.Equal(DateTimeKind.Utc, submission.Start!.Value.Kind);
         Assert.Equal(DateTimeKind.Utc, submission.End!.Value.Kind);
     }

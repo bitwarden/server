@@ -11,11 +11,7 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessAuditEventRepositoryTests
 {
-    // An emitted action round-trips as ONE row: CreateAsync writes the before/after pair as two rows (the store is
-    // append-only, nothing is overwritten) and the read collapses them to the Outcome -- what actually happened --
-    // with its subject ids and detail intact. The collapse lives in the store rather than in the caller because a
-    // caller holding one page could not tell an Attempt whose Outcome sits on the next page from one that never
-    // landed.
+    // CreateAsync writes an append-only before/after pair; the read collapses them to the Outcome row.
     [DatabaseTheory, DatabaseData]
     public async Task Create_ThenRead_CollapsesTheBeforeAfterPairToItsOutcome(
         IOrganizationRepository organizationRepository,
@@ -42,8 +38,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal("looks good", row.Detail);
     }
 
-    // An action whose Outcome never landed collapses to its lone Attempt, which the response flags as in-doubt. This
-    // is the case the collapse must not confuse with "the Outcome is on the next page".
+    // An action whose Outcome never landed collapses to its lone Attempt.
     [DatabaseTheory, DatabaseData]
     public async Task Read_AnActionWithNoOutcome_ComesBackAsItsAttempt(
         IOrganizationRepository organizationRepository,
@@ -64,8 +59,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(AccessAuditEventPhase.Attempt, row.Phase);
     }
 
-    // The acceptance criterion the collapse exists for: a pair whose halves fall on either side of a page boundary
-    // still reads as one row, because the collapse happens before the page is cut rather than after.
+    // A pair split across a page boundary still collapses to one row.
     [DatabaseTheory, DatabaseData]
     public async Task Read_APairSpanningAPageBoundary_StillCollapsesToOneRow(
         IOrganizationRepository organizationRepository,
@@ -76,8 +70,7 @@ public class AccessAuditEventRepositoryTests
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
 
-        // Two actions, each written as a pair. Read one row at a time, so any page boundary that could split a pair
-        // does: four stored rows, and a caller reading a page at a time must still see exactly two actions.
+        // Four stored rows (two pairs); a page-at-a-time caller must still see exactly two actions.
         var older = BuildEvent(organization.Id, AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt,
             now.AddMinutes(-5)) with
         { AccessRequestId = first };
@@ -96,9 +89,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal([second, first], events.Select(e => e.AccessRequestId!.Value)); // newest first
     }
 
-    // Paging is keyed on (OccurredAt, Id), not OccurredAt alone, so a boundary landing inside a group of events
-    // sharing one instant neither drops nor repeats any of them. Those groups are ordinary here: the two halves of an
-    // action are written at the same instant, and a burst of activity produces more.
+    // Paging is keyed on (OccurredAt, Id), not OccurredAt alone, so a shared instant is neither dropped nor repeated.
     [DatabaseTheory, DatabaseData]
     public async Task Read_EventsSharingAnInstant_ArePagedWithoutSkippingOrRepeating(
         IOrganizationRepository organizationRepository,
@@ -205,9 +196,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(3, events.Count);
     }
 
-    // The kind filter is applied to the row that SURVIVED the collapse, not to either half. A refused activation
-    // writes its Attempt as LeaseActivated and its Outcome as LeaseActivationRejected, so filtering before the
-    // collapse would answer "activated" with an action that was turned down.
+    // Kind filter applies to the row that survived the collapse, not to either half.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByKind_OnTheCollapsedRowRatherThanEitherHalf(
         IOrganizationRepository organizationRepository,
@@ -236,7 +225,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Contains(rejected, e => e.AccessRequestId == refusedId);
     }
 
-    // Values within one dimension are OR-ed, because the chips driving them are multi-select.
+    // Values within one dimension are OR-ed.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByKind_SelectsEveryChosenKind(
         IOrganizationRepository organizationRepository,
@@ -262,8 +251,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(events, e => e.AccessRequestId == approved);
     }
 
-    // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own: an
-    // auditor following one approver and the automatic decisions alongside them is asking for both sets.
+    // Actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByActor_AndUnionsTheAutomaticBucket(
         IOrganizationRepository organizationRepository,
@@ -323,9 +311,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal([wanted], byBoth.Select(e => e.AccessRequestId!.Value));
     }
 
-    // The Item dimension is two columns and they UNION: a rule-administration event names a rule and no cipher, so a
-    // selection spanning both is asking for either, not for the empty intersection every other pair of dimensions
-    // would give.
+    // Item is two columns (cipher, rule) and they union rather than intersect.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByItem_UnioningCiphersWithRules(
         IOrganizationRepository organizationRepository,
@@ -356,7 +342,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(byEither, e => e.AccessRequestId == onNeither);
     }
 
-    // The Item filter's menu: one row per subject the trail names in range, however many events name it.
+    // One row per subject in range, however many events name it.
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_ReturnsOneRowPerSubjectTheTrailNames(
         IOrganizationRepository organizationRepository,
@@ -392,8 +378,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Null(rule.CipherId);
     }
 
-    // The rule's name is snapshotted per event, so a renamed rule has several. The menu takes the most recent one, or
-    // it would offer an option labelled differently from the rows it selects.
+    // The menu takes the most recent of a renamed rule's several snapshotted names.
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_TakesARenamedRulesMostRecentName(
         IOrganizationRepository organizationRepository,
@@ -417,7 +402,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal("Production database (paused)", Assert.Single(items, i => i.RuleId == ruleId).RuleName);
     }
 
-    // Scoped to the same range the page read uses, so the menu cannot offer an option the page can never match.
+    // Scoped to the same range the page read uses.
     [DatabaseTheory, DatabaseData]
     public async Task ReadItems_FollowsTheRange(
         IOrganizationRepository organizationRepository,
@@ -471,9 +456,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(items, item => item.CipherId == hiddenCipherId);
     }
 
-    // The point of the self-contained store: the display name is snapshotted at write time, so it SURVIVES deleting
-    // the referenced entity. Emit a RuleCreated for a real rule, then delete the rule -- the event still names it
-    // (a read-time join would return NULL here).
+    // Display name is snapshotted at write time, so it survives deleting the referenced entity.
     [DatabaseTheory, DatabaseData]
     public async Task Read_SnapshotName_SurvivesEntityDeletion(
         IOrganizationRepository organizationRepository,
@@ -506,8 +489,7 @@ public class AccessAuditEventRepositoryTests
             e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id && e.RuleName == "audit-rule");
     }
 
-    // Renaming the referenced entity must NOT rewrite history: the event keeps the name as it was when written. This is
-    // the definitive proof the name is frozen at write, not re-resolved at read.
+    // The event keeps the name as written; renaming the entity must not rewrite history.
     [DatabaseTheory, DatabaseData]
     public async Task Read_SnapshotName_IsNotRewrittenByRename(
         IOrganizationRepository organizationRepository,

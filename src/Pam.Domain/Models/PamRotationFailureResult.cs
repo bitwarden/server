@@ -12,7 +12,7 @@ public class PamRotationFailureResult
 {
     public required PamRotationAttemptResolveOutcome Outcome { get; init; }
 
-    /// <summary>Null when <see cref="Outcome"/> is <see cref="PamRotationAttemptResolveOutcome.Rejected"/> (a stale report).</summary>
+    /// <summary>Null for <see cref="PamRotationAttemptResolveOutcome.Rejected"/> (a stale report).</summary>
     public PamRotationJobStatus? JobStatus { get; init; }
 
     /// <summary>The number of Errored attempts recorded against the job, including this one — checked against <c>MaxAttempts</c>.</summary>

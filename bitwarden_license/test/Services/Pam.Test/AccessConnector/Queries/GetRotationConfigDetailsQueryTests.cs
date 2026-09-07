@@ -40,7 +40,7 @@ public class GetRotationConfigDetailsQueryTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, details.Id));
 
-        // The history read is the expensive part and the part that would leak; it must not happen at all.
+        // The history read is expensive and would leak; it must not happen at all.
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
             .GetManyByConfigIdAsync(default);
     }

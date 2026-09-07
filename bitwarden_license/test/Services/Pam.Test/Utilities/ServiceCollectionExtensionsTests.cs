@@ -13,8 +13,7 @@ namespace Bit.Services.Pam.Test.Utilities;
 /// </summary>
 public class ServiceCollectionExtensionsTests
 {
-    // AddPamServices binds PamRotationOptions from configuration; an empty root leaves every option at
-    // its default, which is all these wiring assertions need.
+    // An empty configuration root leaves PamRotationOptions at its default, which is all these need.
     private static IServiceCollection PamServices() =>
         new ServiceCollection().AddPamServices(new ConfigurationBuilder().Build());
 
@@ -105,9 +104,7 @@ public class ServiceCollectionExtensionsTests
     }
 
     /// <remarks>
-    /// Discovered by reflection rather than listed by hand: the hand-maintained list had drifted to four of the
-    /// eleven handlers PAM registers, and the sibling every-dependency test cannot catch that because it only walks
-    /// registrations that already exist.
+    /// Discovered by reflection rather than listed by hand, which had drifted stale.
     /// </remarks>
     public static TheoryData<Type> EndpointHandlers()
     {
@@ -126,8 +123,7 @@ public class ServiceCollectionExtensionsTests
     [Theory, MemberData(nameof(EndpointHandlers))]
     public void AddPamServices_RegistersEndpointHandler(Type handlerType)
     {
-        // The Minimal API endpoints resolve their handler from DI, and an unregistered handler would also make the
-        // handler parameter look like a request body to Minimal API's binding.
+        // The Minimal API endpoints resolve their handler from DI.
         var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == handlerType);

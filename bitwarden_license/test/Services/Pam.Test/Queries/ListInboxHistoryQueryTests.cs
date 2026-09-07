@@ -42,8 +42,7 @@ public class ListInboxHistoryQueryTests
         var result = await sutProvider.Sut.GetHistoryAsync(userId, _now);
 
         Assert.Single(result);
-        // `now` is passed alongside `since`: it is the clock each row's produced-lease status is projected against
-        // (PM-42355), distinct from the window bound.
+        // `now` is the clock produced-lease status is projected against, distinct from the `since` window bound.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .GetManyInboxHistoryByCollectionIdsAsync(manageable, expectedSince, _now);
     }

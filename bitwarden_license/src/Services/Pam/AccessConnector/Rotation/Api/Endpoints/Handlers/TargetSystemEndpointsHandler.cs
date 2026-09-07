@@ -55,14 +55,8 @@ public class TargetSystemEndpointsHandler(
     }
 
     /// <remarks>
-    /// The single update replaces the separate rename and policy operations, so it fans out to both commands. The
-    /// automatic/manual shape rule cannot be enforced on the request model -- the body no longer carries the method
-    /// that decides it -- so it is checked here against the stored method, exactly as
-    /// <see cref="UpdateTargetSystemRequestModel"/> describes.
-    ///
-    /// The policy update goes first: it carries the stricter guards (automatic-only, and it refuses to withdraw
-    /// session-termination support while a rotation config still requires it), so a rejected policy leaves the name
-    /// untouched rather than half-applying the update.
+    /// Fans out to both the rename and policy commands. The policy update goes first, since it carries the
+    /// stricter guards, so a rejected policy leaves the name untouched rather than half-applying the update.
     /// </remarks>
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {

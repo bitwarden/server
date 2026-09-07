@@ -1,9 +1,6 @@
--- One offer of rotation work for a config (invariant AtMostOneActiveJobPerConfig -- enforced by PamRotationJob_Create
--- under a range lock, not by a unique index, since Pending/Claimed jobs may still co-exist with terminal ones for the
--- same config across its history). Every transition out of Claimed (retry, release, success, failure, timeout) nulls
--- ClaimedByDaemonId/ClaimedAt -- the executing daemon's identity for a given try lives on PamRotationAttempt instead.
--- ExpiresAt is persisted at creation (CreationDate + JobTtl) rather than derived, so the timeout sweep is a plain
--- range scan.
+-- One rotation offer per config (AtMostOneActiveJobPerConfig).
+-- Claimed fields null on every exit; the executing identity lives on PamRotationAttempt.
+-- ExpiresAt is persisted at creation so the timeout sweep is a plain range scan.
 CREATE TABLE [dbo].[PamRotationJob] (
     [Id]                    UNIQUEIDENTIFIER    NOT NULL,
     [RotationConfigId]      UNIQUEIDENTIFIER    NOT NULL,
@@ -15,13 +12,12 @@ CREATE TABLE [dbo].[PamRotationJob] (
     [NextClaimableAt]       DATETIME2(7)        NOT NULL,
     [ExpiresAt]             DATETIME2(7)        NOT NULL,
     CONSTRAINT [PK_PamRotationJob] PRIMARY KEY CLUSTERED ([Id] ASC),
-    -- No cascade: PamRotationConfig_DeleteWithJobs deletes a config's jobs (and their attempts) explicitly, in order,
-    -- inside one transaction -- deletion is a sproc concern, not a schema-level cascade.
+    -- No cascade; PamRotationConfig_DeleteWithJobs deletes jobs/attempts explicitly in one transaction.
     CONSTRAINT [FK_PamRotationJob_RotationConfig] FOREIGN KEY ([RotationConfigId]) REFERENCES [dbo].[PamRotationConfig] ([Id]) ON DELETE NO ACTION
 );
 GO
 
--- PamRotationJob_ReadManyByConfigId and the active-job checks (PamRotationJob_Create's guard, PamRotationConfig_ReadManyDue).
+-- Backs PamRotationJob_ReadManyByConfigId and the active-job checks.
 CREATE NONCLUSTERED INDEX [IX_PamRotationJob_RotationConfigId_Status]
     ON [dbo].[PamRotationJob] ([RotationConfigId] ASC, [Status] ASC);
 GO

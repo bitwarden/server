@@ -96,8 +96,7 @@ public class ApproverCollectionAccessQueryTests
         Assert.Contains(orgCollectionId, result);
     }
 
-    // A suspended (disabled) org is absent from the claim-based request context, but governance must still load: the
-    // user's confirmed membership is read from the database (which includes disabled orgs) and folded in.
+    // A suspended org is absent from the request context, but its confirmed membership is read from the database.
     [Theory, BitAutoData]
     public async Task GetManageableCollectionIdsAsync_SuspendedOrgDroppedFromContext_StillIncludesOrgCollections(
         SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid orgCollectionId)
@@ -143,8 +142,7 @@ public class ApproverCollectionAccessQueryTests
         Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, otherId));
     }
 
-    // The manage-all path also reads confirmed memberships (to catch suspended orgs the request context drops); most
-    // tests have none beyond what the context already covers.
+    // The manage-all path also reads confirmed memberships, to catch suspended orgs the request context drops.
     private static void NoOtherMemberships(SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId)
         => sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByUserAsync(userId, OrganizationUserStatusType.Confirmed)

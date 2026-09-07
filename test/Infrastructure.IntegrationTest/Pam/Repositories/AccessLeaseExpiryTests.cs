@@ -9,11 +9,8 @@ using Xunit;
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 /// <summary>
-/// The lease natural-expiry sweep (<c>AccessLease_ExpireDue</c> via
-/// <see cref="IAccessLeaseRepository.ExpireDueAsync"/>): leases whose window closed on its own are returned once for
-/// the LeaseExpired audit emission / rotation access-end trigger, journaled in <c>PamLeaseExpirySweep</c> so a later
-/// run never returns them again (expiry itself is derived at read time, never stored). The sweep is set-based across
-/// the whole table, so assertions scope to this test's lease ids rather than the full result.
+/// The lease natural-expiry sweep (<see cref="IAccessLeaseRepository.ExpireDueAsync"/>); a returned lease is
+/// journaled so a later run can't return it again. Set-based, so assertions scope to this test's lease ids.
 /// </summary>
 public class AccessLeaseExpiryTests
 {
@@ -41,8 +38,7 @@ public class AccessLeaseExpiryTests
         Assert.Equal(lease.NotBefore, row.NotBefore);
         Assert.Equal(lease.NotAfter, row.NotAfter);
 
-        // Natural expiry is derived, never stored: the sweep records nothing on the lease itself, so the row still
-        // carries no early end and no revoker, and the read model derives Expired from the closed window.
+        // The sweep records nothing on the lease itself; Expired is derived from the closed window.
         var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.Equal(AccessLeaseAction.None, persisted!.Action);
         Assert.Null(persisted.RevokedDate);
@@ -64,8 +60,7 @@ public class AccessLeaseExpiryTests
         var active = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddMinutes(-5), now.AddHours(1));
 
-        // Past its window but already Revoked: the sweep only handles natural expiry -- an operator-ended lease's
-        // access-end trigger fired on the revoke path, so returning it here would fire it twice.
+        // Past its window but already Revoked; the revoke path already fired its access-end trigger.
         var revoked = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
         await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseAction.Revoked, new AccessDecision
@@ -87,9 +82,7 @@ public class AccessLeaseExpiryTests
         Assert.Equal(AccessLeaseAction.Revoked, (await accessLeaseRepository.GetByIdAsync(revoked.Id))!.Action);
     }
 
-    // The sweep fires at most once per lease: a returned lease is journaled in the same call, so a second run never
-    // returns it again -- the LeaseExpired audit event and the rotation access-end trigger fire exactly once. This
-    // is the guarantee the retired stored-status flip used to provide.
+    // A returned lease is journaled in the same call, so a second run can't return it again.
     [DatabaseTheory, DatabaseData]
     public async Task ExpireDueAsync_SecondRun_DoesNotReturnAlreadySweptLease(
         IOrganizationRepository organizationRepository,
@@ -108,9 +101,7 @@ public class AccessLeaseExpiryTests
         Assert.DoesNotContain(secondRun, r => r.Id == lease.Id);
     }
 
-    // Seeds an active lease the way production does: record the auto-approved request, then mint the lease by
-    // activating it at a time inside the request's window (which can be in the past, so already-elapsed windows can
-    // still be seeded).
+    // Seeds an active lease as production does: record the request, then mint by activating within its window.
     private static async Task<AccessLease> SeedActiveLeaseAsync(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
@@ -152,8 +143,7 @@ public class AccessLeaseExpiryTests
         Assert.Equal(AccessLeaseMintOutcome.Minted,
             await accessLeaseRepository.CreateFromApprovedRequestAsync(lease, notBefore, false));
 
-        // The mint copies the persisted request's window, whose datetime2 roundtrip may differ from the in-memory
-        // ticks -- read the lease back so the expiry assertions compare against what is actually stored.
+        // Read the lease back, since datetime2 round-tripping may differ from the in-memory ticks.
         return (await accessLeaseRepository.GetByIdAsync(lease.Id))!;
     }
 }

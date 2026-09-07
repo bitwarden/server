@@ -8,9 +8,8 @@
 public interface IApproverCollectionAccessQuery
 {
     /// <summary>
-    /// The ids of every collection the user can Manage: collections they are assigned with Manage (directly or via
-    /// group), plus all collections in any organization where they are an Owner/Admin (when the org allows admin
-    /// access to all collection items) or hold the EditAnyCollection permission.
+    /// The ids of every collection the user can Manage: assigned directly or via group, plus every collection
+    /// in an organization where they are an Owner/Admin with all-collection access, or hold EditAnyCollection.
     /// </summary>
     Task<HashSet<Guid>> GetManageableCollectionIdsAsync(Guid userId);
 

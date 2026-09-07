@@ -5,10 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The daemon poll: jobs this daemon may claim right now. Re-derives every eligibility condition
-    -- PamRotationJob_Claim itself re-checks (config enabled, target active, an assignment exists, the daemon is
-    -- Enabled, and -- defense in depth -- its own org matches the config's org) so the list a daemon sees and what
-    -- it can actually claim never diverge.
+    -- The daemon poll; re-derives PamRotationJob_Claim's eligibility so the poll list matches what's claimable.
     SELECT J.*, C.[TargetSystemId]
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]

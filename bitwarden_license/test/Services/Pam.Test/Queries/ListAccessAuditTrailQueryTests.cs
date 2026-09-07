@@ -14,9 +14,8 @@ namespace Bit.Services.Pam.Test.Queries;
 
 /// <summary>
 /// The trail read's own responsibilities: what range it asks the store for, and how it reports where a page stopped.
-/// The before/after collapse is deliberately absent from here — it moved into the store, because a caller holding one
-/// page cannot tell an Attempt whose Outcome sits on the next page from one that never landed. It is covered against
-/// a real database in <c>AccessAuditEventRepositoryTests</c>.
+/// The before/after collapse lives in the store instead, and is covered against a real database in
+/// <c>AccessAuditEventRepositoryTests</c>.
 /// </summary>
 [SutProviderCustomize]
 public class ListAccessAuditTrailQueryTests
@@ -25,8 +24,7 @@ public class ListAccessAuditTrailQueryTests
 
     private static DateTime RetentionFloor => _now.AddDays(-AccessHistoryWindow.RetentionDays);
 
-    // A caller asking for no particular range is asking for everything the store promises to hold -- the shared
-    // history window, so the audit view reaches as far back as the request and lease history views.
+    // No range means the whole shared retention window, same as the request and lease history views.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_WithNoBounds_ReadsTheWholeRetentionWindow(Guid organizationId)
     {
@@ -39,8 +37,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(_now, filter.Until);
     }
 
-    // What bounds the response is the page, not a narrowed default window: "all time" on the audit page still means
-    // the whole retention window, it just arrives one page at a time.
+    // "All time" still means the whole retention window; it just arrives one page at a time.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_ReadsOnePageAtTheFixedSize(Guid organizationId)
     {
@@ -81,8 +78,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(RetentionFloor, Assert.Single(filters).Since);
     }
 
-    // Matching ApiHelpers.GetDateRange on the organization event log rather than refusing: an inverted pair is a
-    // caller mistake with one obvious reading.
+    // Matches ApiHelpers.GetDateRange: an inverted pair is swapped, not refused.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_InvertedRange_IsSwapped(Guid organizationId)
     {
@@ -98,8 +94,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(later, filter.Until);
     }
 
-    // Refused rather than quietly narrowed, so a caller asking for more history than exists is told so instead of
-    // being handed a shorter answer that looks like the one they asked for.
+    // Refused rather than quietly narrowed to what's retained.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_RangeWiderThanRetention_ThrowsBadRequest(Guid organizationId)
     {
@@ -152,8 +147,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(beforeId, filter.BeforeId);
     }
 
-    // A full page is the only reason to offer another one, and the token names the row it stopped on -- both halves of
-    // the position, so a boundary landing among events sharing an instant resumes exactly.
+    // The token names the exact row it stopped on, so a boundary among same-instant events resumes exactly.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_FullPage_ReturnsATokenNamingTheLastRow(Guid organizationId)
     {

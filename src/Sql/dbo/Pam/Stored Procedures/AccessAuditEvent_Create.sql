@@ -28,12 +28,8 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
-    -- rename cannot change what this event says. Actor/requester/cipher/collection names are resolved by id from the
-    -- live tables once, here, and frozen (cipher/collection names are encrypted EncString, stored as-is for the client
-    -- to decrypt); a name is NULL where its id is NULL or the row is gone. The rule/target-system/daemon names are
-    -- supplied by the caller (@RuleName/@TargetSystemName/@DaemonName), not JOINed -- those entities can be deleted or
-    -- renamed in the same action, so their names are captured by the command before then.
+    -- Snapshots names at write; later deletes/renames can't change the event.
+    -- Rule/target-system/daemon names are caller-supplied, not JOINed, since those rows may be deleted.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],

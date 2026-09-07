@@ -21,8 +21,7 @@ public class AccessRequestEndpointsHandlerTests
 {
     private static readonly ClaimsPrincipal _user = new();
 
-    // A pinned clock far from the wall clock on purpose: a derivation that accidentally reads the real clock instead
-    // of the handler's TimeProvider lands on the wrong side of every window built from _now and fails loudly.
+    // Pinned far from the wall clock so a derivation reading the real clock instead of TimeProvider fails loudly.
     private static readonly DateTime _now = new(2026, 6, 10, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
@@ -112,9 +111,7 @@ public class AccessRequestEndpointsHandlerTests
         Guid userId, Guid requestId, AccessLease lease)
     {
         var sutProvider = Setup(userId);
-        // Live only relative to the pinned clock: no early end, window open at _now (and long lapsed in wall-clock
-        // terms). The Active assertion below therefore proves the response derived against the same instant the
-        // handler handed the command -- a second, later clock read would report the granted lease as expired.
+        // Live only relative to the pinned clock; a later real clock read would report this lease as expired.
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
         sutProvider.GetDependency<IActivateAccessRequestCommand>()

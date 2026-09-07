@@ -144,8 +144,7 @@ public class AccessRequestRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // Expiry is never stored: a lease whose window closed keeps Action None forever, and only a projection
-        // against the read clock can call it Expired (PM-42355). All three projections derive it that way.
+        // Expiry is never stored; only a projection against the read clock derives it, on all three reads.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -171,7 +170,7 @@ public class AccessRequestRepositoryTests
             [collection.Id], now.AddDays(-1), now));
         Assert.Equal(AccessLeaseStatus.Expired, history.ProducedLeaseStatus);
 
-        // Read as of a moment inside the window the same row is Active: this is a projection, not a write.
+        // Read inside the window, the same row is Active; this is a projection, not a write.
         var whileLive = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now.AddHours(-3));
         Assert.Equal(AccessLeaseStatus.Active, whileLive!.ProducedLeaseStatus);
     }
@@ -183,9 +182,8 @@ public class AccessRequestRepositoryTests
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // An extension pushes the parent lease's NotAfter out in place and leaves the original request row behind,
-        // so the request's own window is no longer the lease's. The projection must read the lease's NotAfter: off
-        // the request's it would report a live, extended lease as expired.
+        // An extension pushes the lease's NotAfter out but leaves the request row's window behind; the
+        // projection must read the lease's NotAfter, not the request's.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -452,9 +450,8 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // The requester's own list had no retention window while the approver-side history had a 90-day one, so the
-        // same resolved request outlived itself for the member who raised it and vanished for the approvers who
-        // decided it (PM-42614). It now takes the same window -- but only over rows that are actually history.
+        // The requester's list now takes the same 90-day retention window as the approver history, but only over
+        // rows that are actually history.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -466,16 +463,14 @@ public class AccessRequestRepositoryTests
         var longAgoDenied = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, requesterId, AccessRequestAction.Denied, now.AddDays(-120)));
 
-        // An open request whose window can still be answered is live, whatever its age: windowing it away would drop
-        // a live request out of the caller's own list, not age out its history.
+        // An open, still-answerable request is live regardless of age; windowing it away would drop it, not age it out.
         var longOpenStillAnswerable = BuildRequest(
             organization.Id, collection.Id, requesterId, AccessRequestAction.None, now.AddDays(-120));
         longOpenStillAnswerable.NotBefore = now.AddHours(-1);
         longOpenStillAnswerable.NotAfter = now.AddHours(1);
         longOpenStillAnswerable = await accessRequestRepository.CreateAsync(longOpenStillAnswerable);
 
-        // An unanswered request whose window has lapsed is derived Expired: history like any resolved row, so it
-        // ages out with the rest. (Nothing is stored -- the clock already closed it everywhere it is read.)
+        // A lapsed unanswered request is derived Expired, so it ages out as history like any resolved row.
         var longLapsedUnanswered = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, requesterId, AccessRequestAction.None, now.AddDays(-120)));
 
@@ -499,7 +494,7 @@ public class AccessRequestRepositoryTests
         Assert.DoesNotContain(windowed, r => r.Id == longLapsedUnanswered.Id);
         Assert.DoesNotContain(windowed, r => r.Id == lapsedApproved.Id);
 
-        // A null window is "no window", which is what a server predating the parameter sends -- every row comes back.
+        // A null window means no window: every row comes back.
         var unwindowed = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, null, now);
 
         Assert.Equal(6, unwindowed.Count);
@@ -717,8 +712,7 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // The clock predicate under test: nothing ever writes Expired, so only the read's @Now comparison keeps a
-        // lapsed unanswered row out of the actionable inbox and hands it to the history read as derived Expired.
+        // Nothing writes Expired; the read's @Now comparison alone moves a lapsed row from inbox to history.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -749,8 +743,7 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // A lapsed unanswered request is derived Expired: it must not block a fresh submission (the duplicate guard
-        // reads through this) or prop up a dead pending banner. Only the read's @Now comparison delivers that.
+        // A lapsed unanswered request is derived Expired, so it must not block a fresh submission.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -768,8 +761,7 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // A row users already saw as derived Expired must never restamp to Cancelled: the write's own @Now guard is
-        // the race-safe authority, whatever the command-level check concluded from its earlier read.
+        // A row already derived Expired must never restamp to Cancelled; the write's own @Now guard decides.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;
@@ -790,8 +782,7 @@ public class AccessRequestRepositoryTests
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository)
     {
-        // The manager-retraction write carries the same @Now guard: a lapsed approved-unactivated row is derived
-        // Expired and must not restamp to Denied, and the retraction's verdict must not be orphaned onto it.
+        // The same @Now guard: a lapsed approved-unactivated row is derived Expired, not restamped Denied.
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var collection = await collectionRepository.CreateTestCollectionAsync(organization);
         var now = DateTime.UtcNow;

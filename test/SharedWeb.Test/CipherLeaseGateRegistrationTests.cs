@@ -10,16 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.SharedWeb.Test.Utilities;
 
 /// <summary>
-/// Pins the <em>default</em> <see cref="ICipherLeaseGate"/> registration, which is the open-source fallback: it lets
-/// every cipher read and every mutation through, because leasing is a commercial feature. The real gate is
-/// registered by <c>AddPamServices</c>, which Startup calls after <c>AddBaseServices</c> and only in a non-OSS
-/// build.
+/// Pins the <em>default</em> <see cref="ICipherLeaseGate"/> registration, the open-source fallback that lets every
+/// cipher read and mutation through. The real gate is registered by <c>AddPamServices</c>, only in a non-OSS build.
 /// </summary>
 /// <remarks>
-/// That arrangement rests on last-one-wins, so it is only correct while <em>both</em> registrations are a plain
-/// <c>Add</c> — hence two tests rather than one. This file owns the open-source half; the commercial half is pinned by
-/// <c>ServiceCollectionExtensionsTests</c> in the Pam test project. Turning either into a <c>TryAdd</c> leaves leasing
-/// silently ungated with the rest of the feature working, which is exactly the failure these pin against.
+/// Relies on last-one-wins, so both registrations must stay a plain <c>Add</c>; the commercial half is pinned by
+/// <c>ServiceCollectionExtensionsTests</c> in the Pam test project. A <c>TryAdd</c> on either side would leave
+/// leasing silently ungated.
 /// </remarks>
 public class CipherLeaseGateRegistrationTests
 {
@@ -38,8 +35,7 @@ public class CipherLeaseGateRegistrationTests
     [Fact]
     public void AddBaseServices_RegistersGateSoALaterPlainAddWins()
     {
-        // Stands in for what AddPamServices does. This project cannot reference the commercial library, so the
-        // override is modelled with a stub here and asserted for real over there.
+        // Stands in for what AddPamServices does; this project cannot reference the commercial library.
         var services = new ServiceCollection();
         services.AddBaseServices(new GlobalSettings());
 

@@ -40,8 +40,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
-        // 404 when the request is missing or the caller is neither its requester nor a managing approver, so the
-        // caller can't probe for requests they have no business seeing. Mirrors the inbox/decide surfaces.
+        // 404 when the request is missing or the caller is neither its requester nor a managing approver.
         if (request is null)
         {
             throw new NotFoundException();
@@ -56,8 +55,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         }
 
         // Only a request that has not produced a lease can be cancelled: still open, or approved but not yet
-        // activated. A recorded denial or cancellation is terminal; surfaced as a conflict so the client refreshes.
-        // The stored procs additionally guard the transition to stay race-safe.
+        // activated. Surfaced as a conflict so the client refreshes.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
@@ -65,13 +63,10 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // An approved request that has minted a lease is governed by that lease, not the request: end it via lease
-        // revoke while active, and once the lease has ended the request is terminal history. Which of those two it is
-        // has to be judged against the clock -- a lapsed lease carries no early end (nothing ever writes expiry), so
-        // reading the stored action raw would point the caller at a Revoke that would itself be refused. Checked
-        // before the window guard below, deliberately: an extension pushes the lease's end out in place while the
-        // request row keeps its original window, so an activated request can have a lapsed window and a live lease --
-        // that caller must be sent to Revoke, not told the window ended.
+        // An approved request that has minted a lease is governed by that lease, not the request. Checked before
+        // the window guard below: an extension pushes the lease's end out in place while the request row keeps
+        // its original window, so an activated request can have a lapsed window and a live lease that must be
+        // sent to Revoke, not told the window ended.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
@@ -80,15 +75,15 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 : new ConflictException("This request has already been resolved.");
         }
 
-        // No lease exists, so once the window has lapsed the request is derived Expired everywhere it is read; a
-        // cancellation must not restamp it (the repository write is guarded the same way).
+        // No lease exists, so a lapsed window derives Expired everywhere it is read; a cancellation must
+        // not restamp it.
         if (!request.IsWindowOpen(now))
         {
             throw new ConflictException("This request's window has already ended.");
         }
 
-        // audit (before/after): record the cancel attempt, then the outcome around the point of no return. Both the
-        // requester withdrawing and a manager retracting settle the request to the single RequestCancelled kind.
+        // audit (before/after): both the requester withdrawing and a manager retracting settle to the
+        // single RequestCancelled kind.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestCancelled,
@@ -104,14 +99,13 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         if (isRequester)
         {
-            // The requester withdraws their own request: Cancelled, no decision recorded. A user who is both the
-            // requester and a manager takes this branch when cancelling their own request.
+            // The requester withdraws their own request: Cancelled, no decision recorded.
             await _accessRequestRepository.CancelAsync(request.Id, now);
         }
         else
         {
-            // A managing approver retracts the request: Denied, recorded as a human Deny decision so the audit trail
-            // names the approver — mirrors RevokeAccessLeaseCommand.
+            // A managing approver retracts the request: Denied, recorded as a human Deny decision so the audit
+            // trail names the approver, mirroring RevokeAccessLeaseCommand.
             var decision = new AccessDecision
             {
                 AccessRequestId = request.Id,

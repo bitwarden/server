@@ -16,12 +16,9 @@ public class ListMyAccessRequestsQuery : IListMyAccessRequestsQuery
 
     public async Task<ICollection<AccessRequestDetails>> GetMineAsync(Guid userId, DateTime now)
     {
-        // No collection-manageability check to make here, unlike the approver reads: this is a caller-scoped
-        // self-read, and being the requester is the whole authorization story.
-        //
-        // One clock (the caller's), three jobs: `now` bounds the history window through `since`, decides which
-        // approved requests still have an unlapsed window (and so stay visible past that window), and projects each
-        // row's derived statuses (see AccessRequestDetails.ProducedLeaseStatus).
+        // No collection-manageability check here, unlike the approver reads: being the requester is the whole
+        // authorization story. `now` bounds the history window, gates unlapsed approved requests, and projects
+        // each row's derived statuses.
         return await _accessRequestRepository.GetManyByRequesterIdAsync(
             userId, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

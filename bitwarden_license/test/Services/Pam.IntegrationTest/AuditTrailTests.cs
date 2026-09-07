@@ -13,14 +13,8 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// The access-audit trail over the real request pipeline: the append-only store's write and read paths, the
-/// AccessEventLogs authorization at the endpoint, and the before/after collapse — all round-tripping through SQLite.
+/// The access-audit trail over the real request pipeline, round-tripping through SQLite.
 /// </summary>
-/// <remarks>
-/// The unit tests mock the store away, so this is where the store itself is exercised: that the display names are
-/// snapshotted into the row at write time (the EF path resolves them in C#, the Dapper path with LEFT JOINs, and both
-/// have to agree), and that a written event comes back through the endpoint in the documented shape.
-/// </remarks>
 public class AuditTrailTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-audit-trail")
 {
@@ -29,9 +23,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        // The substituted feature service is class-scoped, so the kill-switch test's flip outlives it and would
-        // withdraw the trail from every test ordered after it. Reset here, alongside the base's own Pam flag, rather
-        // than in that one test: the next test to flip a flag would otherwise reintroduce the same leak.
+        // Reset here since the feature service is class-scoped and a flip would leak into later tests.
         FeatureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging).Returns(false);
         await LoginHelper.LoginAsync(OwnerEmail);
     }
@@ -110,8 +102,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.False(rows[1]!["incomplete"]!.GetValue<bool>());
     }
 
-    // Rule administration goes through the same store as the request/lease lifecycle. This is the end-to-end proof
-    // that the three rule commands emit: create, rename, and delete one rule over HTTP and read the trail back.
+    // End-to-end proof that create/rename/delete rule commands emit and are readable in the trail.
     [Fact]
     public async Task Audit_RuleCreateUpdateDelete_AreRecordedWithTheRuleName()
     {
@@ -147,10 +138,10 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var byKind = rows.ToDictionary(row => row!["kind"]!.GetValue<string>(), row => row!);
         Assert.Equal(3, rows.Count);
 
-        // The name is snapshotted per event, so the create and the rename each read as they were at the time.
+        // The name is snapshotted per event, so create/rename each read as of their time.
         Assert.Equal("Production database", byKind["ruleCreated"]["ruleName"]!.GetValue<string>());
         Assert.Equal("Production database (paused)", byKind["ruleUpdated"]["ruleName"]!.GetValue<string>());
-        // The rule row is gone, so the delete event is the only thing that still knows what it was called.
+        // The rule row is gone; the delete event is the only record of its name.
         Assert.Equal("Production database (paused)", byKind["ruleDeleted"]["ruleName"]!.GetValue<string>());
 
         Assert.All(byKind.Values, row =>
@@ -171,9 +162,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // PM-42480: the kill switch, end to end. A rule round-trip that normally leaves three events behind leaves none,
-    // and the trail itself is withdrawn rather than served as a record with a hole in it. Both halves matter — shedding
-    // only the writes would keep serving a trail that quietly stopped being complete.
+    // The kill switch, end to end: writes stop and the trail is withdrawn, not served with a hole.
     [Fact]
     public async Task Audit_WithSqlAuditLoggingDisabled_WritesNothingAndWithdrawsTheTrail()
     {
@@ -204,9 +193,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, trail.StatusCode);
     }
 
-    // The filters reach the server now, so a narrowed request comes back narrowed rather than being sifted in the
-    // browser. Applied to the row that survived the before/after collapse, which is why the refused activation below
-    // answers to "leaseActivationRejected" and not to "leaseActivated".
+    // Filters apply server-side; the refused activation reads as leaseActivationRejected, the collapsed row's Outcome.
     [Fact]
     public async Task Audit_WithAKindFilter_ReturnsOnlyTheMatchingRows()
     {
@@ -238,7 +225,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
 
         Assert.Equal("leaseActivationRejected", Assert.Single(rejected)!["kind"]!.GetValue<string>());
         Assert.Empty(activated);
-        // Values within a dimension are OR-ed, because the chip driving them is multi-select.
+        // Values within a dimension are OR-ed; the chip driving them is multi-select.
         Assert.Equal(2, either.Count);
     }
 
@@ -260,8 +247,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Empty(outOfRange);
     }
 
-    // A page that filled carries the position to resume from; the last one does not. A caller walking every page --
-    // the CSV export does -- needs both halves of that to be true, or it stops early or never stops.
+    // A filled page carries a resume position; the last page doesn't, so pagination can terminate.
     [Fact]
     public async Task Audit_MoreThanOnePage_CarriesAContinuationTokenAndPagesThroughExactlyOnce()
     {
@@ -276,8 +262,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
             {
                 Kind = AccessAuditEventKind.CredentialAccessed,
                 Phase = AccessAuditEventPhase.Outcome,
-                // Deliberately the same instant for all of them: the pathological case for a position keyed on time
-                // alone, and an ordinary one here, since an action writes both its halves at one instant.
+                // Same instant for all: the pathological case for a time-only position.
                 OccurredAt = occurredAt,
                 OrganizationId = Organization.Id,
                 AccessRequestId = requestId,
@@ -320,8 +305,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.True(body["continuationToken"] == null || body["continuationToken"]!.GetValue<string?>() == null);
     }
 
-    // Refused rather than ignored. A filter the server did not understand, answered with an unfiltered trail, reads
-    // as "this never happened"; a token it did not issue, answered with the first page, loops a paging caller forever.
+    // Refused, not ignored: an unfiltered fallback would misreport, and a bad token would loop paging forever.
     [Theory]
     [InlineData("?kind=notAKind")]
     [InlineData("?continuationToken=forged")]
@@ -332,7 +316,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // Nothing may reach past the retention window, so a range wider than it is a request the store cannot answer.
+    // A range wider than the retention window is a request the store can't answer.
     [Fact]
     public async Task Audit_WithARangeWiderThanRetention_Returns400()
     {
@@ -342,8 +326,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // The Item filter's menu, end to end. It exists because neither obvious source works: a page of the trail names
-    // only some of the items in range, and the caller's vault holds credentials the trail never mentions.
+    // The Item filter's menu; neither a trail page nor the caller's vault alone can name it.
     [Fact]
     public async Task AuditItems_NamesEverySubjectTheTrailCarries_OncePerSubject()
     {
@@ -380,14 +363,14 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(2, items.Count);
         var cipher = Assert.Single(items, item => item!["cipherId"]?.GetValue<Guid?>() == cipherId)!;
         Assert.Equal(collectionId, cipher["collectionId"]!.GetValue<Guid>());
-        // No cipher name: it is Vault Data the caller resolves from its own vault, so the menu carries only the id.
+        // No cipher name: it's Vault Data; the menu carries only the id.
         Assert.True(cipher["ruleName"] == null || cipher["ruleName"]!.GetValue<string?>() == null);
         var rule = Assert.Single(items, item => item!["ruleId"]?.GetValue<Guid?>() == ruleId)!;
         // The rule's name is plaintext organization configuration, so it travels with the id.
         Assert.Equal("Production database", rule["ruleName"]!.GetValue<string>());
     }
 
-    // The menu follows the time period the auditor chose, so it cannot offer an option the page can never match.
+    // The menu follows the chosen time period, so it can't offer an unmatchable option.
     [Fact]
     public async Task AuditItems_FollowsTheRange()
     {
@@ -419,8 +402,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(recentCipherId, Assert.Single(narrowed)!["cipherId"]!.GetValue<Guid>());
     }
 
-    // One Item selection spanning both columns asks for either, not for the empty intersection every other pair of
-    // dimensions would give.
+    // One Item selection spanning both columns asks for either, not their intersection.
     [Fact]
     public async Task Audit_WithAnItemFilter_UnionsCiphersWithRules()
     {
@@ -462,8 +444,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(2, byEither.Count);
     }
 
-    // Guarded exactly as the trail is, because it describes the same records: it must not become a way to learn what
-    // the trail itself would not disclose.
+    // Guarded exactly as the trail is, since it describes the same records.
     [Fact]
     public async Task AuditItems_AnOrganizationTheCallerIsNotIn_Returns404()
     {

@@ -3,9 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// One job the release sweep returned to <see cref="PamRotationJobStatus.Pending"/> because its claiming daemon's
-/// heartbeat had gone stale and its claim lease (<c>ExecuteBy</c>) had expired — the row the sweep needs to emit the
-/// <c>released</c> audit event, since the job's own claim fields are cleared by the same update.
+/// One job the release sweep returned to <see cref="PamRotationJobStatus.Pending"/>. Carries the fields the sweep
+/// needs to emit the <c>released</c> audit event, since the job's own claim fields are cleared by the same update.
 /// </summary>
 public record PamReleasedJob
 {

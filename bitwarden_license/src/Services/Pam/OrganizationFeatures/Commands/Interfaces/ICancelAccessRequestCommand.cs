@@ -4,8 +4,7 @@ public interface ICancelAccessRequestCommand
 {
     /// <summary>
     /// Withdraws the caller's own pending access request: transitions it to
-    /// <see cref="Bit.Pam.Enums.AccessRequestStatus.Cancelled"/> and drops it from any approver's inbox. Only the requester
-    /// may cancel, and only while the request is still pending.
+    /// <see cref="Bit.Pam.Enums.AccessRequestStatus.Cancelled"/> and drops it from any approver's inbox.
     /// </summary>
     /// <exception cref="Bit.Core.Exceptions.NotFoundException">
     /// The request does not exist or the caller is not its requester.

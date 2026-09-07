@@ -21,12 +21,10 @@ namespace Bit.Services.Pam.IntegrationTest;
 /// request pipeline.
 /// </summary>
 /// <remarks>
-/// The endpoint-registration tests in Pam.Test assert that ManageAccessConnectorRequirement is attached to every
-/// connector admin route, but they stop before the pipeline runs — presence in metadata is not enforcement. These tests
-/// deliberately assert only that a caller was or was not denied, never what the handler returned.
+/// Unlike the Pam.Test endpoint-registration tests, these run the real pipeline and assert only allow/deny, never
+/// what the handler returned.
 /// <para>
-/// One route per group is enough: the requirement is applied once, to the parent group, so a route that escapes it
-/// escapes it for the whole group.
+/// One route per group is enough: the requirement is applied to the parent group.
 /// </para>
 /// </remarks>
 public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
@@ -35,8 +33,7 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        // The connector groups sit behind their own flag, on top of the base PAM flag the harness already
-        // enables.
+        // Connector groups sit behind their own flag, on top of the base PAM flag.
         FeatureService.IsEnabled(FeatureFlagKeys.PamAccessConnector).Returns(true);
     }
 
@@ -157,10 +154,8 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     }
 
     /// <summary>
-    /// Asserts a caller got past authorization without pinning what the handler did. NotFound is excluded as well as
-    /// Forbidden: without it these would still pass if the connector feature gate silently swallowed the route,
-    /// which
-    /// would in turn make every denial above pass for the wrong reason.
+    /// Asserts a caller got past authorization without pinning what the handler did. NotFound is excluded too, so a
+    /// feature gate silently swallowing the route doesn't pass as authorization.
     /// </summary>
     private static void AssertReachedTheHandler(HttpResponseMessage response)
     {

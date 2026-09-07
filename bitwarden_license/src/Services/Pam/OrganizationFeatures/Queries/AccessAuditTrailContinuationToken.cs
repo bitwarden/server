@@ -5,12 +5,9 @@ namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
 /// <summary>
 /// Where a page of the access-audit trail stopped, as the opaque string the client hands back to resume.
-///
-/// It carries the last row's instant AND its id, because the instant alone does not identify a row: an action writes
-/// its before/after halves at one instant, so events sharing a timestamp are ordinary in this store rather than a
-/// remote tie. A position keyed on the instant alone would have to resume strictly before it and would silently drop
-/// every other row recorded at that same instant — on an audit trail, the one kind of loss that must not happen
-/// quietly. (The organization event log's token is instant-only; this deliberately diverges from it.)
+/// Carries the last row's instant AND its id, since events sharing a timestamp are routine in this store (an
+/// action writes its before/after halves at one instant) and an instant-only token would silently drop the
+/// others recorded at that instant.
 /// </summary>
 public static class AccessAuditTrailContinuationToken
 {
@@ -21,11 +18,8 @@ public static class AccessAuditTrailContinuationToken
         string.Create(CultureInfo.InvariantCulture, $"{lastRow.OccurredAt.Ticks}{Separator}{lastRow.Id:N}");
 
     /// <summary>
-    /// Reads a token back into a position. Returns false for anything this did not issue.
-    ///
-    /// A caller paging through the trail — the CSV export walks every page — must not be answered with the first page
-    /// when it asked for the fifth: that would loop forever, or silently write a file of repeats. So a token that does
-    /// not parse is rejected by the endpoint rather than treated as "start from the beginning".
+    /// Reads a token back into a position. False for anything this did not issue; a caller paging through the
+    /// trail must not be silently restarted from the beginning.
     /// </summary>
     public static bool TryParse(string token, out DateTime occurredAt, out Guid id)
     {

@@ -3,11 +3,9 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The write-side payload for a PAM audit event: the raw facts a state-changing action records at the moment it
-/// happens, before anything is stored. It carries only the event itself — its <see cref="Kind"/> and <see cref="Phase"/>, when it occurred,
-/// the organization, the actor and requester, the subject ids, and free-text <see cref="Detail"/>. Unlike the read
-/// model <see cref="AccessAuditEvent"/>, it has no denormalized display fields (actor / requester / cipher /
-/// collection / rule names); those are joined in on read. Emitted through the PAM audit-event emitter.
+/// The write-side payload for a PAM audit event: the raw facts a state-changing action records, before anything is
+/// stored. Unlike the read model <see cref="AccessAuditEvent"/>, it has no denormalized display fields; those are
+/// joined in on read.
 /// </summary>
 public record AccessAuditEventData
 {
@@ -40,9 +38,8 @@ public record AccessAuditEventData
     public Guid? AccessRuleId { get; init; }
 
     /// <summary>
-    /// The access rule's name, supplied by the rule commands (which hold the entity). Unlike the other display names,
-    /// which are resolved by a JOIN at write time, the rule name is captured in C# because a rule can be hard-deleted
-    /// in the same action, after which a JOIN could no longer resolve it. Null for non-rule events.
+    /// The access rule's name, supplied by the rule commands rather than resolved by a JOIN at write time like the
+    /// other display names, since a rule can be hard-deleted in the same action. Null for non-rule events.
     /// </summary>
     public string? RuleName { get; init; }
 

@@ -16,9 +16,7 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class GoverningRuleResolverTests
 {
-    // Resolution is structural throughout: the oldest rule wins, and its human-approval gate is read off its
-    // conditions. Nothing here evaluates them, so the tests assert on the rule the resolver picks and the gate it
-    // reports, never on a verdict.
+    // Resolution is structural: the oldest rule wins, and the gate is read off its conditions, never evaluated.
 
     // An in-range IP for the 10.0.0.0/8 allowlists below; out-of-range for the 192.168/172.16 allowlists, which
     // therefore deny.
@@ -97,10 +95,7 @@ public class GoverningRuleResolverTests
         Assert.Contains(result.Conditions, condition => condition is HumanApprovalCondition);
     }
 
-    // PM-42256: the gate used to be read off the engine's verdict, and Combine gives deny precedence over
-    // requires-approval, so a denying condition alongside the human-approval one folded the rule to Deny and reported
-    // "no approval needed". Submit then took the automatic path and refused the request outright, and the pre-check
-    // advertised Automatic, so the caller never reached the approver whose decision the rule exists to require.
+    // Deny previously took precedence over human-approval in Combine, letting Submit skip the approver entirely.
     [Theory, BitAutoData]
     public async Task ResolveAsync_HumanApprovalWithDenyingIpAllowlist_StillRequiresHumanApproval(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
@@ -120,8 +115,7 @@ public class GoverningRuleResolverTests
     public async Task ResolveAsync_HumanApprovalGate_DoesNotVaryWithTheCallersSignals(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
     {
-        // The same rule has to resolve the same way for a caller its allowlist admits and one it denies: the gate is a
-        // property of the rule, not of who is asking or from where.
+        // The gate is a property of the rule, not of who is asking or from where.
         rule.Conditions = """[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]},{"kind":"human_approval"}]""";
         SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
         var outOfRange = _signals with { IpAddress = IPAddress.Parse("192.168.1.1") };
@@ -161,8 +155,7 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         // An unparseable rule fails safe to human approval rather than surfacing a rule the engine cannot evaluate.
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
-        // Flagged as well as substituted: the stand-in is indistinguishable from a genuine [human_approval] rule, and
-        // a caller that strips the approval gate before evaluating needs to know it is looking at a fallback.
+        // Flagged as well as substituted, so a caller stripping the approval gate knows it's a fallback.
         Assert.True(result.ConditionsUnreadable);
     }
 
@@ -414,9 +407,7 @@ public class GoverningRuleResolverTests
         Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
     }
 
-    // PM-39858: the resolved rule is what submit and the pre-check both read, so it has to carry the rule's lease
-    // duration bounds. It previously copied only the extension fields, leaving the two lease-duration ones unreadable
-    // downstream.
+    // The resolved rule must carry lease-duration bounds, not just the extension fields.
     [Theory, BitAutoData]
     public async Task ResolveAsync_CarriesTheRulesLeaseDurationBounds(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, AccessRule rule)
@@ -449,9 +440,7 @@ public class GoverningRuleResolverTests
         Assert.Null(result.MaxLeaseDurationSeconds);
     }
 
-    // ResolvePinnedAsync answers a different question from ResolveAsync: not "which rule governs this caller now" but
-    // "which rule decided this request". It therefore reads the rule straight off its id and never consults the
-    // caller's collections, so a rule created or re-pointed since submit cannot take over.
+    // ResolvePinnedAsync reads the rule by id; a rule re-pointed since submit can't take over.
 
     [Theory, BitAutoData]
     public async Task ResolvePinnedAsync_EnabledRule_ProjectsItOntoTheSuppliedCollection(
@@ -498,7 +487,7 @@ public class GoverningRuleResolverTests
     public async Task ResolvePinnedAsync_DisabledRule_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
     {
-        // Dropped for the same reason ResolveAsync drops it: an admin has switched the rule off, so it no longer gates.
+        // Dropped for the same reason ResolveAsync drops it: the rule is switched off.
         rule.Enabled = false;
         sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
 
@@ -528,8 +517,7 @@ public class GoverningRuleResolverTests
         Assert.True(result!.RequiresHumanApproval);
         Assert.True(result.ConditionsUnreadable);
         Assert.IsType<HumanApprovalCondition>(Assert.Single(result.Conditions));
-        // Stripping the fail-safe gate leaves nothing, which the engine reads as vacuously satisfied -- the flag above
-        // is what stops a caller evaluating this list from failing open.
+        // An empty list reads as vacuously satisfied; the flag above prevents failing open.
         Assert.Empty(result.AutomatedConditions);
     }
 
@@ -545,7 +533,7 @@ public class GoverningRuleResolverTests
 
         Assert.NotNull(result);
         Assert.Equal(2, result!.Conditions.Count);
-        // An approver's verdict settles the gate once; the allowlist is a standing condition and stays answerable.
+        // An approver's verdict settles the gate; the allowlist stays a standing, answerable condition.
         Assert.IsType<IpAllowlistCondition>(Assert.Single(result.AutomatedConditions));
     }
 

@@ -25,9 +25,9 @@ public class AccessRuleRequestModel
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The conditions that decide how access is granted under this rule — for example requiring human approval,
-    /// or restricting to certain source IPs. Sent as a JSON array of condition objects and stored verbatim.
-    /// An empty array means the rule imposes no conditions, so requests under it resolve automatically.
+    /// The conditions that decide how access is granted under this rule (human approval, source IP
+    /// restriction, etc). Sent as a JSON array of condition objects and stored verbatim; an empty array
+    /// means requests under it resolve automatically.
     /// </summary>
     [Required]
     public object Conditions { get; set; } = null!;

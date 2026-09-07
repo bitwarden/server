@@ -15,44 +15,26 @@ using Xunit;
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 /// <summary>
-/// The activation/retraction write skew (PM-41878) and the claim that closes it.
-///
-/// Activation used to read AccessRequest and write only AccessLease, while a retraction (requester cancel, or a
-/// manager's cancel-with-decision) reads AccessLease and writes only AccessRequest. Neither side wrote the table the
-/// other read, so both could commit and leave a Cancelled/Denied request holding a live lease -- and access is
-/// governed by the lease alone once it exists, so that combination hands the requester the credential their request
-/// was withdrawn from. Both sides now claim the request row first, which is what these tests pin.
+/// The activation/retraction write skew and the claim that closes it: activation used to write only AccessLease
+/// while retraction wrote only AccessRequest, so both could commit and leave a cancelled request holding a live
+/// lease. Both sides now claim the request row first.
 /// </summary>
 /// <remarks>
-/// Deliberately not a <c>Task.WhenAll</c> race. Firing both operations at once and asserting the invariant would pass
-/// whether or not either claim exists, because the losing interleaving is rare and plan-dependent. Instead each test
-/// holds the request row in an uncommitted transaction of its own and asserts that the real counterparty
-/// <em>blocks</em> on it -- the mechanism, not the symptom.
-///
-/// Against the pre-fix repositories on PostgreSQL both fail, and the second fails by reproducing the defect itself:
-/// the retraction settles Cancelled on a request that is holding a live lease. (On SQL Server the pre-fix procedures
-/// happened to produce a plan that ordered the two correctly, so there these pin the invariant rather than
-/// demonstrate the fault -- which is the point of fixing it by construction instead of by plan.)
+/// Not a <c>Task.WhenAll</c> race, since the losing interleaving is rare and plan-dependent. Each test instead
+/// holds the request row in its own uncommitted transaction and asserts the real counterparty blocks on it.
 /// </remarks>
 public class AccessRequestActivationRaceTests
 {
     /// <summary>
-    /// How long the blocked counterparty is given to (wrongly) run to completion before the held transaction is
-    /// released. Long enough that a passing run is not luck, short enough not to drag the suite; every provider's
-    /// lock wait timeout is far longer (SQL Server and PostgreSQL wait indefinitely by default, MySQL for 50s).
+    /// Grace period given to the blocked counterparty before the held row is released: long enough that a
+    /// passing run isn't luck, well under every provider's lock wait timeout.
     /// </summary>
     /// <remarks>
-    /// Held this long deliberately, at a known cost: an open transaction of this age holds PostgreSQL's transaction
-    /// horizon back, which under the suite's parallelism makes an unrelated Serializable writer marginally likelier
-    /// to be aborted with 40001 -- measured at roughly one occurrence per nine full runs of Pam.Repositories, in
-    /// CreateApprovedExtensionAsync, which does not retry. Shortening this would trade a firm assertion for a
-    /// cosmetic one: a counterparty that merely ran slowly would read as "blocked" and the test would pass for the
-    /// wrong reason.
+    /// Held this long deliberately; shortening it would let a merely slow run read as "blocked" for the wrong reason.
     /// </remarks>
     private static readonly TimeSpan BlockedGrace = TimeSpan.FromSeconds(2);
 
-    // Activation's half of the claim: a retraction that reached the request row first must make the mint wait, and
-    // once it commits the mint has to lose its CAS on Action rather than mint over a request that is now Cancelled.
+    // Activation's claim: a retraction that reached the row first must block the mint, which then fails its CAS.
     [DatabaseTheory, DatabaseData]
     public async Task CreateFromApprovedRequestAsync_WhileARetractionHoldsTheRequestRow_BlocksThenFailsPrecondition(
         Database database,
@@ -72,7 +54,7 @@ public class AccessRequestActivationRaceTests
         var mint = Task.Run(() =>
             accessLeaseRepository.CreateFromApprovedRequestAsync(BuildLeaseFor(request, now), now, false));
 
-        // The claim is the whole point: activation must not get as far as inserting a lease while the row is held.
+        // Activation must not insert a lease while the row is held.
         Assert.True(mint != await Task.WhenAny(mint, Task.Delay(BlockedGrace)),
             "Activation ran to completion while the request row was held, so it never claimed the row. Without that " +
             "claim its precondition read is an ordinary MVCC read that sees a pre-retraction state and mints anyway.");
@@ -81,9 +63,7 @@ public class AccessRequestActivationRaceTests
         await held.CancelAsync(now);
         await held.CommitAsync();
 
-        // PostgreSQL surfaces the released block to a Serializable transaction as a 40001 rather than re-qualifying
-        // it in place; CreateFromApprovedRequestAsync's retry runs the whole attempt again on a fresh snapshot and
-        // arrives at the same answer, so the outcome code is the same on every provider.
+        // PostgreSQL surfaces this as a 40001; the retry yields the same outcome on every provider.
         Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed, await mint);
 
         Assert.Null(await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id));
@@ -91,9 +71,8 @@ public class AccessRequestActivationRaceTests
         Assert.Equal(AccessRequestAction.Cancelled, settled!.Action);
     }
 
-    // The retraction's half of the claim, and the one the optimizer could previously get wrong: the lease probe is
-    // correlated to the request id rather than to the row being updated, so without the claim it can be evaluated
-    // before AccessRequest is locked at all -- and a mint that commits in that gap goes unseen.
+    // The retraction's claim: without it, the lease probe can run before AccessRequest is locked, missing a
+    // concurrent mint.
     [DatabaseTheory, DatabaseData]
     public async Task CancelAsync_WhileAnActivationHoldsTheRequestRow_BlocksThenRefusesTheMintedLease(
         Database database,
@@ -108,17 +87,14 @@ public class AccessRequestActivationRaceTests
         var request = await CreateApprovedRequestAsync(
             accessRequestRepository, organization.Id, now.AddHours(-1), now.AddHours(1));
 
-        // Stand in for an activation mid-flight: it has claimed the request row and minted, but not yet committed.
-        // The real mint cannot be used here because it commits before returning, and the whole question is what a
-        // retraction does while the lease is still invisible to it.
+        // Stands in for an activation mid-flight: row claimed and lease minted, but not yet committed.
         await using var held = await HeldRequestRow.ClaimAsync(database, request.Id);
         var lease = BuildLeaseFor(request, now);
         await held.InsertLeaseAsync(lease, now);
 
         var cancel = Task.Run(() => accessRequestRepository.CancelAsync(request.Id, now));
 
-        // Without the claim the retraction can read straight past the held row into an AccessLease table that still
-        // looks empty, and complete.
+        // Without the claim, the retraction could read past the held row and complete.
         Assert.True(cancel != await Task.WhenAny(cancel, Task.Delay(BlockedGrace)),
             "The retraction ran to completion while the request row was held, so it never claimed the row and its " +
             "lease probe was free to run before the row was locked.");
@@ -126,8 +102,7 @@ public class AccessRequestActivationRaceTests
         await held.CommitAsync();
         await cancel;
 
-        // The activation won, so the request stays Approved and keeps the lease that governs it. A Cancelled request
-        // here would be the bug: withdrawn on paper, still holding live access to the credential.
+        // Activation won: the request stays Approved and keeps its lease.
         var settled = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestAction.Approved, settled!.Action);
 
@@ -137,10 +112,8 @@ public class AccessRequestActivationRaceTests
         Assert.Equal(AccessLeaseAction.None, minted.Action);
     }
 
-    // Two activations of the same request, with no singleton guard asked for -- the path that now runs at
-    // ReadCommitted rather than Serializable. Nothing about the request's state changes when it is activated, so the
-    // loser's CAS on Action can still pass on a stale snapshot after it unblocks; the unique
-    // IX_AccessLease_AccessRequestId is what actually refuses it, and this is the test that says so.
+    // Two concurrent activations of the same request: the unique index on AccessLease, not the CAS on
+    // AccessRequest.Action, is what refuses the second lease.
     [DatabaseTheory, DatabaseData]
     public async Task CreateFromApprovedRequestAsync_WhileAnotherActivationHoldsTheRequestRow_RefusesTheSecondLease(
         Database database,
@@ -169,8 +142,7 @@ public class AccessRequestActivationRaceTests
 
         Assert.Equal(AccessLeaseMintOutcome.PreconditionFailed, await mint);
 
-        // One request, one lease -- the first one. A second lease here would be a duplicate grant over the same
-        // window, which is what the unique index exists to prevent.
+        // One request, one lease: the unique index refuses a second grant over the same window.
         var minted = await accessLeaseRepository.GetByAccessRequestIdAsync(request.Id);
         Assert.NotNull(minted);
         Assert.Equal(winner.Id, minted.Id);
@@ -182,14 +154,11 @@ public class AccessRequestActivationRaceTests
         "SQLITE_BUSY instead of waiting on the row.";
 
     /// <summary>
-    /// An uncommitted transaction on its own connection holding the AccessRequest row's write lock -- the same claim
-    /// activation and retraction each take before they touch AccessLease. Lets a test assert that the real
-    /// counterparty blocks on that row, then release it and check how the counterparty settles.
+    /// Holds the AccessRequest row's write lock on its own uncommitted transaction, so a test can assert a real
+    /// counterparty blocks on it, then release it and check how the counterparty settles.
     /// </summary>
     /// <remarks>
-    /// Raw SQL rather than a repository or a DbContext, because it has to hold one transaction open across the
-    /// counterparty's whole run and the repositories all own (and commit) their own. The statements are trivial and
-    /// portable; only identifier quoting differs by provider.
+    /// Raw SQL, not a repository, because it must keep one transaction open across the counterparty's whole run.
     /// </remarks>
     private sealed class HeldRequestRow : IAsyncDisposable
     {
@@ -215,8 +184,7 @@ public class AccessRequestActivationRaceTests
             var transaction = await connection.BeginTransactionAsync();
             var held = new HeldRequestRow(database.Type, connection, transaction, requestId);
 
-            // The claim itself: a write that changes nothing but takes the row. Exactly what
-            // AccessLease_CreateFromApprovedRequest and AccessRequestRepository.ClaimRequestRowAsync do.
+            // Mirrors the no-op UPDATE that ClaimRequestRowAsync uses to take the row.
             await held.ExecuteAsync(
                 $"UPDATE {held.Table("AccessRequest")} SET {held.Name("Action")} = {held.Name("Action")} " +
                 $"WHERE {held.Name("Id")} = @Id");
@@ -256,8 +224,7 @@ public class AccessRequestActivationRaceTests
 
         public async ValueTask DisposeAsync()
         {
-            // A test that failed its blocking assertion leaves the row held; rolling back keeps the failure readable
-            // instead of hanging the rest of the run behind an abandoned lock.
+            // Rolls back on failure so an abandoned lock doesn't hang the rest of the run.
             if (!_committed)
             {
                 await _transaction.RollbackAsync();

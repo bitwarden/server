@@ -3,12 +3,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_TimeoutDue]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- JobTimesOut ("success wins"): a job with a Rotated attempt is excluded even if it is otherwise past ExpiresAt --
-    -- a slow-but-successful report still wins the race against the timeout sweep. OUTPUT can't reach through the
-    -- joins needed for the audit projection (config/org/cipher), so affected ids are captured in @Affected first and
-    -- joined afterward. The job update and its attempt's Abandoned transition commit together so a crash between the
-    -- two can never leave a stale Executing attempt behind a job that already moved on. XACT_ABORT guarantees
-    -- rollback (and a clean pooled connection) on any error.
+    -- Success wins: excludes a Rotated job past ExpiresAt; both updates commit together.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -32,16 +27,14 @@ BEGIN
             WHERE AT.[JobId] = J.[Id] AND AT.[Status] = 1 -- Rotated
         )
 
-    -- Abandon the executing attempt (if any) on each timed-out job; a Pending job that never got claimed has none.
-    -- Abandoned attempts are never charged against the retry budget.
+    -- Abandons the executing attempt on each timed-out job; doesn't count against the retry budget.
     UPDATE [dbo].[PamRotationAttempt]
     SET [Status] = 3, -- Abandoned
         [ResolvedDate] = @Now
     WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
         AND [Status] = 0 -- Executing
 
-    -- One row per timed-out job for audit emission; AttemptCount distinguishes unroutable (never claimed, zero
-    -- attempts) from stuck (claimed at least once).
+    -- One row per timed-out job; AttemptCount tells unroutable (never claimed) from stuck (claimed).
     SELECT
         AF.[JobId],
         C.[Id] AS [RotationConfigId],

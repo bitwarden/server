@@ -10,9 +10,7 @@ public class AccessPreCheckResponseModelTests
     [Fact]
     public void Constructor_MarksSlotFreesAtAsUtcWithoutShiftingIt()
     {
-        // Dapper materialises AccessLease.NotAfter with Kind.Unspecified. Serialized as-is it carries no designator
-        // and a browser reads it as local time, so the retry time this ticket exists to give the requester would be
-        // wrong by their UTC offset -- in the past for anyone east of UTC.
+        // Dapper materializes NotAfter as Kind.Unspecified; serialized as-is a browser would read it as local time.
         var slotFreesAt = new DateTime(2026, 8, 31, 10, 52, 0, DateTimeKind.Unspecified);
         var result = new AccessPreCheckResult(AccessApprovalMode.Automatic, CanStartLease: false,
             SlotFreesAt: slotFreesAt);
@@ -42,18 +40,14 @@ public class AccessPreCheckResponseModelTests
     [Fact]
     public void DefaultConstructed_ReadsAsStartable()
     {
-        // The field's polarity is "absence means startable" all the way down, so even the parameterless
-        // (de)serialization constructor must not produce a model that looks blocked.
+        // "Absence means startable" must hold even for the parameterless constructor.
         Assert.True(new AccessPreCheckResponseModel().CanStartLease);
     }
 
     [Fact]
     public void TheWireContractIsExactlyAvailability_WithNoHolderIdentity()
     {
-        // PM-42446 chose Alternative A: the requester learns THAT the slot is taken and when it frees, never by whom.
-        // Pinned as the exact property set rather than a list of forbidden names, so that ANY added field trips this
-        // test and forces a deliberate disclosure decision -- a name-blocklist would wave through the same data under
-        // a different name.
+        // Pinned to the exact property set, not a forbidden-names list, so any added field forces a review.
         var properties = typeof(AccessPreCheckResponseModel).GetProperties().Select(p => p.Name).ToHashSet();
 
         Assert.Equal(

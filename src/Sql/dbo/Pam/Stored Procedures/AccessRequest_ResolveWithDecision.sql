@@ -9,19 +9,10 @@ CREATE PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    -- XACT_ABORT rolls back both writes together on any failure.
     SET XACT_ABORT ON
 
-    -- Atomically record the human approver's action on an open request, together with their decision. The caller has
-    -- already verified (and the application enforces) that no action is recorded yet; the WHERE guard keeps the write
-    -- idempotent under a race so a second approver can't move an already-resolved request -- the column CAS decides
-    -- who gets to write history, and the losing approver's verdict is never appended (@@ROWCOUNT > 0), which would
-    -- leave the decision log contradicting the recorded action.
-    --
-    -- Approval does not mint the lease: the requester activates the approved request later via
-    -- [AccessLease_CreateFromApprovedRequest]. The automatic path ([AccessRequest_CreateAutoApproved]) records the
-    -- approved request the same way and likewise leaves the lease to be minted at activation.
+    -- Records an approver's decision; WHERE guard makes it idempotent (first CAS wins).
     BEGIN TRANSACTION AccessRequest_Resolve
 
     UPDATE [dbo].[AccessRequest]

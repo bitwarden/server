@@ -16,12 +16,10 @@ using EfJob = Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob;
 namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 /// <summary>
-/// EF counterpart of the MSSQL rotation-job procedures. Those rely on <c>UPDLOCK, HOLDLOCK</c> range locks and the
-/// <c>OUTPUT</c> clause, neither of which is portable, so the guarded transitions are rebuilt here from two
-/// portable primitives: a serializable transaction where the MSSQL side takes a range lock, and a single
-/// <c>ExecuteUpdate</c> whose <c>WHERE</c> carries the guard where the MSSQL side relies on a row lock. Every
-/// invariant the procedures enforce — <c>AtMostOneActiveJobPerConfig</c>, <c>AtMostOneInFlightAttemptPerJob</c>,
-/// first-claim-wins, and <c>VerifiedBeforeSuccess</c> — is enforced the same way here.
+/// EF counterpart of the MSSQL rotation-job procedures, rebuilding their <c>UPDLOCK, HOLDLOCK</c> range locks and
+/// <c>OUTPUT</c> clause from two portable primitives: a serializable transaction, and a single <c>ExecuteUpdate</c>
+/// whose <c>WHERE</c> carries the guard. Enforces the same invariants: <c>AtMostOneActiveJobPerConfig</c>,
+/// <c>AtMostOneInFlightAttemptPerJob</c>, first-claim-wins, and <c>VerifiedBeforeSuccess</c>.
 /// </summary>
 public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotationJobRepository
 {
@@ -37,8 +35,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // can_offer's eligibility half, re-checked here and not only by the caller, so a config disabled or a target
-        // switched to Manual between the caller's read and this write cannot mint a job.
+        // Re-checked here, not just by the caller, so a config disabled or target switched to Manual meanwhile can't mint a job.
         var offerable = await dbContext.PamRotationConfigs
             .Join(dbContext.PamTargetSystems, c => c.TargetSystemId, t => t.Id, (c, t) => new { Config = c, Target = t })
             .AnyAsync(x => x.Config.Id == job.RotationConfigId
@@ -51,8 +48,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return PamRotationJobCreateOutcome.ConfigNotOfferable;
         }
 
-        // AtMostOneActiveJobPerConfig. Serializable holds the predicate's range for the life of the transaction, so
-        // a concurrent create for the same config either blocks or fails to serialize rather than inserting a second.
+        // AtMostOneActiveJobPerConfig: Serializable holds the predicate's range, so a concurrent create for the same config fails to serialize instead of duplicating.
         var hasActiveJob = await dbContext.PamRotationJobs
             .AnyAsync(j => j.RotationConfigId == job.RotationConfigId
                 && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed));
@@ -93,8 +89,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // First-claim-wins rests entirely on this statement: the Status == Pending predicate is evaluated under the
-        // row lock the UPDATE itself takes, so two concurrent claims serialize and only the first flips the row.
+        // First-claim-wins: the Pending predicate is evaluated under the row lock this UPDATE itself takes, so concurrent claims serialize.
         var claimed = await EligibleJobs(dbContext, daemonId)
             .Where(x => x.Job.Id == jobId
                 && x.Job.Status == PamRotationJobStatus.Pending
@@ -281,8 +276,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // Serializable stands in for the MSSQL side's UPDLOCK on the job row: it keeps a concurrent release or
-        // timeout sweep from moving the job between "is this attempt still allowed to write" and the write itself.
+        // Serializable stands in for the MSSQL UPDLOCK on the job row, closing the check-then-act window against a concurrent release/timeout sweep.
         var target = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Status == PamRotationAttemptStatus.Executing
@@ -309,8 +303,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return PamRotationCipherWriteOutcome.Rejected;
         }
 
-        // A drifted revision date means the vault item changed since the daemon last read it, so the write is
-        // refused rather than clobbering a concurrent user edit. The one-second tolerance mirrors CipherService.
+        // A drifted revision date means a concurrent user edit; refused rather than clobbered. Tolerance mirrors CipherService.
         if (Math.Abs((cipher.RevisionDate - lastKnownRevisionDate).TotalMilliseconds) > 1000)
         {
             await transaction.RollbackAsync();
@@ -452,8 +445,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // EF has no OUTPUT clause, so the affected set is read first and the update is then keyed by those ids with
-        // the same predicate re-applied. Serializable keeps another sweep from claiming the same rows in between.
+        // EF has no OUTPUT, so the affected ids are read then updated with the same predicate re-applied; Serializable keeps another sweep from claiming them meanwhile.
         var due = await dbContext.PamRotationJobs
             .Where(j => (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed)
                 && j.ExpiresAt <= now
@@ -515,8 +507,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var staleBefore = now - offlineAfter;
 
-        // Releasing only at lease expiry -- not at stale detection -- preserves success-wins for a slow but live
-        // daemon. Keyed on heartbeat staleness alone, never on daemon status, so a disabled daemon's jobs release.
+        // Releases only at lease expiry (not stale detection) to preserve success-wins; keyed on heartbeat staleness alone, so a disabled daemon's jobs still release.
         var candidates = await dbContext.PamRotationJobs
             .Where(j => j.Status == PamRotationJobStatus.Claimed && j.ClaimedAt != null)
             .Join(dbContext.PamDaemons, j => j.ClaimedByDaemonId, d => d.Id, (j, d) => new { Job = j, Daemon = d })
@@ -535,8 +526,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .AsNoTracking()
             .ToListAsync();
 
-        // The lease deadline is computed from the pre-clear ClaimedAt. Doing it in memory rather than in the UPDATE
-        // keeps it correct on MySQL, whose UPDATE assigns left to right and would otherwise read the nulled column.
+        // Computed in memory from the pre-clear ClaimedAt, since MySQL's UPDATE assigns left to right and would otherwise read the nulled column.
         var released = candidates
             .Where(c => c.ClaimedAt!.Value + releaseDelay <= now)
             .ToList();

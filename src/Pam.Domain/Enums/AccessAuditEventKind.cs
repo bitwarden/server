@@ -1,10 +1,9 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The kinds of event in the PAM access-audit trail. State-changing PAM actions write these events to a dedicated store
-/// (<see cref="Models.AccessAuditEventData"/>); the trail is read back from it. Kinds are grouped by subject and
-/// numbered in ranges per group, leaving room to grow. Some kinds are deferred — no action emits them yet (the
-/// time-derived expiry kinds need a background sweep); see the per-member notes.
+/// The kinds of event in the PAM access-audit trail (<see cref="Models.AccessAuditEventData"/>). Grouped by
+/// subject and numbered in ranges per group, leaving room to grow. Some kinds are deferred; see the
+/// per-member notes.
 /// </summary>
 public enum AccessAuditEventKind : byte
 {
@@ -110,10 +109,8 @@ public enum AccessAuditEventKind : byte
 
     // 67-69 reserved for rotation-lifecycle growth.
 
-    // Deferred: no kind is allocated yet for the spec's access_end_deferred (the pending-access-end latch),
-    // auto_paused (§6.8 failure-policy auto-pause), or daemon_credential_reissued (ReissueDaemonCredential) outcomes —
-    // all out of scope this pass. Values are intentionally left unassigned rather than reserved, since the shape of
-    // that work (and which range it belongs in) isn't settled yet.
+    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or daemon_credential_reissued.
+    // Left unassigned rather than reserved.
 
     // Fleet / target administration
     /// <summary>A rotation daemon was registered. Spec outcome <c>daemon_registered</c>.</summary>

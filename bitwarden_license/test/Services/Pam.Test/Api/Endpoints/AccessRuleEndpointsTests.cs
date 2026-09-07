@@ -19,10 +19,7 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the access-rule wire contract that the generated OpenAPI spec — and the client bindings built from it —
-/// depend on. The endpoint bodies just delegate; the contract (routes, names, methods, return types) is the
-/// thing under test. Endpoints are materialized by mapping them onto a minimal host and reading its
-/// <see cref="EndpointDataSource"/> — the same metadata the offline OpenAPI generator inspects.
+/// Locks the access-rule wire contract (routes, names, methods, return types) the OpenAPI spec depends on.
 /// </summary>
 public class AccessRuleEndpointsTests
 {
@@ -115,7 +112,7 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
-    // Diagnostic, and admin-only: it names credentials a rule is failing to protect. A read, but gated as a write.
+    // Diagnostic and admin-only, since it names credentials a rule is failing to protect.
     [InlineData("Pam_AccessRules_GetBypassableCiphers", typeof(ManageAccessRulesRequirement))]
     public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
     {

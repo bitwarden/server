@@ -31,8 +31,8 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
         var assigned = await _collectionRepository.GetManyByUserIdAsync(userId);
         var manageable = assigned.Where(c => c.Manage).Select(c => c.Id).ToHashSet();
 
-        // Owners/Admins (when the org permits) and EditAnyCollection custom users can manage every collection in the
-        // organization, so fold those collections in too -- from the request context for the user's active orgs.
+        // Owners/Admins and EditAnyCollection custom users can manage every collection in the organization; fold
+        // those in from the request context for the user's active orgs.
         var contextOrgIds = new HashSet<Guid>();
         foreach (var org in _currentContext.Organizations)
         {
@@ -40,9 +40,8 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
             await FoldInManageAllCollectionsAsync(org, manageable);
         }
 
-        // A suspended (disabled) organization is absent from the claim-based request context, which would otherwise
-        // blank its governance view. Governance stays visible and actionable while an org is suspended, so fold in the
-        // user's confirmed memberships the context dropped -- read from the database, which includes disabled orgs.
+        // A suspended organization is absent from the claim-based request context; fold in the user's confirmed
+        // memberships read directly from the database, which includes disabled orgs, so governance stays visible.
         var memberships = await _organizationUserRepository.GetManyDetailsByUserAsync(
             userId, OrganizationUserStatusType.Confirmed);
         foreach (var membership in memberships.Where(ou => !contextOrgIds.Contains(ou.OrganizationId)))
@@ -59,7 +58,7 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
         return manageable.Contains(collectionId);
     }
 
-    // Folds every collection in the organization into the manageable set when the user can manage all of them.
+    // Folds in every collection in the organization, for a user who can manage all of them.
     private async Task FoldInManageAllCollectionsAsync(CurrentContextOrganization org, HashSet<Guid> manageable)
     {
         var canManageAll = org.Permissions.EditAnyCollection;

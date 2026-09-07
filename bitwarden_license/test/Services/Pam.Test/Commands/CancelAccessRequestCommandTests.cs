@@ -34,7 +34,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
-        // userId is neither the requester nor a manager (CanManageCollectionAsync defaults to false).
+        // userId is neither the requester nor a manager.
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id));
@@ -91,7 +91,7 @@ public class CancelAccessRequestCommandTests
         request.Action = action;
         SetOpenWindow(request);
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
-        // No lease produced (GetByAccessRequestIdAsync defaults to null).
+        // No lease produced.
 
         await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
 
@@ -179,9 +179,7 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_ApprovedWithLapsedLease_ReportsAlreadyResolvedRatherThanPointingAtRevoke(
         AccessRequest request, AccessLease lease)
     {
-        // A lease whose window has closed carries no early end, so judging the recorded action alone would send the
-        // caller to a Revoke that revoke itself refuses. The lease has already ended: the request is terminal
-        // history (PM-42355). The request's own window is pinned open so this exercises the lease branch.
+        // A lapsed lease has no early end recorded; the request is terminal history, not a candidate for Revoke.
         var sutProvider = Setup();
         request.Action = AccessRequestAction.Approved;
         SetOpenWindow(request);
@@ -199,8 +197,7 @@ public class CancelAccessRequestCommandTests
             .CancelAsync(default, default);
     }
 
-    // BitAutoData generates arbitrary dates; pin a window containing _now so the lapsed-window guard doesn't trip
-    // in tests that aren't about it.
+    // Pins a window containing _now so the lapsed-window guard doesn't trip in unrelated tests.
     private static void SetOpenWindow(AccessRequest request)
     {
         request.NotBefore = _now.AddMinutes(-5);
