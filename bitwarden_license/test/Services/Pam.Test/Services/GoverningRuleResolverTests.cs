@@ -348,28 +348,23 @@ public class GoverningRuleResolverTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResolveAsync_OldestGovernedRuleDeleted_NextRuleGoverns(
+    public async Task ResolveAsync_AlsoReachableThroughDeletedRuleCollection_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+        Collection deletedRuleCollection, AccessRule deletedRule, Collection governedCollection, AccessRule governingRule)
     {
-        // The oldest governing rule was deleted after the collection was read, so it is skipped and the surviving
-        // newer rule governs — a deleted rule stops governing even when it would otherwise have won on age.
-        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"human_approval"}]""";
-        newerRule.Enabled = true;
-        olderCollection.AccessRuleId = olderRule.Id;
-        newerCollection.AccessRuleId = newerRule.Id;
-        SetupReachableCollections(sutProvider, userId, cipherId, olderCollection, newerCollection);
-        // Only the newer rule loads; GetByIdAsync(olderRule.Id) is left unstubbed so the deleted oldest returns null.
-        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(newerRule.Id).Returns(newerRule);
+        // One path's rule was deleted after the collection was read, so that path is an escape and the surviving rule
+        // on the other path does not take over.
+        deletedRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        governingRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        governingRule.Conditions = """[{"kind":"human_approval"}]""";
+        governingRule.Enabled = true;
+        deletedRuleCollection.AccessRuleId = deletedRule.Id;
+        governedCollection.AccessRuleId = governingRule.Id;
+        SetupReachableCollections(sutProvider, userId, cipherId, deletedRuleCollection, governedCollection);
+        // Only the surviving rule loads; GetByIdAsync(deletedRule.Id) is left unstubbed so the deleted one returns null.
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(governingRule.Id).Returns(governingRule);
 
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
-
-        Assert.NotNull(result);
-        Assert.Equal(newerCollection.Id, result!.CollectionId);
-        Assert.Equal(newerRule.Id, result.RuleId);
-        Assert.True(result.RequiresHumanApproval);
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
     }
 
     [Theory, BitAutoData]
@@ -383,27 +378,40 @@ public class GoverningRuleResolverTests
         Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
     }
 
+    // PM-42916: the disabled path used to be skipped so the enabled rule governed, gating a cipher the bulk read had
+    // already released in full. Mirrors CipherLeaseGateTests
+    // .AuthorizeReadManyAsync_AlsoReachableThroughDisabledRuleCollection_NotGated.
     [Theory, BitAutoData]
-    public async Task ResolveAsync_OldestRuleDisabled_NewerEnabledRuleGoverns(
+    public async Task ResolveAsync_AlsoReachableThroughDisabledRuleCollection_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
-        Collection olderCollection, AccessRule olderRule, Collection newerCollection, AccessRule newerRule)
+        Collection disabledRuleCollection, AccessRule disabledRule, Collection governedCollection, AccessRule governingRule)
     {
-        // The oldest rule is disabled and auto-granting; the newer rule is enabled and needs human approval. A disabled
-        // rule must not shadow a newer active one, so the newer rule governs — access is not silently auto-granted.
-        olderRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        olderRule.Conditions = "[]";
-        newerRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
-        newerRule.Conditions = """[{"kind":"human_approval"}]""";
+        // One path's rule is switched off; the other is enabled and needs human approval.
+        disabledRule.CreationDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        disabledRule.Conditions = "[]";
+        governingRule.CreationDate = new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
+        governingRule.Conditions = """[{"kind":"human_approval"}]""";
         SetupGovernedCollections(sutProvider, userId, cipherId,
-            (olderCollection, olderRule), (newerCollection, newerRule));
-        olderRule.Enabled = false;
+            (disabledRuleCollection, disabledRule), (governedCollection, governingRule));
+        disabledRule.Enabled = false;
 
-        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
 
-        Assert.NotNull(result);
-        Assert.Equal(newerCollection.Id, result!.CollectionId);
-        Assert.Equal(newerRule.Id, result.RuleId);
-        Assert.True(result.RequiresHumanApproval);
+    // PM-42916: a "bypassable" cipher — in a governed collection and an ordinary one, the shape
+    // IListRuleBypassableCiphersQuery warns admins about. The ordinary path releases it in full anyway.
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_AlsoReachableThroughPlainCollection_ReturnsNull(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection plainCollection, Collection governedCollection, AccessRule governingRule)
+    {
+        plainCollection.AccessRuleId = null;
+        governedCollection.AccessRuleId = governingRule.Id;
+        governingRule.Enabled = true;
+        SetupReachableCollections(sutProvider, userId, cipherId, plainCollection, governedCollection);
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(governingRule.Id).Returns(governingRule);
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
     }
 
     // PM-39858: the resolved rule is what submit and the pre-check both read, so it has to carry the rule's lease
