@@ -15,8 +15,8 @@ public class Saml2AssertionMetrics
         var meter = meterFactory.Create("Bitwarden.Sso.Saml2");
         _unsupportedKeyTransportAlgorithmCounter = meter.CreateCounter<long>(
             "bitwarden.sso.saml2.unsupported_key_transport_algorithm",
-            unit: "{assertions}",
-            description: "Number of SAML assertion keys that use an unsupported key transport algorithm.");
+            unit: "{requests}",
+            description: "Number of SAML ACS requests carrying at least one assertion key that uses an unsupported key transport algorithm.");
     }
 
     /// <summary>
