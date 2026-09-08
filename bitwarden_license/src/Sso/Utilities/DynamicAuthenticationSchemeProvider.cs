@@ -479,7 +479,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
 
         foreach (var keyDescriptor in keyDescriptors)
         {
-            foreach (var algorithm in SamlEncryptionAlgorithms.Accepted)
+            foreach (var algorithm in Saml2KeyTransportEncryptionAlgorithms.Accepted)
             {
                 keyDescriptor.EncryptionMethods.Add(new EncryptionMethod { Algorithm = new Uri(algorithm) });
             }
