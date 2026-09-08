@@ -634,6 +634,16 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
+        // Snapshot the provisioned state before promoting in memory so it can be rolled back if needed
+        var stagedSnapshots = stagedInvitations.Values.ToDictionary(
+            staged => staged.OrgUser.Id,
+            staged => new StagedUserSnapshot(
+                staged.OrgUser.Status,
+                staged.OrgUser.Type,
+                staged.OrgUser.Permissions,
+                staged.OrgUser.AccessSecretsManager,
+                staged.OrgUser.RevisionDate));
+
         // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
         foreach (var (orgUser, invite) in stagedInvitations.Values)
@@ -660,6 +670,9 @@ public class OrganizationService : IOrganizationService
         var allOrgUsers = createdOrgUsers
             .Concat(stagedInvitations.Values.Select(s => s.OrgUser))
             .ToList();
+
+        // Staged rows whose promotion has actually committed, and so must be put back if the batch fails.
+        var promotedStagedUsers = new List<OrganizationUser>();
 
         try
         {
@@ -701,6 +714,8 @@ public class OrganizationService : IOrganizationService
                     await _organizationUserRepository.ReplaceAsync(orgUser);
                 }
 
+                promotedStagedUsers.Add(orgUser);
+
                 if (invite.Groups != null && invite.Groups.Any())
                 {
                     await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, invite.Groups, revisionDate);
@@ -711,6 +726,10 @@ public class OrganizationService : IOrganizationService
         {
             // Revert any created/non-staged users.
             await _organizationUserRepository.DeleteManyAsync(createdOrgUsers.Select(ou => ou.Id));
+
+            // Demote any staged rows that were promoted before the failure.
+            await RestorePromotedStagedUsersAsync(promotedStagedUsers, stagedSnapshots);
+
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
             // Revert autoscaling
@@ -741,6 +760,46 @@ public class OrganizationService : IOrganizationService
         }
 
         return (allOrgUsers, events);
+    }
+
+    /// <summary>
+    /// The fields <see cref="SaveUsersSendInvitesAsync"/> overwrites when it promotes a staged member, captured
+    /// before the overwrite so the promotion can be undone.
+    /// </summary>
+    private sealed record StagedUserSnapshot(
+        OrganizationUserStatusType Status,
+        OrganizationUserType Type,
+        string Permissions,
+        bool AccessSecretsManager,
+        DateTime RevisionDate);
+
+    /// <summary>
+    /// Puts promoted staged members back to the state they were provisioned in.
+    /// </summary>
+    private async Task RestorePromotedStagedUsersAsync(
+        List<OrganizationUser> promotedStagedUsers,
+        Dictionary<Guid, StagedUserSnapshot> stagedSnapshots)
+    {
+        if (promotedStagedUsers.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var orgUser in promotedStagedUsers)
+        {
+            if (!stagedSnapshots.TryGetValue(orgUser.Id, out var snapshot))
+            {
+                continue;
+            }
+
+            orgUser.Status = snapshot.Status;
+            orgUser.Type = snapshot.Type;
+            orgUser.Permissions = snapshot.Permissions;
+            orgUser.AccessSecretsManager = snapshot.AccessSecretsManager;
+            orgUser.RevisionDate = snapshot.RevisionDate;
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(promotedStagedUsers);
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, Guid? invitingUserId = null) =>

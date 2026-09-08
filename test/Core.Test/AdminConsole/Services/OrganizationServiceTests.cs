@@ -1626,4 +1626,47 @@ public class OrganizationServiceTests
             .Received(1)
             .SendInvitesAsync(Arg.Is<SendInvitesRequest>(r => r.Users.Length == 1));
     }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_EmailBelongsToStagedUser_AndPromotionFailsAfterTheRowIsWritten_DemotesTheRow(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        // Provisioned state deliberately differs from what the invite would write, so the revert is visible.
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        stagedUser.Type = OrganizationUserType.Custom;
+        stagedUser.Permissions = "{\"accessReports\":true}";
+        stagedUser.AccessSecretsManager = false;
+        var provisionedRevisionDate = stagedUser.RevisionDate;
+
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        // Groups are updated after the row itself is written, so failing here leaves a promoted row behind.
+        invite.Collections = [];
+        invite.Groups = [Guid.NewGuid()];
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .UpdateGroupsAsync(stagedUser.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>())
+            .ThrowsAsync(new InvalidOperationException("group membership write failed"));
+
+        await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
+
+        // An Invited row occupies a seat, so it has to be put back before the seat count is reverted.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Single().Id == stagedUser.Id));
+
+        Assert.Equal(OrganizationUserStatusType.Staged, stagedUser.Status);
+        Assert.Equal(OrganizationUserType.Custom, stagedUser.Type);
+        Assert.Equal("{\"accessReports\":true}", stagedUser.Permissions);
+        Assert.False(stagedUser.AccessSecretsManager);
+        Assert.Equal(provisionedRevisionDate, stagedUser.RevisionDate);
+
+        // The row predates this call, so demoting it is the revert; it must never be deleted.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
+    }
 }
