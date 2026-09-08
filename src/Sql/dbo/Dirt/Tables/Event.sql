@@ -36,3 +36,7 @@ CREATE NONCLUSTERED INDEX [IX_Event_OrganizationIdSendIdDate]
     ON [dbo].[Event]([OrganizationId] ASC, [SendId] ASC, [Date] DESC)
     WHERE [SendId] IS NOT NULL;
 
+GO
+CREATE NONCLUSTERED INDEX [IX_Event_OrganizationId]
+    ON [dbo].[Event]([OrganizationId] ASC) WHERE [OrganizationId] IS NOT NULL;
+

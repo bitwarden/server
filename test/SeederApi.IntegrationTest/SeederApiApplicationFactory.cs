@@ -15,6 +15,11 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
             serviceCollection.AddSingleton<IPlayIdService, NeverPlayIdServices>();
             serviceCollection.AddHttpContextAccessor();
         });
+
+        // Keep license signing deterministic regardless of a developer's local user secrets: with no
+        // licensing certificate configured, the self-hosted premium path skips signing and warns.
+        UpdateConfiguration("globalSettings:licenseCertificatePath", null);
+        UpdateConfiguration("globalSettings:licenseCertificatePassword", null);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

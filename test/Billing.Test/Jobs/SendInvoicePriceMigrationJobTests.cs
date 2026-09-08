@@ -149,8 +149,8 @@ public class SendInvoicePriceMigrationJobTests
 
         // Assert
         Assert.NotNull(capturedOptions);
-        Assert.Contains("discounts.coupon", capturedOptions.Expand);
-        Assert.Contains("customer.discount", capturedOptions.Expand);
+        Assert.Contains("discounts.source.coupon", capturedOptions.Expand);
+        Assert.Contains("customer.discount.source.coupon", capturedOptions.Expand);
         Assert.Contains("test_clock", capturedOptions.Expand);
         // customer.discount implies customer; a separate customer entry would be redundant.
         Assert.DoesNotContain("customer", capturedOptions.Expand);

@@ -852,32 +852,52 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_OpenRegistrationDisabled_ThrowsBadRequestException(
+    public async Task RegisterUserViaEmailVerificationTokenAndOpenOrgInvite_OpenRegistrationDisabled_Succeeds(
         SutProvider<RegisterUserCommand> sutProvider, User user, RegisterFinishData registerFinishData,
-        string emailVerificationToken, Guid organizationId, Guid code)
+        string emailVerificationToken, bool receiveMarketingMaterials,
+        Guid organizationId, Guid code,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] PolicyStatus policy)
     {
-        // Arrange
+        // The DisableUserRegistration self-hosted admin toggle targets open self-registration.
+        // Possession of a valid open-org invite is the authorization for this path, so this method
+        // must proceed with the toggle on — fedramp deployments rely on this combination.
         user.Email = $"test+{Guid.NewGuid()}@example.com";
         var openOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = organizationId, Code = code };
 
         sutProvider.GetDependency<IGlobalSettings>()
             .DisableUserRegistration = true;
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(user, registerFinishData, emailVerificationToken, openOrgInvite));
-        Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
+        sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
+            .ValidateAsync(organizationId, code, Arg.Any<string>())
+            .Returns(new CommandResult(new None()));
 
-        // Short-circuit: registration guard must run before the invite validator and token check.
-        await sutProvider.GetDependency<IValidateOrganizationInviteLinkQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .ValidateAsync(default, default, default!);
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(Arg.Any<string>(), Arg.Any<Guid?>())
+            .Returns(false);
+
         sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
-            .DidNotReceiveWithAnyArgs()
-            .TryUnprotect(default, out Arg.Any<RegistrationEmailVerificationTokenable>());
-        await sutProvider.GetDependency<IPolicyQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .RunAsync(default, default);
+            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+            .Returns(callInfo =>
+            {
+                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                return true;
+            });
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organizationId, PolicyType.TwoFactorAuthentication)
+            .Returns(policy);
+
+        sutProvider.GetDependency<IUserService>()
+            .CreateUserAsync(user, registerFinishData)
+            .Returns(IdentityResult.Success);
+
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+            user, registerFinishData, emailVerificationToken, openOrgInvite);
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserService>()
+            .Received(1)
+            .CreateUserAsync(user, registerFinishData);
     }
 
     [Theory]

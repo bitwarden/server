@@ -175,8 +175,8 @@ public class SendInvoicePriceMigrationJob(
         }
 
         /*
-         * These expansions are load-bearing: the price increase scheduler reads Discounts[].Coupon.Id and
-         * Customer.Discount (customer.discount implies customer) to carry existing discounts onto the new
+         * These expansions are load-bearing: the price increase scheduler reads Discounts[].Source.Coupon.Id and
+         * Customer.Discount.Source.Coupon(customer.discount implies customer)  to carry existing discounts onto the new
          * schedule phases, and the eligibility window check and the renewal notification service
          * read TestClock.FrozenTime so test-clock subscriptions evaluate against their frozen time.
          */
@@ -184,7 +184,7 @@ public class SendInvoicePriceMigrationJob(
             organization.GatewaySubscriptionId,
             new SubscriptionGetOptions
             {
-                Expand = ["discounts.coupon", "customer.discount", "test_clock"]
+                Expand = ["discounts.source.coupon", "customer.discount.source.coupon", "test_clock"]
             });
 
         if (!IsStillEligible(organization, subscription))

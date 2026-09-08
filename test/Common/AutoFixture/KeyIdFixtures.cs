@@ -42,6 +42,6 @@ public class KeyIdCustomization : ICustomization
 {
     public void Customize(IFixture fixture)
     {
-        fixture.Customizations.Add(new KeyIdBuilder());
+        fixture.Customizations.Insert(0, new KeyIdBuilder());
     }
 }

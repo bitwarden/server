@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -784,14 +783,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             var newOrganizationUsers = resetPasswordKeys.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
 
             // Get user organization users
             var userOrganizationUsers = await GetDbSet(dbContext)
@@ -808,6 +807,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 var updateOrganizationUser =
                     newOrganizationUsers.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
                 organizationUser.ResetPasswordKey = updateOrganizationUser.ResetPasswordKey;
+                organizationUser.V2UpgradeToken = updateOrganizationUser.V2UpgradeToken;
             }
 
             await dbContext.SaveChangesAsync();

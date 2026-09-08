@@ -7,4 +7,5 @@ public class OrganizationSeatsMaxReachedViewModel : BaseMailModel
 {
     public int MaxSeatCount { get; set; }
     public string VaultSubscriptionUrl { get; set; }
+    public string OrganizationName { get; set; }
 }

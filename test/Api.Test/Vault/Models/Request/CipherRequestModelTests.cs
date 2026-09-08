@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Vault.Entities;
@@ -262,5 +263,67 @@ public class CipherRequestModelTests
         request.ToCipher(cipher);
 
         Assert.Equal(expectedData, cipher.Data);
+    }
+
+    [Fact]
+    public void Validate_BlobEncrypted_NameOmitted_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = "{\"format_version\":1}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_NonBlobData_NameOmitted_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Data = "{\"username\":\"2.aGVsbG8=|aGVsbG8=|aGVsbG8=\"}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Name)));
+    }
+
+    [Fact]
+    public void Validate_NeitherDataNorNameProvided_Fails()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Name)));
+    }
+
+    [Fact]
+    public void Validate_DataOmitted_NameProvided_Passes()
+    {
+        var request = new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            Name = "2.aGVsbG8=|aGVsbG8=|aGVsbG8=",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Empty(results);
+    }
+
+    private static List<ValidationResult> ValidateModel(CipherRequestModel request)
+    {
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
+        return results;
     }
 }

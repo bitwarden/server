@@ -94,6 +94,13 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
                 .SetProperty(c => c.AccessRuleId, (Guid?)null)
                 .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
 
+        // Detach the requests that pinned this rule for the same reason: FK_AccessRequest_AccessRule does not
+        // cascade either, so a request recording this rule as its governing rule would block the delete. RuleId is
+        // provenance rather than authority, and is already nullable for requests never gated through a stored rule.
+        await dbContext.AccessRequests
+            .Where(r => r.RuleId == accessRule.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.RuleId, (Guid?)null));
+
         await dbContext.AccessRules
             .Where(r => r.Id == accessRule.Id)
             .ExecuteDeleteAsync();

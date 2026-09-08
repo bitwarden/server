@@ -4,7 +4,6 @@ using Bit.Core.Auth.Enums;
 using Bit.Seeder.Data.Static;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Pipeline;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Steps;
@@ -26,7 +25,7 @@ internal sealed class CreateSsoConfigStep(
     {
         if (!string.Equals(provider ?? "saml", "saml", StringComparison.OrdinalIgnoreCase))
         {
-            context.Services.GetService<ILogger<CreateSsoConfigStep>>()?
+            context.GetLogger<CreateSsoConfigStep>()?
                 .LogWarning(
                     "SSO provider '{Provider}' is not supported by the seeder yet (only 'saml'); skipping SsoConfig.",
                     provider);

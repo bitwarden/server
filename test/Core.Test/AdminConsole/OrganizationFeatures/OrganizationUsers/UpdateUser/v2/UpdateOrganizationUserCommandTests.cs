@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
@@ -52,7 +53,7 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(userToUpdate, "new@claimed.example.com");
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
@@ -147,7 +148,7 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -193,7 +194,7 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<MemberEmailChangedNotificationView>(default);
@@ -237,7 +238,7 @@ public class UpdateOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<MemberEmailChangedNotificationView>(default);
@@ -315,7 +316,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(userToUpdate);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         // A name-only change never touches the email command.
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .DidNotReceiveWithAnyArgs()
@@ -372,7 +373,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -424,7 +425,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Is<MemberEmailChangedNotificationMail>(mail =>
@@ -453,7 +454,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     private static UpdateOrganizationUserRequest Setup(

@@ -148,9 +148,22 @@ public class AnnualUpgradeLineMapperTests
     {
         // Stricter than the page-load path was before: a discount with no usable coupon id is as
         // unquotable as an unexpanded one.
-        Assert.Null(Map(SubscriptionWith(discounts: [new Discount { Coupon = null }])));
+        Assert.Null(Map(SubscriptionWith(discounts: [new Discount { Source = new DiscountSource() }])));
 
         AssertLogged(LogLevel.Error, "unexpanded or couponless discount");
+    }
+
+    [Fact]
+    public void MapOrNull_CouponSourcedDiscounts_AreNotUnusable()
+    {
+        var couponDiscount = new Discount { Source = new DiscountSource { CouponId = "coupon_1" } };
+
+        var result = Map(SubscriptionWith(
+            items: [Item("2023-teams-org-seat-monthly", discounts: [couponDiscount])],
+            discounts: [couponDiscount]));
+
+        Assert.NotNull(result);
+        AssertNothingLogged();
     }
 
     [Fact]

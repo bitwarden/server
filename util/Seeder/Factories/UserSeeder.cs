@@ -56,6 +56,11 @@ internal static class UserSeeder
             user.Culture = seed.Culture;
         }
 
+        if (seed.CreationDate is not null)
+        {
+            user.CreationDate = seed.CreationDate.Value;
+        }
+
         if (seed.TwoFactorProviders is not null)
         {
             user.SetTwoFactorProviders(seed.TwoFactorProviders);

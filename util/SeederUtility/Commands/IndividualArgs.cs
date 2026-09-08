@@ -33,6 +33,9 @@ public class IndividualArgs : IArgumentModel
     [Option("self-hosted", Description = "Write a user license file to LicenseDirectory after seeding (required for self-hosted premium validation)")]
     public bool SelfHosted { get; set; }
 
+    [Option("account-age-days", Description = "Backdate the account's CreationDate by N days (default: 0 = today)")]
+    public int? AccountAgeDays { get; set; }
+
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
 
@@ -47,6 +50,11 @@ public class IndividualArgs : IArgumentModel
         if (KdfIterations < 5_000)
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
+
+        if (AccountAgeDays < 0)
+        {
+            throw new ArgumentException("Account age days must be >= 0.");
         }
 
         var hasFirst = !string.IsNullOrWhiteSpace(FirstName);
@@ -73,6 +81,7 @@ public class IndividualArgs : IArgumentModel
         GenerateVault = Vault,
         Password = Password,
         KdfIterations = KdfIterations,
-        SelfHosted = SelfHosted
+        SelfHosted = SelfHosted,
+        AccountAgeDays = AccountAgeDays ?? 0
     };
 }

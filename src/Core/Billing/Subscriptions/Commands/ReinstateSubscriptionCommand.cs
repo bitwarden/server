@@ -28,7 +28,7 @@ public class ReinstateSubscriptionCommand(
     {
         var subscription = await stripeAdapter.GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["discounts", "customer.discount"] });
+            new SubscriptionGetOptions { Expand = ["discounts.source.coupon", "customer.discount.source.coupon"] });
 
         if (subscription is not
             {

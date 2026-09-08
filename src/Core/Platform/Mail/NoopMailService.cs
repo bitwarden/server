@@ -342,7 +342,7 @@ public class NoopMailService : IMailService
     }
     public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 
-    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email,
         string organizationId,
         string organizationName)
     {

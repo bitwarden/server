@@ -1710,7 +1710,7 @@ public class PreviewOrganizationTaxCommandTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" }
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "EXISTING_DISCOUNT_50" } }
                 }
             }
         };
@@ -1788,7 +1788,7 @@ public class PreviewOrganizationTaxCommandTests
             Id = "sub_test123",
             Items = new StripeList<SubscriptionItem> { Data = subscriptionItems },
             Customer = new Customer { Discount = null },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+            Discounts = [new Discount { Source = new DiscountSource() { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } } }]
         };
 
         _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
@@ -2570,7 +2570,7 @@ public class PreviewOrganizationTaxCommandTests
             Address = new Address { Country = "ES", PostalCode = "28001" },
             Discount = new Discount
             {
-                Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" }
+                Source = new DiscountSource { Coupon = new Coupon { Id = "ENTERPRISE_DISCOUNT_20" } }
             },
             TaxIds = new StripeList<TaxId>
             {
@@ -2708,7 +2708,7 @@ public class PreviewOrganizationTaxCommandTests
                 Address = new Address { Country = "US", PostalCode = "90210" },
                 Discount = null
             },
-            Discounts = [new Discount { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } }]
+            Discounts = [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "COMPLIMENTARY_PM_100" } } }]
         };
 
         _stripeAdapter.GetSubscriptionAsync("sub_test123", Arg.Any<SubscriptionGetOptions>()).Returns(subscription);

@@ -1,7 +1,9 @@
 ﻿#nullable enable
 using System.Security.Claims;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
@@ -33,7 +35,8 @@ public class MarkNotificationDeletedCommandTest
             .GetByNotificationIdAndUserIdAsync(notificationId, userId ?? Arg.Any<Guid>())
             .Returns(notificationStatus);
         sutProvider.GetDependency<INotificationStatusRepository>()
-            .CreateAsync(Arg.Any<NotificationStatus>());
+            .CreateAsync(Arg.Any<NotificationStatus>())
+            .Returns(x => x.Arg<NotificationStatus>());
         sutProvider.GetDependency<INotificationStatusRepository>()
             .UpdateAsync(notificationStatus ?? Arg.Any<NotificationStatus>());
         sutProvider.GetDependency<IAuthorizationService>()
@@ -66,10 +69,10 @@ public class MarkNotificationDeletedCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -83,10 +86,10 @@ public class MarkNotificationDeletedCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -101,10 +104,10 @@ public class MarkNotificationDeletedCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -119,10 +122,10 @@ public class MarkNotificationDeletedCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -137,10 +140,10 @@ public class MarkNotificationDeletedCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkDeletedAsync(notificationId));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -164,11 +167,7 @@ public class MarkNotificationDeletedCommandTest
             .CreateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(expectedNotificationStatus, ns)));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushNotificationStatusAsync(notification,
-                Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(expectedNotificationStatus, ns)));
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.NotificationStatus && n.Payload.Id == notification.Id));
     }
 
     [Theory]
@@ -185,11 +184,7 @@ public class MarkNotificationDeletedCommandTest
             .UpdateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(notificationStatus, ns)));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushNotificationStatusAsync(notification,
-                Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(notificationStatus, ns)));
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.NotificationStatus && n.Payload.Id == notification.Id));
     }
 
     private static void AssertNotificationStatus(NotificationStatus expectedNotificationStatus,

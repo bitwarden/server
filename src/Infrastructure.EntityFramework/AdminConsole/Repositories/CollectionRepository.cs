@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -259,7 +260,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.CreationDate,
                         c.RevisionDate,
                         c.ExternalId,
-                        c.Type
+                        c.Type,
+                        c.HasEnabledAccessRule
                     })
                     .Select(collectionGroup => new CollectionDetails
                     {
@@ -273,6 +275,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Type = collectionGroup.Key.Type,
+                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
                     })
                     .ToList();
             }
@@ -286,7 +289,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               c.CreationDate,
                               c.RevisionDate,
                               c.ExternalId,
-                              c.Type
+                              c.Type,
+                              c.HasEnabledAccessRule
                           } into collectionGroup
                           select new CollectionDetails
                           {
@@ -300,6 +304,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                               Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                               Type = collectionGroup.Key.Type,
+                              HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
                           }).ToListAsync();
         }
     }
@@ -327,7 +332,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.RevisionDate,
                         c.ExternalId,
                         c.Unmanaged,
-                        c.DefaultUserCollectionEmail
+                        c.DefaultUserCollectionEmail,
+                        c.HasEnabledAccessRule
                     }).Select(collectionGroup => new CollectionAdminDetails
                     {
                         Id = collectionGroup.Key.Id,
@@ -342,7 +348,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                         Unmanaged = collectionGroup.Key.Unmanaged,
-                        DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail
+                        DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
+                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
                     }).ToList();
             }
             else
@@ -357,7 +364,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          c.RevisionDate,
                                          c.ExternalId,
                                          c.Unmanaged,
-                                         c.DefaultUserCollectionEmail
+                                         c.DefaultUserCollectionEmail,
+                                         c.HasEnabledAccessRule
                                      }
                     into collectionGroup
                                      select new CollectionAdminDetails
@@ -374,7 +382,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                          Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                                          Unmanaged = collectionGroup.Key.Unmanaged,
-                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail
+                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
+                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
                                      }).ToListAsync();
             }
 
@@ -440,7 +449,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.Name,
                         c.CreationDate,
                         c.RevisionDate,
-                        c.ExternalId
+                        c.ExternalId,
+                        c.HasEnabledAccessRule
                     }).Select(collectionGroup => new CollectionAdminDetails
                     {
                         Id = collectionGroup.Key.Id,
@@ -454,7 +464,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                        Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault()
+                        Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault(),
+                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
                     }).FirstOrDefault();
             }
             else
@@ -467,7 +478,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                                c.Name,
                                                c.CreationDate,
                                                c.RevisionDate,
-                                               c.ExternalId
+                                               c.ExternalId,
+                                               c.HasEnabledAccessRule
                                            }
                     into collectionGroup
                                            select new CollectionAdminDetails
@@ -483,7 +495,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                                    Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
                                                Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
                                                Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                                               Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault()
+                                               Unmanaged = collectionGroup.Select(c => c.Unmanaged).FirstOrDefault(),
+                                               HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
                                            }).FirstOrDefaultAsync();
             }
 
@@ -535,6 +548,60 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 HidePasswords = cu.HidePasswords,
                 Manage = cu.Manage
             }).ToArray();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var directManageUserIds = from cu in dbContext.CollectionUsers
+                                      where cu.CollectionId == collectionId && cu.Manage
+                                      join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                      where ou.Status == OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                      select ou.UserId!.Value;
+
+            var groupManageUserIds = from cg in dbContext.CollectionGroups
+                                     where cg.CollectionId == collectionId && cg.Manage
+                                     join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
+                                     join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                                     where ou.Status == OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                     select ou.UserId!.Value;
+
+            var adminManageUserIds = from c in dbContext.Collections
+                                     where c.Id == collectionId
+                                     join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                     join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                     where ou.Status == OrganizationUserStatusType.Confirmed
+                                         && ou.UserId != null
+                                         && (ou.Type == OrganizationUserType.Owner
+                                             || ou.Type == OrganizationUserType.Admin)
+                                         && o.AllowAdminAccessToAllCollectionItems
+                                     select ou.UserId!.Value;
+
+            var managerUserIds = await directManageUserIds
+                .Union(groupManageUserIds)
+                .Union(adminManageUserIds)
+                .ToListAsync();
+
+            // TODO: Update to JSON query after upgrading to EF 10.
+            var customMembers = await (from c in dbContext.Collections
+                                       where c.Id == collectionId
+                                       join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                       where ou.Status == OrganizationUserStatusType.Confirmed
+                                           && ou.UserId != null
+                                           && ou.Type == OrganizationUserType.Custom
+                                       select new { UserId = ou.UserId!.Value, ou.Permissions })
+                .ToListAsync();
+
+            return managerUserIds
+                .Concat(customMembers
+                    .Where(m => CoreHelpers.LoadClassFromJsonData<Permissions>(m.Permissions).EditAnyCollection)
+                    .Select(m => m.UserId))
+                .Distinct()
+                .ToList();
         }
     }
 

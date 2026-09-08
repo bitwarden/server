@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -212,6 +213,72 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(newData.Salt, email.ToLowerInvariant());
         Assert.Equal(newData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Equal(newData.UserAccountKeysData, accountKeysRequest.ToAccountKeysData());
+    }
+
+    [Theory]
+    [BitAutoData]
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToData_CarriesTheUserKeyIdFromTheUnlockData(string email, KdfRequestModel kdfRequest,
+        string masterPasswordAuthenticationHash, AccountKeysRequestModel accountKeysRequest, string userSymmetricKey)
+    {
+        // Arrange
+        const string keyId = "0123456789abcdef0123456789abcdef";
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim(),
+                ContainedKeyId = keyId
+            },
+            AccountKeys = accountKeysRequest
+        };
+
+        // Act
+        var data = model.ToData();
+
+        // Assert
+        Assert.Equal(KeyId.FromHexEncodedString(keyId), data.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToData_NoUserKeyIdSupplied_LeavesItUnset(string email, KdfRequestModel kdfRequest,
+        string masterPasswordAuthenticationHash, AccountKeysRequestModel accountKeysRequest, string userSymmetricKey)
+    {
+        // Arrange - a client that predates the key id field sends none
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            AccountKeys = accountKeysRequest
+        };
+
+        // Act
+        var data = model.ToData();
+
+        // Assert
+        Assert.Null(data.UserKeyId);
     }
 
     [Theory]
