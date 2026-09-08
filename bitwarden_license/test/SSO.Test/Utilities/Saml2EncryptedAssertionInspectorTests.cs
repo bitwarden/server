@@ -1,64 +1,63 @@
-﻿using System.Xml;
+﻿using System.Diagnostics.Metrics;
+using System.Xml;
 using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Sustainsys.Saml2;
-using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.SSO.Test.Utilities;
 
 public class Saml2EncryptedAssertionInspectorTests
 {
-    private const string Scheme = "test-scheme";
+    private const string MeterName = "Bitwarden.Sso.Saml2";
+    private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaepMgf1P = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
     private const string Aes256Cbc = "http://www.w3.org/2001/04/xmlenc#aes256-cbc";
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_PlaintextAssertion_LogsNoEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_PlaintextAssertion_RecordsNoMeasurement()
     {
         var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        var result = Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        var result = Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
         Assert.True(result);
-        // An envelope with no encrypted assertion names no algorithm, so no entry is logged.
-        Assert.Empty(logger.Collector.GetSnapshot());
+        // An envelope with no encrypted assertion names no algorithm, so no measurement is recorded.
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Theory]
     [InlineData(RsaOaepMgf1P)]
     [InlineData(RsaOaep)]
-    public void TryLogUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_LogsNoEntry(string algorithm)
+    public void TryRecordUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_RecordsNoMeasurement(string algorithm)
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        Assert.Empty(logger.Collector.GetSnapshot());
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_LogsEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_RecordsMeasurement()
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(LogLevel.Information, record.Level);
-        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_EncryptedKeyBesideEncryptedData_LogsEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_EncryptedKeyBesideEncryptedData_RecordsMeasurement()
     {
         // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData.
         // An xenc:ReferenceList links the key to the data.
@@ -73,20 +72,20 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_DataAndKeyEncryptionMethods_LogsKeyEncryptionAlgorithm()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_DataAndKeyEncryptionMethods_RecordsKeyEncryptionAlgorithm()
     {
         // xenc:EncryptedData names the data encryption algorithm, such as aes256-cbc.
         // xenc:EncryptedKey names the key encryption algorithm.
-        // The inspector must log the key encryption algorithm, not the data encryption algorithm.
+        // The inspector must record the key encryption algorithm, not the data encryption algorithm.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -100,12 +99,12 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        var algorithm = GetStructuredValue(record, "KeyEncryptionAlgorithm");
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        var algorithm = GetAlgorithmTag(measurement);
         Assert.Equal(RsaPkcs1, algorithm);
         Assert.NotEqual(Aes256Cbc, algorithm);
     }
@@ -115,7 +114,7 @@ public class Saml2EncryptedAssertionInspectorTests
     /// IdPs will generally send the algorithm with the assertion request, so this is an edge case.
     /// </summary>
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_NoEncryptedKey_LogsNullEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_NoEncryptedKey_RecordsNoneMeasurement()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -123,50 +122,50 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        // One entry is logged, because the assertion names no algorithm and a missing algorithm is unaccepted.
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        // One measurement is recorded, because the assertion names no algorithm and a missing algorithm is unaccepted.
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal("none", GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_LogsNullEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_EncryptionMethodWithoutAlgorithmAttribute_RecordsNoneMeasurement()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal("none", GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_EmptyAlgorithmAttribute_LogsNullEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_EmptyAlgorithmAttribute_RecordsNoneMeasurement()
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"\" /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal("none", GetAlgorithmTag(measurement));
     }
 
     [Theory]
     [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
     [InlineData("urn:example:unknown-algorithm")]
     [InlineData("rsa-1_5\nlevel=something-else")]
-    public void TryLogUnsupportedKeyTransportAlgorithms_AlgorithmOutsideKnownValues_LogsUnrecognizedEntry(string algorithm)
+    public void TryRecordUnsupportedKeyTransportAlgorithms_AlgorithmOutsideKnownValues_RecordsUnrecognizedMeasurement(string algorithm)
     {
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
@@ -174,54 +173,54 @@ public class Saml2EncryptedAssertionInspectorTests
             $"<xenc:EncryptionMethod Algorithm=\"{EscapeAttributeValue(algorithm)}\" />" +
             "</xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal("unrecognized", GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal("unrecognized", GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_TwoAssertionsWithDifferentUnacceptedAlgorithms_LogsTwoEntriesInOrder()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_TwoAssertionsWithDifferentUnacceptedAlgorithms_RecordsTwoMeasurementsInOrder()
     {
         // A federation proxy can aggregate assertions from two identity providers.
         // Each assertion then holds its own key, and the two keys can use different algorithms.
         var envelope = BuildEnvelope(
             BuildNestedEncryptedAssertion(RsaPkcs1) +
             BuildNestedEncryptedAssertion("urn:example:unknown-algorithm"));
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var records = logger.Collector.GetSnapshot();
-        Assert.Equal(2, records.Count);
-        Assert.Equal(RsaPkcs1, GetStructuredValue(records[0], "KeyEncryptionAlgorithm"));
-        Assert.Equal("unrecognized", GetStructuredValue(records[1], "KeyEncryptionAlgorithm"));
+        var measurements = collector.GetMeasurementSnapshot();
+        Assert.Equal(2, measurements.Count);
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurements[0]));
+        Assert.Equal("unrecognized", GetAlgorithmTag(measurements[1]));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoAssertions_LogsOneEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoAssertions_RecordsOneMeasurement()
     {
         // Two assertions can share one unaccepted algorithm, such as after a federation proxy
         // aggregates assertions from two identity providers with the same configuration.
-        // The inspector must log one entry, not one entry for each assertion.
+        // The inspector must record one measurement, not one measurement for each assertion.
         var envelope = BuildEnvelope(
             BuildNestedEncryptedAssertion(RsaPkcs1) +
             BuildNestedEncryptedAssertion(RsaPkcs1));
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_NullAndAcceptedAlgorithmsInThreeAssertions_LogsOneNullEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_NullAndAcceptedAlgorithmsInThreeAssertions_RecordsOneNoneMeasurement()
     {
         // The first and the third assertion name no algorithm. Both resolve to null, and null deduplicates.
-        // The second assertion uses an accepted algorithm, so it logs no entry.
+        // The second assertion uses an accepted algorithm, so it records no measurement.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -232,16 +231,16 @@ public class Saml2EncryptedAssertionInspectorTests
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Null(GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal("none", GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_AcceptedKeyBeforeUnacceptedKeyInOneAssertion_LogsUnacceptedEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_AcceptedKeyBeforeUnacceptedKeyInOneAssertion_RecordsUnacceptedMeasurement()
     {
         // The SAML 2.0 assertion schema declares xenc:EncryptedKey with maxOccurs="unbounded"
         // inside saml:EncryptedElementType, so one assertion can hold more than one key.
@@ -264,21 +263,21 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:ReferenceList><xenc:DataReference URI=\"#_data\" /></xenc:ReferenceList>" +
             "</xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        // The accepted algorithm logs no entry, so rsa-1_5 is the only entry.
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        // The accepted algorithm records no measurement, so rsa-1_5 is the only measurement.
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_TwoUnacceptedKeysInOneAssertion_LogsTwoEntriesInOrder()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_TwoUnacceptedKeysInOneAssertion_RecordsTwoMeasurementsInOrder()
     {
         // XML Encryption 1.1 section 3.5.3 states that sibling keys carry the same key value,
         // "possibly encrypted in different ways or for different recipients".
-        // Each distinct unaccepted algorithm must reach the log.
+        // Each distinct unaccepted algorithm must reach the metric.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -293,21 +292,21 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var records = logger.Collector.GetSnapshot();
-        Assert.Equal(2, records.Count);
-        Assert.Equal(RsaPkcs1, GetStructuredValue(records[0], "KeyEncryptionAlgorithm"));
-        Assert.Equal("unrecognized", GetStructuredValue(records[1], "KeyEncryptionAlgorithm"));
+        var measurements = collector.GetMeasurementSnapshot();
+        Assert.Equal(2, measurements.Count);
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurements[0]));
+        Assert.Equal("unrecognized", GetAlgorithmTag(measurements[1]));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoKeysOfOneAssertion_LogsOneEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_SameUnacceptedAlgorithmInTwoKeysOfOneAssertion_RecordsOneMeasurement()
     {
         // An identity provider can send one key for each service provider decryption certificate.
-        // Both keys then name the same algorithm, and Distinct keeps the log volume at one entry.
+        // Both keys then name the same algorithm, and Distinct keeps the metric volume at one measurement.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -322,19 +321,19 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(RsaPkcs1, GetAlgorithmTag(measurement));
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_TwoAcceptedKeysInOneAssertion_LogsNoEntry()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_TwoAcceptedKeysInOneAssertion_RecordsNoMeasurement()
     {
         // Service provider metadata advertises rsa-oaep-mgf1p and rsa-oaep, so an identity provider
-        // can send one key for each advertised method. Neither key is unaccepted, so nothing is logged.
+        // can send one key for each advertised method. Neither key is unaccepted, so nothing is recorded.
         var envelope = BuildEnvelope(
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedData>" +
@@ -349,22 +348,22 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, Scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        Assert.Empty(logger.Collector.GetSnapshot());
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public void TryLogUnsupportedKeyTransportAlgorithms_NullEnvelope_ReturnsFalseWithoutThrowing()
+    public void TryRecordUnsupportedKeyTransportAlgorithms_NullEnvelope_ReturnsFalseWithoutRecording()
     {
-        var (context, logger) = BuildContext();
+        var (context, collector) = BuildContext();
 
-        var result = Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(null!, Scheme, context);
+        var result = Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(null!, context);
 
         Assert.False(result);
-        Assert.Empty(logger.Collector.GetSnapshot());
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     private static string BuildNestedEncryptedAssertion(string algorithm) =>
@@ -395,18 +394,22 @@ public class Saml2EncryptedAssertionInspectorTests
         return document.DocumentElement!;
     }
 
-    private static (DefaultHttpContext Context, FakeLogger<Saml2Options> Logger) BuildContext()
+    private static (DefaultHttpContext Context, MetricCollector<long> Collector) BuildContext()
     {
-        var logger = new FakeLogger<Saml2Options>();
         var services = new ServiceCollection();
-        services.AddSingleton<ILogger<Saml2Options>>(logger);
-        var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
-        return (context, logger);
+        services.AddMetrics();
+        services.AddSingleton<Saml2AssertionMetrics>();
+        var provider = services.BuildServiceProvider();
+
+        var collector = new MetricCollector<long>(
+            provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
+        var context = new DefaultHttpContext { RequestServices = provider };
+        return (context, collector);
     }
 
     private static string EscapeAttributeValue(string value) =>
         value.Replace("&", "&amp;").Replace("<", "&lt;").Replace("\"", "&quot;").Replace("\n", "&#10;");
 
-    private static string? GetStructuredValue(FakeLogRecord record, string key) =>
-        Assert.Single(record.StructuredState!, entry => entry.Key == key).Value;
+    private static object? GetAlgorithmTag(CollectedMeasurement<long> measurement) =>
+        measurement.Tags["algorithm"];
 }

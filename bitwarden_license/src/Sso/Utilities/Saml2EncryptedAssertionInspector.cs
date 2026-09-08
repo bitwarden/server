@@ -1,6 +1,5 @@
 ﻿using System.Xml;
 using Sustainsys.Saml2;
-using Sustainsys.Saml2.AspNetCore2;
 
 namespace Bit.Sso.Utilities;
 
@@ -17,10 +16,9 @@ public static class Saml2EncryptedAssertionInspector
 
     /// <summary>
     /// Examines which algorithms encrypted the keys of the assertions in the envelope.
-    /// Logs when an unaccepted algorithm in in use.
+    /// Records a metric when an unaccepted algorithm is in use.
     /// </summary>
     /// <param name="envelope">The root element of a SAML response or request.</param>
-    /// <param name="scheme">The scheme provided in the request.</param>
     /// <param name="context">The current request context.</param>
     /// <returns><see langword="false"/> when any exception interrupts the check. Otherwise, <see langword="true"/>.</returns>
     /// <remarks>
@@ -28,8 +26,9 @@ public static class Saml2EncryptedAssertionInspector
     /// Every key of every assertion must be checked.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
+    /// The recorded metric is an anonymous, aggregate count. It never carries an organization or a user identifier.
     /// </remarks>
-    public static bool TryLogUnsupportedKeyTransportAlgorithms(XmlElement envelope, string scheme, HttpContext context)
+    public static bool TryRecordUnsupportedKeyTransportAlgorithms(XmlElement envelope, HttpContext context)
     {
         try
         {
@@ -47,14 +46,11 @@ public static class Saml2EncryptedAssertionInspector
 
             if (unacceptedAlgorithms.Length > 0)
             {
-                var logger = context.RequestServices.GetRequiredService<ILogger<Saml2Options>>();
+                var metrics = context.RequestServices.GetRequiredService<Saml2AssertionMetrics>();
 
                 foreach (var unacceptedAlgorithm in unacceptedAlgorithms)
                 {
-                    logger.LogInformation(
-                        "Unsupported SAML key encryption. Scheme: {Scheme}," +
-                        "KeyEncryptionAlgorithm: {KeyEncryptionAlgorithm}",
-                        scheme, unacceptedAlgorithm);
+                    metrics.RecordUnsupportedKeyTransportAlgorithm(unacceptedAlgorithm);
                 }
             }
 

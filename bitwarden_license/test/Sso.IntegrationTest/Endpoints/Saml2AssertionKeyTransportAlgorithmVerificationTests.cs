@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Diagnostics.Metrics;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core.Auth.Enums;
@@ -7,7 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
 using Sustainsys.Saml2.AspNetCore2;
 using Xunit;
@@ -24,65 +25,67 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     private const string IdpEntityId = "https://idp.example.com";
     private const string RsaOaepMgf1p = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p";
     private const string Rsa15 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
+    private const string MeterName = "Bitwarden.Sso.Saml2";
+    private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
 
     [Fact]
-    public async Task CouldHandleAsync_WithUnacceptedKeyTransportAlgorithm_LogsUnsupportedSamlKeyEncryption()
+    public async Task CouldHandleAsync_WithUnacceptedKeyTransportAlgorithm_RecordsUnsupportedSamlKeyEncryptionMeasurement()
     {
         // Arrange
-        var (samlOptions, organizationId, context) = await ArrangeAsync(BuildEncryptedAssertion(Rsa15));
+        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(BuildEncryptedAssertion(Rsa15));
+
+        // Act
+        await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
+
+        // Assert: the measurement carries the algorithm only. It never carries the organization ID.
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(Rsa15, measurement.Tags["algorithm"]);
+        Assert.DoesNotContain(measurement.Tags, tag => Equals(tag.Value, organizationId.ToString()));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_WithAcceptedKeyTransportAlgorithm_RecordsNoMeasurement()
+    {
+        // Arrange
+        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(BuildEncryptedAssertion(RsaOaepMgf1p));
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        var record = Assert.Single(GetKeyEncryptionLogRecords(context));
-        Assert.Equal(organizationId.ToString(), GetStructuredValue(record, "Scheme"));
-        Assert.Equal(Rsa15, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public async Task CouldHandleAsync_WithAcceptedKeyTransportAlgorithm_LogsNothing()
+    public async Task CouldHandleAsync_WithNoEncryptedAssertions_RecordsNoMeasurement()
     {
         // Arrange
-        var (samlOptions, organizationId, context) = await ArrangeAsync(BuildEncryptedAssertion(RsaOaepMgf1p));
-
-        // Act
-        await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
-
-        // Assert
-        Assert.Empty(GetKeyEncryptionLogRecords(context));
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_WithNoEncryptedAssertions_LogsNothing()
-    {
-        // Arrange
-        var (samlOptions, organizationId, context) = await ArrangeAsync(
+        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(
             "<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        Assert.Empty(GetKeyEncryptionLogRecords(context));
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public async Task CouldHandleAsync_WithMismatchedIssuer_DoesNotReachVerification_LogsNothing()
+    public async Task CouldHandleAsync_WithMismatchedIssuer_DoesNotReachVerification_RecordsNoMeasurement()
     {
         // Arrange: The issuer does not match the seeded IdpEntityId value. The entity-ID guard
         // in CouldHandleAsync must reject the request before the key transport algorithm verification logic runs.
-        var (samlOptions, organizationId, context) = await ArrangeAsync(
+        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(
             BuildEncryptedAssertion(Rsa15), issuer: "https://not-the-configured-idp.example.com");
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
 
         // Assert
-        Assert.Empty(GetKeyEncryptionLogRecords(context));
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
-    private static async Task<(Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context)> ArrangeAsync(
+    private static async Task<(Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context, MetricCollector<long> Collector)> ArrangeAsync(
         string assertionElement, string issuer = IdpEntityId)
     {
         var testData = await new SsoTestDataBuilder()
@@ -93,7 +96,6 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
                 IdpSingleSignOnServiceUrl = "https://idp.example.com/sso",
                 IdpX509PublicCert = CoreHelpers.Base64UrlEncode(BuildIdpCertificate().RawData),
             }))
-            .WithFakeLogging()
             .BuildAsync();
 
         var organizationId = testData.Organization!.Id;
@@ -101,6 +103,9 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             .GetSchemeAsync(organizationId.ToString());
         var dynamicScheme = Assert.IsType<DynamicAuthenticationScheme>(scheme);
         var samlOptions = Assert.IsType<Saml2Options>(dynamicScheme.Options);
+
+        var collector = new MetricCollector<long>(
+            testData.Factory.Services.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
 
         var responseXml = BuildResponseXml(assertionElement, issuer);
         var context = new DefaultHttpContext
@@ -115,17 +120,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
 
-        return (samlOptions, organizationId, context);
+        return (samlOptions, organizationId, context, collector);
     }
-
-    private static IReadOnlyList<FakeLogRecord> GetKeyEncryptionLogRecords(HttpContext context) =>
-        context.RequestServices.GetRequiredService<FakeLogCollector>()
-            .GetSnapshot()
-            .Where(r => r.StructuredState!.Any(entry => entry.Key == "KeyEncryptionAlgorithm"))
-            .ToList();
-
-    private static string? GetStructuredValue(FakeLogRecord record, string key) =>
-        Assert.Single(record.StructuredState!, entry => entry.Key == key).Value;
 
     private static string BuildResponseXml(string assertionElement, string issuer) =>
         "<samlp:Response xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\" " +

@@ -1,9 +1,9 @@
-﻿using System.Text;
+﻿using System.Diagnostics.Metrics;
+using System.Text;
 using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
@@ -16,9 +16,12 @@ namespace Bit.SSO.Test.Utilities;
 public class Saml2OptionsExtensionsTests
 {
     // The scheme carries the organization ID on this request path.
+    // The metric never receives this value, so no measurement carries an organization identifier.
     private const string Scheme = "test-scheme";
     private const string ModulePath = "/saml2/test-scheme";
     private const string IdpEntityId = "https://idp.example.com/metadata";
+    private const string MeterName = "Bitwarden.Sso.Saml2";
+    private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
 
@@ -29,75 +32,62 @@ public class Saml2OptionsExtensionsTests
         // signature check. The algorithm validation try/catch wraps only the validation,
         // so it must not hide this throw.
         var options = BuildOptions(wantAssertionsSigned: true);
-        var logger = new FakeLogger<Saml2Options>();
-        var context = BuildPostContext(BuildResponseXml(string.Empty), logger);
+        var (context, collector) = BuildPostContext(BuildResponseXml(string.Empty));
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
-        Assert.Empty(logger.Collector.GetSnapshot());
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_LogsOneEntry()
+    public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        var logger = new FakeLogger<Saml2Options>();
-        var context = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)),
-            logger);
+        var (context, collector) = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
 
-        var record = Assert.Single(logger.Collector.GetSnapshot());
-        Assert.Equal(LogLevel.Information, record.Level);
-        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal(RsaPkcs1, measurement.Tags["algorithm"]);
     }
 
     [Fact]
-    public async Task CouldHandleAsync_PlaintextAssertion_LogsNoEntry()
+    public async Task CouldHandleAsync_PlaintextAssertion_RecordsNoMeasurement()
     {
         // An envelope with no encrypted assertion names no key encryption algorithm,
-        // so the inspector logs no entry.
+        // so the inspector records no measurement.
         var options = BuildOptions(wantAssertionsSigned: false);
-        var logger = new FakeLogger<Saml2Options>();
-        var context = BuildPostContext(
-            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"),
-            logger);
+        var (context, collector) = BuildPostContext(
+            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"));
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
-        Assert.Empty(logger.Collector.GetSnapshot());
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
-    public async Task CouldHandleAsync_TwoEncryptedAssertionsWithOneUnsupportedAlgorithm_LogsOneEntry()
+    public async Task CouldHandleAsync_TwoEncryptedAssertionsWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
     {
         // A federation proxy can aggregate assertions from two identity providers.
-        // The inspector then logs one entry for each distinct unaccepted algorithm.
+        // The inspector then records one measurement for each distinct unaccepted algorithm.
         var options = BuildOptions(wantAssertionsSigned: false);
-        var logger = new FakeLogger<Saml2Options>();
-        var context = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1) + BuildEncryptedAssertion(RsaOaep)),
-            logger);
+        var (context, collector) = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1) + BuildEncryptedAssertion(RsaOaep)));
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
 
-        var records = logger.Collector.GetSnapshot();
-        Assert.Single(records);
-        var record = records.Single();
-        Assert.Equal(LogLevel.Information, record.Level);
-        Assert.Equal(Scheme, GetStructuredValue(record, "Scheme"));
-        Assert.Equal(RsaPkcs1, GetStructuredValue(record, "KeyEncryptionAlgorithm"));
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(RsaPkcs1, measurement.Tags["algorithm"]);
     }
 
     [Fact]
     public async Task CouldHandleAsync_AlgorithmInspectionThrows_DoesNotPropagate()
     {
-        // An empty service provider makes the logger resolution throw.
+        // An empty service provider makes the metrics resolution throw.
         // The inspection must swallow that throw, and the login must continue.
         var options = BuildOptions(wantAssertionsSigned: false);
-        var context = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
+        var context = BuildRawPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
         context.RequestServices = new ServiceCollection().BuildServiceProvider();
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
@@ -145,7 +135,7 @@ public class Saml2OptionsExtensionsTests
         "</xenc:EncryptedData>" +
         "</saml:EncryptedAssertion>";
 
-    private static DefaultHttpContext BuildPostContext(string responseXml, ILogger<Saml2Options>? logger = null)
+    private static DefaultHttpContext BuildRawPostContext(string responseXml)
     {
         var context = new DefaultHttpContext();
         context.Request.Method = HttpMethods.Post;
@@ -155,18 +145,22 @@ public class Saml2OptionsExtensionsTests
         {
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
-
-        // CouldHandleAsync resolves the inspector logger from the request services.
-        if (logger != null)
-        {
-            var services = new ServiceCollection();
-            services.AddSingleton(logger);
-            context.RequestServices = services.BuildServiceProvider();
-        }
-
         return context;
     }
 
-    private static string? GetStructuredValue(FakeLogRecord record, string key) =>
-        Assert.Single(record.StructuredState!, entry => entry.Key == key).Value;
+    // CouldHandleAsync resolves the inspector metrics from the request services.
+    private static (DefaultHttpContext Context, MetricCollector<long> Collector) BuildPostContext(string responseXml)
+    {
+        var context = BuildRawPostContext(responseXml);
+
+        var services = new ServiceCollection();
+        services.AddMetrics();
+        services.AddSingleton<Saml2AssertionMetrics>();
+        var provider = services.BuildServiceProvider();
+
+        var collector = new MetricCollector<long>(
+            provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
+        context.RequestServices = provider;
+        return (context, collector);
+    }
 }

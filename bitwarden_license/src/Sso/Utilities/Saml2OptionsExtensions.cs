@@ -90,7 +90,7 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        Saml2EncryptedAssertionInspector.TryLogUnsupportedKeyTransportAlgorithms(envelope, scheme, context);
+        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
         // This can throw if an IdP sends encrypted assertions in an
         // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
