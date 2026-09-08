@@ -32,7 +32,8 @@ public class Saml2OptionsExtensionsTests
         // signature check. The algorithm validation try/catch wraps only the validation,
         // so it must not hide this throw.
         var options = BuildOptions(wantAssertionsSigned: true);
-        var (context, collector) = BuildPostContext(BuildResponseXml(string.Empty));
+        using var testContext = BuildPostContext(BuildResponseXml(string.Empty));
+        var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, context));
@@ -44,7 +45,8 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        var (context, collector) = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
+        using var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
+        var (context, collector) = testContext;
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
 
@@ -59,8 +61,9 @@ public class Saml2OptionsExtensionsTests
         // An envelope with no encrypted assertion names no key encryption algorithm,
         // so the inspector records no measurement.
         var options = BuildOptions(wantAssertionsSigned: false);
-        var (context, collector) = BuildPostContext(
+        using var testContext = BuildPostContext(
             BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"));
+        var (context, collector) = testContext;
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
         Assert.Empty(collector.GetMeasurementSnapshot());
@@ -72,8 +75,9 @@ public class Saml2OptionsExtensionsTests
         // A federation proxy can aggregate assertions from two identity providers.
         // The inspector then records one measurement for each distinct unaccepted algorithm.
         var options = BuildOptions(wantAssertionsSigned: false);
-        var (context, collector) = BuildPostContext(
+        using var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1) + BuildEncryptedAssertion(RsaOaep)));
+        var (context, collector) = testContext;
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
 
@@ -149,7 +153,7 @@ public class Saml2OptionsExtensionsTests
     }
 
     // CouldHandleAsync resolves the inspector metrics from the request services.
-    private static (DefaultHttpContext Context, MetricCollector<long> Collector) BuildPostContext(string responseXml)
+    private static MetricTestContext BuildPostContext(string responseXml)
     {
         var context = BuildRawPostContext(responseXml);
 
@@ -161,6 +165,12 @@ public class Saml2OptionsExtensionsTests
         var collector = new MetricCollector<long>(
             provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
         context.RequestServices = provider;
-        return (context, collector);
+        return new MetricTestContext(context, collector);
+    }
+
+    // Disposing this disposes the collector's underlying listener, so a test does not leak it.
+    private sealed record MetricTestContext(DefaultHttpContext Context, MetricCollector<long> Collector) : IDisposable
+    {
+        public void Dispose() => Collector.Dispose();
     }
 }

@@ -21,7 +21,8 @@ public class Saml2EncryptedAssertionInspectorTests
     public void TryRecordUnsupportedKeyTransportAlgorithms_PlaintextAssertion_RecordsNoMeasurement()
     {
         var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         var result = Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -36,7 +37,8 @@ public class Saml2EncryptedAssertionInspectorTests
     public void TryRecordUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithAcceptedAlgorithm_RecordsNoMeasurement(string algorithm)
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -47,7 +49,8 @@ public class Saml2EncryptedAssertionInspectorTests
     public void TryRecordUnsupportedKeyTransportAlgorithms_NestedEncryptedKeyWithUnacceptedAlgorithm_RecordsMeasurement()
     {
         var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -72,7 +75,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -99,7 +103,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -122,7 +127,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -138,7 +144,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -153,7 +160,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod Algorithm=\"\" /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -173,7 +181,8 @@ public class Saml2EncryptedAssertionInspectorTests
             $"<xenc:EncryptionMethod Algorithm=\"{EscapeAttributeValue(algorithm)}\" />" +
             "</xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -189,7 +198,8 @@ public class Saml2EncryptedAssertionInspectorTests
         var envelope = BuildEnvelope(
             BuildNestedEncryptedAssertion(RsaPkcs1) +
             BuildNestedEncryptedAssertion("urn:example:unknown-algorithm"));
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -208,7 +218,8 @@ public class Saml2EncryptedAssertionInspectorTests
         var envelope = BuildEnvelope(
             BuildNestedEncryptedAssertion(RsaPkcs1) +
             BuildNestedEncryptedAssertion(RsaPkcs1));
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -231,7 +242,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<saml:EncryptedAssertion>" +
             "<xenc:EncryptedKey><xenc:EncryptionMethod /></xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -263,7 +275,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:ReferenceList><xenc:DataReference URI=\"#_data\" /></xenc:ReferenceList>" +
             "</xenc:EncryptedKey>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -292,7 +305,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -321,7 +335,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -348,7 +363,8 @@ public class Saml2EncryptedAssertionInspectorTests
             "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
             "</xenc:EncryptedData>" +
             "</saml:EncryptedAssertion>");
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
@@ -358,7 +374,8 @@ public class Saml2EncryptedAssertionInspectorTests
     [Fact]
     public void TryRecordUnsupportedKeyTransportAlgorithms_NullEnvelope_ReturnsFalseWithoutRecording()
     {
-        var (context, collector) = BuildContext();
+        using var testContext = BuildContext();
+        var (context, collector) = testContext;
 
         var result = Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(null!, context);
 
@@ -394,7 +411,7 @@ public class Saml2EncryptedAssertionInspectorTests
         return document.DocumentElement!;
     }
 
-    private static (DefaultHttpContext Context, MetricCollector<long> Collector) BuildContext()
+    private static MetricTestContext BuildContext()
     {
         var services = new ServiceCollection();
         services.AddMetrics();
@@ -404,7 +421,13 @@ public class Saml2EncryptedAssertionInspectorTests
         var collector = new MetricCollector<long>(
             provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
         var context = new DefaultHttpContext { RequestServices = provider };
-        return (context, collector);
+        return new MetricTestContext(context, collector);
+    }
+
+    // Disposing this disposes the collector's underlying listener, so a test does not leak it.
+    private sealed record MetricTestContext(DefaultHttpContext Context, MetricCollector<long> Collector) : IDisposable
+    {
+        public void Dispose() => Collector.Dispose();
     }
 
     private static string EscapeAttributeValue(string value) =>

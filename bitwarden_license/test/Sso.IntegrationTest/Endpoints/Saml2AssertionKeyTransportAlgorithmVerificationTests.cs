@@ -32,7 +32,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     public async Task CouldHandleAsync_WithUnacceptedKeyTransportAlgorithm_RecordsUnsupportedSamlKeyEncryptionMeasurement()
     {
         // Arrange
-        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(BuildEncryptedAssertion(Rsa15));
+        using var arrangement = await ArrangeAsync(BuildEncryptedAssertion(Rsa15));
+        var (samlOptions, organizationId, context, collector) = arrangement;
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
@@ -47,7 +48,8 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     public async Task CouldHandleAsync_WithAcceptedKeyTransportAlgorithm_RecordsNoMeasurement()
     {
         // Arrange
-        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(BuildEncryptedAssertion(RsaOaepMgf1p));
+        using var arrangement = await ArrangeAsync(BuildEncryptedAssertion(RsaOaepMgf1p));
+        var (samlOptions, organizationId, context, collector) = arrangement;
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
@@ -60,8 +62,9 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     public async Task CouldHandleAsync_WithNoEncryptedAssertions_RecordsNoMeasurement()
     {
         // Arrange
-        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(
+        using var arrangement = await ArrangeAsync(
             "<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
+        var (samlOptions, organizationId, context, collector) = arrangement;
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
@@ -75,8 +78,9 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
     {
         // Arrange: The issuer does not match the seeded IdpEntityId value. The entity-ID guard
         // in CouldHandleAsync must reject the request before the key transport algorithm verification logic runs.
-        var (samlOptions, organizationId, context, collector) = await ArrangeAsync(
+        using var arrangement = await ArrangeAsync(
             BuildEncryptedAssertion(Rsa15), issuer: "https://not-the-configured-idp.example.com");
+        var (samlOptions, organizationId, context, collector) = arrangement;
 
         // Act
         await samlOptions.CouldHandleAsync(organizationId.ToString(), context);
@@ -85,7 +89,7 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
         Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
-    private static async Task<(Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context, MetricCollector<long> Collector)> ArrangeAsync(
+    private static async Task<Arrangement> ArrangeAsync(
         string assertionElement, string issuer = IdpEntityId)
     {
         var testData = await new SsoTestDataBuilder()
@@ -120,7 +124,14 @@ public class Saml2AssertionKeyTransportAlgorithmVerificationTests
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
 
-        return (samlOptions, organizationId, context, collector);
+        return new Arrangement(samlOptions, organizationId, context, collector);
+    }
+
+    // Disposing this disposes the collector's underlying listener, so a test does not leak it.
+    private sealed record Arrangement(
+        Saml2Options SamlOptions, Guid OrganizationId, HttpContext Context, MetricCollector<long> Collector) : IDisposable
+    {
+        public void Dispose() => Collector.Dispose();
     }
 
     private static string BuildResponseXml(string assertionElement, string issuer) =>
