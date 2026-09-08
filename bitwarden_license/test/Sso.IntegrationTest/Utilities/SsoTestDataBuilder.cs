@@ -16,7 +16,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 
@@ -65,7 +64,6 @@ public class SsoTestDataBuilder
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
-    private bool _enableFakeLogging = false;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -236,18 +234,6 @@ public class SsoTestDataBuilder
         return this;
     }
 
-    /// <summary>
-    /// Replaces the host's <see cref="ILoggerFactory"/> object with real logging and a
-    /// <see cref="FakeLogCollector"/> object.
-    /// The base factory disables logging completely, through <c>NullLoggerFactory</c>, to keep
-    /// unrelated tests quiet. This method lets a test inspect log records that a request emits.
-    /// </summary>
-    public SsoTestDataBuilder WithFakeLogging()
-    {
-        _enableFakeLogging = true;
-        return this;
-    }
-
     public async Task<SsoTestData> BuildAsync()
     {
         // Create factory
@@ -303,16 +289,6 @@ public class SsoTestDataBuilder
             {
                 services.RemoveAll<SamlEnvironment>();
                 services.AddSingleton(samlEnvironment);
-            });
-        }
-
-        // 1.b.ii Replace the disabled NullLoggerFactory with real logging and a fake collector, if the test requests it
-        if (_enableFakeLogging)
-        {
-            factory.ConfigureServices(services =>
-            {
-                services.RemoveAll<ILoggerFactory>();
-                services.AddFakeLogging();
             });
         }
 
