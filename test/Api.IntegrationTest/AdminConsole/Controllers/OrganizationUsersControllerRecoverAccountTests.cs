@@ -224,7 +224,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
         Assert.Contains(RecoverAccountAuthorizationHandler.FailureReason, model.Message);
     }
@@ -281,7 +281,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
         Assert.Equal(RecoverAccountAuthorizationHandler.ProviderFailureReason, model.Message);
     }
@@ -322,7 +322,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             resetPasswordRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         var model = await response.Content.ReadFromJsonAsync<ErrorResponseModel>();
         Assert.Equal(RecoverAccountAuthorizationHandler.ProviderFailureReason, model.Message);
     }

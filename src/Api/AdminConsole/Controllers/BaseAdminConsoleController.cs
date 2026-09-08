@@ -43,6 +43,16 @@ public abstract class BaseAdminConsoleController : Controller
         public static BadRequest<ErrorResponseModel> BadRequest(string message) =>
             TypedResults.BadRequest(new ErrorResponseModel(message));
 
+        /// <summary>
+        /// Returns 403 Forbidden with an error message in the body. <c>TypedResults.Forbid()</c> is not used because
+        /// it does not carry a response body, and callers of this helper have a specific reason to explain to the
+        /// user why they were denied.
+        /// </summary>
+        public static JsonHttpResult<ErrorResponseModel> Forbidden(string message) =>
+            TypedResults.Json(
+                new ErrorResponseModel(message),
+                statusCode: StatusCodes.Status403Forbidden);
+
         public static JsonHttpResult<ErrorResponseModel> InternalError(
             string message = "Something went wrong with your request. Please contact support for assistance.") =>
             TypedResults.Json(
