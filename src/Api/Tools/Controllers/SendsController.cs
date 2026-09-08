@@ -305,7 +305,7 @@ public class SendsController : Controller
 
     [Authorize(Policies.Application)]
     [HttpGet("{id}/file/{fileId}")]
-    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
+    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var sendId = new Guid(id);
@@ -333,7 +333,7 @@ public class SendsController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
-    public async Task PostFileForExistingSend(string id, string fileId)
+    public async Task PostFileForExistingSend(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
