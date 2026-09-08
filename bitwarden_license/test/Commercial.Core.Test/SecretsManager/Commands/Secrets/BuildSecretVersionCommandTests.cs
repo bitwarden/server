@@ -1,4 +1,16 @@
-﻿namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Secrets;
+﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Secrets;
 
 [SutProviderCustomize]
 [SecretCustomize]

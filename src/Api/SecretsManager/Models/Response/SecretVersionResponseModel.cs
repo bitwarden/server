@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.Api;
-using Bit.Core.SecretsManager.Entities;
+﻿using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.HttpExtensions;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 

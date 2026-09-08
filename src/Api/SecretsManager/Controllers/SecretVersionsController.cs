@@ -1,5 +1,4 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Api.SecretsManager.Models.Request;
+﻿using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
@@ -8,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -145,8 +145,17 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var responses = versions.Select(v => new SecretVersionResponseModel(v));
-        return new ListResponseModel<SecretVersionResponseModel>(responses);
+        if (!CanReadEditorNames(accessClient))
+        {
+            return new ListResponseModel<SecretVersionResponseModel>(
+                versions.Select(v => new SecretVersionResponseModel(v)));
+        }
+
+        // Re-read with the editor join only once the caller is known to be allowed to see names.
+        var details = await _secretVersionRepository.GetManyDetailsByIdsAsync(ids);
+
+        return new ListResponseModel<SecretVersionResponseModel>(
+            details.Select(v => new SecretVersionResponseModel(v)));
     }
 
     [HttpPut("secrets/{secretId}/versions/restore")]
@@ -245,6 +254,21 @@ public class SecretVersionsController : Controller
     /// API keys resolve to <see cref="AccessClientType.Organization"/>, which grants no
     /// access to individual secrets.
     /// </summary>
+    /// <summary>
+    /// Whether the caller may see editor display names. Only the web UI renders them, so they are
+    /// withheld from service account tokens, which receive the editor ids alone.
+    /// </summary>
+    /// <remarks>
+    /// Member display names fall back to the member's email, so this is member PII. Service account
+    /// credentials are deployed to CI runners and have no access to the organization's member
+    /// directory, so returning names to them would widen where member emails can end up. This
+    /// mirrors CanReadAccessPoliciesAsync, which restricts the same PII to users and admins.
+    /// NoAccessCheck covers organization admins and organization API keys; the latter can already
+    /// read member emails from the public members API, so they are no wider an exposure here.
+    /// </remarks>
+    private static bool CanReadEditorNames(AccessClientType accessClient) =>
+        accessClient is AccessClientType.User or AccessClientType.NoAccessCheck;
+
     private async Task<(AccessClientType AccessClient, Guid AccessClientId)> GetAccessContextAsync(Guid organizationId)
     {
         var accessClientId = _userService.GetProperUserId(User);

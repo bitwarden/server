@@ -161,12 +161,105 @@ public class SecretVersionsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetVersionsBySecretId_ServiceAccount_DoesNotReceiveEditorNames(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        List<SecretVersion> versions,
+        Guid serviceAccountId)
+    {
+        foreach (var version in versions)
+        {
+            version.SecretId = secret.Id;
+        }
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns((true, false));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyBySecretIdAsync(secret.Id)
+            .Returns(versions);
+
+        var result = (await sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id)).Data.ToList();
+
+        // Member display names fall back to the member's email, so they are member PII. Service
+        // account credentials live on CI runners and have no member-directory access, so they get
+        // the editor ids only.
+        Assert.All(result, r => Assert.Null(r.EditorOrganizationUserName));
+        Assert.All(result, r => Assert.Null(r.EditorServiceAccountName));
+
+        // The editor join is never even executed for these callers.
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyDetailsBySecretIdAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetById_ServiceAccount_DoesNotReceiveEditorNames(
+        SutProvider<SecretVersionsController> sutProvider,
+        SecretVersion version,
+        Secret secret,
+        Guid serviceAccountId)
+    {
+        version.SecretId = secret.Id;
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns((true, false));
+
+        var result = await sutProvider.Sut.GetByIdAsync(version.Id);
+
+        Assert.Null(result.EditorOrganizationUserName);
+        Assert.Null(result.EditorServiceAccountName);
+        // The ids are still returned; only the names are withheld.
+        Assert.Equal(version.EditorOrganizationUserId, result.EditorOrganizationUserId);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .GetDetailsByIdAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetVersionsBySecretId_OrganizationAdmin_ReceivesEditorNames(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        SecretVersion version,
+        Guid userId)
+    {
+        version.SecretId = secret.Id;
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, userId, AccessClientType.NoAccessCheck)
+            .Returns((true, true));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyDetailsBySecretIdAsync(secret.Id)
+            .Returns([new SecretVersionDetails { SecretVersion = version, EditorUserName = "Ada Lovelace" }]);
+
+        var result = (await sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id)).Data.ToList();
+
+        Assert.Equal("Ada Lovelace", result[0].EditorOrganizationUserName);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetById_VersionNotFound_Throws(
         SutProvider<SecretVersionsController> sutProvider,
         Guid versionId)
     {
-        sutProvider.GetDependency<ISecretVersionRepository>().GetDetailsByIdAsync(versionId)
-            .Returns((SecretVersionDetails?)null);
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(versionId)
+            .Returns((SecretVersion?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetByIdAsync(versionId));
@@ -181,6 +274,7 @@ public class SecretVersionsControllerTests
         Guid userId)
     {
         version.SecretId = secret.Id;
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
         sutProvider.GetDependency<ISecretVersionRepository>().GetDetailsByIdAsync(version.Id)
             .Returns(new SecretVersionDetails { SecretVersion = version });
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
@@ -579,6 +673,7 @@ public class SecretVersionsControllerTests
     {
         version.SecretId = secret.Id;
 
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
         sutProvider.GetDependency<ISecretVersionRepository>().GetDetailsByIdAsync(version.Id)
             .Returns(new SecretVersionDetails { SecretVersion = version });
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
@@ -615,8 +710,7 @@ public class SecretVersionsControllerTests
             new() { Id = inaccessibleSecretId, OrganizationId = organizationId },
         };
 
-        sutProvider.GetDependency<ISecretVersionRepository>().GetManyDetailsByIdsAsync(versionIds)
-            .Returns(versions.Select(v => new SecretVersionDetails { SecretVersion = v }).ToList());
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(versionIds).Returns(versions);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
@@ -656,8 +750,7 @@ public class SecretVersionsControllerTests
             new() { Id = otherSecretId, OrganizationId = organizationId },
         };
 
-        sutProvider.GetDependency<ISecretVersionRepository>().GetManyDetailsByIdsAsync(versionIds)
-            .Returns(versions.Select(v => new SecretVersionDetails { SecretVersion = v }).ToList());
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(versionIds).Returns(versions);
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
