@@ -19,7 +19,7 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
     [RequesterName]     NVARCHAR(50)        NULL,
     [RequesterEmail]    NVARCHAR(256)       NULL,
     [RuleName]          NVARCHAR(256)       NULL,
-    [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL CONSTRAINT [DF_AccessAuditEvent_CorrelationId] DEFAULT NEWID(),
+    [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL,
     [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
     [TargetSystemName]  NVARCHAR(200)       NULL,
     [DaemonId]          UNIQUEIDENTIFIER    NULL,
@@ -41,6 +41,11 @@ GO
 -- Subject and rotation ids are deliberately NOT foreign keyed so an event survives deletion of what it references, and
 -- the frozen names mean a later delete or rename cannot rewrite history. The rotation columns are NULL for
 -- non-rotation events.
+--
+-- [CorrelationId] deliberately has no default. An action's Attempt and Outcome must SHARE one id for the read to
+-- collapse them, so the caller mints one per action and carries it to both halves; a DEFAULT NEWID() would let a
+-- forgotten id quietly become a fresh one that correlates with nothing, which reads back as a lone in-doubt half
+-- rather than as an error. The Entity Framework providers have no default either, so all four agree.
 --
 -- The trail's own read: org-scoped, ranged on [OccurredDate], newest first, one page at a time. [Id] is the third key
 -- column purely so that order comes straight off the index: [OccurredDate] alone is not unique (an action's Attempt
