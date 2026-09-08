@@ -41,7 +41,7 @@ public class ProvidersController : Controller
 
     [HttpGet("{providerId:guid}")]
     [Authorize<ProviderUserRequirement>]
-    public async Task<ProviderResponseModel> Get(Guid providerId)
+    public async Task<ProviderResponseModel> Get([FromRoute] Guid providerId)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
@@ -54,7 +54,7 @@ public class ProvidersController : Controller
 
     [HttpPut("{providerId:guid}")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task<ProviderResponseModel> Put(Guid providerId, [FromBody] ProviderUpdateRequestModel model)
+    public async Task<ProviderResponseModel> Put([FromRoute] Guid providerId, [FromBody] ProviderUpdateRequestModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
@@ -89,14 +89,14 @@ public class ProvidersController : Controller
     [HttpPost("{providerId:guid}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task<ProviderResponseModel> PostPut(Guid providerId, [FromBody] ProviderUpdateRequestModel model)
+    public async Task<ProviderResponseModel> PostPut([FromRoute] Guid providerId, [FromBody] ProviderUpdateRequestModel model)
     {
         return await Put(providerId, model);
     }
 
     [HttpPost("{providerId:guid}/setup")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task<ProviderResponseModel> Setup(Guid providerId, [FromBody] ProviderSetupRequestModel model)
+    public async Task<ProviderResponseModel> Setup([FromRoute] Guid providerId, [FromBody] ProviderSetupRequestModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
@@ -118,7 +118,7 @@ public class ProvidersController : Controller
 
     [HttpPost("{providerId}/delete-recover-token")]
     [AllowAnonymous]
-    public async Task PostDeleteRecoverToken(Guid providerId, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
+    public async Task PostDeleteRecoverToken([FromRoute] Guid providerId, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
@@ -130,7 +130,7 @@ public class ProvidersController : Controller
 
     [HttpDelete("{providerId}")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task Delete(Guid providerId)
+    public async Task Delete([FromRoute] Guid providerId)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
         if (provider == null)
@@ -150,7 +150,7 @@ public class ProvidersController : Controller
     [HttpPost("{providerId}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
     [Authorize<ProviderAdminRequirement>]
-    public async Task PostDelete(Guid providerId)
+    public async Task PostDelete([FromRoute] Guid providerId)
     {
         await Delete(providerId);
     }

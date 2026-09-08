@@ -18,7 +18,9 @@ public class OrganizationSubscriptionEndpointsTests
     {
         var app = WebApplication.CreateBuilder().Build();
 
-        var group = app.MapOrganizationSubscriptionEndpoints();
+        // only organizationId is important for the mapping.
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
         group.MapGet("/__probe", () => Results.Ok());
 
         var endpoint = ((IEndpointRouteBuilder)app).DataSources

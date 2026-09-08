@@ -1328,7 +1328,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.8.1, )"
+          "HttpExtensions": "[2026.8.2, )"
         }
       },
       "httpextensions": {
@@ -1337,9 +1337,9 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.8.1, )",
+          "Core": "[2026.8.2, )",
           "Dapper": "[2.1.66, 2.1.66]",
-          "Pam.Domain": "[2026.8.1, )"
+          "Pam.Domain": "[2026.8.2, )"
         }
       },
       "pam.domain": {
