@@ -39,7 +39,7 @@ public class AzureSendFileStorageService(
     public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
     public static string BlobName(Send send, string fileId)
     {
-        if (fileId.Contains('/') || fileId.Contains("..") || fileId.Contains("{{") || fileId.Contains("}}"))
+        if (string.IsNullOrEmpty(fileId) || !fileId.All(char.IsAsciiLetterOrDigit))
         {
             throw new ArgumentException("File ID contains invalid characters", nameof(fileId));
         }
