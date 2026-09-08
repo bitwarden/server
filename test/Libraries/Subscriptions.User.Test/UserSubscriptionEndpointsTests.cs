@@ -44,4 +44,34 @@ public class UserSubscriptionEndpointsTests
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
     }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsPremiumOrgUpgradeInvoicePreview()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        // Resolves to POST /account/billing/subscription/premium/upgrade/invoice/preview once the host mounts the group.
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/invoice/preview", StringComparison.Ordinal));
+
+        var methods = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Equal(["POST"], methods!.HttpMethods);
+
+        Assert.Equal("PreviewPremiumOrgUpgradeInvoice",
+            endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
+
+        // The endpoint inherits the group's cross-cutting chain rather than repeating it.
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+        Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
+        Assert.Equal("internal",
+            endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
+    }
 }

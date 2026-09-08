@@ -1,5 +1,7 @@
-﻿using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Invoicing.InvoicePreviews;
+using Bit.Invoicing.InvoicePreviews.Commands;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -14,6 +16,8 @@ public class AddInvoicingTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
+        // Registered by the host in production; the commands and queries take it as a dependency.
+        services.AddSingleton(Substitute.For<IPricingClient>());
         // SelfHosted defaults to false on the substitute, so this exercises the cloud path.
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
@@ -23,6 +27,7 @@ public class AddInvoicingTests
 
         Assert.NotNull(provider.GetService<IInvoicePreviewService>());
         Assert.NotNull(provider.GetService<InvoicePreviewBuilder>());
+        Assert.NotNull(provider.GetService<IBuildInvoicePreviewForPremiumOrgUpgradeCommand>());
     }
 
     [Fact]

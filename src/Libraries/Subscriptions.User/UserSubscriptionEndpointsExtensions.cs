@@ -1,8 +1,12 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
+using Bit.Subscriptions.User.Handlers;
+using Bit.Subscriptions.User.Models.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Subscriptions.User;
@@ -19,6 +23,16 @@ public static class UserSubscriptionEndpointsExtensions
         group.RequireAuthorization(Policies.Application);
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
+
+        // The host mounts this group at /account/billing/subscription/premium.
+        group.MapPost("upgrade/invoice/preview",
+                async (ClaimsPrincipal principal,
+                        PreviewInvoiceForPremiumOrgUpgradeRequest request,
+                        [FromServices] UserSubscriptionEndpointsHandler handler) =>
+                    TypedResults.Ok(await handler.PreviewPremiumOrgUpgradeAsync(principal, request)))
+            .WithName("PreviewPremiumOrgUpgradeInvoice")
+            .WithDescription("Previews the invoice for upgrading a Premium subscription to an organization plan.");
+
         return group;
     }
 }

@@ -16,6 +16,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         var passwordManagerProrations = new List<InvoiceLineItem>();
         var secretsManagerProrations = new List<InvoiceLineItem>();
         var discounts = DiscountMapper.Partition(invoice, logger);
+        var skippedLines = 0;
 
         foreach (var line in invoice.Lines?.Data ?? [])
         {
@@ -23,6 +24,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             var reference = ResolvePurchasableReference(price);
             if (reference is null)
             {
+                skippedLines++;
                 continue;
             }
 
@@ -57,7 +59,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             PlanTier = planTier,
             Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations)),
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, ProrationMapper.Summarize(passwordManagerProrations), skippedLines),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference, ProrationMapper.Summarize(secretsManagerProrations)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
@@ -102,7 +104,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             PlanTier = planTier,
             Cadence = cadence,
-            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, null),
+            PasswordManager = BuildPasswordManagerItems(lineItemsByReference, null, skippedLines: 0),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference, null),
             Discounts = null,
             EstimatedTax = 0m,
@@ -130,11 +132,23 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     }
 
     private static PasswordManagerInvoiceItems BuildPasswordManagerItems(
-        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration, int skippedLines)
     {
         // Password Manager seats are always present; a missing line is a Stripe misconfiguration, unlike Secrets Manager.
-        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
-            ?? throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
+        // Under AlwaysInvoice every line is a proration, so the seat is synthesized from the proration's gross charge.
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat);
+        if (seats is null)
+        {
+            // Only synthesize when every line resolved and the switch charged; otherwise the cart won't reconcile to the total.
+            if (skippedLines > 0 || proration is not { Charge: > 0 })
+            {
+                throw new InvalidOperationException(
+                    $"The preview resolved no Password Manager seats line (skipped lines: {skippedLines}, proration charge: {proration?.Charge ?? 0m}).");
+            }
+
+            seats = SynthesizeSeatsFromProration(proration);
+        }
+
         return new PasswordManagerInvoiceItems
         {
             Seats = seats,
@@ -142,6 +156,18 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             Prorations = proration is { } p ? [p] : null,
         };
     }
+
+    /// <summary>
+    /// Synthesizes the seats line for a proration-only preview (<c>proration_behavior=always_invoice</c>).
+    /// Quantity is 1 and cost is the gross prorated charge; the credit is rendered as its own row.
+    /// </summary>
+    private static InvoicePreviewItem SynthesizeSeatsFromProration(PurchasableProration proration) =>
+        new()
+        {
+            Reference = StripeConstants.PurchasableReferences.PasswordManagerSeat,
+            Quantity = 1,
+            Cost = proration.Charge,
+        };
 
     private static SecretsManagerInvoiceItems? BuildSecretsManagerItems(
         Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
