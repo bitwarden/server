@@ -7,6 +7,11 @@
 -- collection are recorded by id only and no vault data lands in the audit store. Subject and rotation ids are
 -- deliberately NOT foreign keyed for the same reason: an event outlives what it references. Only OrganizationId is, so
 -- the rows go when the org does. The rotation columns are NULL for non-rotation events.
+--
+-- [CorrelationId] deliberately has no default. An action's Attempt and Outcome must SHARE one id for the read to
+-- collapse them, so the caller mints one per action and carries it to both halves; a DEFAULT NEWID() would let a
+-- forgotten id quietly become a fresh one that correlates with nothing, which reads back as a lone in-doubt half
+-- rather than as an error. The Entity Framework providers have no default either, so all four agree.
 
 IF OBJECT_ID('[dbo].[AccessAuditEvent]') IS NULL
 BEGIN
@@ -31,7 +36,7 @@ BEGIN
         [RequesterName]     NVARCHAR(50)        NULL,
         [RequesterEmail]    NVARCHAR(256)       NULL,
         [RuleName]          NVARCHAR(256)       NULL,
-        [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL CONSTRAINT [DF_AccessAuditEvent_CorrelationId] DEFAULT NEWID(),
+        [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL,
         [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
         [TargetSystemName]  NVARCHAR(200)       NULL,
         [DaemonId]          UNIQUEIDENTIFIER    NULL,
