@@ -293,6 +293,12 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             return (null, SendAccessResult.Denied);
         }
 
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data ?? string.Empty);
+        if (fileData?.Id != fileId)
+        {
+            throw new NotFoundException();
+        }
+
         send.AccessCount++;
         await _sendRepository.ReplaceAsync(send);
         await _pushNotificationService.PushSyncSendUpdateAsync(send);

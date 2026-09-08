@@ -204,7 +204,7 @@ public class SendsController : Controller
     [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
+    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth([FromRoute] string fileId)
     {
         var sendId = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(sendId);

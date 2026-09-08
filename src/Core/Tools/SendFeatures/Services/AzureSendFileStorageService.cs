@@ -37,7 +37,14 @@ public class AzureSendFileStorageService(
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
     public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
-    public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
+    public static string BlobName(Send send, string fileId)
+    {
+        if (fileId.Contains('/') || fileId.Contains("..") || fileId.Contains("{{") || fileId.Contains("}}"))
+        {
+            throw new ArgumentException("File ID contains invalid characters", nameof(fileId));
+        }
+        return $"{send.Id}/{fileId}";
+    }
 
     public async Task UploadNewFileAsync(Stream stream, Send send, string fileId)
     {
