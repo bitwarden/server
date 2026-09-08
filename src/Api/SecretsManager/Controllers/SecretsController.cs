@@ -113,9 +113,6 @@ public class SecretsController : Controller
             }
         }
 
-        // Built before the write and handed to the command so the secret and its first version are
-        // committed together. Writing the version afterwards would return an error for a secret that
-        // was already saved, and a retry would create a duplicate.
         var userId = _userService.GetProperUserId(User)!.Value;
         var initialVersion = await _buildSecretVersionCommand.BuildAsync(secret, userId);
 
@@ -199,8 +196,6 @@ public class SecretsController : Controller
             }
         }
 
-        // Built before the write so the update and its version snapshot share one transaction.
-        // ToSecret has already stamped the new value and revision date onto updatedSecret.
         SecretVersion newVersion = null;
         if (updateRequest.ValueChanged)
         {

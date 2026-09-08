@@ -5,16 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
-/// <summary>
-/// Shared version-write logic for the repositories that persist secret versions.
-/// </summary>
-/// <remarks>
-/// This takes an existing <see cref="DatabaseContext"/> rather than opening its own scope so the
-/// version write can join the caller's transaction. Writing a secret and its version has to be
-/// atomic: if the version were written separately and failed, the caller would receive an error for
-/// a secret that was already committed, and a retry would duplicate it.
-/// The caller owns calling SaveChanges and committing.
-/// </remarks>
 internal static class SecretVersionWriter
 {
     private const int MaxVersionsToKeep = 10;

@@ -95,7 +95,6 @@ public class SecretVersionsController : Controller
             return new SecretVersionResponseModel(secretVersion);
         }
 
-        // Re-read with the editor join only once the caller is known to be allowed to see names.
         var secretVersionDetails = await _secretVersionRepository.GetDetailsByIdAsync(id);
         if (secretVersionDetails == null)
         {
@@ -151,7 +150,6 @@ public class SecretVersionsController : Controller
                 versions.Select(v => new SecretVersionResponseModel(v)));
         }
 
-        // Re-read with the editor join only once the caller is known to be allowed to see names.
         var details = await _secretVersionRepository.GetManyDetailsByIdsAsync(ids);
 
         return new ListResponseModel<SecretVersionResponseModel>(
@@ -192,8 +190,6 @@ public class SecretVersionsController : Controller
         secret.Value = version.Value;
         secret.RevisionDate = DateTime.UtcNow;
 
-        // Built before the write so the restored value and its version snapshot share one
-        // transaction; writing the version afterwards could restore a value with no record of it.
         var restoredVersion = valueChanged
             ? await _buildSecretVersionCommand.BuildAsync(secret, accessClientId)
             : null;
@@ -247,25 +243,6 @@ public class SecretVersionsController : Controller
         return Ok();
     }
 
-    /// <summary>
-    /// Resolves the access client for the current caller. Organization admins resolve to
-    /// <see cref="AccessClientType.NoAccessCheck"/>, which grants organization-wide access;
-    /// every other caller is checked against the secret's own access policies. Organization
-    /// API keys resolve to <see cref="AccessClientType.Organization"/>, which grants no
-    /// access to individual secrets.
-    /// </summary>
-    /// <summary>
-    /// Whether the caller may see editor display names. Only the web UI renders them, so they are
-    /// withheld from service account tokens, which receive the editor ids alone.
-    /// </summary>
-    /// <remarks>
-    /// Member display names fall back to the member's email, so this is member PII. Service account
-    /// credentials are deployed to CI runners and have no access to the organization's member
-    /// directory, so returning names to them would widen where member emails can end up. This
-    /// mirrors CanReadAccessPoliciesAsync, which restricts the same PII to users and admins.
-    /// NoAccessCheck covers organization admins and organization API keys; the latter can already
-    /// read member emails from the public members API, so they are no wider an exposure here.
-    /// </remarks>
     private static bool CanReadEditorNames(AccessClientType accessClient) =>
         accessClient is AccessClientType.User or AccessClientType.NoAccessCheck;
 
