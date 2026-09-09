@@ -29,6 +29,10 @@ public class SecretVersionResponseModel : ResponseModel
         EditorOrganizationUserId = secretVersion.EditorOrganizationUserId;
     }
 
+    /// <summary>
+    /// Includes the editor display names. Callers are responsible for only using this overload for
+    /// clients allowed to read editor names; see SecretVersionsController.CanReadEditorNames.
+    /// </summary>
     public SecretVersionResponseModel(SecretVersionDetails details) : this(details.SecretVersion)
     {
         EditorOrganizationUserName = GetUserDisplayName(details.EditorUserName, details.EditorUserEmail);
