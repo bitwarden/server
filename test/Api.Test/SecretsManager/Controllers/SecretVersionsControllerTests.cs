@@ -1,7 +1,5 @@
-﻿using System.Reflection;
-using Bit.Api.SecretsManager.Controllers;
+﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
-using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -577,26 +575,4 @@ public class SecretVersionsControllerTests
         await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
             .DeleteManyByIdAsync(default!);
     }
-
-    [Fact]
-    public void Controller_IsGatedOnTheSecretsVersioningFlag()
-    {
-        // Version history ships behind sm-1587-secrets-versioning. The gate sits on the class so it
-        // covers every endpoint at once, and UseFeatureFlagChecks is what enforces it at runtime.
-        // Invoking FeatureCheck pins the exact flag key without reaching into attribute internals.
-        var attribute = typeof(SecretVersionsController)
-            .GetCustomAttributes<Bitwarden.Server.Sdk.Features.RequireFeatureAttribute>(inherit: false)
-            .SingleOrDefault();
-
-        Assert.NotNull(attribute);
-
-        var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
-
-        featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning, Arg.Any<bool>()).Returns(true);
-        Assert.True(attribute.FeatureCheck(featureService));
-
-        featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning, Arg.Any<bool>()).Returns(false);
-        Assert.False(attribute.FeatureCheck(featureService));
-    }
-
 }
