@@ -187,13 +187,8 @@ public class TeamsServiceTests
         var serviceUri = new Uri("https://smba.example.com/amer/");
         var channelId = "19:channel-id@thread.tacv2";
 
-        string? capturedBody = null;
         var matcher = _handler
-            .When(request =>
-            {
-                capturedBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
-                return true;
-            })
+            .When(_ => true)
             .RespondWith(HttpStatusCode.OK)
             .WithContent("application/json", JsonSerializer.Serialize(new { id = "activity-id" }));
 
