@@ -1,13 +1,14 @@
-﻿using AutoMapper;
-using Bit.Core;
+﻿using System.Data.Common;
+using AutoMapper;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -17,6 +18,22 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
+
+    /// <summary>
+    /// Builds the context an <see cref="UpdateUserData"/> action writes through.
+    /// </summary>
+    private async Task<DatabaseContext> GetUpdateUserDataContextAsync(IServiceScope scope, DbConnection? connection,
+        DbTransaction? transaction)
+    {
+        var dbContext = GetDatabaseContext(scope);
+        if (connection != null)
+        {
+            dbContext.Database.SetDbConnection(connection);
+            await dbContext.Database.UseTransactionAsync(transaction);
+        }
+
+        return dbContext;
+    }
 
     public async Task<Core.Entities.User?> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
     {
@@ -177,12 +194,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         try
         {
@@ -200,14 +220,14 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
+            entity.UserKeyId = user.UserKeyId;
 
             await dbContext.SaveChangesAsync();
 
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
-                // connection and transaction aren't used in EF
-                await action();
+                await action(connection, transaction);
             }
 
             await transaction.CommitAsync();
@@ -222,12 +242,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
 
     public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         // Update user
         var userEntity = await dbContext.Users.FindAsync(user.Id);
@@ -250,6 +273,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         userEntity.MasterPassword = user.MasterPassword;
         userEntity.MasterPasswordHint = user.MasterPasswordHint;
 
+        userEntity.LastPasswordChangeDate = user.LastPasswordChangeDate;
         userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
         userEntity.AccountRevisionDate = user.AccountRevisionDate;
         userEntity.RevisionDate = user.RevisionDate;
@@ -260,13 +284,14 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
 
+        userEntity.UserKeyId = user.UserKeyId;
+
         await dbContext.SaveChangesAsync();
 
         //  Update re-encrypted data
         foreach (var action in updateDataActions)
         {
-            // connection and transaction aren't used in EF
-            await action();
+            await action(connection, transaction);
         }
 
         await transaction.CommitAsync();
@@ -340,7 +365,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             foreach (var action in updateUserDataActions)
             {
-                await action();
+                await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
             }
         }
         await transaction.CommitAsync();
@@ -510,10 +535,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData SetKeyConnectorUserKey(Guid userId, string keyConnectorWrappedUserKey)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -526,9 +551,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = keyConnectorWrappedUserKey;
             // Key Connector does not use KDF, so we set some defaults
             userEntity.Kdf = KdfType.Argon2id;
-            userEntity.KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default;
-            userEntity.KdfMemory = AuthConstants.ARGON2_MEMORY.Default;
-            userEntity.KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+            userEntity.KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default;
+            userEntity.KdfMemory = KdfConstants.ARGON2_MEMORY.Default;
+            userEntity.KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default;
             userEntity.UsesKeyConnector = true;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
@@ -540,10 +565,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     public UpdateUserData SetMasterPassword(Guid userId, MasterPasswordUnlockData masterPasswordUnlockData,
         string serverSideHashedMasterPasswordAuthenticationHash, string? masterPasswordHint)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId);
             if (userEntity == null)
@@ -580,7 +605,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         foreach (var action in updateUserDataActions)
         {
-            await action();
+            await action(dbContext.Database.GetDbConnection(), transaction.GetDbTransaction());
         }
 
         await transaction.CommitAsync();
@@ -588,10 +613,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     public UpdateUserData UpdateMasterPasswordUnlockData(Guid userId, RegisterFinishData registerFinishData)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
 
             var userEntity = await dbContext.Users.FindAsync(userId) ?? throw new ArgumentException("User not found", nameof(userId));
             var timestamp = DateTime.UtcNow;
@@ -604,6 +629,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
         };

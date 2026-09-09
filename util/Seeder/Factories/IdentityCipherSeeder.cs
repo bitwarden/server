@@ -16,10 +16,11 @@ internal static class IdentityCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.Identity,
             Identity = options.Identity,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToIdentityData(), CipherType.Identity, options.OrganizationId, options.UserId);
     }
 

@@ -16,10 +16,11 @@ internal static class SecureNoteCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.SecureNote,
             SecureNote = options.SecureNote ?? new SecureNoteViewDto { Type = 0 },
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToSecureNoteData(), CipherType.SecureNote, options.OrganizationId, options.UserId);
     }
 

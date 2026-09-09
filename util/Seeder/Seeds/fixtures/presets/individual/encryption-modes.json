@@ -1,0 +1,9 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "user": {
+    "email": "encryptionmodes@individual.example",
+    "premium": true,
+    "maxStorageGb": 5
+  },
+  "ciphers": { "fixture": "encryption-modes" }
+}

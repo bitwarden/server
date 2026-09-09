@@ -168,4 +168,38 @@ public class EventsControllerTests
             .GetManyByProviderActingUserAsync(providerId, userId, Arg.Any<DateTime>(), Arg.Any<DateTime>(),
                 Arg.Any<PageOptions>());
     }
+
+    [Theory, BitAutoData]
+    public async Task GetSend_NoAccessToEventLogs_ThrowsNotFound(
+        SutProvider<EventsController> sutProvider, Guid orgId, Guid id)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(orgId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSend(orgId, id));
+
+        await sutProvider.GetDependency<IEventRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyBySendAsync(default, default, default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetSend_EmptyIds_ThrowsNotFound(SutProvider<EventsController> sutProvider, Guid orgId)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSend(Guid.Empty, Guid.NewGuid()));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSend(orgId, Guid.Empty));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetSend_ValidRequest_ReturnsEvents(
+        SutProvider<EventsController> sutProvider, Guid orgId, Guid id)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(orgId).Returns(true);
+        sutProvider.GetDependency<IEventRepository>()
+            .GetManyBySendAsync(orgId, id, Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<PageOptions>())
+            .Returns(new PagedResult<IEvent>());
+
+        await sutProvider.Sut.GetSend(orgId, id);
+
+        await sutProvider.GetDependency<IEventRepository>().Received(1)
+            .GetManyBySendAsync(orgId, id, Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<PageOptions>());
+    }
 }

@@ -64,7 +64,9 @@ public class CheckoutSessionCompletedHandler(
         user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
         user.MaxStorageGb = (short)premiumPlan.Storage.Provided;
         user.LicenseKey = string.IsNullOrWhiteSpace(user.LicenseKey) ? CoreHelpers.SecureRandomString(20) : user.LicenseKey;
-        user.RevisionDate = DateTime.UtcNow;
+        // Bump AccountRevisionDate so clients' revision-gated syncs pick up the
+        // premium change even when the one-time push notification is missed.
+        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
 
         await userRepository.ReplaceAsync(user);
         await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);

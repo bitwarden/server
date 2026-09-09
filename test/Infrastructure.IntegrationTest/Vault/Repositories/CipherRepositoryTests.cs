@@ -1028,7 +1028,8 @@ public class CipherRepositoryTests
             ciphers: [cipher],
             collections: [collection],
             collectionCiphers: [collectionCipher],
-            collectionUsers: [collectionUser]);
+            collectionUsers: [collectionUser],
+            []);
 
         // Assert
         var orgCiphers = await cipherRepository.GetManyByOrganizationIdAsync(org.Id);

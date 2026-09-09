@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "AngleSharp": {
+        "type": "Direct",
+        "requested": "[1.5.2, 1.5.2]",
+        "resolved": "1.5.2",
+        "contentHash": "LVZ7rrr6GHbhERhTgVDarVygl1e6KwE96pronA90LBOMacDhxR4lB+xYLjn/vlnUu+xbOB2RM9fuCPEx5bdyWA=="
+      },
+      "Bitwarden.Server.Sdk.Environment": {
+        "type": "Direct",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "yLK3ik/+zQ4w41iDObvv4vq2QwWPaVMuyKFpzlgsukClOOuZUxJAivwnnZZDMXbp2wipWgaW4yeEY+yLdLVaVQ=="
+      },
+      "Bitwarden.Server.Sdk.Features": {
+        "type": "Direct",
+        "requested": "[1.4.0, )",
+        "resolved": "1.4.0",
+        "contentHash": "74Ir68CSZSUvZvVkb2CaUNHSAZcFMtZY5pReHz+K1eQX6+Am29iWS1i8DbQWq9F6KmCAEbqcGDyfAo4gRCurbg==",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "0.1.0",
+          "LaunchDarkly.ServerSdk": "8.14.1"
+        }
+      },
+      "Bitwarden.Server.Sdk.WebEssentials": {
+        "type": "Direct",
+        "requested": "[0.5.0, )",
+        "resolved": "0.5.0",
+        "contentHash": "pMKQCluxCGueZ8DK9NS8Xfa+/oxplS9NoSxd7JrI573JsKKl7THe2yeB772S7yogzmqt+0n3GrvA56b8fKOIsQ==",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "0.1.0"
+        }
+      },
+      "OpenTelemetry.Exporter.OpenTelemetryProtocol": {
+        "type": "Direct",
+        "requested": "[1.15.3, )",
+        "resolved": "1.15.3",
+        "contentHash": "FEXJepcseTGbATiCkUfP7ipoFEYYfl/0UmmUwi0KxCPg9PaUA8ab2P1LGopK+/HExasJ1ZutFhZrN6WvUIR23g==",
+        "dependencies": {
+          "OpenTelemetry": "1.15.3"
+        }
+      },
+      "OpenTelemetry.Extensions.Hosting": {
+        "type": "Direct",
+        "requested": "[1.15.3, )",
+        "resolved": "1.15.3",
+        "contentHash": "u8n/W8yIlqv0BXZmvId1iVaeWXG42tGKdTkuLYg5g57Y/r9CeUNzqtrSHNdG5IoO8iPX79w3v+WsbAHgUQbfeg==",
+        "dependencies": {
+          "OpenTelemetry": "1.15.3"
+        }
+      },
+      "OpenTelemetry.Instrumentation.AspNetCore": {
+        "type": "Direct",
+        "requested": "[1.15.2, )",
+        "resolved": "1.15.2",
+        "contentHash": "2nPd7r0ug/gd6/CNFL6Rlu+RSQ9WYGSGHAYQ1ssbSqyzKJpqTunfx2I/1O0WB5k+L0cyXbG4XVZpoSoUc3M7wg==",
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.15.3, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Instrumentation.EntityFrameworkCore": {
+        "type": "Direct",
+        "requested": "[1.12.0-beta.2, )",
+        "resolved": "1.12.0-beta.2",
+        "contentHash": "4D2PLiJWbBbQbauojkIflT11WGVXoRU+xgox1mvOkpfm7YXIfwTtROOlcdscS51sMh5fgwjGKJtLWpLKppe7dw==",
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.12.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Instrumentation.Http": {
+        "type": "Direct",
+        "requested": "[1.15.1, )",
+        "resolved": "1.15.1",
+        "contentHash": "vFO4Fj/dXkoVNGo/nhoGpO2zYQmZwr4jTID7oRGo+XlQ8LqksyZjUXQ4p39RfUvTID7IzzL8Qe71tW7CcAFymA==",
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.15.3, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Instrumentation.Runtime": {
+        "type": "Direct",
+        "requested": "[1.15.1, )",
+        "resolved": "1.15.1",
+        "contentHash": "cpPwlUT5HXcLGPaIgsbSy0W9eFYAPGVbTP1p8/uyQ4Osvf5BJuPpEXE7crL09SmEd44r0DGNKDtsqxaAz0HxQw==",
+        "dependencies": {
+          "OpenTelemetry.Api": "[1.15.3, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Instrumentation.SqlClient": {
+        "type": "Direct",
+        "requested": "[1.15.2, )",
+        "resolved": "1.15.2",
+        "contentHash": "pRB84YJEXD121kygc6CtcF46dtLuTKIjphA2SJye32G4g2Xl3epkCrOcPCOAg4WDagCdMGa16Ge6PPVzFJZsAQ==",
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.15.3, 2.0.0)"
+        }
+      },
+      "LaunchDarkly.Cache": {
+        "type": "Transitive",
+        "resolved": "1.0.2",
+        "contentHash": "0bEnUVFVeW1TTDXb/bW6kS3FLQTLeGtw7Xh8yt6WNO56utVmtgcrMLvcnF6yeTn+N4FXrKfW09KkLNmK8YYQvw=="
+      },
+      "LaunchDarkly.CommonSdk": {
+        "type": "Transitive",
+        "resolved": "7.2.0",
+        "contentHash": "YLT9rl0ooxHVNWtSsKBjtqdBt8Ysg99sXHAO1G8dcSH4B6yv3qR0lyCo6GEb9EQpUuGdneGqO7Bs7K2B8F+lTg==",
+        "dependencies": {
+          "LaunchDarkly.Logging": "2.0.0"
+        }
+      },
+      "LaunchDarkly.EventSource": {
+        "type": "Transitive",
+        "resolved": "5.3.1",
+        "contentHash": "bVXethnjYnjC+hYSHYhn+1QFZhwtD0NYy1MJjtfOfC6CBW9h1pzR0hEAf16DQYl/LJtMi7fwOJbQhq8lFlFrSw==",
+        "dependencies": {
+          "LaunchDarkly.Logging": "[2.0.0, 3.0.0)"
+        }
+      },
+      "LaunchDarkly.InternalSdk": {
+        "type": "Transitive",
+        "resolved": "3.6.1",
+        "contentHash": "qkbqHzz3AruAPW5PfbwQEM883p2ArHG3xun8IONmBT/QdiAhLFqh/5vxMCUsT1GfPyyly4S0HxYx3GP01Gc3Pg==",
+        "dependencies": {
+          "LaunchDarkly.CommonSdk": "[7.2.0, 8.0.0)",
+          "LaunchDarkly.Logging": "[2.0.0, 3.0.0)"
+        }
+      },
+      "LaunchDarkly.Logging": {
+        "type": "Transitive",
+        "resolved": "2.0.0",
+        "contentHash": "lsLKNqAZ7HIlkdTIrf4FetfRA1SUDE3WlaZQn79aSVkLjYWEhUhkDDK7hORGh4JoA3V2gXN+cIvJQax2uR/ijA=="
+      },
+      "LaunchDarkly.ServerSdk": {
+        "type": "Transitive",
+        "resolved": "8.14.1",
+        "contentHash": "ufdAP+8OYpLEnDJanErS7wXj9xRYKCY1ZXmxaYuQwTB0qik3DviMRy5ml6Ehjd8kGgWZzOnur5EwqTKM+wW/AQ==",
+        "dependencies": {
+          "LaunchDarkly.Cache": "1.0.2",
+          "LaunchDarkly.CommonSdk": "7.2.0",
+          "LaunchDarkly.EventSource": "5.3.1",
+          "LaunchDarkly.InternalSdk": "3.6.1",
+          "LaunchDarkly.Logging": "2.0.0"
+        }
+      },
+      "OpenTelemetry": {
+        "type": "Transitive",
+        "resolved": "1.15.3",
+        "contentHash": "N0i6WjPoHPbZyms1ugbDIFAJFuGlpeExJMU/+XSL0lQRUkg/D0utFkDoLXf8Z1km5B+xVZ2GyMXXiX8qdeNmPg==",
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.15.3"
+        }
+      },
+      "OpenTelemetry.Api": {
+        "type": "Transitive",
+        "resolved": "1.15.3",
+        "contentHash": "fX+fkCysfPut+qCcT3bKqyX4QN9Saf4CgX8HLOHywEVD+Xr7sULtfuypITpoDysjx8R59dn/3mWhgimMH8cm/g=="
+      },
+      "OpenTelemetry.Api.ProviderBuilderExtensions": {
+        "type": "Transitive",
+        "resolved": "1.15.3",
+        "contentHash": "SYn0lqYDwLMWhv/zlNGsQcl2yX++yTumanX46bmOZE/ZDOd1WjPBO2kZaZgKLEZTZk48pavIFGJ6vOvxXgWVFQ==",
+        "dependencies": {
+          "OpenTelemetry.Api": "1.15.3"
+        }
+      },
+      "Serilog": {
+        "type": "Transitive",
+        "resolved": "2.10.0",
+        "contentHash": "+QX0hmf37a0/OZLxM3wL7V6/ADvC1XihXN4Kq/p6d8lCPfgkRdiuhbWlMaFjR9Av0dy5F0+MBeDmDdRZN/YwQA=="
+      },
+      "Serilog.Extensions.Logging": {
+        "type": "Transitive",
+        "resolved": "3.1.0",
+        "contentHash": "IWfem7wfrFbB3iw1OikqPFNPEzfayvDuN4WP7Ue1AVFskalMByeWk3QbtUXQR34SBkv1EbZ3AySHda/ErDgpcg==",
+        "dependencies": {
+          "Serilog": "2.9.0"
+        }
+      },
+      "Serilog.Extensions.Logging.File": {
+        "type": "Transitive",
+        "resolved": "3.0.0",
+        "contentHash": "bUYjMHn7NhpK+/8HDftG7+G5hpWzD49XTSvLoUFZGgappDa6FoseqFOsLrjLRjwe1zM+igH5mySFJv3ntb+qcg==",
+        "dependencies": {
+          "Serilog": "2.10.0",
+          "Serilog.Extensions.Logging": "3.1.0",
+          "Serilog.Formatting.Compact": "1.1.0",
+          "Serilog.Sinks.Async": "1.5.0",
+          "Serilog.Sinks.RollingFile": "3.3.0"
+        }
+      },
+      "Serilog.Formatting.Compact": {
+        "type": "Transitive",
+        "resolved": "1.1.0",
+        "contentHash": "pNroKVjo+rDqlxNG5PXkRLpfSCuDOBY0ri6jp9PLe505ljqwhwZz8ospy2vWhQlFu5GkIesh3FcDs4n7sWZODA==",
+        "dependencies": {
+          "Serilog": "2.8.0"
+        }
+      },
+      "Serilog.Sinks.Async": {
+        "type": "Transitive",
+        "resolved": "1.5.0",
+        "contentHash": "csHYIqAwI4Gy9oAhXYRwxGrQEAtBg3Ep7WaCzsnA1cZuBZjVAU0n7hWaJhItjO7hbLHh/9gRVxALCUB4Dv+gZw==",
+        "dependencies": {
+          "Serilog": "2.9.0"
+        }
+      },
+      "Serilog.Sinks.File": {
+        "type": "Transitive",
+        "resolved": "3.2.0",
+        "contentHash": "VHbo68pMg5hwSWrzLEdZv5b/rYmIgHIRhd4d5rl8GnC5/a8Fr+RShT5kWyeJOXax1el6mNJ+dmHDOVgnNUQxaw==",
+        "dependencies": {
+          "Serilog": "2.3.0"
+        }
+      },
+      "Serilog.Sinks.RollingFile": {
+        "type": "Transitive",
+        "resolved": "3.3.0",
+        "contentHash": "2lT5X1r3GH4P0bRWJfhA7etGl8Q2Ipw9AACvtAHWRUSpYZ42NGVyHoVs2ALBZ/cAkkS+tA4jl80Zie144eLQPg==",
+        "dependencies": {
+          "Serilog.Sinks.File": "3.2.0"
+        }
+      },
+      "globalsettingsbridge": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )"
+        }
+      },
+      "serilogfilelogging": {
+        "type": "Project",
+        "dependencies": {
+          "Serilog.Extensions.Logging.File": "[3.0.0, 3.0.0]"
+        }
+      },
+      "ssrfprotection": {
+        "type": "Project"
+      }
+    }
+  }
+}

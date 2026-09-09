@@ -1,9 +1,12 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.Services;
@@ -17,7 +20,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -37,7 +39,7 @@ public class CloudOrganizationSignUpCommand(
     IStripePaymentService paymentService,
     IOrganizationRepository organizationRepository,
     IOrganizationApiKeyRepository organizationApiKeyRepository,
-    IApplicationCacheService applicationCacheService,
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
@@ -50,13 +52,14 @@ public class CloudOrganizationSignUpCommand(
         var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
+        ValidateTrialLength(signup);
 
         if (signup.UseSecretsManager)
         {
             if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
-                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                    new SecretsManagerMspUnsupportedError().Message);
             }
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -92,6 +95,7 @@ public class CloudOrganizationSignUpCommand(
             UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
             UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
+            UseRiskInsights = plan.HasRiskInsights,
             Plan = plan.Name,
             Gateway = null,
             ReferenceData = signup.Owner.ReferenceData,
@@ -120,7 +124,7 @@ public class CloudOrganizationSignUpCommand(
                 await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
             if (adminCount > 0)
             {
-                throw new BadRequestException("You can only be an admin of one free organization.");
+                throw new BadRequestException(new FreeOrgAdminLimitError().Message);
             }
         }
         else if (plan.Type != PlanType.Free)
@@ -140,39 +144,38 @@ public class CloudOrganizationSignUpCommand(
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
         {
-            throw new BadRequestException($"You do not have any Password Manager seats!");
+            throw new BadRequestException(new NoPasswordManagerSeatsError().Message);
         }
 
         if (upgrade.AdditionalSeats < 0)
         {
-            throw new BadRequestException($"You can't subtract Password Manager seats!");
+            throw new BadRequestException(new CannotSubtractPasswordManagerSeatsError().Message);
         }
 
         if (!plan.PasswordManager.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
-            throw new BadRequestException("Plan does not allow additional storage.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalStorageError().Message);
         }
 
         if (upgrade.AdditionalStorageGb < 0)
         {
-            throw new BadRequestException("You can't subtract storage!");
+            throw new BadRequestException(new CannotSubtractStorageError().Message);
         }
 
         if (!plan.PasswordManager.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
         {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            throw new BadRequestException(new PlanDoesNotAllowPremiumAccessAddonError().Message);
         }
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
         {
-            throw new BadRequestException("Plan does not allow additional users.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
         }
 
         if (plan.PasswordManager.HasAdditionalSeatsOption && plan.PasswordManager.MaxAdditionalSeats.HasValue &&
             upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value)
         {
-            throw new BadRequestException($"Selected plan allows a maximum of " +
-                                          $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
         }
     }
 
@@ -180,19 +183,19 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan.SupportsSecretsManager == false)
         {
-            throw new BadRequestException("Invalid Secrets Manager plan selected.");
+            throw new BadRequestException(new InvalidSecretsManagerPlanError().Message);
         }
 
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
 
         if (plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats <= 0)
         {
-            throw new BadRequestException($"You do not have any Secrets Manager seats!");
+            throw new BadRequestException(new NoSecretsManagerSeatsError().Message);
         }
 
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
+            throw new BadRequestException(new PlanDoesNotAllowAdditionalMachineAccountsError().Message);
         }
 
         if ((plan.ProductTier == ProductTierType.TeamsStarter &&
@@ -200,22 +203,21 @@ public class CloudOrganizationSignUpCommand(
             (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
-            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+            throw new BadRequestException(new SecretsManagerSeatsMustNotExceedPasswordManagerSeatsError().Message);
         }
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
         {
-            throw new BadRequestException("You can't subtract Machine Accounts!");
+            throw new BadRequestException(new CannotSubtractMachineAccountsError().Message);
         }
 
         switch (plan.SecretsManager.HasAdditionalSeatsOption)
         {
             case false when upgrade.AdditionalSmSeats > 0:
-                throw new BadRequestException("Plan does not allow additional users.");
+                throw new BadRequestException(new PlanDoesNotAllowAdditionalUsersError().Message);
             case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
                            upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+                throw new BadRequestException(new PlanMaxAdditionalUsersExceededError(plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)).Message);
         }
     }
 
@@ -223,17 +225,17 @@ public class CloudOrganizationSignUpCommand(
     {
         if (plan is null)
         {
-            throw new BadRequestException($"{productType} Plan was null.");
+            throw new BadRequestException(new PlanNullError(productType).Message);
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException($"{productType} Plan not found.");
+            throw new BadRequestException(new PlanNotFoundError(productType).Message);
         }
 
         if (additionalSeats < 0)
         {
-            throw new BadRequestException($"You can't subtract {productType} seats!");
+            throw new BadRequestException(new CannotSubtractProductSeatsError(productType).Message);
         }
     }
 
@@ -243,8 +245,7 @@ public class CloudOrganizationSignUpCommand(
 
         if (requirement.CannotCreateNewOrganization())
         {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(new UserCannotCreateOrg().Message);
         }
 
         var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
@@ -268,7 +269,7 @@ public class CloudOrganizationSignUpCommand(
                 Type = OrganizationApiKeyType.Default,
                 RevisionDate = DateTime.UtcNow,
             });
-            await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
             // ownerId == default if the org is created by a provider - in this case it's created without an
             // owner and the first owner is immediately invited afterwards
@@ -326,10 +327,10 @@ public class CloudOrganizationSignUpCommand(
                 await paymentService.CancelAndRecoverChargesAsync(organization);
             }
 
-            if (organization.Id != default(Guid))
+            if (organization.Id != Guid.Empty)
             {
                 await organizationRepository.DeleteAsync(organization);
-                await applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+                await organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             throw;
@@ -342,5 +343,13 @@ public class CloudOrganizationSignUpCommand(
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
             .Select(d => d.Id.ToString());
+    }
+
+    private static void ValidateTrialLength(OrganizationSignup signup)
+    {
+        if (signup.TrialLength is < 0 or > 30)
+        {
+            throw new BadRequestException(new TrialLengthOutOfRangeError().Message);
+        }
     }
 }

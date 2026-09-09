@@ -1,43 +1,43 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 namespace Bit.Seeder.Factories;
 
 internal static class OrganizationSeeder
 {
-    internal static Organization Create(string name, string domain, int seats, IManglerService manglerService, string? publicKey = null, string? privateKey = null, PlanType planType = PlanType.EnterpriseAnnually)
+    internal static Organization Create(OrganizationSeed seed, IManglerService manglerService)
     {
-        var billingHash = DeriveShortHash(domain);
         var org = new Organization
         {
-            Id = CoreHelpers.GenerateComb(),
-            Identifier = manglerService.Mangle(domain),
-            Name = manglerService.Mangle(name),
-            BillingEmail = $"billing{billingHash}@{billingHash}.{domain}",
-            Seats = seats,
+            Id = CombGuid.Generate(),
+            Identifier = manglerService.Mangle(seed.Domain),
+            Name = manglerService.Mangle(seed.Name),
+            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(seed.Domain),
+            Seats = seed.Seats,
             Status = OrganizationStatusType.Created,
-            PublicKey = publicKey,
-            PrivateKey = privateKey
+            PublicKey = seed.PublicKey,
+            PrivateKey = seed.PrivateKey,
+            // A fresh Organization has null gateway fields and PlanFeatures never touches them,
+            // so direct assignment matches the former "only set non-null values" mutator.
+            Gateway = seed.Gateway,
+            GatewayCustomerId = seed.GatewayCustomerId,
+            GatewaySubscriptionId = seed.GatewaySubscriptionId
         };
 
-        PlanFeatures.Apply(org, planType);
+        // Order matters: plan defaults first, then overrides layered on top, then Secrets Manager,
+        // which reads the PlanType and Seats the earlier steps established.
+        PlanFeatures.Apply(org, seed.PlanType);
+        PlanFeatures.ApplyOrganizationOverrides(org, seed.Overrides);
+
+        if (seed.EnableSecretsManager)
+        {
+            PlanFeatures.EnableSecretsManager(org, seed.SmSeats, seed.SmServiceAccounts);
+        }
 
         return org;
-    }
-
-    /// <summary>
-    /// Derives a deterministic 8-char hex string from a domain for safe billing email generation.
-    /// Always applied regardless of mangle flag — billing emails must never be deliverable.
-    /// </summary>
-    private static string DeriveShortHash(string domain)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(domain));
-        return Convert.ToHexString(bytes, 0, 4).ToLowerInvariant();
     }
 }
 
@@ -59,7 +59,7 @@ internal static class OrganizationExtensions
 
         return new OrganizationUser
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             UserId = shouldLinkUserId ? user.Id : null,
             Email = shouldLinkUserId ? null : user.Email,

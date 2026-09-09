@@ -95,14 +95,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
-            _currentContext.IdentityClientType == IdentityClientType.Organization)
-        {
-            // Already verified Secrets Manager access above
-            return new SecretVersionResponseModel(secretVersion);
-        }
-
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -153,15 +145,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
-            _currentContext.IdentityClientType == IdentityClientType.Organization)
-        {
-            // Already verified Secrets Manager access and organization ownership above
-            var serviceAccountResponses = versions.Select(v => new SecretVersionResponseModel(v));
-            return new ListResponseModel<SecretVersionResponseModel>(serviceAccountResponses);
-        }
-
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -171,9 +154,8 @@ public class SecretVersionsController : Controller
         var isAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
 
-        // Verify read access to all associated secrets
         var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Values.Any(access => !access.Read))
+        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Read))
         {
             throw new NotFoundException();
         }
@@ -196,7 +178,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // Get the version first to validate it belongs to this secret
         var version = await _secretVersionRepository.GetByIdAsync(request.VersionId);
         if (version == null || version.SecretId != secretId)
         {
@@ -251,27 +232,39 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // Save current value as a version before restoring
+        var currentValue = secret.Value;
         if (currentValue != version.Value)
         {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId.Value);
-            if (orgUser == null)
+            Guid? editorServiceAccountId = null;
+            Guid? editorOrganizationUserId = null;
+
+            if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
             {
-                throw new NotFoundException();
+                editorServiceAccountId = userId.Value;
+            }
+            else
+            {
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId.Value);
+                if (orgUser == null)
+                {
+                    throw new NotFoundException();
+                }
+
+                editorOrganizationUserId = orgUser.Id;
             }
 
             var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
             {
                 SecretId = secretId,
                 Value = currentValue!,
-                VersionDate = currentValueRevisionDate,
-                EditorOrganizationUserId = orgUser.Id
+                VersionDate = DateTime.UtcNow,
+                EditorServiceAccountId = editorServiceAccountId,
+                EditorOrganizationUserId = editorOrganizationUserId
             };
 
             await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
         }
 
-        // Update the secret with the version's value
         secret.Value = version.Value;
         secret.RevisionDate = DateTime.UtcNow;
 
@@ -312,15 +305,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
-            _currentContext.IdentityClientType == IdentityClientType.Organization)
-        {
-            // Already verified Secrets Manager access and organization ownership above
-            await _secretVersionRepository.DeleteManyByIdAsync(ids);
-            return Ok();
-        }
-
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -330,9 +314,8 @@ public class SecretVersionsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
-        // Verify write access to all associated secrets
         var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Values.Any(access => !access.Write))
+        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Write))
         {
             throw new NotFoundException();
         }

@@ -1,0 +1,22 @@
+[
+  {"query": "how many orgs in my local db have SSO enabled? i seeded a bunch yesterday and lost track", "should_trigger": true},
+  {"query": "Query the Bitwarden database for all confirmed members of the org 'Acme Corp' and give me their emails", "should_trigger": true},
+  {"query": "can you check vault_dev and tell me which users have the most vault items?", "should_trigger": true},
+  {"query": "I just ran the seeder with the Planet Express preset — verify the org actually got ~750 ciphers and 8 groups", "should_trigger": true},
+  {"query": "whats in the Policy table for the org I seeded this morning? need to know which policies are turned on", "should_trigger": true},
+  {"query": "look up the user kate@corp.example in the local database and tell me which orgs she belongs to and her status in each", "should_trigger": true},
+  {"query": "run some sql against my local bitwarden mssql to count collections per org, top 10", "should_trigger": true},
+  {"query": "Is there any org in my dev database on a Families plan? check the DB", "should_trigger": true},
+  {"query": "show me the columns of the AuthRequest table in vault_dev — I don't remember if it has an expiry field", "should_trigger": true},
+  {"query": "how many cipher records got soft-deleted in the last 7 days in my local database?", "should_trigger": true},
+  {"query": "Write a stored procedure that returns all confirmed members for an org, following our conventions", "should_trigger": false},
+  {"query": "I need an EF migration to add a nullable ArchivedDate column to OrganizationUser", "should_trigger": false},
+  {"query": "review the SQL in util/Migrator/DbScripts/2026-07-01_00_AddSendControls.sql from my PR", "should_trigger": false},
+  {"query": "OrganizationUserRepository.GetManyDetailsByOrganizationAsync is slow — can you optimize the LINQ?", "should_trigger": false},
+  {"query": "seed 500 users into my local database with the SeederUtility, enterprise org, mixed statuses", "should_trigger": false},
+  {"query": "update the Cipher row with id 96dc0c08 to set DeletedDate back to null — I trashed it by accident in my dev db", "should_trigger": false},
+  {"query": "walk me through how the UserCipherDetails TVF works — I'm modifying it and need to understand the joins", "should_trigger": false},
+  {"query": "queries against Cipher are slow in my dev env, add an index on OrganizationId+DeletedDate", "should_trigger": false},
+  {"query": "query production and tell me how many enterprise orgs we have right now", "should_trigger": false},
+  {"query": "help me write the LINQ to fetch collections with their groups in the Api project", "should_trigger": false}
+]

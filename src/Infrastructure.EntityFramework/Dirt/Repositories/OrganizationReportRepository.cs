@@ -27,7 +27,34 @@ public class OrganizationReportRepository :
         {
             var dbContext = GetDatabaseContext(scope);
             var result = await dbContext.OrganizationReports
-                .Where(p => p.OrganizationId == organizationId)
+                .Where(p => p.OrganizationId == organizationId
+                    && p.ReportData != string.Empty)
+                .OrderByDescending(p => p.RevisionDate)
+                .Take(1)
+                .FirstOrDefaultAsync();
+
+            if (result == null) return default;
+
+            return Mapper.Map<OrganizationReport>(result);
+        }
+    }
+
+    public async Task<OrganizationReport> ReadLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            // Substring match relies on SetReportFile (OrganizationReport.cs) serializing via
+            // JsonHelpers.IgnoreWritingNull (PascalCase, no whitespace). If those serializer
+            // options ever change, the substring stops matching V2 rows on non-MSSQL providers
+            // and the OR fallback silently serves the latest V1 inline row instead, masking
+            // the bug. The Dapper/MSSQL path uses JSON_VALUE which is format-agnostic.
+            var result = await dbContext.OrganizationReports
+                .Where(p => p.OrganizationId == organizationId
+                    && (
+                        (p.ReportFile != null && p.ReportFile.Contains("\"Validated\":true"))
+                        || p.ReportData != string.Empty
+                    ))
                 .OrderByDescending(p => p.RevisionDate)
                 .Take(1)
                 .FirstOrDefaultAsync();
@@ -105,48 +132,6 @@ public class OrganizationReportRepository :
                 .ToListAsync();
 
             return results;
-        }
-    }
-
-    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var result = await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId)
-                .Select(p => new OrganizationReportDataResponse
-                {
-                    ReportData = p.ReportData
-                })
-                .FirstOrDefaultAsync();
-
-            return result;
-        }
-    }
-
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            // Update only ReportData and RevisionDate
-            await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId && p.OrganizationId == organizationId)
-                .UpdateAsync(p => new Models.OrganizationReport
-                {
-                    ReportData = reportData,
-                    RevisionDate = DateTime.UtcNow
-                });
-
-            // Return the updated report
-            var updatedReport = await dbContext.OrganizationReports
-                .Where(p => p.Id == reportId)
-                .FirstOrDefaultAsync();
-
-            return Mapper.Map<OrganizationReport>(updatedReport);
         }
     }
 

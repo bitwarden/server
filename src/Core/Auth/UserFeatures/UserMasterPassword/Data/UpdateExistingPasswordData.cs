@@ -13,7 +13,7 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 /// Use when: constructing a call to
 /// <see cref="Interfaces.IMasterPasswordService.PrepareUpdateExistingMasterPasswordAsync"/> or
 /// <see cref="Interfaces.IMasterPasswordService.SaveUpdateExistingMasterPasswordAsync"/>.
-/// For KDF rotation, use <see cref="UpdateExistingPasswordAndKdfData"/> instead.
+/// For KDF rotation, use <see cref="UpdateExistingKdfConfigurationData"/> instead.
 /// </para>
 /// </summary>
 public class UpdateExistingPasswordData

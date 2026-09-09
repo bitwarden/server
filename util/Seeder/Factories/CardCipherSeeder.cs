@@ -16,10 +16,11 @@ internal static class CardCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.Card,
             Card = options.Card,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToCardData(), CipherType.Card, options.OrganizationId, options.UserId);
     }
 

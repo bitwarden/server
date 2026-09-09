@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
@@ -13,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -51,7 +53,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == organizationUser.UserId!.Value));
     }
 
     [Theory, BitAutoData]
@@ -74,7 +76,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(organizationUser.UserId!.Value);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == organizationUser.UserId!.Value));
     }
 
     [Theory, BitAutoData]
@@ -97,7 +99,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -123,7 +125,47 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_CustomUserRestoreAdmin_Fails(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Custom)] OrganizationUser customUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, customUser, organizationUser, sutProvider);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, customUser.Id, null));
+
+        // Assert
+        Assert.Contains("custom users can not restore admins", exception.Message.ToLowerInvariant());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_AdminRestoreAdmin_Success(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Admin)] OrganizationUser admin,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, admin, organizationUser, sutProvider);
+
+        // Act
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, admin.Id, null);
+
+        // Assert
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, Arg.Any<OrganizationUserStatusType>());
     }
 
     [Theory]
@@ -149,7 +191,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -204,7 +246,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -290,7 +332,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com is not compliant with the single organization and two-step login policy", exception.Message.ToLowerInvariant());
+        Assert.Contains(new UserCannotBeRestoredNotCompliantWithPolicies("test@bitwarden.com").Message.ToLowerInvariant(), exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -300,7 +342,7 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>(), Arg.Any<EventSystemUser>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -339,7 +381,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com cannot be restored because they are in another organization which forbids it.", exception.Message.ToLowerInvariant());
+        Assert.Contains(new UserCannotBeRestoredForbiddenByOtherOrg("test@bitwarden.com").Message.ToLowerInvariant(), exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -384,7 +426,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("test@bitwarden.com cannot be restored until they leave or remove all other organizations.", exception.Message.ToLowerInvariant());
+        Assert.Contains(new UserCannotBeRestoredMemberOfAnotherOrg("test@bitwarden.com").Message.ToLowerInvariant(), exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -444,7 +486,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Equal("User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.", exception.Message);
+        Assert.Equal(new UserCannotBeRestoredFreeOrgAdminLimit().Message, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -596,7 +638,44 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_StagedUserInFreeOrganization_Success(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // A staged user has no linked account (UserId == null) and its pre-revoke status is snapshotted
+        // onto StatusNew by the revoke flow. It must skip the account-level policy checks in
+        // CheckPoliciesBeforeRestoreAsync (which would otherwise dereference the null UserId).
+        organization.PlanType = PlanType.Free;
+        organizationUser.UserId = null;
+        organizationUser.Key = null;
+        organizationUser.Status = OrganizationUserStatusType.Revoked;
+        organizationUser.StatusNew = OrganizationUserStatusTypeNew.Staged;
+
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id).Returns(new OrganizationSeatCounts
+            {
+                Sponsored = 0,
+                Users = 1
+            });
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, "");
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Staged);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -617,7 +696,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
 
@@ -648,7 +727,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user)));
 
@@ -679,17 +758,17 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id)
             .Returns(new AutomaticUserConfirmationPolicyRequirement([new PolicyDetails { OrganizationId = organization.Id }]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Invalid(
                 new AutomaticUserConfirmationPolicyEnforcementRequest(organization.Id, [organizationUser], user),
-                new UserCannotBelongToAnotherOrganization()));
+                new UserCannotBelongToAnotherOrganization(user.Email)));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id, null));
 
-        Assert.Contains("is not compliant with the automatic user confirmation policy", exception.Message);
+        Assert.Contains(new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());
@@ -744,6 +823,43 @@ public class RestoreOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(orgUser1, EventType.OrganizationUser_Restored);
         await eventService.Received(1)
             .LogOrganizationUserEventAsync(orgUser2, EventType.OrganizationUser_Restored);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_CustomUserRestoreAdmin_ReturnsErrorForAdmin(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Custom)] OrganizationUser customUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Admin)] OrganizationUser adminUser,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser regularUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, customUser, adminUser, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userService = Substitute.For<IUserService>();
+
+        adminUser.Email = regularUser.Email = null;
+        adminUser.OrganizationId = regularUser.OrganizationId = organization.Id;
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(adminUser.Id) && ids.Contains(regularUser.Id)))
+            .Returns([adminUser, regularUser]);
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [adminUser.Id, regularUser.Id], customUser.Id, userService, null);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        var adminResult = result.Single(r => r.Item1.Id == adminUser.Id);
+        var regularResult = result.Single(r => r.Item1.Id == regularUser.Id);
+        Assert.Contains("custom users can not restore admins", adminResult.Item2.ToLowerInvariant());
+        Assert.Empty(regularResult.Item2);
+
+        await organizationUserRepository
+            .DidNotReceive()
+            .RestoreAsync(adminUser.Id, Arg.Any<OrganizationUserStatusType>());
+        await organizationUserRepository
+            .Received(1)
+            .RestoreAsync(regularUser.Id, Arg.Any<OrganizationUserStatusType>());
     }
 
     [Theory, BitAutoData]
@@ -1054,6 +1170,7 @@ public class RestoreOrganizationUserCommandTests
         });
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organization.Id).Returns(requestingOrganizationUser != null && requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(requestingOrganizationUser != null && (requestingOrganizationUser.Type is OrganizationUserType.Owner or OrganizationUserType.Admin));
 
         // Setup default disabled OrganizationDataOwnershipPolicyRequirement for any user
@@ -1076,7 +1193,7 @@ public class RestoreOrganizationUserCommandTests
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(Arg.Any<Guid>())
             .Returns(new AutomaticUserConfirmationPolicyRequirement([]));
 
-        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementValidator>()
+        sutProvider.GetDependency<IAutomaticUserConfirmationPolicyEnforcementHandler>()
             .IsCompliantAsync(Arg.Any<AutomaticUserConfirmationPolicyEnforcementRequest>(), Arg.Any<AutomaticUserConfirmationPolicyRequirement>())
             .Returns(Valid(new AutomaticUserConfirmationPolicyEnforcementRequest(targetOrganizationUser.OrganizationId, [], null!)));
 

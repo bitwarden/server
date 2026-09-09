@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Scim.IntegrationTest.Factories;
@@ -392,6 +393,122 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount, databaseContext.OrganizationUsers.Count());
+    }
+
+    [Fact]
+    public async Task Post_InviteUsersAfterProvisioningDisabled_CreatesStagedUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
+
+        var email = "user5@example.com";
+        var externalId = "UE";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = externalId,
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+        Assert.Contains(context.Response.Headers, h => h.Key == "Location");
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
+
+        var stagedUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Staged, stagedUser.Status);
+        Assert.Equal(externalId, stagedUser.ExternalId);
+        Assert.Null(stagedUser.UserId);
+    }
+
+    [Fact]
+    public async Task Post_InviteUsersAfterProvisioningDisabled_WithoutFeatureFlag_InvitesUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(false));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
+
+        var email = "user5@example.com";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = "UE",
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        var newUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Invited, newUser.Status);
+    }
+
+    [Fact]
+    public async Task Post_InviteUsersAfterProvisioningEnabled_InvitesUser()
+    {
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
+                .Returns(true));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
+        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: true);
+
+        var email = "user5@example.com";
+        var inputModel = new ScimUserRequestModel
+        {
+            DisplayName = "Test User 5",
+            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
+            ExternalId = "UE",
+            Active = true,
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+
+        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
+
+        var databaseContext = localFactory.GetDatabaseContext();
+        var newUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
+        Assert.Equal(OrganizationUserStatusType.Invited, newUser.Status);
+    }
+
+    private static void SeedScimConnection(ScimApplicationFactory factory, bool inviteUsersAfterProvisioning)
+    {
+        var connection = new Infrastructure.EntityFramework.Models.OrganizationConnection
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = ScimApplicationFactory.TestOrganizationId1,
+            Type = OrganizationConnectionType.Scim,
+            Enabled = true
+        };
+        connection.SetConfig(new ScimConfig
+        {
+            Enabled = true,
+            InviteUsersAfterProvisioning = inviteUsersAfterProvisioning
+        });
+
+        var databaseContext = factory.GetDatabaseContext();
+        databaseContext.OrganizationConnections.Add(connection);
+        databaseContext.SaveChanges();
     }
 
     [Fact]

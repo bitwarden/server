@@ -1,0 +1,220 @@
+{
+  "skill_name": "exploring-bitwarden-data",
+  "fixture": {
+    "preset": "scale.md-balanced-sterling-cooper",
+    "seed_command": "cd util/SeederUtility && dotnet run -- preset --name scale.md-balanced-sterling-cooper --mangle",
+    "slug_binding": "Prompts use {{SLUG}} placeholders. Before a run, substitute each slug with the value from ground-truth.json -> slugs. Re-seeding produces a new mangle prefix: re-run capture-ground-truth.sh, never edit prompts.",
+    "slugs": [
+      "ORG_NAME",
+      "ORG_ID",
+      "PROBE_USER_EMAIL",
+      "PERM_PROBE_USER_EMAIL"
+    ],
+    "ground_truth_note": "Expected values live in ground-truth.json, regenerated per seed via capture-ground-truth.sh. Density tolerances per util/Seeder/Seeds/docs/verification.md (Sterling Cooper MD)."
+  },
+  "evals": [
+    {
+      "id": 0,
+      "name": "active-member-count",
+      "grounding_rules_exercised": [
+        1
+      ],
+      "prompt": "How many active members does the organization named '{{ORG_NAME}}' have in my local Bitwarden database?",
+      "expected_output": "The count of OrganizationUser rows with Status = 2 (Confirmed) for the org \u2014 NOT the total member count (fixture uses a realistic status mix, so total != confirmed).",
+      "files": [],
+      "assertions": [
+        "Final answer states 214 active members (the Status = 2 Confirmed count), not 251 (the total member count)",
+        "Executed SQL filters OrganizationUser.Status = 2 rather than counting all membership rows"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "member-status-breakdown",
+      "grounding_rules_exercised": [
+        1
+      ],
+      "references_exercised": [
+        "sources.md"
+      ],
+      "prompt": "Break down the members of the org '{{ORG_NAME}}' in my local Bitwarden database by their membership status, with human-readable status names.",
+      "expected_output": "Counts per status with correct name mapping: -1 Revoked, 0 Invited, 1 Accepted, 2 Confirmed.",
+      "files": [],
+      "assertions": [
+        "Counts per status match ground truth: Revoked 12, Invited 13, Accepted 12, Confirmed 214",
+        "Status names mapped correctly: -1 Revoked, 0 Invited, 1 Accepted, 2 Confirmed"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "user-visible-ciphers",
+      "grounding_rules_exercised": [
+        3,
+        4,
+        5
+      ],
+      "prompt": "In my local Bitwarden database, what vault items can the user with email '{{PROBE_USER_EMAIL}}' see? Just give me the count and a breakdown by how they get access.",
+      "expected_output": "Uses [dbo].[UserCipherDetails](@UserId) (or an equivalent correct union of personal + direct-collection + group-mediated access with the Organization.Enabled gate). Count matches TVF ground truth.",
+      "files": [],
+      "assertions": [
+        "Final answer reports 138 total visible vault items for the probe user",
+        "Access resolution uses [dbo].[UserCipherDetails](@UserId) or an equivalent union covering personal + direct-collection + group-mediated access",
+        "Breakdown distinguishes access paths (personal vs org/collection vs group)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "top-users-by-direct-collection-access",
+      "grounding_rules_exercised": [
+        5
+      ],
+      "references_exercised": [
+        "sources.md"
+      ],
+      "prompt": "Show me the top 5 members of org '{{ORG_NAME}}' by the number of collections they have direct access to (not via groups), with their emails.",
+      "expected_output": "Joins CollectionUser.OrganizationUserId = OrganizationUser.Id then OrganizationUser.UserId = User.Id. Results match ground truth. A CollectionUser.OrganizationUserId = User.Id join silently returns wrong/empty results.",
+      "files": [],
+      "assertions": [
+        "Top two results are the owner with 10 collections and user0 with 5",
+        "SQL joins CollectionUser.OrganizationUserId to OrganizationUser.Id (not directly to User.Id)",
+        "Remaining reported counts are 3, 3, 2 (ties may reorder emails)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "active-vs-deleted-ciphers",
+      "grounding_rules_exercised": [
+        2
+      ],
+      "prompt": "How many active versus deleted vault items does org '{{ORG_NAME}}' have in my local Bitwarden database?",
+      "expected_output": "Active = DeletedDate IS NULL (no IsDeleted column exists). Expected ~4975 active / 25 deleted (deletedRate clamped to 25 cap per verification.md).",
+      "files": [],
+      "assertions": [
+        "Final answer reports 4975 active and 25 deleted vault items",
+        "SQL determines deletion via DeletedDate IS NULL / IS NOT NULL and references no IsDeleted column"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "archived-org-ciphers",
+      "grounding_rules_exercised": [
+        7
+      ],
+      "prompt": "How many of org '{{ORG_NAME}}'s vault items are archived in my local Bitwarden database?",
+      "expected_output": "Uses Archives JSON presence (per-user JSON keyed by uppercase GUID). Expected 50 (archivedRate clamped to 50 cap). Naive queries on a non-existent ArchivedDate column fail.",
+      "files": [],
+      "assertions": [
+        "Final answer reports 50 archived vault items",
+        "SQL detects archival via the Archives JSON column (presence or JSON_VALUE), not a non-existent ArchivedDate column"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "personal-ciphers-of-org-members",
+      "grounding_rules_exercised": [
+        3
+      ],
+      "prompt": "How many personal (non-organization) vault items do the members of org '{{ORG_NAME}}' own in total in my local Bitwarden database?",
+      "expected_output": "Filters Cipher.OrganizationId IS NULL and scopes UserId through OrganizationUser membership. Count matches ground truth (~3,638 per verification.md, exact value recorded post-seed).",
+      "files": [],
+      "assertions": [
+        "Final answer reports 2910 (all personal items) or 2885 (active only), with the deleted/trash interpretation stated",
+        "SQL filters Cipher.OrganizationId IS NULL and scopes owners through OrganizationUser membership of the org"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "org-plan-and-active-state",
+      "grounding_rules_exercised": [
+        8
+      ],
+      "references_exercised": [
+        "sources.md"
+      ],
+      "prompt": "What subscription plan is org '{{ORG_NAME}}' on, and is the org currently active? Check my local Bitwarden database.",
+      "expected_output": "Reads PlanType (TINYINT enum, resolved via PlanType.cs) as authoritative, reports Enabled = 1 as the active flag (not Status).",
+      "files": [],
+      "assertions": [
+        "Plan identified as Enterprise (Annually) via PlanType = 20, not solely from the Plan display string",
+        "Active state reported from Enabled = 1 (not from Organization.Status)"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "encrypted-column-trap",
+      "grounding_rules_exercised": [
+        9
+      ],
+      "prompt": "Search my local Bitwarden database for collections in org '{{ORG_NAME}}' whose name contains 'Finance'.",
+      "expected_output": "Declines to LIKE-search Collection.Name because it is AES256-CBC ciphertext; explains why and offers what IS searchable (e.g., Group.Name, Organization.Name, User.Email are plaintext).",
+      "files": [],
+      "assertions": [
+        "Does not present results of a LIKE search on Collection.Name as genuine name matches",
+        "Explains that Collection.Name is encrypted (ciphertext) and offers a plaintext-searchable alternative or workaround"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "org-abilities-via-view",
+      "references_exercised": [
+        "sources.md"
+      ],
+      "prompt": "Which features does org '{{ORG_NAME}}' have enabled \u2014 SSO, groups, API, events, that kind of thing? Query my local Bitwarden database.",
+      "expected_output": "Uses OrganizationAbilityView (or equivalent correct Use* flag read) and reports flags matching ground truth.",
+      "files": [],
+      "assertions": [
+        "Reports groups, SSO, API, and events as enabled (matching ground-truth Use* flags)",
+        "Reads the Use* flags from OrganizationAbilityView or the Organization table's Use* columns"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "density-validation-q1-q8",
+      "grounding_rules_exercised": [
+        1,
+        5
+      ],
+      "references_exercised": [
+        "providers/mssql.md"
+      ],
+      "prompt": "I just seeded the Sterling Cooper preset; the org is '{{ORG_NAME}}' with ID {{ORG_ID}}. Run Q1-Q8 from util/Seeder/Seeds/docs/verification.md against it and give me a pass/fail table versus the Sterling Cooper expected values.",
+      "expected_output": "All eight queries executed via read-only sqlcmd; a pass/fail table comparing to the Sterling Cooper (MD) expected-value table with deviations flagged.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "live-sends-shape",
+      "grounding_rules_exercised": [
+        10
+      ],
+      "weak_case": "Send table is empty in the fixture \u2014 only the SQL shape is assertable, not a behavioral difference. Prime ablation candidate per AI Review Guidelines.",
+      "prompt": "How many Sends are currently live and accessible in my local Bitwarden database?",
+      "expected_output": "SQL composes all four liveness conditions: DeletionDate > now, ExpirationDate NULL-or-future, Disabled = 0, MaxAccessCount NULL-or-under. Returns 0 (table is empty).",
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "pending-auth-requests-shape",
+      "grounding_rules_exercised": [
+        11
+      ],
+      "weak_case": "AuthRequest table is empty in the fixture \u2014 only the SQL shape is assertable. Prime ablation candidate per AI Review Guidelines.",
+      "prompt": "Are there any pending passwordless login requests in my local Bitwarden database?",
+      "expected_output": "Does not reference a non-existent ExpirationDate column; filters ResponseDate IS NULL with a CreationDate recency offset (or uses AuthRequestPendingDetailsView). Returns 0.",
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "collection-permission-resolution",
+      "grounding_rules_exercised": [
+        6
+      ],
+      "prompt": "In my local Bitwarden database, how many collections can the user '{{PERM_PROBE_USER_EMAIL}}' actually edit (as opposed to just view)? They're in org '{{ORG_NAME}}'.",
+      "expected_output": "13 accessible collections, 7 editable. Effective permission resolved with direct-user-grant precedence over group grants (COALESCE(CU.ReadOnly, CG.ReadOnly, 0)); Edit = NOT ReadOnly. A most-restrictive-wins resolution answers 6.",
+      "assertions": [
+        "Final answer reports 7 editable collections (of 13 accessible)",
+        "SQL resolves the direct-vs-group conflict with direct-grant precedence (COALESCE(direct, group, 0) or equivalent), not MIN/MAX across all paths"
+      ],
+      "files": []
+    }
+  ]
+}

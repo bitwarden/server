@@ -1,10 +1,12 @@
 ﻿using System.Globalization;
+using Azure.Storage.Queues;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Notifications;
 
@@ -65,16 +67,18 @@ public class Startup
         // Mvc
         services.AddMvc();
 
+        services.TryAddSingleton(TimeProvider.System);
         services.AddHostedService<HeartbeatHostedService>();
+        services.TryAddKeyedSingleton<QueueClient>("notifications", (sp, _) =>
+            new QueueClient(
+                sp.GetRequiredService<GlobalSettings>().Notifications.ConnectionString,
+                "notifications"));
+        services.AddHostedService<AzureQueueHostedService>();
         if (!globalSettings.SelfHosted)
         {
             // Hosted Services
             Jobs.JobsHostedService.AddJobsServices(services);
             services.AddHostedService<Jobs.JobsHostedService>();
-            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
-            {
-                services.AddHostedService<AzureQueueHostedService>();
-            }
         }
     }
 
@@ -122,6 +126,7 @@ public class Startup
                 options.TransportMaxBufferSize = 4096;
             });
             endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
         });
     }
 }

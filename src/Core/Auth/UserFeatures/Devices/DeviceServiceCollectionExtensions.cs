@@ -12,6 +12,6 @@ public static class DeviceServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddScoped<IDeviceLastActivityCacheService, DeviceLastActivityCacheService>();
         services.TryAddScoped<IUntrustDevicesCommand, UntrustDevicesCommand>();
-        services.TryAddScoped<IBumpDeviceLastActivityDateCommand, BumpDeviceLastActivityDateCommand>();
+        services.TryAddScoped<IUpdateDeviceLastActivityCommand, UpdateDeviceLastActivityCommand>();
     }
 }

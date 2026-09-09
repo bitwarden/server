@@ -1,4 +1,5 @@
-﻿using Bit.Core.KeyManagement.Models.Data;
+﻿using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Core.Auth.Models.Data;
 
@@ -20,4 +21,11 @@ public class SetInitialMasterPasswordDataModel
     /// </summary>
     public required UserAccountKeysData? AccountKeys { get; set; }
     public string? MasterPasswordHint { get; set; }
+
+    public SetInitialPasswordData ToSetInitialPasswordData() => new SetInitialPasswordData
+    {
+        MasterPasswordAuthentication = MasterPasswordAuthentication,
+        MasterPasswordUnlock = MasterPasswordUnlock,
+        MasterPasswordHint = MasterPasswordHint
+    };
 }

@@ -433,6 +433,285 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PatchGroup_ReplaceExternalIdFromPath_Success(
+        Organization organization, Group group, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group>());
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        Assert.Equal(newExternalId, group.ExternalId);
+        Assert.Equal(_expectedRevisionDate, group.RevisionDate);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddExternalIdFromPath_Success(
+        Organization organization, Group group, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        group.ExternalId = null;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group>());
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        Assert.Equal(newExternalId, group.ExternalId);
+        Assert.Equal(_expectedRevisionDate, group.RevisionDate);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_ReplaceExternalIdFromValueObject_Success(
+        Organization organization, Group group, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group>());
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        Assert.Equal(newExternalId, group.ExternalId);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddExternalIdFromValueObject_Success(
+        Organization organization, Group group, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        group.ExternalId = null;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group>());
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        Assert.Equal(newExternalId, group.ExternalId);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddExternalIdFromPath_DuplicateExternalId_Throws(
+        Organization organization, Group group, Group otherGroup, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        otherGroup.OrganizationId = organization.Id;
+        otherGroup.ExternalId = newExternalId;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group> { otherGroup });
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddExternalIdFromPath_TooLong_Throws(
+        Organization organization, Group group)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        var tooLongExternalId = new string('a', 301);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{tooLongExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddExternalIdFromPath_SameGroupExistingExternalId_DoesNotConflict(
+        Organization organization, Group group, string newExternalId)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        group.ExternalId = newExternalId;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Group> { group });
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        Assert.Equal(newExternalId, group.ExternalId);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task PatchGroup_ReplaceExternalIdFromPath_EmptyOrWhitespace_StoresNull(
+        string externalId,
+        Organization organization,
+        Group group)
+    {
+        // Arrange
+        var sutProvider = SetupSutProvider();
+        group.OrganizationId = organization.Id;
+        group.ExternalId = "original";
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{externalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert
+        await sutProvider.GetDependency<IGroupRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).ReplaceAsync(group);
+        Assert.Null(group.ExternalId);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PatchGroup_InvalidOperation_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
     {
         group.OrganizationId = organization.Id;

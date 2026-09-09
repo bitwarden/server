@@ -7,7 +7,13 @@ namespace Bit.Core.Models.Data;
 /// </summary>
 public class CollectionAdminDetails : CollectionDetails
 {
+    /// <summary>
+    /// The groups that have been assigned to this collection, including each group's permission level.
+    /// </summary>
     public IEnumerable<CollectionAccessSelection> Groups { get; set; } = [];
+    /// <summary>
+    /// The organization users that have been directly assigned to this collection, including each user's permission level.
+    /// </summary>
     public IEnumerable<CollectionAccessSelection> Users { get; set; } = [];
 
     /// <summary>

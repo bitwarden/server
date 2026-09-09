@@ -1,15 +1,21 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Sso.Models;
 using Bitwarden.License.Test.Sso.IntegrationTest.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using AuthenticationSchemes = Bit.Core.AuthenticationSchemes;
 
@@ -38,6 +44,7 @@ public class SsoTestDataBuilder
     private Action<Organization>? _organizationConfig;
     private Action<User>? _userConfig;
     private Action<OrganizationUser>? _orgUserConfig;
+    private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
     private Action<SsoApplicationFactory>? _featureFlagConfig;
@@ -45,6 +52,7 @@ public class SsoTestDataBuilder
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
     private bool _includeOrganizationUser = false;
+    private bool _includeStagedOrganizationUser = false;
     private bool _includeSsoConfig = false;
     private bool _successfulAuth = true;
     private bool _withNullEmail = false;
@@ -52,6 +60,10 @@ public class SsoTestDataBuilder
     private bool _includeProviderUserId = true;
     private bool _useNonExistentOrgInAuth = false;
     private bool _isNativeClient = false;
+    private bool _mockAutoscaleSuccess = false;
+    private bool _mockAutoscalePartialFailure = false;
+    private bool _mockSendOrganizationInvitesCommand = false;
+    private X509Certificate2? _samlSigningCertificate;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -70,6 +82,20 @@ public class SsoTestDataBuilder
     {
         _includeOrganizationUser = true;
         _orgUserConfig = configure;
+        return this;
+    }
+
+    /// <summary>
+    /// Seeds an OrganizationUser in <see cref="OrganizationUserStatusType.Staged"/> with
+    /// <c>UserId = null</c> and <c>Email</c> matching the SSO-claimed email, mirroring
+    /// the directory-import placeholder pattern. Does not seed a BW User — use in
+    /// combination with an omitted <see cref="WithUser(Action{User}?)"/> to exercise
+    /// the JIT-against-Staged path.
+    /// </summary>
+    public SsoTestDataBuilder WithStagedOrganizationUser(Action<OrganizationUser>? configure = null)
+    {
+        _includeStagedOrganizationUser = true;
+        _stagedOrgUserConfig = configure;
         return this;
     }
 
@@ -144,6 +170,70 @@ public class SsoTestDataBuilder
         return this;
     }
 
+    /// <summary>
+    /// Enables the <see cref="FeatureFlagKeys.PM34423StagedStatus"/> feature flag for the test.
+    /// SSO Staged-row promotion (Scenario 3 in AutoProvisionUserAsync) is gated behind this
+    /// flag, so tests exercising that branch must opt in.
+    /// </summary>
+    public SsoTestDataBuilder WithPM34423StagedStatusFlag(bool enabled = true)
+    {
+        return WithFeatureFlags(factory =>
+        {
+            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
+            {
+                svc.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(enabled);
+            });
+        });
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="ISendOrganizationInvitesCommand"/> so <c>SendInvitesAsync</c>
+    /// no-ops instead of exercising the real mail pipeline. Use in tests that want to
+    /// assert an invite was (or was not) issued, and to keep integration runs from
+    /// touching the real email path.
+    /// </summary>
+    public SsoTestDataBuilder WithMockedSendOrganizationInvitesCommand()
+    {
+        _mockSendOrganizationInvitesCommand = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IOrganizationService"/> so <c>AutoAddSeatsAsync</c> succeeds
+    /// without hitting the real billing gateway. Use to exercise the "at cap, autoscale
+    /// succeeds" branch of the seat-availability check in integration.
+    /// </summary>
+    public SsoTestDataBuilder WithAutoscaleSucceeds()
+    {
+        _mockAutoscaleSuccess = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Substitutes <see cref="IOrganizationService"/> so <c>AutoAddSeatsAsync</c> bumps
+    /// <c>organization.Seats</c> by one and then throws. Exercises the catch-path
+    /// mid-flight rollback branch that calls <c>AdjustSeatsAsync</c> to revert the
+    /// partial mutation before rethrowing <c>NoSeatsAvailable</c>.
+    /// </summary>
+    public SsoTestDataBuilder WithAutoscalePartialFailure()
+    {
+        _mockAutoscalePartialFailure = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Replaces the host's <see cref="SamlEnvironment"/> object. This method sets
+    /// <c>SpSigningCertificate</c> to a non-null value.
+    /// Without this method, <c>DynamicAuthenticationSchemeProvider.GetSaml2AuthenticationScheme</c>
+    /// never adds a Service Provider (SP) certificate. Without this method, the published SP
+    /// metadata has no <c>KeyDescriptor</c> elements.
+    /// </summary>
+    public SsoTestDataBuilder WithSamlSigningCertificate(X509Certificate2 cert)
+    {
+        _samlSigningCertificate = cert;
+        return this;
+    }
+
     public async Task<SsoTestData> BuildAsync()
     {
         // Create factory
@@ -191,6 +281,17 @@ public class SsoTestDataBuilder
         // 1.b configure setting feature flags
         _featureFlagConfig?.Invoke(factory);
 
+        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        if (_samlSigningCertificate != null)
+        {
+            var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
+            factory.ConfigureServices(services =>
+            {
+                services.RemoveAll<SamlEnvironment>();
+                services.AddSingleton(samlEnvironment);
+            });
+        }
+
         // 1.c Configure IIdentityServerInteractionService for native client flow
         if (_isNativeClient)
         {
@@ -204,6 +305,36 @@ public class SsoTestDataBuilder
                 };
                 interaction.GetAuthorizationContextAsync(Arg.Any<string>())
                     .Returns(authorizationRequest);
+            });
+        }
+
+        // 1.d Configure ISendOrganizationInvitesCommand for tests that exercise the invite path
+        if (_mockSendOrganizationInvitesCommand)
+        {
+            factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
+        }
+
+        // 1.e Configure IOrganizationService for autoscale-branch tests
+        if (_mockAutoscaleSuccess)
+        {
+            factory.SubstituteService<IOrganizationService>(orgService =>
+            {
+                orgService.AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>())
+                    .Returns(Task.CompletedTask);
+            });
+        }
+        else if (_mockAutoscalePartialFailure)
+        {
+            factory.SubstituteService<IOrganizationService>(orgService =>
+            {
+                orgService
+                    .When(x => x.AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>()))
+                    .Do(callInfo =>
+                    {
+                        var org = callInfo.Arg<Organization>();
+                        org.Seats = org.Seats!.Value + 1;
+                        throw new Exception("simulated partial-autoscale failure");
+                    });
             });
         }
 
@@ -256,6 +387,23 @@ public class SsoTestDataBuilder
                 Type = OrganizationUserType.User
             };
             _orgUserConfig?.Invoke(orgUser);
+
+            var orgUserRepo = factory.Services.GetRequiredService<IOrganizationUserRepository>();
+            orgUser = await orgUserRepo.CreateAsync(orgUser);
+        }
+
+        // 4.a Create Staged OrganizationUser (directory-import placeholder shape).
+        if (_includeStagedOrganizationUser)
+        {
+            orgUser = new OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = null,
+                Email = userEmail,
+                Status = OrganizationUserStatusType.Staged,
+                Type = OrganizationUserType.User
+            };
+            _stagedOrgUserConfig?.Invoke(orgUser);
 
             var orgUserRepo = factory.Services.GetRequiredService<IOrganizationUserRepository>();
             orgUser = await orgUserRepo.CreateAsync(orgUser);

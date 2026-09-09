@@ -53,7 +53,7 @@ public class ProfileService : IProfileService
         // Whenever IdentityServer issues a new access token or services a UserInfo request, it calls
         // GetProfileDataAsync to determine which claims to include in the token or response.
         // In normal user identity scenarios, we have to look up the user to get their claims and update
-        // the issued claims collection as claim info can have changed since the last time the user logged in or the
+        // the issued claims collection as claim info may have changed since the last time the user logged in or the
         // last time the token was issued.
         var newClaims = new List<Claim>();
         var user = await _userService.GetUserByPrincipalAsync(context.Subject);
@@ -73,13 +73,15 @@ public class ProfileService : IProfileService
             }
         }
 
-        // filter out any of the new claims
+        // Determine which of the existingClaims to carry over onto the refreshed token.
+        // Only known-safe user-identity claims are carried over; everything else (including membership and
+        // authorization claims) is dropped so each refresh token reflects the user's current membership and
+        // authorization state.
         var existingClaimsToKeep = existingClaims
             .Where(c =>
-                // Drop any org claims
-                !c.Type.StartsWith("org") &&
-                // If we have no new claims, then keep the existing claims
-                // If we have new claims, then keep the existing claim if it does not match a new claim type
+                // only allow user-identity claims to be carried over from the existing subject
+                Claims.UserIdentityClaimTypes.Contains(c.Type) &&
+                // keep the existing claim only when it is not being overwritten by a freshly built claim of the same type
                 (newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type))
             ).ToList();
 
@@ -92,7 +94,8 @@ public class ProfileService : IProfileService
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
-        // Send Tokens are not refreshed so when the token has expired the user must request a new one via the authentication method assigned to the send.
+        // Send Tokens are not refreshed so when the token has expired the user must request a new one via
+        // the authentication method assigned to the send.
         if (context.Client.ClientId == BitwardenClient.Send)
         {
             context.IsActive = true;

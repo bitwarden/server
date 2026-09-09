@@ -12,8 +12,8 @@ repository = "https://github.com/bitwarden/server"
 crate-type = ["cdylib"]
 
 [dependencies]
-base64 = "0.22.1"
-bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "abba7fdab687753268b63248ec22639dff35d07c" }
+base64 = "=0.22.1"
+bitwarden-crypto = { git = "https://github.com/bitwarden/sdk-internal.git", rev = "c5d5bba159bd222321f3ecfd90f5ae6192c2c8eb" }
 serde = "=1.0.219"
 serde_json = "=1.0.141"
 

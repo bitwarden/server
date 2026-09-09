@@ -49,6 +49,25 @@ public class BasePolicyRequirementFactoryTests
     }
 
     [Theory, AutoData]
+    public void DefaultExemptStatuses_DoesNotEnforceAgainstInvitedRevokedOrStaged(
+        [PolicyDetails(PolicyType.SingleOrg, userStatus: OrganizationUserStatusType.Invited)] PolicyDetails invitedPolicy,
+        [PolicyDetails(PolicyType.SingleOrg, userStatus: OrganizationUserStatusType.Accepted)] PolicyDetails acceptedPolicy,
+        [PolicyDetails(PolicyType.SingleOrg, userStatus: OrganizationUserStatusType.Confirmed)] PolicyDetails confirmedPolicy,
+        [PolicyDetails(PolicyType.SingleOrg, userStatus: OrganizationUserStatusType.Revoked)] PolicyDetails revokedPolicy,
+        [PolicyDetails(PolicyType.SingleOrg, userStatus: OrganizationUserStatusType.Staged)] PolicyDetails stagedPolicy)
+    {
+        // Uses the base-class default ExemptStatuses (Invited, Revoked, Staged) - the set used by most production factories.
+        var sut = new DefaultExemptionsPolicyRequirementFactory();
+
+        Assert.False(sut.Enforce(invitedPolicy));
+        Assert.False(sut.Enforce(revokedPolicy));
+        // Staged users are provisioned but not invited, so they must not be subject to policy.
+        Assert.False(sut.Enforce(stagedPolicy));
+        Assert.True(sut.Enforce(acceptedPolicy));
+        Assert.True(sut.Enforce(confirmedPolicy));
+    }
+
+    [Theory, AutoData]
     public void ExemptProviders_DoesNotEnforceAgainstProviders(
         [PolicyDetails(PolicyType.SingleOrg, isProvider: true)] PolicyDetails policy)
     {
@@ -83,6 +102,18 @@ public class BasePolicyRequirementFactoryTests
         protected override IEnumerable<OrganizationUserStatusType> ExemptStatuses => exemptStatuses;
 
         protected override bool ExemptProviders => exemptProviders;
+
+        public override TestPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+            => new() { Policies = policyDetails };
+    }
+
+    /// <summary>
+    /// A factory that keeps the base-class default exemptions (ExemptRoles, ExemptStatuses, ExemptProviders)
+    /// so tests can assert the out-of-the-box behavior.
+    /// </summary>
+    private class DefaultExemptionsPolicyRequirementFactory : BasePolicyRequirementFactory<TestPolicyRequirement>
+    {
+        public override PolicyType PolicyType => PolicyType.SingleOrg;
 
         public override TestPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
             => new() { Policies = policyDetails };

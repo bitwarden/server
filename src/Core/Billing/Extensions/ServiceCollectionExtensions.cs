@@ -1,6 +1,12 @@
 ﻿using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Services;
+using Bit.Core.Billing.Organizations.PlanMigration.Utilities;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Payment;
@@ -33,12 +39,16 @@ public static class ServiceCollectionExtensions
         services.AddLicenseOperations();
         services.AddPricingClient();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
+        services.AddTransient<IBusinessPlanRenewalNotificationService, BusinessPlanRenewalNotificationService>();
+        services.AddTransient<IBusinessPlanMigrationCoordinator, BusinessPlanMigrationCoordinator>();
         services.AddPaymentOperations();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddPremiumCommands();
         services.AddPremiumQueries();
         services.AddTransient<IGetOrganizationMetadataQuery, GetOrganizationMetadataQuery>();
         services.AddTransient<IGetOrganizationWarningsQuery, GetOrganizationWarningsQuery>();
+        services.AddTransient<IGetCohortAssignmentStateQuery, GetCohortAssignmentStateQuery>();
+        services.AddTransient<IExportCohortAssignmentsQuery, ExportCohortAssignmentsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
@@ -48,6 +58,14 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
+        services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
+        services.AddTransient<IGetAnnualUpgradeOfferQuery, GetAnnualUpgradeOfferQuery>();
+        services.AddTransient<IGetPendingAnnualUpgradeQuery, GetPendingAnnualUpgradeQuery>();
+        services.AddTransient<IRedeemAnnualUpgradeOfferCommand, RedeemAnnualUpgradeOfferCommand>();
+        services.AddTransient<IGetChurnMitigationOfferQuery, GetChurnMitigationOfferQuery>();
+        services.AddTransient<IRedeemChurnMitigationOfferCommand, RedeemChurnMitigationOfferCommand>();
+        services.AddScoped<ICohortBulkAssignmentCsvParser, CohortBulkAssignmentCsvParser>();
+        services.AddScoped<IBulkSyncCohortAssignmentsCommand, BulkSyncCohortAssignmentsCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)

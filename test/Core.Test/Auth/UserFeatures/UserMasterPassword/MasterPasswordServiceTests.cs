@@ -106,7 +106,7 @@ public class MasterPasswordServiceTests
         };
     }
 
-    private static UpdateExistingPasswordAndKdfData BuildUpdateExistingPasswordAndKdfData(User user,
+    private static UpdateExistingKdfConfigurationData BuildUpdateExistingKdfConfigurationData(User user,
         KdfSettings? newKdf = null, string? hint = null, bool validatePassword = false, bool refreshStamp = false)
     {
         var salt = user.GetMasterPasswordSalt();
@@ -117,7 +117,7 @@ public class MasterPasswordServiceTests
             Memory = 64,
             Parallelism = 4
         };
-        return new UpdateExistingPasswordAndKdfData
+        return new UpdateExistingKdfConfigurationData
         {
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
@@ -759,21 +759,22 @@ public class MasterPasswordServiceTests
             () => sutProvider.Sut.PrepareSetInitialOrUpdateExistingMasterPasswordAsync(user, data));
     }
 
-    // --- SaveUpdateExistingMasterPasswordAndKdf ---
+    // --- SaveUpdateExistingKdfConfiguration ---
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_Success(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_Success(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingPasswordAndKdfData(user, hint: "test-hint");
+        var data = BuildUpdateExistingKdfConfigurationData(user, hint: "test-hint");
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
+        var originalLastPasswordChangeDate = user.LastPasswordChangeDate;
 
-        var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        var result = await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
         var expectedTime = sutProvider.GetDependency<TimeProvider>().GetUtcNow().UtcDateTime;
 
@@ -782,15 +783,20 @@ public class MasterPasswordServiceTests
         Assert.Equal(data.MasterPasswordUnlock.Kdf.KdfType, user.Kdf);
         Assert.Equal(data.MasterPasswordUnlock.Kdf.Iterations, user.KdfIterations);
         Assert.Equal("test-hint", user.MasterPasswordHint);
-        Assert.Equal(expectedTime, user.LastPasswordChangeDate);
         Assert.Equal(expectedTime, user.LastKdfChangeDate);
+        // LastPasswordChangeDate marks a user's action to change the password;
+        // the fact that the hash-of-hash which is stored in the database changes
+        // as a result of KDF update does not affect a change to this date;
+        // doing so would confuse the data. LastKdfChangeDate neatly separates
+        // this concern.
+        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate);
         Assert.Equal(expectedTime, user.RevisionDate);
         Assert.Equal(user.RevisionDate, user.AccountRevisionDate);
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(user);
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_RotatesPbkdf2ToArgon2id(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_RotatesPbkdf2ToArgon2id(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -807,12 +813,12 @@ public class MasterPasswordServiceTests
             Memory = 64,
             Parallelism = 4
         };
-        var data = BuildUpdateExistingPasswordAndKdfData(user, newKdf: newKdf);
+        var data = BuildUpdateExistingKdfConfigurationData(user, newKdf: newKdf);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
 
-        var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        var result = await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
         Assert.True(result.IsT0);
         Assert.Equal(KdfType.Argon2id, user.Kdf);
@@ -822,7 +828,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_RotatesArgon2idToPbkdf2(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_RotatesArgon2idToPbkdf2(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -839,12 +845,12 @@ public class MasterPasswordServiceTests
             Memory = null,
             Parallelism = null
         };
-        var data = BuildUpdateExistingPasswordAndKdfData(user, newKdf: newKdf);
+        var data = BuildUpdateExistingKdfConfigurationData(user, newKdf: newKdf);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("new-hash");
 
-        var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        var result = await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
         Assert.True(result.IsT0);
         Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
@@ -854,7 +860,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_WhenValidationFails_ReturnsErrorsAndDoesNotPersist(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_WhenValidationFails_ReturnsErrorsAndDoesNotPersist(User user)
     {
         var error = new IdentityError { Code = "pwd-invalid", Description = "Password is too weak." };
         var validator = Substitute.For<IPasswordValidator<User>>();
@@ -866,9 +872,9 @@ public class MasterPasswordServiceTests
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = false;
 
-        var data = BuildUpdateExistingPasswordAndKdfData(user, validatePassword: true);
+        var data = BuildUpdateExistingKdfConfigurationData(user, validatePassword: true);
 
-        var result = await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        var result = await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
         Assert.True(result.IsT1);
         Assert.NotEmpty(result.AsT1);
@@ -876,7 +882,7 @@ public class MasterPasswordServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenSaltChanged(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenSaltChanged(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
@@ -890,7 +896,7 @@ public class MasterPasswordServiceTests
             Memory = 64,
             Parallelism = 4
         };
-        var data = new UpdateExistingPasswordAndKdfData
+        var data = new UpdateExistingKdfConfigurationData
         {
             MasterPasswordUnlock = new MasterPasswordUnlockData
             {
@@ -909,51 +915,51 @@ public class MasterPasswordServiceTests
         };
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data));
+            () => sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data));
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenNoExistingPassword(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenNoExistingPassword(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = null;
 
-        var data = BuildUpdateExistingPasswordAndKdfData(user);
+        var data = BuildUpdateExistingKdfConfigurationData(user);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data));
+            () => sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data));
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsWhenUserNotHydrated(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsWhenUserNotHydrated(User user)
     {
         var sutProvider = CreateSutProvider();
         user.Id = default;
         user.MasterPassword = "existing-hash";
 
-        var data = BuildUpdateExistingPasswordAndKdfData(user);
+        var data = BuildUpdateExistingKdfConfigurationData(user);
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data));
+            () => sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data));
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_ThrowsForKeyConnectorUser(User user)
+    public async Task SaveUpdateExistingKdfConfiguration_ThrowsForKeyConnectorUser(User user)
     {
         var sutProvider = CreateSutProvider();
         user.MasterPassword = "existing-hash";
         user.UsesKeyConnector = true;
 
-        var data = BuildUpdateExistingPasswordAndKdfData(user);
+        var data = BuildUpdateExistingKdfConfigurationData(user);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data));
+            () => sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data));
     }
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task SaveUpdateExistingMasterPasswordAndKdf_SecurityStampRotation_HonorsRefreshStampFlag(bool refreshStamp)
+    public async Task SaveUpdateExistingKdfConfiguration_SecurityStampRotation_HonorsRefreshStampFlag(bool refreshStamp)
     {
         var sutProvider = CreateSutProvider();
         var user = new User
@@ -967,12 +973,12 @@ public class MasterPasswordServiceTests
             KdfIterations = 600000,
             SecurityStamp = "original-stamp"
         };
-        var data = BuildUpdateExistingPasswordAndKdfData(user, refreshStamp: refreshStamp);
+        var data = BuildUpdateExistingKdfConfigurationData(user, refreshStamp: refreshStamp);
         sutProvider.GetDependency<IPasswordHasher<User>>()
             .HashPassword(Arg.Any<User>(), Arg.Any<string>())
             .Returns("hash");
 
-        await sutProvider.Sut.SaveUpdateExistingMasterPasswordAndKdfAsync(user, data);
+        await sutProvider.Sut.SaveUpdateExistingKdfConfigurationAsync(user, data);
 
         Assert.Equal(refreshStamp, user.SecurityStamp != "original-stamp");
     }
@@ -1179,4 +1185,105 @@ public class MasterPasswordServiceTests
         }
     }
 
+    // --- PrepareClearMasterPassword ---
+
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_HydratedUser_ClearsCredentialAndHintAndUpdatesRevisionDates(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        user.MasterPasswordHint = "existing-hint";
+        var originalLastPasswordChangeDate = user.LastPasswordChangeDate;
+
+        var result = sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        var expectedTime = sutProvider.GetDependency<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        Assert.Same(user, result);
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
+        Assert.Equal(expectedTime, user.RevisionDate);
+        Assert.Equal(expectedTime, user.AccountRevisionDate);
+        Assert.Equal(originalLastPasswordChangeDate, user.LastPasswordChangeDate);
+    }
+
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_ThrowsWhenUserNotHydrated(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.Id = default;
+
+        Assert.Throws<ArgumentException>(
+            () => sutProvider.Sut.PrepareClearMasterPassword(user));
+    }
+
+    /// <summary>
+    /// The Key Connector conversion flow depends on these surviving — the caller may re-wrap
+    /// <see cref="User.Key"/> and must not lose the other user state when the credential is cleared.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_PreservesUnrelatedUserState(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        user.Key = "wrapped-user-key";
+        user.Kdf = KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+
+        sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        Assert.Equal("wrapped-user-key", user.Key);
+        Assert.Equal(KdfType.Argon2id, user.Kdf);
+        Assert.Equal(3, user.KdfIterations);
+        Assert.Equal(64, user.KdfMemory);
+        Assert.Equal(4, user.KdfParallelism);
+    }
+
+    /// <summary>
+    /// Unlike every other write path in this service, <c>PrepareClearMasterPassword</c> takes no
+    /// <c>RefreshStamp</c> flag — Key Connector conversion preserves the user-key capability so
+    /// sessions stay valid. Locking this in stops a future contributor from quietly adding
+    /// rotation without revisiting the contract.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_DoesNotRotateSecurityStamp(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = "existing-hash";
+        user.MasterPasswordSalt = "existing-salt";
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        Assert.Equal(originalStamp, user.SecurityStamp);
+    }
+
+    /// <summary>
+    /// The XML doc claims no constraints on the user's current master password state. Calling
+    /// on an already-cleared user must succeed and still bump revision dates.
+    /// </summary>
+    [Theory, BitAutoData]
+    public void PrepareClearMasterPassword_AlreadyCleared_SucceedsAndUpdatesRevisionDates(User user)
+    {
+        var sutProvider = CreateSutProvider();
+        user.MasterPassword = null;
+        user.MasterPasswordSalt = null;
+        user.MasterPasswordHint = null;
+
+        var result = sutProvider.Sut.PrepareClearMasterPassword(user);
+
+        var expectedTime = sutProvider.GetDependency<TimeProvider>().GetUtcNow().UtcDateTime;
+
+        Assert.Same(user, result);
+        Assert.Null(user.MasterPassword);
+        Assert.Null(user.MasterPasswordSalt);
+        Assert.Null(user.MasterPasswordHint);
+        Assert.Equal(expectedTime, user.RevisionDate);
+        Assert.Equal(expectedTime, user.AccountRevisionDate);
+    }
 }

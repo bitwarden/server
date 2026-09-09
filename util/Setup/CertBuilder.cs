@@ -44,7 +44,7 @@ public class CertBuilder
                     _context.Config.Ssl = true;
                     _context.Install.Trusted = false;
                     _context.Install.SelfSignedCert = true;
-                    var opensslConfig = File.ReadAllText("/usr/lib/ssl/openssl.cnf") +
+                    var opensslConfig = File.ReadAllText("/etc/ssl/openssl.cnf") +
                         $"\n[SAN]\nsubjectAltName=DNS:{_context.Install.Domain}\nbasicConstraints=CA:true";
                     var opensslConfigPath = Path.GetTempFileName();
 

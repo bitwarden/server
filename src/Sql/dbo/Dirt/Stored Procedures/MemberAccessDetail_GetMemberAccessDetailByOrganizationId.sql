@@ -30,7 +30,7 @@ IF @OrganizationId IS NULL
         INNER JOIN dbo.Collection C ON C.Id = CU.CollectionId and C.OrganizationId = @OrganizationId
         INNER JOIN dbo.CollectionCipher CC ON CC.CollectionId = C.Id
         INNER JOIN dbo.Cipher Cipher ON Cipher.Id = CC.CipherId AND Cipher.OrganizationId = @OrganizationId
-    WHERE OU.Status IN (0,1,2) -- Invited, Accepted and Confirmed Users
+    WHERE OU.Status IN (0,1,2,3) -- Invited, Accepted, Confirmed, and Staged Users
         AND Cipher.DeletedDate IS NULL
 UNION ALL
     -- Group-based collection permissions
@@ -60,7 +60,7 @@ UNION ALL
         INNER JOIN dbo.Collection C ON C.Id = CG.CollectionId AND C.OrganizationId = @OrganizationId
         INNER JOIN dbo.CollectionCipher CC ON CC.CollectionId = C.Id
         INNER JOIN dbo.Cipher Cipher ON Cipher.Id = CC.CipherId and Cipher.OrganizationId = @OrganizationId
-    WHERE OU.Status IN (0,1,2)  -- Invited, Accepted and Confirmed Users
+    WHERE OU.Status IN (0,1,2,3)  -- Invited, Accepted, Confirmed, and Staged Users
         AND Cipher.DeletedDate IS NULL
 UNION ALL
     -- Users without collection access (invited users)
@@ -84,7 +84,7 @@ UNION ALL
     FROM dbo.OrganizationUser OU
             LEFT JOIN dbo.[User] U ON U.Id = OU.UserId
         INNER JOIN dbo.Organization O ON O.Id = OU.OrganizationId AND O.Id = @OrganizationId AND O.Enabled = 1
-    WHERE OU.Status IN (0,1,2)  -- Invited, Accepted and Confirmed Users
+    WHERE OU.Status IN (0,1,2,3)  -- Invited, Accepted, Confirmed, and Staged Users
         AND OU.Id not in (
             select OU1.Id from dbo.OrganizationUser OU1
                 inner join dbo.CollectionUser CU1 on CU1.OrganizationUserId = OU1.Id

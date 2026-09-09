@@ -14,7 +14,7 @@ public class OrganizationTwoFactorDuoRequestModelTests
     {
         // Arrange
         var existingOrg = new Organization();
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             ClientId = "clientId",
             ClientSecret = "clientSecret",
@@ -41,7 +41,7 @@ public class OrganizationTwoFactorDuoRequestModelTests
         {
             { TwoFactorProviderType.OrganizationDuo, new TwoFactorProvider() }
         });
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             ClientId = "newClientId",
             ClientSecret = "newClientSecret",

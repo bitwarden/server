@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Pipeline;
 
 namespace Bit.Seeder.Steps;
@@ -6,7 +7,8 @@ namespace Bit.Seeder.Steps;
 /// <summary>
 /// Creates a standalone user with no organization, registering them as the context owner.
 /// </summary>
-internal sealed class CreateIndividualUserStep(string email, bool premium, short maxStorageGb) : IStep
+internal sealed class CreateIndividualUserStep(
+    string email, bool premium, short maxStorageGb, bool emailVerified, DateTime? creationDate = null) : IStep
 {
     public void Execute(SeederContext context)
     {
@@ -14,18 +16,18 @@ internal sealed class CreateIndividualUserStep(string email, bool premium, short
         var password = context.GetPassword();
 
         var (userEntity, keys) = UserSeeder.Create(
-            email,
+            new UserSeed
+            {
+                Email = email,
+                EmailVerified = emailVerified,
+                Premium = premium,
+                MaxStorageGb = maxStorageGb > 0 ? Math.Min(maxStorageGb, (short)5) : null,
+                Password = password,
+                KdfIterations = kdfIterations,
+                CreationDate = creationDate
+            },
             context.GetPasswordHasher(),
-            context.GetMangler(),
-            premium: premium,
-            maxStorageGb: maxStorageGb > 0 ? Math.Min(maxStorageGb, (short)5) : null,
-            password: password,
-            kdfIterations: kdfIterations);
-
-        if (premium)
-        {
-            userEntity.PremiumExpirationDate = DateTime.UtcNow.AddYears(1);
-        }
+            context.GetMangler());
 
         context.Users.Add(userEntity);
         context.Owner = userEntity;

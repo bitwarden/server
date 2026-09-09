@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Settings;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace Bit.SeederUtility.Configuration;
 
@@ -14,18 +15,22 @@ public static class GlobalSettingsFactory
 
     private static GlobalSettings LoadGlobalSettings()
     {
-        var configBuilder = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
-            .AddUserSecrets("bitwarden-Api")
-            .AddEnvironmentVariables();
+        // The generic host only reads DOTNET_ENVIRONMENT, while the rest of the repo keys off
+        // ASPNETCORE_ENVIRONMENT; honor both. The seeder is a local development tool, so fall
+        // back to Development rather than Production so appsettings.Development.json applies.
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                          ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                          ?? Environments.Development;
 
-        var configuration = configBuilder.Build();
-        var globalSettingsSection = configuration.GetSection("globalSettings");
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            // Resolve appsettings files next to the binary, not the caller's working directory.
+            ContentRootPath = AppContext.BaseDirectory,
+            EnvironmentName = environment,
+        });
 
         var settings = new GlobalSettings();
-        globalSettingsSection.Bind(settings);
+        builder.Configuration.GetSection("globalSettings").Bind(settings);
 
         return settings;
     }

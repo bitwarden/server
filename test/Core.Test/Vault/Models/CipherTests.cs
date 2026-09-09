@@ -23,4 +23,30 @@ public class CipherTests
     {
         Assert.Equal(JsonSerializer.Serialize(cipher), JsonSerializer.Serialize(cipher.Clone()));
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("{\"Name\":\"x\"}")]
+    [InlineData("   { \"Name\": \"x\" }")]
+    [InlineData("2.iv|ct|mac")]
+    [InlineData("plain string")]
+    [InlineData("   2.iv|ct|mac")]
+    [InlineData("{\"other_key\":1}")]
+    [InlineData("\"format_version\"")]
+    public void IsDataBlobEncrypted_LegacyEmptyOrInvalid_ReturnsFalse(string? data)
+    {
+        var cipher = new Cipher { Data = data! };
+        Assert.False(cipher.IsDataBlobEncrypted());
+    }
+
+    [Theory]
+    [InlineData("{\"format_version\":1,\"wrapped_cek\":\"abc\",\"envelope\":\"def\"}")]
+    [InlineData("   { \"format_version\": 1, \"wrapped_cek\": \"abc\", \"envelope\": \"def\" }")]
+    public void IsDataBlobEncrypted_BlobData_ReturnsTrue(string data)
+    {
+        var cipher = new Cipher { Data = data };
+        Assert.True(cipher.IsDataBlobEncrypted());
+    }
 }

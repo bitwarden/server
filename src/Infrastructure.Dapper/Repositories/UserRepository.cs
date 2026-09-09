@@ -4,8 +4,8 @@ using Bit.Core;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -241,7 +241,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(
         User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
@@ -265,6 +265,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     user.AccountRevisionDate;
                 cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
                     user.LastKeyRotationDate;
+
+                // User_UpdateKeys assigns UserKeyId unconditionally, so the parameter has to be
+                // supplied even when it is null or a rotation would clear a key id it should keep.
+                cmd.Parameters.Add("@UserKeyId", SqlDbType.VarChar).Value =
+                    (object?)user.UserKeyId ?? DBNull.Value;
+
                 cmd.ExecuteNonQuery();
             }
 
@@ -285,7 +291,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public async Task UpdateUserKeyAndEncryptedDataV2Async(
         User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
@@ -447,9 +453,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     Key = protectedKeyConnectorWrappedUserKey,
                     // Key Connector does not use KDF, so we set some defaults
                     Kdf = KdfType.Argon2id,
-                    KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
-                    KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
-                    KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+                    KdfIterations = KdfConstants.ARGON2_ITERATIONS.Default,
+                    KdfMemory = KdfConstants.ARGON2_MEMORY.Default,
+                    KdfParallelism = KdfConstants.ARGON2_PARALLELISM.Default,
                     UsesKeyConnector = true,
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp
@@ -540,6 +546,19 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     RevisionDate = timestamp,
                     AccountRevisionDate = timestamp,
                 },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection!.ExecuteAsync(
+                "[dbo].[User_SetUserKeyId]",
+                new { Id = userId, UserKeyId = userKeyId.ToString(), RevisionDate = DateTime.UtcNow },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
         };

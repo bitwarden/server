@@ -1,7 +1,7 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
@@ -108,7 +108,7 @@ public class GetCipherPermissionsForUserQueryTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(org);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
 
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(org.Id).Returns(new OrganizationAbility
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(org.Id).Returns(new OrganizationAbility
         {
             AllowAdminAccessToAllCollectionItems = true
         });

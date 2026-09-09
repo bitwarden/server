@@ -48,9 +48,7 @@ public class Startup
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
             endpoints.MapGet("/now",
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
-            endpoints.MapGet("/version",
-                async context => await context.Response.WriteAsJsonAsync(AssemblyHelpers.GetVersion()));
-
+            endpoints.MapVersionEndpoint();
         });
     }
 }

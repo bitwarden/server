@@ -171,9 +171,9 @@ internal class MasterPasswordService(
         return user;
     }
 
-    public async Task<OneOf<User, IdentityError[]>> SaveUpdateExistingMasterPasswordAndKdfAsync(
+    public async Task<OneOf<User, IdentityError[]>> SaveUpdateExistingKdfConfigurationAsync(
         User user,
-        UpdateExistingPasswordAndKdfData updateExistingData)
+        UpdateExistingKdfConfigurationData updateExistingData)
     {
         EnsureUserIsHydrated(user);
         updateExistingData.ValidateDataForUser(user);
@@ -199,9 +199,10 @@ internal class MasterPasswordService(
         // Always override the master password hint, even if it's null
         user.MasterPasswordHint = updateExistingData.MasterPasswordHint;
 
-        // Update time markers on the user
+        // Update time markers on the user.
+        // LastPasswordChangeDate is intentionally not set: KDF rotation re-derives the authentication
+        // hash from the same password using new KDF parameters — the user's password has not changed.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        user.LastPasswordChangeDate = now;
         user.LastKdfChangeDate = now;
         user.RevisionDate = user.AccountRevisionDate = now;
 
@@ -224,6 +225,20 @@ internal class MasterPasswordService(
         await _userRepository.ReplaceAsync(result.AsT0);
 
         return result.AsT0;
+    }
+
+    public User PrepareClearMasterPassword(User user)
+    {
+        EnsureUserIsHydrated(user);
+
+        user.MasterPassword = null;
+        user.MasterPasswordSalt = null;
+        user.MasterPasswordHint = null;
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        user.RevisionDate = user.AccountRevisionDate = now;
+
+        return user;
     }
 
     /// <summary>

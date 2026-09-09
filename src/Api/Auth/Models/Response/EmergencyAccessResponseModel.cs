@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Auth.Models.Response;
@@ -129,15 +130,19 @@ public class EmergencyAccessViewResponseModel : ResponseModel
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
         IEnumerable<CipherDetails> ciphers,
-        User user)
+        User user,
+        FullCipherAccess fullCipherAccess)
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
+        // Emergency access only retrieves personal ciphers, which are never leasing-gated, so full data
+        // is released (organizationAbility is not needed for personal ciphers).
         Ciphers = ciphers.Select(cipher =>
-            new CipherResponseModel(
+            new FullCipherResponseModel(
+                fullCipherAccess,
                 cipher,
                 user,
-                null, // Emergency access only retrieves personal ciphers so organizationAbility is not needed
+                null,
                 globalSettings));
     }
 

@@ -212,6 +212,197 @@ public class GroupsControllerPatchTests : IClassFixture<ScimApplicationFactory>,
     }
 
     [Fact]
+    public async Task Patch_ReplaceExternalIdFromPath_Success()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        var newExternalId = "Z";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal(newExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_ReplaceExternalIdFromValueObject_Success()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        var newExternalId = "Z";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal(newExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_AddExternalIdFromPath_Success()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        var newExternalId = "Z";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{newExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal(newExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_AddExternalIdFromValueObject_Success()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        var newExternalId = "Z";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Value = JsonDocument.Parse($"{{\"externalId\":\"{newExternalId}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal(newExternalId, group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_AddExternalIdFromPath_Duplicate_Returns409()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        // TestGroupId2 already has ExternalId "B"
+        var duplicateExternalId = "B";
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{duplicateExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal("A", group.ExternalId);
+    }
+
+    [Fact]
+    public async Task Patch_AddExternalIdFromPath_TooLong_Returns400()
+    {
+        // Arrange
+        var organizationId = ScimApplicationFactory.TestOrganizationId1;
+        var groupId = ScimApplicationFactory.TestGroupId1;
+        var tooLongExternalId = new string('a', 301);
+        var inputModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>()
+            {
+                new ScimPatchModel.OperationModel
+                {
+                    Op = "add",
+                    Path = "externalId",
+                    Value = JsonDocument.Parse($"\"{tooLongExternalId}\"").RootElement
+                }
+            },
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+        };
+
+        // Act
+        var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
+
+        // Assert
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+
+        var databaseContext = _factory.GetDatabaseContext();
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
+        Assert.Equal("A", group.ExternalId);
+    }
+
+    [Fact]
     public async Task Patch_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;

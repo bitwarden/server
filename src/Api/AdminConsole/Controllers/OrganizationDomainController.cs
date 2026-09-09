@@ -48,7 +48,18 @@ public class OrganizationDomainController : Controller
     [HttpGet("{orgId}/domain")]
     public async Task<ListResponseModel<OrganizationDomainResponseModel>> GetAll(Guid orgId)
     {
-        await ValidateOrganizationAccessAsync(orgId);
+        // The Send Policy edit dialog will call this endpoint to read all claimed domains
+        // The validation used elsewhere in this controller gates on ManageSso policy alone
+        if (!await _currentContext.ManageSso(orgId) && !await _currentContext.ManagePolicies(orgId))
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
 
         var domains = await _getOrganizationDomainByOrganizationIdQuery
             .GetDomainsByOrganizationIdAsync(orgId);

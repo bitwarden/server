@@ -12,12 +12,10 @@ using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
@@ -159,24 +157,19 @@ public class ProviderBillingControllerTests
     #region GenerateClientInvoiceReportAsync
 
     [Theory, BitAutoData]
-    public async Task GenerateClientInvoiceReportAsync_NullReportContent_ServerError(
+    public async Task GenerateClientInvoiceReportAsync_NullReportContent_NotFound(
         Provider provider,
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
         ConfigureStableProviderAdminInputs(provider, sutProvider);
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .ReturnsNull();
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
 
-        Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-
-        var response = (JsonHttpResult<ErrorResponseModel>)result;
-
-        Assert.Equal(StatusCodes.Status500InternalServerError, response.StatusCode);
-        Assert.Equal("We had a problem generating your invoice CSV. Please contact support.", response.Value.Message);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -189,7 +182,7 @@ public class ProviderBillingControllerTests
 
         var reportContent = "Report"u8.ToArray();
 
-        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
+        sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(provider.Id, invoiceId)
             .Returns(reportContent);
 
         var result = await sutProvider.Sut.GenerateClientInvoiceReportAsync(provider.Id, invoiceId);
@@ -280,7 +273,7 @@ public class ProviderBillingControllerTests
                     State = "NY"
                 },
                 Balance = -100000,
-                Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 10 } } },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
             },
             Items = new StripeList<SubscriptionItem>
@@ -304,7 +297,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         var daysInLastMonth = DateTime.DaysInMonth(oneMonthAgo.Year, oneMonthAgo.Month);
@@ -366,7 +359,7 @@ public class ProviderBillingControllerTests
 
         Assert.Equal(subscription.Status, response.Status);
         Assert.Equal(subscription.GetCurrentPeriodEnd(), response.CurrentPeriodEndDate);
-        Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
+        Assert.Equal(subscription.Customer!.Discount!.Source?.Coupon?.PercentOff, response.DiscountPercentage);
         Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
         var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
@@ -439,7 +432,7 @@ public class ProviderBillingControllerTests
             },
             Discounts =
             [
-                new Discount { Coupon = new Coupon { PercentOff = 15 } } // Subscription-level discount
+                new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 15 } } } // Subscription-level discount
             ],
             Items = new StripeList<SubscriptionItem>
             {
@@ -462,7 +455,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(

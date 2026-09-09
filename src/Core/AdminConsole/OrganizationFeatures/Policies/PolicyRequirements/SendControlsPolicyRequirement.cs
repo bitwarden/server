@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Tools.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
@@ -19,6 +20,26 @@ public class SendControlsPolicyRequirement : IPolicyRequirement
     /// Indicates whether the user is prohibited from hiding their email from the recipient of a Send.
     /// </summary>
     public bool DisableHideEmail { get; init; }
+
+    /// <summary>
+    /// Indicates the access control that a user must specify on their Sends
+    /// </summary>
+    public SendWhoCanAccessType? WhoCanAccess { get; init; }
+
+    /// <summary>
+    /// Indicates the domains the emails of an email-protected Send must use
+    /// </summary>
+    public string? AllowedDomains { get; init; }
+
+    /// <summary>
+    /// Indicates the types of Send that can be created
+    /// </summary>
+    public SendType[]? AllowedSendTypes { get; init; }
+
+    /// <summary>
+    /// Indicates the deletion date interval that Sends must use
+    /// </summary>
+    public int? DeletionHours { get; init; }
 }
 
 public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory<SendControlsPolicyRequirement>
@@ -35,6 +56,10 @@ public class SendControlsPolicyRequirementFactory : BasePolicyRequirementFactory
                 {
                     DisableSend = result.DisableSend || data.DisableSend,
                     DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail,
+                    WhoCanAccess = result.WhoCanAccess ?? data.WhoCanAccess,
+                    AllowedDomains = result.AllowedDomains ?? data.AllowedDomains,
+                    AllowedSendTypes = result.AllowedSendTypes ?? data.AllowedSendTypes,
+                    DeletionHours = result.DeletionHours ?? data.DeletionHours,
                 });
     }
 }

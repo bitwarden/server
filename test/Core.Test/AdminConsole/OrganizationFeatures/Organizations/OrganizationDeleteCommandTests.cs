@@ -1,14 +1,16 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Services;
@@ -28,14 +30,18 @@ public class OrganizationDeleteCommandTests
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
         var cipherService = sutProvider.GetDependency<ICipherService>();
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await organizationRepository.Received(1).DeleteAsync(organization);
-        await applicationCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
+        // The deletion and the events-cleanup task enqueue happen atomically in one repository call.
+        await organizationRepository.Received(1).DeleteAndCreateDeleteTasksAsync(
+            organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
+        await organizationRepository.DidNotReceive().DeleteAsync(organization);
+        await organizationAbilityCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -46,76 +52,41 @@ public class OrganizationDeleteCommandTests
         ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
         var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
 
         ssoConfigRepository.GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organization));
 
-        Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
+        Assert.Contains(new CannotDeleteOrganizationWithKeyConnectorError().Message, exception.Message);
 
-        await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
-        await applicationCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
+        await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAndCreateDeleteTasksAsync(default, default);
+        await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagEnabled_CallsSubscriberService(
+    public async Task Delete_CallsSubscriberService(
         Organization organization,
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         organization.GatewaySubscriptionId = "sub_123";
         organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         await sutProvider.Sut.DeleteAsync(organization);
 
         await sutProvider.GetDependency<ISubscriberService>()
             .Received(1)
             .CancelSubscription(organization, cancelImmediately: false);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscriptionAsync(default, default);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagDisabled_CallsLegacyPaymentService(
+    public async Task Delete_HandlesBillingException(
         Organization organization,
         SutProvider<OrganizationDeleteCommand> sutProvider)
     {
         organization.GatewaySubscriptionId = "sub_123";
         organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        await sutProvider.Sut.DeleteAsync(organization);
-
-        await sutProvider.GetDependency<IStripePaymentService>()
-            .Received(1)
-            .CancelSubscriptionAsync(organization, true);
-
-        await sutProvider.GetDependency<ISubscriberService>()
-            .DidNotReceiveWithAnyArgs()
-            .CancelSubscription(default, default, default);
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagEnabled_HandlesBillingException(
-        Organization organization,
-        SutProvider<OrganizationDeleteCommand> sutProvider)
-    {
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(true);
 
         var billingException = new BillingException();
         sutProvider.GetDependency<ISubscriberService>()
@@ -124,30 +95,9 @@ public class OrganizationDeleteCommandTests
 
         await sutProvider.Sut.DeleteAsync(organization);
 
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
-
-    }
-
-    [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task Delete_WhenFlagDisabled_HandlesBillingException(
-        Organization organization,
-        SutProvider<OrganizationDeleteCommand> sutProvider)
-    {
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.ExpirationDate = DateTime.UtcNow.AddDays(10);
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal)
-            .Returns(false);
-
-        var billingException = new BillingException();
-        sutProvider.GetDependency<IStripePaymentService>()
-            .CancelSubscriptionAsync(organization, Arg.Any<bool>())
-            .ThrowsAsync(billingException);
-
-        await sutProvider.Sut.DeleteAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -165,7 +115,7 @@ public class OrganizationDeleteCommandTests
             .Returns(Task.CompletedTask)
             .AndDoes(_ => callOrder.Add("file"));
         sutProvider.GetDependency<IOrganizationRepository>()
-            .DeleteAsync(organization)
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Any<IEnumerable<OrganizationDeleteTaskType>>())
             .Returns(Task.CompletedTask)
             .AndDoes(_ => callOrder.Add("db"));
 
@@ -174,7 +124,8 @@ public class OrganizationDeleteCommandTests
         await sutProvider.GetDependency<ISendFileStorageService>()
             .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
         await sutProvider.GetDependency<IOrganizationRepository>()
-            .Received(1).DeleteAsync(organization);
+            .Received(1).DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
         Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }

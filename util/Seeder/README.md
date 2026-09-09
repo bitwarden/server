@@ -13,6 +13,19 @@ A class library for generating and inserting properly encrypted test data into B
 
 The "View" suffix always denotes plaintext. No suffix means encrypted.
 
+### Encryption Schemes
+
+Seeded ciphers and attachments reproduce Bitwarden's historical encryption schemes across two independent axes, so clients exercise every decrypt branch. Fixtures select them with `cipherEncryption` and `attachmentVersion`.
+
+| Axis              | Fixture key         | Values                            | Meaning                                                                                                          |
+| ----------------- | ------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Cipher encryption | `cipherEncryption`  | `userKey` (default) · `cipherKey` | `Cipher.Key` null, fields under the vault key · per-cipher key wrapped by the vault key                          |
+| Attachment scheme | `attachmentVersion` | `v0` · `v1` · `v2`                | no attachment key (bytes+name under vault key) · attachment key wrapped by vault key · wrapped by the cipher key |
+
+**Invariant:** a cipher and its attachments use the same strategy — a `v2` attachment requires a `cipherKey` host; `v0`/`v1` require a `userKey` host.
+
+> **Not the same as account "Encryption V1/V2".** The attachment `v0/v1/v2` axis is about attachment key wrapping. Everything the seeder emits is Encryption-V1 (AES-256-CBC-HMAC, type-2 EncString) — there is no XChaCha20/COSE (Encryption V2) path. See the [cryptography guide](https://contributing.bitwarden.com/architecture/cryptography/crypto-guide).
+
 ### Data Structure Differences
 
 **SDK Structure (nested):**
@@ -39,7 +52,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** New bulk operations, especially with presets. Provides ultimate flexibility.
 
-**Flow**: Preset JSON → Loader → Builder → Steps → Executor → Context → BulkCommitter
+**Flow**: Preset JSON → Loader → Builder → Steps (sync or async) → Executor → Context → BulkCommitter → post-commit steps
 
 **Why this architecture wins**:
 
@@ -47,8 +60,8 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Mix & Match**: Fixtures + generation in one preset
 - **Extensible**: Add entity types via new step implementations
 
-**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
-**Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → FolderAssignments → FavoriteAssignments
+**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Files**: `Pipeline/` folder
 
@@ -81,10 +94,10 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Use BulkCopy for performance optimization
 - Interact with database directly
 - Compose Factories for individual entity creation
-- **SHALL have a `Seed()` method** that executes the complete recipe
+- **SHALL have a single public entry point** that executes the complete recipe — `Seed()` if synchronous, `SeedAsync()` if it returns a Task
 - Use method parameters (with defaults) for variations, not separate methods
 
-**Naming:** `{DomainConcept}Recipe` with a `Seed()` method
+**Naming:** `{DomainConcept}Recipe`, with `Seed()` when synchronous or `SeedAsync()` when async. Sharing the `SeedAsync()` name with Scenes is fine — the type suffix distinguishes the patterns.
 
 #### Models
 

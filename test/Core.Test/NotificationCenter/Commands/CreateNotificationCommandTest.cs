@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using System.Security.Claims;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
@@ -43,10 +45,10 @@ public class CreateNotificationCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(notification));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -64,10 +66,7 @@ public class CreateNotificationCommandTest
         Assert.Equal(notification.CreationDate, notification.RevisionDate);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushNotificationAsync(newNotification);
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.Notification && n.Payload.Id == newNotification.Id));
     }
 
     [Theory]
@@ -82,6 +81,6 @@ public class CreateNotificationCommandTest
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(newNotification);
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.Infrastructure.EntityFramework.Converters;
+
 public class DataProtectionConverter : ValueConverter<string, string>
 {
     public DataProtectionConverter(IDataProtector dataProtector) :

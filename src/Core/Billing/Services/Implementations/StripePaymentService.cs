@@ -8,8 +8,11 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -87,7 +90,7 @@ public class StripePaymentService : IStripePaymentService
         SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
-        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids"] };
+        var subGetOptions = new SubscriptionGetOptions { Expand = ["customer.tax", "customer.tax_ids", "customer.discount.source.coupon"] };
         var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId, subGetOptions);
         if (sub == null)
         {
@@ -100,7 +103,7 @@ public class StripePaymentService : IStripePaymentService
                 "You do not have an active subscription. Reinstate your subscription to make changes.");
         }
 
-        var existingCoupon = sub.Customer.Discount?.Coupon?.Id;
+        var existingCoupon = sub.Customer.Discount?.Source?.Coupon?.Id;
 
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
@@ -123,16 +126,6 @@ public class StripePaymentService : IStripePaymentService
 
         if (subscriptionUpdate is CompleteSubscriptionUpdate)
         {
-            var determinedTaxExemptStatus = TaxHelpers.DetermineTaxExemptStatus(sub.Customer.Address?.Country, sub.Customer.TaxExempt);
-            switch (sub.Customer)
-            {
-                case { Address.Country: not null and not "", TaxExempt: var customerTaxExemptStatus }
-                    when determinedTaxExemptStatus != customerTaxExemptStatus:
-                    await _stripeAdapter.UpdateCustomerAsync(sub.Customer.Id,
-                        new CustomerUpdateOptions { TaxExempt = determinedTaxExemptStatus });
-                    break;
-            }
-
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
@@ -208,9 +201,10 @@ public class StripePaymentService : IStripePaymentService
                     });
             }
 
-            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId);
+            var customer = await _stripeAdapter.GetCustomerAsync(sub.CustomerId,
+                new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
-            var newCoupon = customer.Discount?.Coupon?.Id;
+            var newCoupon = customer.Discount?.Source?.Coupon?.Id;
 
             if (!string.IsNullOrEmpty(existingCoupon) && string.IsNullOrEmpty(newCoupon))
             {
@@ -502,83 +496,6 @@ public class StripePaymentService : IStripePaymentService
         return paymentIntentClientSecret;
     }
 
-    public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if (sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
-            sub.Status == "incomplete_expired")
-        {
-            // Already canceled
-            return;
-        }
-
-        try
-        {
-            var canceledSub = endOfPeriod
-                ? await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-                    new SubscriptionUpdateOptions { CancelAtPeriodEnd = true })
-                : await _stripeAdapter.CancelSubscriptionAsync(sub.Id, new SubscriptionCancelOptions());
-            if (!canceledSub.CanceledAt.HasValue)
-            {
-                throw new GatewayException("Unable to cancel subscription.");
-            }
-        }
-        catch (StripeException e)
-        {
-            if (e.Message != $"No such subscription: {subscriber.GatewaySubscriptionId}")
-            {
-                throw;
-            }
-        }
-    }
-
-    public async Task ReinstateSubscriptionAsync(ISubscriber subscriber)
-    {
-        if (subscriber == null)
-        {
-            throw new ArgumentNullException(nameof(subscriber));
-        }
-
-        if (string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
-        {
-            throw new GatewayException("No subscription.");
-        }
-
-        var sub = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
-        if (sub == null)
-        {
-            throw new GatewayException("Subscription was not found.");
-        }
-
-        if ((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
-            !sub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Subscription is not marked for cancellation.");
-        }
-
-        var updatedSub = await _stripeAdapter.UpdateSubscriptionAsync(sub.Id,
-            new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
-        if (updatedSub.CanceledAt.HasValue)
-        {
-            throw new GatewayException("Unable to reinstate subscription.");
-        }
-    }
-
     public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
     {
         Customer customer = null;
@@ -638,7 +555,11 @@ public class StripePaymentService : IStripePaymentService
         }
 
         var subscription = await _stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["customer.discount.coupon.applies_to", "discounts.coupon.applies_to", "test_clock"] });
+            // `customer.discount.source.coupon` stops at 4 levels: appending `.applies_to`
+            // would put it at 5, over Stripe's 4-level expand cap (the 2025-09-30.clover
+            // change wrapped Coupon under Discount.Source). AppliesTo is filled in by
+            // EnsureDiscountCouponAppliesToAsync's per-coupon refetch below.
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon.applies_to", "test_clock"] });
 
         if (subscription == null)
         {
@@ -658,10 +579,11 @@ public class StripePaymentService : IStripePaymentService
 
         if (discount != null)
         {
+            await EnsureDiscountCouponAppliesToAsync(discount);
             subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(discount);
         }
 
-        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo);
+        await ApplySchedulePhase2DataAsync(subscription, subscriptionInfo, subscriber);
 
         var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(subscription);
 
@@ -681,7 +603,7 @@ public class StripePaymentService : IStripePaymentService
             var invoiceCreatePreviewOptions = new InvoiceCreatePreviewOptions
             {
                 Customer = subscriber.GatewayCustomerId,
-                Subscription = subscriber.GatewaySubscriptionId
+                Subscription = subscriber.GatewaySubscriptionId,
             };
 
             var upcomingInvoice = await _stripeAdapter.CreateInvoicePreviewAsync(invoiceCreatePreviewOptions);
@@ -704,7 +626,8 @@ public class StripePaymentService : IStripePaymentService
         return subscriptionInfo;
     }
 
-    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo)
+    private async Task ApplySchedulePhase2DataAsync(Subscription subscription, SubscriptionInfo subscriptionInfo,
+        ISubscriber subscriber)
     {
         if (string.IsNullOrEmpty(subscription.ScheduleId))
         {
@@ -716,10 +639,23 @@ public class StripePaymentService : IStripePaymentService
             var schedule = await _stripeAdapter.GetSubscriptionScheduleAsync(subscription.ScheduleId,
                 new SubscriptionScheduleGetOptions
                 {
+                    // `SubscriptionSchedulePhaseDiscount` exposes `Coupon` directly (not
+                    // wrapped under `Source` like the 2025-09-30.clover Discount refactor).
+                    // Expanding through `phases.discounts.coupon.applies_to` fits Stripe's
+                    // 4-level cap and includes applies_to inline; no separate coupon
+                    // refetch is needed for the phase-2 branch.
                     Expand = ["phases.discounts.coupon.applies_to", "phases.items.price"]
                 });
 
             if (schedule.Status != StripeConstants.SubscriptionScheduleStatus.Active || schedule.Phases.Count < 2)
+            {
+                return;
+            }
+
+            // An annual-upgrade phase 2 prices at a different interval, so its amounts don't belong
+            // on a still-monthly line item.
+            if (SubscriptionScheduleOwnershipMapper.MapSchedule(schedule) ==
+                OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
             {
                 return;
             }
@@ -738,6 +674,18 @@ public class StripePaymentService : IStripePaymentService
                 var items = subscriptionInfo.Subscription.Items.ToList();
                 var matchedPhase1Items = new HashSet<SubscriptionInfo.BillingSubscription.BillingSubscriptionItem>();
                 var unmatchedPhase2Items = new List<SubscriptionSchedulePhaseItem>();
+
+                // A Packaged migration source (e.g. Teams 2019) folds its base-bundle and seat-overage lines
+                // into one migrated seat line. Drop the overage line up front (keyed on the source plan's seat
+                // price) so the passes below reprice the base line instead of leaving its legacy amount.
+                if (subscriber is Organization organization && ShouldCollapseSeatOverageLine(organization))
+                {
+                    var sourcePlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                    if (sourcePlan.PasswordManager is { StripeSeatPlanId: not null and not "" } passwordManager)
+                    {
+                        items.RemoveAll(item => item.PriceId == passwordManager.StripeSeatPlanId);
+                    }
+                }
 
                 // Pass 1: Match by product ID
                 foreach (var phase2Item in phase2.Items)
@@ -771,6 +719,9 @@ public class StripePaymentService : IStripePaymentService
                         fallbackItem.Amount = phase2Item.Price.UnitAmount!.Value / 100M;
                         fallbackItem.ProductId = phase2Item.Price.ProductId;
                         fallbackItem.Name = phase2Item.Price.Nickname;
+                        // A packaged base line (qty 1) collapses onto a scalable seat line whose quantity
+                        // is the migrated seat count; carry it so the Phase 2 preview total is correct.
+                        fallbackItem.Quantity = (int)phase2Item.Quantity;
                         matchedPhase1Items.Add(fallbackItem);
                     }
                     else
@@ -789,7 +740,10 @@ public class StripePaymentService : IStripePaymentService
             var phase2Discount = phase2.Discounts?.FirstOrDefault();
             if (phase2Discount?.Coupon != null)
             {
+                // Coupon comes populated (with AppliesTo) from the parent
+                // `phases.discounts.coupon.applies_to` expand — see comment above.
                 subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(phase2Discount.Coupon);
+                subscriptionInfo.CustomerDiscount.IsFromSchedule = true;
             }
         }
         catch (StripeException ex)
@@ -801,6 +755,57 @@ public class StripePaymentService : IStripePaymentService
                 subscription.ScheduleId,
                 subscription.Id,
                 ex.StripeError?.Code);
+        }
+    }
+
+    /// <summary>
+    /// Overlays a fresh Coupon fetch (with <c>Expand = ["applies_to"]</c>) onto the
+    /// Coupon inside <paramref name="discount"/> so downstream readers (e.g.
+    /// <see cref="SubscriptionInfo.BillingCustomerDiscount(Discount)"/>) find
+    /// <c>Coupon.AppliesTo.Products</c> populated.
+    ///
+    /// Required because two stable Stripe rules combine to make the natural
+    /// single-fetch expand impossible after the 2025-09-30.clover API version:
+    /// <list type="bullet">
+    ///   <item><description><c>expand</c> has a max depth of 4
+    ///     (<see href="https://docs.stripe.com/expand"/>).</description></item>
+    ///   <item><description><c>coupon.applies_to</c> is expandable, not inline
+    ///     (<see href="https://docs.stripe.com/api/coupons/object"/>).</description></item>
+    /// </list>
+    /// The clover release wrapped Coupon under <c>Discount.Source</c>, so the
+    /// formerly-at-the-cap path <c>customer.discount.coupon.applies_to</c> became
+    /// the over-the-cap path <c>customer.discount.source.coupon.applies_to</c>.
+    /// Rooting the refetch at Coupons.Retrieve keeps <c>applies_to</c> only 1
+    /// level deep.
+    /// </summary>
+    private async Task EnsureDiscountCouponAppliesToAsync(Discount discount)
+    {
+        // Skip the refetch when there's no coupon or applies_to is already populated.
+        if (discount.Source?.Coupon is not { Id: not null and not "" } coupon || coupon.AppliesTo != null)
+        {
+            return;
+        }
+
+        var enriched = await FetchCouponWithAppliesToAsync(coupon.Id);
+        if (enriched != null)
+        {
+            coupon.AppliesTo = enriched.AppliesTo;
+        }
+    }
+
+    private async Task<Coupon> FetchCouponWithAppliesToAsync(string couponId)
+    {
+        // A subscription/customer can still reference a coupon that was later deleted in
+        // Stripe, and GetCouponAsync throws on a missing coupon. Fail soft here — the
+        // caller leaves AppliesTo null rather than surfacing a Stripe error.
+        try
+        {
+            return await _stripeAdapter.GetCouponAsync(couponId,
+                new CouponGetOptions { Expand = ["applies_to"] });
+        }
+        catch (StripeException)
+        {
+            return null;
         }
     }
 
@@ -825,9 +830,10 @@ public class StripePaymentService : IStripePaymentService
             return false;
         }
 
-        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId);
+        var customer = await _stripeAdapter.GetCustomerAsync(gatewayCustomerId,
+            new CustomerGetOptions { Expand = ["discount.source.coupon"] });
 
-        return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
+        return customer?.Discount?.Source?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
 
     private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
@@ -1013,4 +1019,15 @@ public class StripePaymentService : IStripePaymentService
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
+
+    /// <summary>
+    /// Evaluates whether the organization's pending migration folds a legacy seat-overage line into the migrated
+    /// seat line — true only for usage-resolved Packaged sources (e.g. Teams 2019).
+    /// </summary>
+    /// <param name="organization">The organization to evaluate.</param>
+    /// <returns>True if the seat-overage line should be collapsed into the migrated seat line.</returns>
+    private static bool ShouldCollapseSeatOverageLine(Organization organization) =>
+        MigrationPaths.All.Any(path =>
+            path.FromPlan == organization.PlanType &&
+            path.SeatCountPolicy == SeatCountPolicy.ActualUsage);
 }

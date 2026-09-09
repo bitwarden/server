@@ -257,6 +257,40 @@ public class ExtendedCacheServiceCollectionExtensionsTests
     }
 
     [Fact]
+    public void AddExtendedCache_SharedRedis_MultipleCaches_EachGetsIsolatedBackplane()
+    {
+        var settings = CreateGlobalSettings(new()
+        {
+            { "GlobalSettings:DistributedCache:Redis:ConnectionString", "localhost:6379" },
+            { "GlobalSettings:DistributedCache:DefaultExtendedCache:UseSharedDistributedCache", "true" }
+        });
+
+        // Shared multiplexer, as AddDistributedCache would provide
+        _services.AddSingleton(Substitute.For<IConnectionMultiplexer>());
+
+        _services.AddExtendedCache("CacheA", settings);
+        _services.AddExtendedCache("CacheB", settings);
+
+        using var provider = _services.BuildServiceProvider();
+
+        var cacheA = provider.GetRequiredKeyedService<IFusionCache>("CacheA");
+        var cacheB = provider.GetRequiredKeyedService<IFusionCache>("CacheB");
+        Assert.True(cacheA.HasBackplane);
+        Assert.True(cacheB.HasBackplane);
+
+        // Each cache must resolve its own backplane instance. Sharing a single backplane binds
+        // both caches to one pub/sub channel and misroutes cross-instance invalidations.
+        var backplaneA = provider.GetRequiredKeyedService<IFusionCacheBackplane>("CacheA");
+        var backplaneB = provider.GetRequiredKeyedService<IFusionCacheBackplane>("CacheB");
+        Assert.NotSame(backplaneA, backplaneB);
+
+        // The multiplexer is still shared across both caches
+        var muxA = provider.GetRequiredService<IConnectionMultiplexer>();
+        var muxB = provider.GetRequiredService<IConnectionMultiplexer>();
+        Assert.Same(muxA, muxB);
+    }
+
+    [Fact]
     public void AddExtendedCache_KeyedRedis_UsesSeparateMultiplexers()
     {
         var settingsA = new GlobalSettings.ExtendedCacheSettings

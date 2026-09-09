@@ -44,12 +44,12 @@ jobs:
       checks: write
     steps:
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Restore tools
         run: dotnet tool restore
@@ -157,7 +157,9 @@ jobs:
 
       - name: Report test results
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
+        # This will skip the job if it's a pull request from a fork, because that won't have permission to upload test results.
+        # PRs from the repository and all other events are OK.
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && !cancelled()
         with:
           name: Test Results
           path: "./**/*-test-results.trx"
@@ -178,12 +180,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Print environment
         run: |
@@ -197,7 +199,7 @@ jobs:
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sql.dacpac
           path: Sql.dacpac
@@ -223,7 +225,7 @@ jobs:
         shell: pwsh
 
       - name: Report validation results
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report.xml
           path: |
@@ -269,7 +271,7 @@ jobs:
 
     steps:
       - name: Check out repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false

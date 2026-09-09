@@ -51,10 +51,12 @@ public class GetCloudOrganizationLicenseQuery : IGetCloudOrganizationLicenseQuer
 
         if (subscriptionInfo.Subscription is null)
         {
-            throw new BadRequestException("No active subscription found.");
+            if (!organization.ExpirationDate.HasValue || organization.ExpirationDate <= DateTime.UtcNow)
+            {
+                throw new BadRequestException("No active subscription found.");
+            }
         }
-
-        if (subscriptionInfo.Subscription.Status is StripeConstants.SubscriptionStatus.Canceled
+        else if (subscriptionInfo.Subscription.Status is StripeConstants.SubscriptionStatus.Canceled
             or StripeConstants.SubscriptionStatus.Incomplete
             or StripeConstants.SubscriptionStatus.IncompleteExpired)
         {

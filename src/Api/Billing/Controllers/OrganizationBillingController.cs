@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
@@ -166,6 +167,11 @@ public class OrganizationBillingController(
         if (organization.PlanType == request.NewPlanType)
         {
             return Error.BadRequest("Organization is already on the requested plan frequency.");
+        }
+
+        if (organization.PlanType.GetProductTier() != request.NewPlanType.GetProductTier())
+        {
+            return Error.BadRequest("Plan frequency changes must stay within the same product tier.");
         }
 
         await organizationBillingService.UpdateSubscriptionPlanFrequency(

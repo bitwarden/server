@@ -7,14 +7,19 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.TempPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
@@ -25,6 +30,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
@@ -37,51 +43,63 @@ public class AccountsController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IUserService _userService;
-    private readonly IPolicyService _policyService;
+    private readonly ISelfServicePasswordChangeCommand _selfServicePasswordChangeCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand;
     private readonly ITdeSetPasswordCommand _tdeSetPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
+    private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
     private readonly IUserRepository _userRepository;
+    private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
+    private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
 
     public AccountsController(
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IUserService userService,
-        IPolicyService policyService,
+        ISelfServicePasswordChangeCommand selfServicePasswordChangeCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
         IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
         ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
         ITdeSetPasswordCommand tdeSetPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
+        IReplaceAdminSetTemporaryPasswordCommand replaceAdminSetTemporaryPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,
-        IUserRepository userRepository
+        IUserRepository userRepository,
+        IRotateUserApiKeyCommand rotateUserApiKeyCommand,
+        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand
         )
     {
         _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _userService = userService;
-        _policyService = policyService;
+        _selfServicePasswordChangeCommand = selfServicePasswordChangeCommand;
+        _policyRequirementQuery = policyRequirementQuery;
         _finishSsoJitProvisionMasterPasswordCommand = finishSsoJitProvisionMasterPasswordCommand;
         _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
         _tdeSetPasswordCommand = tdeSetPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
+        _replaceAdminSetTemporaryPasswordCommand = replaceAdminSetTemporaryPasswordCommand;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _userAccountKeysQuery = userAccountKeysQuery;
         _twoFactorEmailService = twoFactorEmailService;
         _changeKdfCommand = changeKdfCommand;
         _userRepository = userRepository;
+        _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
+        _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
     }
 
 
@@ -99,6 +117,16 @@ public class AccountsController : Controller
         if (user == null)
         {
             throw new UnauthorizedAccessException();
+        }
+
+        // TODO: PM-39120 - PM30806_SelfServiceChangeEmailCommand flag cleanup, remove the flag
+        // check and keep only the SelfServiceChangeEmailCommand call.
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            await _selfServiceChangeEmailCommand.InitiateChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail);
+
+            return;
         }
 
         if (user.UsesKeyConnector)
@@ -131,9 +159,26 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        // TODO: PM-39120 - PM30806_SelfServiceChangeEmailCommand flag cleanup, remove the flag
+        // check and keep only the SelfServiceChangeEmailCommand call.
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM30806_SelfServiceChangeEmailCommand))
+        {
+            await _selfServiceChangeEmailCommand.ChangeEmailAsync(
+                user, model.MasterPasswordHash, model.NewEmail, model.Token);
+            return;
+        }
+
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
+        // Legacy path still rotates the master password and wrapped user key alongside the
+        // email change; those fields are optional on the model so we have to enforce them here.
+        if (string.IsNullOrEmpty(model.NewMasterPasswordHash) || string.IsNullOrEmpty(model.Key))
+        {
+            ModelState.AddModelError(string.Empty, "NewMasterPasswordHash and Key are required.");
+            throw new BadRequestException(ModelState);
         }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
@@ -151,6 +196,7 @@ public class AccountsController : Controller
         await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
+
 
     [HttpPost("verify-email")]
     public async Task PostVerifyEmail()
@@ -197,8 +243,22 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _selfServicePasswordChangeCommand.ChangePasswordAsync(
+                user,
+                model.MasterPasswordHash,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
+        }
+        else
+        {
+            result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
+                model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -222,48 +282,111 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
+        // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
+        // fall through to SetInitialPasswordV1Async, which uses the V1 command to handle modern
+        // V1 MP JIT requests and all legacy-shape requests (TDE and MP JIT). See its doc comment
+        // for the full list of scenarios.
+        if (model.HasAuthAndUnlockData())
         {
+            // TDE set-password (for TDE users who obtain the "manage account recovery" permission).
+            // _tdeSetPasswordCommand handles both V1 and V2 TDE users (it sets the master password
+            // without touching cryptographic state).
+            // 
+            // Note: Why not check the V2RegistrationTDEJIT flag?
+            // The V2RegistrationTDEJIT flag governs SSO+TDE account creation, not set-password, so
+            // don't reference it here (no feature-flag gate), because it isn't relevant. A TDE user
+            // reaching this endpoint already has keys that were set up at registration time, regardless
+            // of the flag.
             if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
-            }
-            else
-            {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-            }
-        }
-        else
-        {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-            try
-            {
-                user = model.ToUser(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordHash,
-                model.Key,
-                model.OrgIdentifier);
-
-            if (result.Succeeded)
-            {
                 return;
             }
 
-            foreach (var error in result.Errors)
+            // V2 encryption - MP JIT.
+            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
+            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
+            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
+            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
+            if (model.AccountKeys != null &&
+                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                return;
             }
+        }
 
+        await SetInitialPasswordV1Async(user, model);
+    }
+
+    /// <summary>
+    /// Handles setting an initial password for V1 users in the following scenarios:
+    /// 1. TDE user where request contains legacy fields (MasterPasswordHash + Key)
+    /// 2. MP JIT user where request contains legacy fields (MasterPasswordHash + Key + Keys)
+    /// 3. MP JIT user where request contains MPAD + MPUD + legacy Keys (not AccountKeys)
+    /// </summary>
+    /// <remarks>
+    /// TODO: In order to remove this method, all 3 of those scenarios need to become unused. This means
+    /// removal can only happen when BOTH of the following are true:
+    /// 
+    /// 1. Client-side changes in https://bitwarden.atlassian.net/browse/PM-35599 have been merged
+    ///    and have aged out according to the Bitwarden release support policy. This covers scenarios
+    ///    #1-2 above (legacy TDE and legacy MP JIT).
+    /// 
+    /// 2. The EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
+    ///    https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has
+    ///    aged out according to the Bitwarden release support policy. This covers scenarios #2-3 above (legacy
+    ///    and modern MP JIT).
+    /// </remarks>
+    private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
+    {
+        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
+        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
+        // a client/server flag-state mismatch or a non-Angular caller.
+        if (model.AccountKeys != null)
+        {
+            throw new BadRequestException(
+                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
+        }
+
+        try
+        {
+            // Stage 1 (PM-27044) compatibility: the client MUST send salt == email.lower.trim
+            // on initial SET. Clients currently derive the master key from the email as salt at
+            // login time, so a divergent salt persisted here would make the account un-loginable.
+            // Mirrors the check in SetInitialPasswordData.ValidateDataForUser; removable in
+            // Stage 3 when PM-28143 clears and clients consume the explicit salt from prelogin.
+            model.MasterPasswordUnlock?.ToData().ValidateSaltUnchangedForUser(user);
+            model.MasterPasswordAuthentication?.ToData().ValidateSaltUnchangedForUser(user);
+
+            // ToUser() handles fallbacks if MPAD + MPUD are not present (i.e. legacy shape)
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
             throw new BadRequestException(ModelState);
         }
+
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+            user,
+            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash,
+            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key,
+            model.OrgIdentifier);
+
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]
@@ -277,9 +400,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
+            var masterPasswordPolicy = await _policyRequirementQuery.GetAsyncVNext<MasterPasswordPolicyRequirement>(user.Id);
 
-            return new MasterPasswordPolicyResponseModel(policyData);
+            return new MasterPasswordPolicyResponseModel(masterPasswordPolicy.EnforcedOptions);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
@@ -288,17 +411,12 @@ public class AccountsController : Controller
     }
 
     [HttpPost("kdf")]
-    public async Task PostKdf([FromBody] PasswordRequestModel model)
+    public async Task PostKdf([FromBody] ChangeKdfRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (model.AuthenticationData == null || model.UnlockData == null)
-        {
-            throw new BadRequestException("AuthenticationData and UnlockData must be provided.");
         }
 
         var result = await _changeKdfCommand.ChangeKdfAsync(user, model.MasterPasswordHash, model.AuthenticationData.ToData(), model.UnlockData.ToData());
@@ -363,9 +481,11 @@ public class AccountsController : Controller
 
         var accountKeys = await _userAccountKeysQuery.Run(user);
 
+        var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
+
         var response = new ProfileResponseModel(user, accountKeys, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, organizationIdsClaimingActiveUser);
+            hasPremiumFromOrg, organizationIdsClaimingActiveUser, organizationUserDetailsNew);
         return response;
     }
 
@@ -469,7 +589,15 @@ public class AccountsController : Controller
             {
                 throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
             }
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            // A client that predates the key id field sends none. The account then picks one up from
+            // the backfill endpoint on a later sync rather than here.
+            var userKeyId = KeyId.FromHexEncodedString(model.UserKeyId);
+            var updateUserDataTasks = userKeyId == null
+                ? null
+                : new UpdateUserData[] { _userRepository.SetUserKeyId(user.Id, userKeyId) };
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData,
+                updateUserDataTasks);
             return new KeysResponseModel(accountKeysData, user.Key);
         }
         else
@@ -518,12 +646,6 @@ public class AccountsController : Controller
         }
         else
         {
-            // Check if the user is claimed by any organization.
-            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
-            {
-                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
-            }
-
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -632,7 +754,18 @@ public class AccountsController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        await _userService.RotateApiKeyAsync(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM37165_RotateUserApiKeyCommand))
+        {
+            await _rotateUserApiKeyCommand.RotateApiKeyAsync(user);
+        }
+        else
+        {
+            // legacy path while PM37165_RotateUserApiKeyCommand rolls out
+            // so temporarily disable the obsolete warning for RotateApiKeyAsync
+#pragma warning disable CS0618
+            await _userService.RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+        }
         var response = new ApiKeyResponseModel(user);
         return response;
     }
@@ -646,7 +779,24 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.UpdateTempPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _replaceAdminSetTemporaryPasswordCommand.ReplaceTemporaryPasswordAsync(
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
+        }
+        else
+        {
+            result = await _userService.UpdateTempPasswordAsync(
+                user,
+                model.NewMasterPasswordHash,
+                model.Key,
+                model.MasterPasswordHint);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -669,7 +819,24 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(user, model.NewMasterPasswordHash, model.Key, model.MasterPasswordHint);
+        IdentityResult result;
+        if (model.RequestHasNewDataTypes())
+        {
+            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(
+                user,
+                model.UnlockData!.ToData(),
+                model.AuthenticationData!.ToData(),
+                model.MasterPasswordHint);
+        }
+        else
+        {
+            result = await _tdeOffboardingPasswordCommand.UpdateTdeOffboardingPasswordAsync(
+                user,
+                model.NewMasterPasswordHash,
+                model.Key,
+                model.MasterPasswordHint);
+        }
+
         if (result.Succeeded)
         {
             return;
@@ -707,13 +874,13 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
-        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        var user = await _userRepository.GetByEmailAsync(request.Email);
+        if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
+            // If the user is not found, or the secret is not valid, we still return
+            // a success response, to avoid account enumeration via response shape.
+            return;
         }
-
         await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
     }
 

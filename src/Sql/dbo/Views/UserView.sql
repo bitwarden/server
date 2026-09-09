@@ -48,6 +48,8 @@ SELECT
     [SecurityVersion],
     [SignedPublicKey],
     [V2UpgradeToken],
-    [MasterPasswordSalt]
+    [MasterPasswordSalt],
+    [LastApiKeyRotationDate],
+    [UserKeyId]
 FROM
     [dbo].[User]

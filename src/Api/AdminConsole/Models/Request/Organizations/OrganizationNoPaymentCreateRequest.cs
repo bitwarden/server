@@ -79,6 +79,9 @@ public class OrganizationNoPaymentCreateRequest
 
     public string InitiationPath { get; set; }
 
+    [Range(0, 30)]
+    public int? TrialLength { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -111,6 +114,7 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
+            TrialLength = TrialLength,
             Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
 

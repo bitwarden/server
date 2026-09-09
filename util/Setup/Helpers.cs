@@ -125,17 +125,28 @@ public static class Helpers
         var process = new Process { StartInfo = startInfo };
 
         var result = new StringBuilder();
+        // OutputDataReceived and ErrorDataReceived are raised on separate threads, so appends to the
+        // shared StringBuilder must be synchronized. Without this lock, simultaneous stdout/stderr
+        // output corrupts the builder's internal buffer and throws
+        // "System.ArgumentException: Destination is too short", crashing the setup process.
+        var resultLock = new object();
 
         process.OutputDataReceived += (_, e) =>
         {
             if (!returnStdout || e.Data == null) return;
-            result.AppendLine(e.Data);
+            lock (resultLock)
+            {
+                result.AppendLine(e.Data);
+            }
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
             if (!returnStderr || e.Data == null) return;
-            result.AppendLine(e.Data);
+            lock (resultLock)
+            {
+                result.AppendLine(e.Data);
+            }
         };
 
         process.Start();

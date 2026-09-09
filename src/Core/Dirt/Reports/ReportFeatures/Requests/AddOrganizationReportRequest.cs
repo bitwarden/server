@@ -11,5 +11,10 @@ public class AddOrganizationReportRequest
 
     public string? ApplicationData { get; set; }
 
-    public OrganizationReportMetricsRequest? Metrics { get; set; }
+    public OrganizationReportMetrics? ReportMetrics { get; set; }
+
+    /// <summary>
+    /// Estimated size of the report file in bytes. Required for v2 reports.
+    /// </summary>
+    public long? FileSize { get; set; }
 }

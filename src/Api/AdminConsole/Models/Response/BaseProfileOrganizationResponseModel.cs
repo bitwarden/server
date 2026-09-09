@@ -53,6 +53,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organizationDetails.UsePasswordManager;
         UseMyItems = organizationDetails.UseMyItems;
         UseInviteLinks = organizationDetails.UseInviteLinks;
+        UsePam = organizationDetails.UsePam;
         SelfHost = organizationDetails.SelfHost;
         Seats = organizationDetails.Seats;
         MaxCollections = organizationDetails.MaxCollections;
@@ -108,6 +109,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public bool UsePhishingBlocker { get; set; }
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
+    public bool UsePam { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
@@ -129,6 +131,7 @@ public abstract class BaseProfileOrganizationResponseModel : ResponseModel
     public string? KeyConnectorUrl { get; set; }
     public MemberDecryptionType? SsoMemberDecryptionType { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Guid? UserId { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }

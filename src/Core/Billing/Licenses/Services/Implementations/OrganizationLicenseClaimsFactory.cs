@@ -61,6 +61,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.UsePhishingBlocker), entity.UsePhishingBlocker.ToString()),
             new(nameof(OrganizationLicenseConstants.UseMyItems), entity.UseMyItems.ToString()),
             new(nameof(OrganizationLicenseConstants.UseInviteLinks), entity.UseInviteLinks.ToString()),
+            new(nameof(OrganizationLicenseConstants.UsePam), entity.UsePam.ToString()),
         };
 
         if (entity.Name is not null)

@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Net;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -11,7 +13,7 @@ namespace Bit.Seeder.Queries;
 public class EmergencyAccessInviteQuery(
     DatabaseContext db,
     IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
-    : IQuery<EmergencyAccessInviteQuery.Request, IEnumerable<string>>
+    : IQuery<EmergencyAccessInviteQuery.Request, EmergencyAccessInviteQuery.Response>
 {
     public class Request
     {
@@ -19,17 +21,26 @@ public class EmergencyAccessInviteQuery(
         public required string Email { get; set; }
     }
 
-    public Task<IEnumerable<string>> Execute(Request request)
+    public class Response
     {
-        var invites = db.EmergencyAccesses
+        public required List<string> Urls { get; set; }
+    }
+
+    public Task<Response> Execute(Request request)
+    {
+        var urls = db.EmergencyAccesses
             .Where(ea => ea.Email == request.Email).ToList().Select(ea =>
             {
                 var token = dataProtectorTokenizer.Protect(
                     new EmergencyAccessInviteTokenable(ea, hoursTillExpiration: 1)
                 );
-                return $"/accept-emergency?id={ea.Id}&name=Dummy&email={ea.Email}&token={token}";
-            });
+                return string.Format(CultureInfo.InvariantCulture,
+                    "/accept-emergency?id={0}&name=Dummy&email={1}&token={2}",
+                    WebUtility.UrlEncode(ea.Id.ToString()),
+                    WebUtility.UrlEncode(ea.Email),
+                    WebUtility.UrlEncode(token));
+            }).ToList();
 
-        return Task.FromResult(invites);
+        return Task.FromResult(new Response { Urls = urls });
     }
 }

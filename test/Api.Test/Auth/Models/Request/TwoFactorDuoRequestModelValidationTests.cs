@@ -10,7 +10,7 @@ public class TwoFactorDuoRequestModelValidationTests
     public void ShouldReturnValidationError_WhenHostIsInvalid()
     {
         // Arrange
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             Host = "invalidHost",
             ClientId = "clientId",
@@ -30,7 +30,7 @@ public class TwoFactorDuoRequestModelValidationTests
     public void ShouldReturnValidationError_WhenValuesAreInvalid()
     {
         // Arrange
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             Host = "api-12345abc.duosecurity.com"
         };
@@ -48,7 +48,7 @@ public class TwoFactorDuoRequestModelValidationTests
     public void ShouldReturnSuccess_WhenValuesAreValid()
     {
         // Arrange
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             Host = "api-12345abc.duosecurity.com",
             ClientId = "clientId",

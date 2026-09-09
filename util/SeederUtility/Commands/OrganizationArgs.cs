@@ -4,6 +4,9 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
 
+// Aliased because this class has its own string PlanType property, which would otherwise shadow the enum.
+using CorePlanType = Bit.Core.Billing.Enums.PlanType;
+
 namespace Bit.SeederUtility.Commands;
 
 /// <summary>
@@ -20,6 +23,9 @@ public class OrganizationArgs : IArgumentModel
 
     [Option('d', "domain", Description = "Email domain for users")]
     public string Domain { get; set; } = null!;
+
+    [Option("claimed-domain", Description = "Claimed (verified) domain to seed. Repeat to add multiple, e.g. --claimed-domain acme.example --claimed-domain hr.acme.example")]
+    public List<string>? ClaimedDomains { get; set; }
 
     [Option('c', "ciphers", Description = "Number of ciphers to create (default: 0, no vault data)")]
     public int? Ciphers { get; set; }
@@ -48,11 +54,38 @@ public class OrganizationArgs : IArgumentModel
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
+    [Option("owner-email", Description = "Override the organization owner email (default: owner@<domain>). Must not already exist in the User table; add --mangle to make repeat runs unique.")]
+    public string? OwnerEmail { get; set; }
+
     [Option("plan-type", Description = "Billing plan type: free, teams-monthly, teams-annually, enterprise-monthly, enterprise-annually, teams-starter, families-annually. Defaults to enterprise-annually.")]
     public string PlanType { get; set; } = "enterprise-annually";
 
     [Option("kdf-iterations", Description = "KDF iteration count for all seeded users (default: 5000). Use 600000 for production-realistic e2e testing.")]
     public int KdfIterations { get; set; } = 5_000;
+
+    [Option("auto-confirm-users", Description = "Automatically confirm invited users without manual approval")]
+    public bool? UseAutomaticUserConfirmation { get; set; }
+
+    [Option("allow-admin-collection-access", Description = "Allow admins/owners to access all collection items")]
+    public bool? AllowAdminAccessToAllCollectionItems { get; set; }
+
+    [Option("limit-item-deletion", Description = "Restrict item deletion to members with Can Manage permission")]
+    public bool? LimitItemDeletion { get; set; }
+
+    [Option("limit-collection-creation", Description = "Restrict collection creation to admins/owners")]
+    public bool? LimitCollectionCreation { get; set; }
+
+    [Option("limit-collection-deletion", Description = "Restrict collection deletion to admins/owners")]
+    public bool? LimitCollectionDeletion { get; set; }
+
+    [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and subscription for the organization. Requires a sk_test_ key and pricingUri; not valid with --plan-type free.")]
+    public bool StripeBilling { get; set; }
+
+    [Option("skip-trial", Description = "Start the subscription active instead of trialing (charges the Stripe test card). Requires --stripe-billing.")]
+    public bool SkipTrial { get; set; }
+
+    [Option("trial-days", Description = "Trial length in days, 1-30 (default: 30). Requires --stripe-billing; not valid with --skip-trial.")]
+    public int? TrialDays { get; set; }
 
     public void Validate()
     {
@@ -81,11 +114,24 @@ public class OrganizationArgs : IArgumentModel
             DensityProfiles.Parse(Density);
         }
 
-        PlanFeatures.Parse(PlanType);
+        var planType = PlanFeatures.Parse(PlanType);
+
+        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays);
+
+        if (StripeBilling && planType == CorePlanType.Free)
+        {
+            throw new ArgumentException(
+                "The Free plan has no Stripe subscription. Choose a paid --plan-type or drop --stripe-billing.");
+        }
 
         if (KdfIterations < 5_000)
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(OwnerEmail) && !OwnerEmail.Contains('@'))
+        {
+            throw new ArgumentException("--owner-email must be a valid email address (must contain '@').");
         }
     }
 
@@ -97,13 +143,24 @@ public class OrganizationArgs : IArgumentModel
         Ciphers = Ciphers ?? 0,
         Groups = Groups ?? 0,
         Collections = Collections ?? 0,
+        ClaimedDomains = ClaimedDomains ?? [],
         RealisticStatusMix = MixStatuses,
         StructureModel = ParseOrgStructure(Structure),
         Region = ParseGeographicRegion(Region),
         Density = DensityProfiles.Parse(Density),
         Password = Password,
+        OwnerEmail = OwnerEmail,
         PlanType = PlanFeatures.Parse(PlanType),
-        KdfIterations = KdfIterations
+        KdfIterations = KdfIterations,
+        StripeBilling = StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays),
+        Overrides = new()
+        {
+            UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
+            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
+            LimitItemDeletion = LimitItemDeletion,
+            LimitCollectionCreation = LimitCollectionCreation,
+            LimitCollectionDeletion = LimitCollectionDeletion,
+        },
     };
 
     private static OrgStructureModel? ParseOrgStructure(string? structure)

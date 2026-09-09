@@ -243,6 +243,8 @@ public class SlackIntegrationControllerTests
     {
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
+        var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
@@ -259,7 +261,7 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>()).Returns(expectedUrl);
 
-        var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+        var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
         var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
 
@@ -279,6 +281,8 @@ public class SlackIntegrationControllerTests
         integration.Configuration = null;
         integration.Type = IntegrationType.Slack;
         var expectedUrl = "https://localhost/";
+        var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
@@ -294,7 +298,7 @@ public class SlackIntegrationControllerTests
 
         var requestAction = await sutProvider.Sut.RedirectAsync(organizationId);
 
-        var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+        var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
         Assert.IsType<RedirectResult>(requestAction);
         sutProvider.GetDependency<ISlackService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());

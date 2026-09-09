@@ -48,7 +48,8 @@ SELECT
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
-    O.[UseInviteLinks]
+    O.[UseInviteLinks],
+    O.[UsePam]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

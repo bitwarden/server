@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 
 #nullable enable
 
@@ -42,14 +43,16 @@ public class SubscriptionInfo
         /// <param name="discount">The Stripe discount containing coupon and expiration information.</param>
         public BillingCustomerDiscount(Discount discount)
         {
-            Id = discount.Coupon?.Id;
+            Id = discount.Source?.Coupon?.Id;
             // Active = true only for perpetual/recurring discounts (no end date)
             // This is intentional for Milestone 2 - only perpetual discounts are shown in UI
             Active = discount.End == null;
-            PercentOff = discount.Coupon?.PercentOff;
-            AmountOff = ConvertFromStripeMinorUnits(discount.Coupon?.AmountOff);
+            End = discount.End;
+            DurationInMonths = discount.Source?.Coupon?.DurationInMonths;
+            PercentOff = discount.Source?.Coupon?.PercentOff;
+            AmountOff = ConvertFromStripeMinorUnits(discount.Source?.Coupon?.AmountOff);
             // Stripe's CouponAppliesTo.Products is already IReadOnlyList<string>, so no conversion needed
-            AppliesTo = discount.Coupon?.AppliesTo?.Products;
+            AppliesTo = discount.Source?.Coupon?.AppliesTo?.Products;
         }
 
         /// <summary>
@@ -61,6 +64,8 @@ public class SubscriptionInfo
         {
             Id = coupon.Id;
             Active = true;
+            End = null;
+            DurationInMonths = coupon.DurationInMonths;
             PercentOff = coupon.PercentOff;
             AmountOff = ConvertFromStripeMinorUnits(coupon.AmountOff);
             AppliesTo = coupon.AppliesTo?.Products;
@@ -79,6 +84,19 @@ public class SubscriptionInfo
         /// Product decision for Milestone 2: only show perpetual discounts in UI.
         /// </summary>
         public bool Active { get; set; }
+
+        /// <summary>
+        /// The instant the discount stops applying, from Stripe's Discount.end.
+        /// Null when the discount has no end date (perpetual) or when constructed from a
+        /// Coupon directly (Phase-2 scheduled discount — no Discount wrapper available).
+        /// </summary>
+        public DateTime? End { get; set; }
+
+        /// <summary>
+        /// For a `repeating` coupon, the number of months the discount applies (Stripe Coupon.duration_in_months).
+        /// Null for `once`/`forever` coupons.
+        /// </summary>
+        public long? DurationInMonths { get; set; }
 
         /// <summary>
         /// Percentage discount applied to the subscription (e.g., 20.0 for 20% off).
@@ -102,6 +120,13 @@ public class SubscriptionInfo
         /// </para>
         /// </summary>
         public IReadOnlyList<string>? AppliesTo { get; set; }
+
+        /// <summary>
+        /// True when this discount was surfaced from a price-migration schedule's Phase 2 coupon
+        /// rather than a genuine customer- or subscription-level discount. Lets clients distinguish
+        /// a deferred price-migration coupon from a real discount. Defaults to false.
+        /// </summary>
+        public bool IsFromSchedule { get; set; }
     }
 
     public class BillingSubscription
@@ -130,6 +155,8 @@ public class SubscriptionInfo
             GracePeriod = sub?.CollectionMethod == "charge_automatically"
                 ? 14
                 : 30;
+            ServiceAccountGrace = sub?.GetMigrationGraceServiceAccounts() ?? 0;
+            ScheduleId = sub?.ScheduleId;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -147,20 +174,34 @@ public class SubscriptionInfo
         public DateTime? UnpaidPeriodEndDate { get; set; }
         public int GracePeriod { get; set; }
 
+        /// <summary>
+        /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline
+        /// during a pricing migration. Read from Stripe subscription metadata; 0 when none was granted.
+        /// </summary>
+        public int ServiceAccountGrace { get; set; }
+
+        /// <summary>
+        /// The Stripe subscription schedule id, or null when no schedule is attached. Internal only;
+        /// not mapped to the API response. Used to gate billing lookups that are only meaningful for a
+        /// scheduled subscription.
+        /// </summary>
+        public string? ScheduleId { get; set; }
+
         public class BillingSubscriptionItem
         {
             public BillingSubscriptionItem(SubscriptionItem item)
             {
                 if (item.Plan != null)
                 {
+                    PriceId = item.Price?.Id;
                     ProductId = item.Plan.ProductId;
                     Name = item.Plan.Nickname;
                     Amount = ConvertFromStripeMinorUnits(item.Plan.Amount) ?? 0;
                     Interval = item.Plan.Interval;
 
-                    if (item.Metadata != null)
+                    if (item.Price?.Metadata != null)
                     {
-                        AddonSubscriptionItem = item.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                        AddonSubscriptionItem = item.Price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) && bool.Parse(value);
                     }
                 }
 
@@ -168,7 +209,39 @@ public class SubscriptionInfo
                 SponsoredSubscriptionItem = item.Plan != null && SponsoredPlans.All.Any(p => p.StripePlanId == item.Plan.Id);
             }
 
+            /// <summary>
+            /// Builds a line item from a subscription schedule phase item. Phase items carry an
+            /// expanded <see cref="Price"/> and no <see cref="Plan"/>, so the fields the
+            /// <see cref="SubscriptionItem"/> constructor reads off the plan are read off the price here.
+            /// </summary>
+            public BillingSubscriptionItem(SubscriptionSchedulePhaseItem item)
+            {
+                var price = item.Price;
+                if (price != null)
+                {
+                    PriceId = price.Id;
+                    ProductId = price.ProductId;
+                    Name = price.Nickname;
+                    Amount = ConvertFromStripeMinorUnits(price.UnitAmount) ?? 0;
+                    Interval = price.Recurring?.Interval;
+
+                    if (price.Metadata != null)
+                    {
+                        AddonSubscriptionItem =
+                            price.Metadata.TryGetValue(MetadataKeys.IsAddOn, out var value) &&
+                            bool.TryParse(value, out var isAddOn) && isAddOn;
+                    }
+
+                    SponsoredSubscriptionItem = SponsoredPlans.All.Any(p => p.StripePlanId == price.Id);
+                }
+
+                Quantity = (int)item.Quantity;
+            }
+
             public bool AddonSubscriptionItem { get; set; }
+
+            /// <summary>Internal only; not mapped to the API response. Used to match a line to a plan's price.</summary>
+            public string? PriceId { get; set; }
             public string? ProductId { get; set; }
             public string? Name { get; set; }
             public decimal Amount { get; set; }

@@ -73,6 +73,6 @@ public class CreateOrganizationDomainCommandTests
         var requestAction = async () => await sutProvider.Sut.CreateAsync(orgDomain);
 
         var exception = await Assert.ThrowsAsync<ConflictException>(requestAction);
-        Assert.Contains("A domain already exists for this organization.", exception.Message);
+        Assert.Contains(new DuplicateDomainError().Message, exception.Message);
     }
 }

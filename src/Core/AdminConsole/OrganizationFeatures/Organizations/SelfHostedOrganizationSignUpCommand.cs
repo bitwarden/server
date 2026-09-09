@@ -1,8 +1,11 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
@@ -12,7 +15,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -23,7 +25,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IPushNotificationService _pushNotificationService;
@@ -37,7 +39,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         ICollectionRepository collectionRepository,
         IPushRegistrationService pushRegistrationService,
         IPushNotificationService pushNotificationService,
@@ -50,7 +52,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _collectionRepository = collectionRepository;
         _pushRegistrationService = pushRegistrationService;
         _pushNotificationService = pushNotificationService;
@@ -67,8 +69,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
     {
         if (license.LicenseType != LicenseType.Organization)
         {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
-                                          "Upload this license from your personal account settings page.");
+            throw new BadRequestException(new PremiumLicenseError().Message);
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
@@ -82,7 +83,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
         if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
-            throw new BadRequestException("License is already in use by another organization.");
+            throw new BadRequestException(new LicenseAlreadyInUseError().Message);
         }
 
         await ValidateSignUpPoliciesAsync(owner.Id);
@@ -108,8 +109,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
 
         if (requirement.CannotCreateNewOrganization())
         {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(new UserCannotCreateOrg().Message);
         }
 
         var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
@@ -138,7 +138,7 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
                 Type = OrganizationApiKeyType.Default,
                 RevisionDate = DateTime.UtcNow,
             });
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
             // ownerId == default if the org is created by a provider - in this case it's created without an
             // owner and the first owner is immediately invited afterwards
@@ -205,10 +205,10 @@ public class SelfHostedOrganizationSignUpCommand : ISelfHostedOrganizationSignUp
                 await _paymentService.CancelAndRecoverChargesAsync(organization);
             }
 
-            if (organization.Id != default(Guid))
+            if (organization.Id != Guid.Empty)
             {
                 await _organizationRepository.DeleteAsync(organization);
-                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+                await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             throw;

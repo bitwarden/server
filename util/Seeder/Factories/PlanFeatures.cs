@@ -2,6 +2,7 @@
 using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Seeder.Options;
 
 namespace Bit.Seeder.Factories;
 
@@ -13,13 +14,6 @@ public static class PlanFeatures
 {
     internal static void Apply(Organization org, PlanType planType)
     {
-        // Org-level admin settings — not plan-gated, safe defaults for seeding
-        org.UseAutomaticUserConfirmation = true;
-        org.AllowAdminAccessToAllCollectionItems = true;
-        org.LimitCollectionCreation = true;
-        org.LimitCollectionDeletion = true;
-        org.LimitItemDeletion = true;
-
         switch (planType)
         {
             case PlanType.Free:
@@ -76,6 +70,72 @@ public static class PlanFeatures
                     $"Unsupported PlanType '{planType}'. Supported types: Free, TeamsMonthly, TeamsAnnually, " +
                     "TeamsStarter, EnterpriseMonthly, EnterpriseAnnually, FamiliesAnnually.");
         }
+    }
+
+    /// <summary>
+    /// Applies overrides on top of the organization's initial values.
+    /// Only non-null properties are applied; null means "leave the value unchanged from <see cref="OrganizationSeeder.Create"/>".
+    /// </summary>
+    internal static void ApplyOrganizationOverrides(Organization org, OrganizationOverrides? overrides)
+    {
+        if (overrides is null)
+        {
+            return;
+        }
+
+        org.UseAutomaticUserConfirmation = overrides.UseAutomaticUserConfirmation ?? org.UseAutomaticUserConfirmation;
+        org.AllowAdminAccessToAllCollectionItems = overrides.AllowAdminAccessToAllCollectionItems ?? org.AllowAdminAccessToAllCollectionItems;
+        org.LimitItemDeletion = overrides.LimitItemDeletion ?? org.LimitItemDeletion;
+        org.LimitCollectionCreation = overrides.LimitCollectionCreation ?? org.LimitCollectionCreation;
+        org.LimitCollectionDeletion = overrides.LimitCollectionDeletion ?? org.LimitCollectionDeletion;
+
+        org.UseGroups = overrides.UseGroups ?? org.UseGroups;
+        org.UsePolicies = overrides.UsePolicies ?? org.UsePolicies;
+        org.UseSso = overrides.UseSso ?? org.UseSso;
+        org.UseKeyConnector = overrides.UseKeyConnector ?? org.UseKeyConnector;
+        org.UseScim = overrides.UseScim ?? org.UseScim;
+        org.UseDirectory = overrides.UseDirectory ?? org.UseDirectory;
+        org.UseEvents = overrides.UseEvents ?? org.UseEvents;
+        org.UseTotp = overrides.UseTotp ?? org.UseTotp;
+        org.Use2fa = overrides.Use2fa ?? org.Use2fa;
+        org.UseApi = overrides.UseApi ?? org.UseApi;
+        org.UseResetPassword = overrides.UseResetPassword ?? org.UseResetPassword;
+        org.UseCustomPermissions = overrides.UseCustomPermissions ?? org.UseCustomPermissions;
+        org.UseOrganizationDomains = overrides.UseOrganizationDomains ?? org.UseOrganizationDomains;
+        org.UsersGetPremium = overrides.UsersGetPremium ?? org.UsersGetPremium;
+        org.SelfHost = overrides.SelfHost ?? org.SelfHost;
+        org.UseRiskInsights = overrides.UseRiskInsights ?? org.UseRiskInsights;
+        org.UseMyItems = overrides.UseMyItems ?? org.UseMyItems;
+        org.UseAdminSponsoredFamilies = overrides.UseAdminSponsoredFamilies ?? org.UseAdminSponsoredFamilies;
+        org.UseInviteLinks = overrides.UseInviteLinks ?? org.UseInviteLinks;
+        org.SyncSeats = overrides.SyncSeats ?? org.SyncSeats;
+        org.UsePasswordManager = overrides.UsePasswordManager ?? org.UsePasswordManager;
+        org.UsePam = overrides.UsePam ?? org.UsePam;
+        // Off-path only: the EnableSecretsManager gate in OrganizationSeeder.Create runs after this and forces SM on when set, so pair this with EnableSecretsManager=false to disable SM.
+        org.UseSecretsManager = overrides.UseSecretsManager ?? org.UseSecretsManager;
+    }
+
+    /// <summary>
+    /// Enables Secrets Manager on an organization by populating its subscription fields.
+    /// Seat defaults mirror the plan's SecretsManager base values in test/Core.Test/Billing/Mocks/Plans/.
+    /// </summary>
+    internal static void EnableSecretsManager(Organization org, int? smSeats, int? smServiceAccounts)
+    {
+        var (baseSeats, baseServiceAccounts) = org.PlanType switch
+        {
+            PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
+                or PlanType.TeamsAnnually => (org.Seats, 50),
+            PlanType.TeamsMonthly or PlanType.TeamsStarter => (org.Seats, 20),
+            // Free Secrets Manager tier: 2 seats, 3 service accounts (see FreePlan mock).
+            PlanType.Free => (2, 3),
+            _ => throw new ArgumentException(
+                $"PlanType '{org.PlanType}' does not support Secrets Manager. " +
+                "Supported: Free, TeamsMonthly, TeamsAnnually, TeamsStarter, EnterpriseMonthly, EnterpriseAnnually.")
+        };
+
+        org.UseSecretsManager = true;
+        org.SmSeats = smSeats ?? baseSeats;
+        org.SmServiceAccounts = smServiceAccounts ?? baseServiceAccounts;
     }
 
     public static PlanType Parse(string? planTypeString)
@@ -217,6 +277,7 @@ public static class PlanFeatures
         org.UsePasswordManager = true;
         org.UseSecretsManager = true;
         org.UseRiskInsights = true;
+        org.UseMyItems = true;
         org.UseAdminSponsoredFamilies = true;
         org.SyncSeats = true;
         org.UseInviteLinks = true;

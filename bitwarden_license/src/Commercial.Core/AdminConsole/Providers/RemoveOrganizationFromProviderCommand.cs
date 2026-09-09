@@ -3,7 +3,9 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -66,7 +68,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization == null ||
             providerOrganization.ProviderId != provider.Id)
         {
-            throw new BadRequestException("Failed to remove organization. Please contact support.");
+            throw new BadRequestException(new FailedToRemoveOrganizationFromProviderError().Message);
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
@@ -74,7 +76,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 [],
                 includeProvider: false))
         {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
+            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
         }
 
         var organizationOwnerEmails =
@@ -124,6 +126,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
+                BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
@@ -150,7 +153,11 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         {
             var subscription = await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer"]
+                // `customer.discount.source.coupon` (4 levels — Stripe's cap) is required to read the
+                // customer's coupon below; the 2025-09-30.clover refactor wrapped Coupon under
+                // Discount.Source, so expanding only `customer` leaves Coupon a null stub and the
+                // discount deletion silently no-ops.
+                Expand = ["customer.discount.source.coupon"]
             });
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
@@ -162,7 +169,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Email = organization.BillingEmail
             });
 
-            if (subscription.Customer.Discount?.Coupon != null)
+            if (subscription.Customer.Discount?.Source?.Coupon != null)
             {
                 await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
             }

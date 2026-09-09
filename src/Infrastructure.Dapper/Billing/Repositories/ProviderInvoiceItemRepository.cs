@@ -16,7 +16,7 @@ public class ProviderInvoiceItemRepository(
 {
     public async Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId)
     {
-        var sqlConnection = new SqlConnection(ConnectionString);
+        await using var sqlConnection = new SqlConnection(ConnectionString);
 
         var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
             "[dbo].[ProviderInvoiceItem_ReadByInvoiceId]",
@@ -28,11 +28,23 @@ public class ProviderInvoiceItemRepository(
 
     public async Task<ICollection<ProviderInvoiceItem>> GetByProviderId(Guid providerId)
     {
-        var sqlConnection = new SqlConnection(ConnectionString);
+        await using var sqlConnection = new SqlConnection(ConnectionString);
 
         var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
             "[dbo].[ProviderInvoiceItem_ReadByProviderId]",
             new { ProviderId = providerId },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToArray();
+    }
+
+    public async Task<ICollection<ProviderInvoiceItem>> GetByProviderIdAndInvoiceId(Guid providerId, string invoiceId)
+    {
+        await using var sqlConnection = new SqlConnection(ConnectionString);
+
+        var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
+            "[dbo].[ProviderInvoiceItem_ReadByProviderIdInvoiceId]",
+            new { ProviderId = providerId, InvoiceId = invoiceId },
             commandType: CommandType.StoredProcedure);
 
         return results.ToArray();

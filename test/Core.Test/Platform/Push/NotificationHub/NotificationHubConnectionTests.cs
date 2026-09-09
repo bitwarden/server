@@ -158,7 +158,7 @@ public class NotificationHubConnectionTests
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow));
+        var result = connection.RegistrationEnabled(CombGuid.Generate(Guid.NewGuid(), DateTime.UtcNow));
 
         // Assert
         Assert.False(result);
@@ -178,7 +178,7 @@ public class NotificationHubConnectionTests
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddDays(2)));
+        var result = connection.RegistrationEnabled(CombGuid.Generate(Guid.NewGuid(), DateTime.UtcNow.AddDays(2)));
 
         // Assert
         Assert.False(result);
@@ -198,7 +198,7 @@ public class NotificationHubConnectionTests
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)));
+        var result = connection.RegistrationEnabled(CombGuid.Generate(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)));
 
         // Assert
         Assert.True(result);

@@ -30,13 +30,21 @@ public class CreatePremiumCheckoutSessionCommandTests
 
     private const string _successUrl = "success/url";
     private const string _cancelUrl = "cancel/url";
+    private const string _browserSuccessUrl = "browser/success/url";
+    private const string _browserCancelUrl = "browser/cancel/url";
+    private const string _desktopSuccessUrl = "desktop/success/url";
+    private const string _desktopCancelUrl = "desktop/cancel/url";
 
     public CreatePremiumCheckoutSessionCommandTests()
     {
         var stripeSettings = new GlobalSettings.StripeSettings
         {
             PremiumCheckoutSuccessUrl = _successUrl,
-            PremiumCheckoutCancelUrl = _cancelUrl
+            PremiumCheckoutCancelUrl = _cancelUrl,
+            BrowserPremiumCheckoutSuccessUrl = _browserSuccessUrl,
+            BrowserPremiumCheckoutCancelUrl = _browserCancelUrl,
+            DesktopPremiumCheckoutSuccessUrl = _desktopSuccessUrl,
+            DesktopPremiumCheckoutCancelUrl = _desktopCancelUrl
         };
         _globalSettings.Stripe.Returns(stripeSettings);
 
@@ -67,7 +75,7 @@ public class CreatePremiumCheckoutSessionCommandTests
         user.Premium = false;
         user.GatewayCustomerId = null;
         const string appVersion = "1.0.0";
-        const string platform = "iOS";
+        var platform = StripeConstants.CheckoutSession.Platforms.Ios;
 
         var newCustomer = new Customer { Id = "cus_123" };
         _subscriberService.CreateStripeCustomer(user).Returns(newCustomer);
@@ -104,7 +112,7 @@ public class CreatePremiumCheckoutSessionCommandTests
         user.Premium = false;
         user.GatewayCustomerId = "cus_existing";
         const string appVersion = "2.0.0";
-        const string platform = "Android";
+        var platform = StripeConstants.CheckoutSession.Platforms.Android;
 
         var existingCustomer = new Customer { Id = "cus_existing" };
         _subscriberService.GetCustomerOrThrow(user).Returns(existingCustomer);
@@ -140,7 +148,7 @@ public class CreatePremiumCheckoutSessionCommandTests
         user.Premium = true;
 
         // Act
-        var result = await _command.Run(user, "1.0.0", "iOS");
+        var result = await _command.Run(user, "1.0.0", StripeConstants.CheckoutSession.Platforms.Ios);
 
         // Assert
         Assert.True(result.IsT1);
@@ -161,7 +169,7 @@ public class CreatePremiumCheckoutSessionCommandTests
         _subscriberService.CreateStripeCustomer(user).ThrowsAsync(new BillingException());
 
         // Act
-        var result = await _command.Run(user, "1.0.0", "iOS");
+        var result = await _command.Run(user, "1.0.0", StripeConstants.CheckoutSession.Platforms.Ios);
 
         // Assert
         Assert.True(result.IsT3);
@@ -180,7 +188,7 @@ public class CreatePremiumCheckoutSessionCommandTests
         _subscriberService.GetCustomerOrThrow(user).ThrowsAsync(new BillingException());
 
         // Act
-        var result = await _command.Run(user, "1.0.0", "iOS");
+        var result = await _command.Run(user, "1.0.0", StripeConstants.CheckoutSession.Platforms.Ios);
 
         // Assert
         Assert.True(result.IsT3);
@@ -200,11 +208,102 @@ public class CreatePremiumCheckoutSessionCommandTests
         _pricingClient.GetAvailablePremiumPlan().ThrowsAsync<NotFoundException>();
 
         // Act
-        var result = await _command.Run(user, "1.0.0", "iOS");
+        var result = await _command.Run(user, "1.0.0", StripeConstants.CheckoutSession.Platforms.Ios);
 
         // Assert
         Assert.True(result.IsT3); // UnhandledException
         Assert.IsType<NotFoundException>(result.AsT3.Exception);
+        await _stripeAdapter.DidNotReceive().CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_UserNotPremium_BrowserPlatform_UsesCorrectUrls(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        const string appVersion = "1.0.0";
+        var platform = StripeConstants.CheckoutSession.Platforms.Browser;
+
+        var newCustomer = new Customer { Id = "cus_123" };
+        _subscriberService.CreateStripeCustomer(user).Returns(newCustomer);
+
+        const string checkoutSessionUrl = "https://checkout.stripe.com/session/789";
+        _stripeAdapter.CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>()).Returns(new Session { Url = checkoutSessionUrl });
+
+        // Act
+        var result = await _command.Run(user, appVersion, platform);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(checkoutSessionUrl, result.AsT0.CheckoutSessionUrl);
+        await _stripeAdapter.Received(1).CreateCheckoutSessionAsync(Arg.Is<SessionCreateOptions>(options =>
+            options.Customer == "cus_123"
+            && options.Mode == StripeConstants.CheckoutSession.Modes.Subscription
+            && options.LineItems[0].Price == StripeConstants.Prices.PremiumAnnually
+            && options.LineItems[0].Quantity == 1
+            && options.AutomaticTax.Enabled == true
+            && options.SuccessUrl == _browserSuccessUrl
+            && options.CancelUrl == _browserCancelUrl
+            && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_UserNotPremium_DesktopPlatform_UsesCorrectUrls(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        const string appVersion = "1.0.0";
+        var platform = StripeConstants.CheckoutSession.Platforms.Desktop;
+
+        var newCustomer = new Customer { Id = "cus_123" };
+        _subscriberService.CreateStripeCustomer(user).Returns(newCustomer);
+
+        const string checkoutSessionUrl = "https://checkout.stripe.com/session/101";
+        _stripeAdapter.CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>()).Returns(new Session { Url = checkoutSessionUrl });
+
+        // Act
+        var result = await _command.Run(user, appVersion, platform);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(checkoutSessionUrl, result.AsT0.CheckoutSessionUrl);
+        await _stripeAdapter.Received(1).CreateCheckoutSessionAsync(Arg.Is<SessionCreateOptions>(options =>
+            options.Customer == "cus_123"
+            && options.Mode == StripeConstants.CheckoutSession.Modes.Subscription
+            && options.LineItems[0].Price == StripeConstants.Prices.PremiumAnnually
+            && options.LineItems[0].Quantity == 1
+            && options.AutomaticTax.Enabled == true
+            && options.SuccessUrl == _desktopSuccessUrl
+            && options.CancelUrl == _desktopCancelUrl
+            && options.PaymentMethodTypes.Contains(StripeConstants.PaymentMethodTypes.Card)
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
+            && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_UnsupportedPlatform_ReturnsUnhandledException(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+
+        _subscriberService.CreateStripeCustomer(user).Returns(new Customer { Id = "cus_123" });
+
+        // Act
+        var result = await _command.Run(user, "1.0.0", "web");
+
+        // Assert
+        Assert.True(result.IsT3);
+        Assert.IsType<InvalidOperationException>(result.AsT3.Exception);
         await _stripeAdapter.DidNotReceive().CreateCheckoutSessionAsync(Arg.Any<SessionCreateOptions>());
     }
 

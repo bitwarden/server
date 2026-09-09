@@ -42,6 +42,17 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             }, startDate, endDate, pageOptions);
     }
 
+    public async Task<PagedResult<IEvent>> GetManyBySendAsync(Guid organizationId, Guid sendId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySendId]",
+            new Dictionary<string, object?>
+            {
+                ["@OrganizationId"] = organizationId,
+                ["@SendId"] = sendId
+            }, startDate, endDate, pageOptions);
+    }
+
     public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
@@ -143,6 +154,20 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        // The procedure deletes a bounded number of rows per call (its @MaxRows default), so a
+        // single call completes well within the timeout and the caller's claim lease; the caller
+        // loops until 0 is returned.
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            $"[{Schema}].[Event_DeleteManyByOrganizationId]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure,
+            commandTimeout: 300,
+            cancellationToken: cancellationToken));
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate,
         PageOptions pageOptions)
@@ -232,6 +257,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(projectIdColumn);
         var grantedServiceAccountIdColumn = new DataColumn(nameof(e.GrantedServiceAccountId), typeof(Guid));
         eventsTable.Columns.Add(grantedServiceAccountIdColumn);
+        var domainNameColumn = new DataColumn(nameof(e.DomainName), typeof(string));
+        eventsTable.Columns.Add(domainNameColumn);
+        var sendIdColumn = new DataColumn(nameof(e.SendId), typeof(Guid));
+        eventsTable.Columns.Add(sendIdColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -266,6 +295,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
             row[projectIdColumn] = ev.ProjectId.HasValue ? ev.ProjectId.Value : DBNull.Value;
             row[grantedServiceAccountIdColumn] = ev.GrantedServiceAccountId.HasValue ? ev.GrantedServiceAccountId.Value : DBNull.Value;
+            row[domainNameColumn] = ev.DomainName != null ? (object)ev.DomainName : DBNull.Value;
+            row[sendIdColumn] = ev.SendId.HasValue ? ev.SendId.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 

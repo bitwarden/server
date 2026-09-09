@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +25,7 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
     private readonly IMailService _mailService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _tokenDataFactory;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IValidateOrganizationInviteLinkQuery _validateOrganizationInviteLinkQuery;
 
     public SendVerificationEmailForRegistrationCommand(
         ILogger<SendVerificationEmailForRegistrationCommand> logger,
@@ -30,7 +33,8 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         GlobalSettings globalSettings,
         IMailService mailService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository,
+        IValidateOrganizationInviteLinkQuery validateOrganizationInviteLinkQuery)
     {
         _logger = logger;
         _userRepository = userRepository;
@@ -38,29 +42,47 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         _mailService = mailService;
         _tokenDataFactory = tokenDataFactory;
         _organizationDomainRepository = organizationDomainRepository;
-
+        _validateOrganizationInviteLinkQuery = validateOrganizationInviteLinkQuery;
     }
 
-    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing)
+    public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails, string? fromMarketing,
+        RegisterStartOpenOrgInviteRequestModel? openOrgInvite = null)
     {
-        if (_globalSettings.DisableUserRegistration)
-        {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
-        }
-
         if (string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentNullException(nameof(email));
         }
 
-        // Check if the email domain is blocked by an organization policy
         var emailDomain = EmailValidation.GetDomain(email);
 
-        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(emailDomain))
+        // When an open-org-invite payload is present, validate it and use its org as the
+        // exclusion target for the claimed-domain block check so a user reaching registration
+        // via that org's link can proceed with a domain the org has claimed.
+        Guid? excludeOrganizationId = null;
+        if (openOrgInvite is not null)
+        {
+            var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
+                openOrgInvite.OrganizationId, openOrgInvite.Code, email);
+            if (validationResult.IsError)
+            {
+                throw new BadRequestException("Invalid or expired organization invite link.");
+            }
+            excludeOrganizationId = openOrgInvite.OrganizationId;
+        }
+
+        // DisableUserRegistration targets open self-registration. A validated open-org invite
+        // is the authorization for that path, so the toggle must not block it.
+        if (openOrgInvite is null && _globalSettings.DisableUserRegistration)
+        {
+            throw new BadRequestException("Open registration has been disabled by the system administrator.");
+        }
+
+        if (await _organizationDomainRepository.HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(
+                emailDomain, excludeOrganizationId))
         {
             _logger.LogInformation(
-                "User registration email verification blocked by domain claim policy. Domain: {Domain}",
-                emailDomain);
+                "User registration email verification blocked by domain claim policy. Domain: {Domain}, ExcludedOrgId: {ExcludedOrgId}",
+                emailDomain, excludeOrganizationId);
             throw new BadRequestException("This email address is claimed by an organization using Bitwarden.");
         }
 
@@ -86,7 +108,8 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
             // If the user doesn't exist, create a new EmailVerificationTokenable and send the user
             // an email with a link to verify their email address
             var token = GenerateToken(email, name, receiveMarketingEmails);
-            await _mailService.SendRegistrationVerificationEmailAsync(email, token, fromMarketing);
+            await _mailService.SendRegistrationVerificationEmailAsync(
+                email, token, fromMarketing, openOrgInvite?.SealedOpenOrgInviteData);
         }
 
         // User exists but we will return a 200 regardless of whether the email was sent or not; so return null
@@ -99,4 +122,3 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         return _tokenDataFactory.Protect(registrationEmailVerificationTokenable);
     }
 }
-

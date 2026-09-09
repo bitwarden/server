@@ -19,6 +19,7 @@ public class SecretVersionMapperProfile : Profile
     {
         CreateMap<Core.SecretsManager.Entities.SecretVersion, SecretVersion>()
             .PreserveReferences()
+            .MaxDepth(5)
             .ReverseMap();
     }
 }

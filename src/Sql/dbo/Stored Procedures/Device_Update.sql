@@ -11,7 +11,8 @@
     @EncryptedPublicKey VARCHAR(MAX) = NULL,
     @EncryptedPrivateKey VARCHAR(MAX) = NULL,
     @Active BIT = 1,
-    @LastActivityDate DATETIME2(7) = NULL
+    @LastActivityDate DATETIME2(7) = NULL,
+    @ClientVersion NVARCHAR(43) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -40,7 +41,11 @@ BEGIN
         [LastActivityDate] = CASE
             WHEN @LastActivityDate > ISNULL([LastActivityDate], '1900-01-01') THEN @LastActivityDate
             ELSE [LastActivityDate]
-        END
+        END,
+        -- ClientVersion is value-equality based, not forward-only — downgrades are valid (e.g. a user
+        -- reverts a desktop install). We only need NULL passthrough so unrelated SaveAsync calls (that
+        -- don't intend to touch ClientVersion) don't clobber the stored value with NULL.
+        [ClientVersion] = ISNULL(@ClientVersion, [ClientVersion])
     WHERE
         [Id] = @Id
 END

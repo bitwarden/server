@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Core.Billing.Subscriptions.Repositories;
@@ -25,6 +26,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories;
+using Bit.Pam.Repositories;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,6 +103,9 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
+        services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
+        services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
+        services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
@@ -114,9 +119,12 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortRepository, OrganizationPlanMigrationCohortRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortAssignmentRepository, OrganizationPlanMigrationCohortAssignmentRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
+        services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
 
         if (selfHosted)
         {
