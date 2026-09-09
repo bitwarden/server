@@ -212,6 +212,10 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             .Include(s => s.ServiceAccountAccessPolicies)
             .FirstAsync(s => s.Id == secret.Id);
 
+        // Captured before SetValues overwrites the tracked entity with the incoming values.
+        var previousValue = entity.Value;
+        var previousRevisionDate = entity.RevisionDate;
+
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
         if (secret.Projects != null)
@@ -230,6 +234,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         if (newVersion != null)
         {
             newVersion.SecretId = entity.Id;
+
+            // Saved before pruning so AddWithPruningAsync counts it against the retention limit.
+            if (await SecretVersionWriter.TryBackfillPreviousVersionAsync(
+                    dbContext, Mapper, entity.Id, previousValue, previousRevisionDate))
+            {
+                await dbContext.SaveChangesAsync();
+            }
+
             await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, newVersion);
             await dbContext.SaveChangesAsync();
         }

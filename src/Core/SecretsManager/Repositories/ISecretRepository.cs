@@ -28,6 +28,11 @@ public interface ISecretRepository
     /// <summary>
     /// Updates a secret, and when <paramref name="newVersion"/> is supplied writes it in the same
     /// transaction. Pass null when the value did not change and no snapshot is wanted.
+    /// <para>
+    /// When <paramref name="newVersion"/> is supplied and the secret has no version history yet,
+    /// a snapshot of the pre-update value is written first, with no editor attributed. This keeps
+    /// the overwritten value recoverable for secrets stored before versioning existed.
+    /// </para>
     /// </summary>
     Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null,
         SecretVersion newVersion = null);

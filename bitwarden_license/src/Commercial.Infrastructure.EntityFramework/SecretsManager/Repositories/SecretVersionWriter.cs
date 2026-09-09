@@ -10,6 +10,43 @@ internal static class SecretVersionWriter
     private const int MaxVersionsToKeep = 10;
 
     /// <summary>
+    /// Snapshots a secret's pre-update value when it has no version history yet, so the value being
+    /// overwritten stays recoverable. Secrets written before versioning existed - or by any future
+    /// create path that omits an initial version - would otherwise lose it silently on first edit.
+    /// The editor is left unset because that earlier write was never attributed to anyone.
+    /// </summary>
+    /// <returns><c>true</c> when a snapshot was added to the change tracker.</returns>
+    public static async Task<bool> TryBackfillPreviousVersionAsync(
+        DatabaseContext dbContext,
+        IMapper mapper,
+        Guid secretId,
+        string? previousValue,
+        DateTime previousRevisionDate)
+    {
+        // SecretVersion.Value is non-nullable, and a null value has nothing worth recovering.
+        if (previousValue == null)
+        {
+            return false;
+        }
+
+        if (await dbContext.SecretVersion.AnyAsync(sv => sv.SecretId == secretId))
+        {
+            return false;
+        }
+
+        var previousVersion = new Core.SecretsManager.Entities.SecretVersion
+        {
+            SecretId = secretId,
+            Value = previousValue,
+            VersionDate = previousRevisionDate
+        };
+
+        previousVersion.SetNewId();
+        await dbContext.AddAsync(mapper.Map<SecretVersion>(previousVersion));
+        return true;
+    }
+
+    /// <summary>
     /// Trims the secret's history so that adding <paramref name="secretVersion"/> leaves at most
     /// <see cref="MaxVersionsToKeep"/> versions, then adds it to the change tracker.
     /// </summary>
