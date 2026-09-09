@@ -7,7 +7,7 @@ itself is not in this repository.
 **Audience:** server engineers changing the daemon-facing endpoints, and anyone implementing or
 debugging a daemon against them.
 
-Routes live under `rotation/` and are mapped in
+Routes live under `access-connectors/rotation/` and are mapped in
 [`PamEndpointsExtensions`](../../Api/Endpoints/PamEndpointsExtensions.cs). Every one of them requires
 a daemon token, not a member's.
 
@@ -46,13 +46,13 @@ An administrator registers the daemon; the daemon does not register itself.
 
 1. Wrap the organization key client-side and post the ciphertext to `POST
    organizations/{orgId}/access-connectors` with a display name.
-   [`RegisterDaemonCommand`](../Commands/RegisterDaemonCommand.cs) stores the wrapped key and never
-   sees the plaintext.
+   [`RegisterAccessConnectorCommand`](../Commands/RegisterAccessConnectorCommand.cs) stores the
+   wrapped key and never sees the plaintext.
 2. Keep the `clientSecret` from the response. It is shown exactly once — the server stores only a
    hash of it and cannot return it again.
 3. Assemble the daemon's credential from the response's `apiKeyId` and `clientSecret`, plus the
    encryption key half held client-side, in the form
-   `0.daemon.<apiKeyId>.<clientSecret>:<encryptionKey>`.
+   `0.access-connector.<apiKeyId>.<clientSecret>:<encryptionKey>`.
 4. Assign the daemon to each target system it should work, with `POST
    organizations/{orgId}/access-connectors/{id}/assignments`. A daemon with no assignment sees no work.
    The daemon must be enabled and the target must be automatic; a manual target has no daemon to
@@ -64,7 +64,7 @@ at it. PAM reuses the Secrets Manager credential store rather than minting a par
 ## Authentication
 
 The daemon exchanges its credential for an access token at Identity's token endpoint using the
-client-credentials grant, with client id `daemon.<apiKeyId>` and scope `api.pam.rotation`.
+client-credentials grant, with client id `access-connector.<apiKeyId>` and scope `api.pam.rotation`.
 [`PamDaemonClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamDaemonClientProvider.cs)
 resolves the client and refuses to issue a token unless the daemon is enabled and its organization is
 both enabled and licensed for PAM.
@@ -192,11 +192,11 @@ working. Both return **404** for an unknown attempt id.
 
 ## Endpoint reference
 
-| Method and route                          | Purpose                                        |
-| ----------------------------------------- | ---------------------------------------------- |
-| `GET access-connectors/rotation/jobs`                | Poll for claimable work; doubles as heartbeat. |
-| `POST access-connectors/rotation/jobs/{id}/claim`           | Claim a job and open an attempt.               |
-| `GET access-connectors/rotation/attempts/{id}/cipher`       | Read the claimed attempt's vault item.         |
-| `PUT access-connectors/rotation/attempts/{id}/cipher`       | Write the rotated secret back.                 |
-| `POST access-connectors/rotation/attempts/{id}/success`     | Report a successful rotation.                  |
-| `POST access-connectors/rotation/attempts/{id}/failure`     | Report a failed rotation.                      |
+| Method and route                                        | Purpose                                        |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| `GET access-connectors/rotation/jobs`                   | Poll for claimable work; doubles as heartbeat. |
+| `POST access-connectors/rotation/jobs/{id}/claim`       | Claim a job and open an attempt.               |
+| `GET access-connectors/rotation/attempts/{id}/cipher`   | Read the claimed attempt's vault item.         |
+| `PUT access-connectors/rotation/attempts/{id}/cipher`   | Write the rotated secret back.                 |
+| `POST access-connectors/rotation/attempts/{id}/success` | Report a successful rotation.                  |
+| `POST access-connectors/rotation/attempts/{id}/failure` | Report a failed rotation.                      |
