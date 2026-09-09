@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -258,6 +259,57 @@ public class SecretsControllerTests
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
             .UpdateAsync(Arg.Any<Secret>(), null);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_FlagDisabled_DoesNotCreateVersion(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+        SetupUpdateForVersioning(sutProvider, data, currentSecret);
+
+        // The substituted IFeatureService reports every flag disabled, so this is the flag-off path.
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueChanged_FlagEnabled_CreatesVersion(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = true;
+        SetupUpdateForVersioning(sutProvider, data, currentSecret);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SecretsVersioning, Arg.Any<bool>()).Returns(true);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().Received(1)
+            .CreateAsync(Arg.Is<SecretVersion>(v => v.SecretId == currentSecret.Id));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSecret_ValueUnchanged_FlagEnabled_DoesNotCreateVersion(
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = false;
+        SetupUpdateForVersioning(sutProvider, data, currentSecret);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SecretsVersioning, Arg.Any<bool>()).Returns(true);
+
+        // The flag opens the gate; it does not make an unchanged value worth recording.
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
     }
 
     [Theory]
@@ -617,6 +669,26 @@ public class SecretsControllerTests
             .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
         return data;
+    }
+
+    /// <summary>
+    /// Minimum wiring for UpdateSecretAsync to reach the version-recording branch. Runs as a
+    /// service account so attribution needs no OrganizationUser lookup.
+    /// </summary>
+    private static void SetupUpdateForVersioning(SutProvider<SecretsController> sutProvider,
+        SecretUpdateRequestModel data, Secret currentSecret)
+    {
+        SetControllerUser(sutProvider, Guid.NewGuid());
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType
+            .Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .ReturnsForAnyArgs(data.ToSecret(currentSecret));
     }
 
     private static void SetControllerUser(SutProvider<SecretsController> sutProvider, Guid userId)
