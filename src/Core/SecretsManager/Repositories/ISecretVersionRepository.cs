@@ -8,7 +8,6 @@ public interface ISecretVersionRepository
     Task<SecretVersion?> GetByIdAsync(Guid id);
     Task<IEnumerable<SecretVersion>> GetManyBySecretIdAsync(Guid secretId);
     Task<IEnumerable<SecretVersion>> GetManyByIdsAsync(IEnumerable<Guid> ids);
-    Task<SecretVersion> CreateAsync(SecretVersion secretVersion);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task<SecretVersionDetails?> GetDetailsByIdAsync(Guid id);
     Task<IEnumerable<SecretVersionDetails>> GetManyDetailsBySecretIdAsync(Guid secretId);

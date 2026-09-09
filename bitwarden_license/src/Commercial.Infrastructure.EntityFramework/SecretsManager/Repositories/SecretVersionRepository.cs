@@ -8,6 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
+// Versions are written only via ISecretRepository, inside the owning secret's transaction —
+// see SecretVersionWriter.AddWithPruningAsync for the retention cap.
 public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.SecretVersion, SecretVersion, Guid>, ISecretVersionRepository
 {
     public SecretVersionRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
@@ -47,21 +49,6 @@ public class SecretVersionRepository : Repository<Core.SecretsManager.Entities.S
             .ThenByDescending(sv => sv.Id)
             .ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.SecretVersion>>(secretVersions);
-    }
-
-    public override async Task<Core.SecretsManager.Entities.SecretVersion> CreateAsync(Core.SecretsManager.Entities.SecretVersion secretVersion)
-    {
-        await using var scope = ServiceScopeFactory.CreateAsyncScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, secretVersion);
-
-        await dbContext.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return secretVersion;
     }
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)

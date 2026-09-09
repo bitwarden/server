@@ -50,6 +50,25 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Seeds a version the way production does — handed to <see cref="ISecretRepository.UpdateAsync"/>
+    /// so it is written inside the owning secret's transaction, with the same retention pruning.
+    /// </summary>
+    private async Task<SecretVersion> AddVersionAsync(Secret secret, string value, DateTime versionDate)
+    {
+        // AddWithPruningAsync assigns the id on this instance, so it comes back populated.
+        var version = new SecretVersion
+        {
+            SecretId = secret.Id,
+            Value = value,
+            VersionDate = versionDate
+        };
+
+        await _secretRepository.UpdateAsync(secret, null, version);
+
+        return version;
+    }
+
     [Theory]
     [InlineData(false, false, false)]
     [InlineData(false, false, true)]
@@ -92,19 +111,8 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         // Create some versions
-        var version1 = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = _mockEncryptedString,
-            VersionDate = DateTime.UtcNow.AddDays(-2)
-        });
-
-        var version2 = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = _mockEncryptedString,
-            VersionDate = DateTime.UtcNow.AddDays(-1)
-        });
+        await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow.AddDays(-2));
+        await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow.AddDays(-1));
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -147,12 +155,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
             Note = _mockEncryptedString
         });
 
-        var version = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = _mockEncryptedString,
-            VersionDate = DateTime.UtcNow
-        });
+        var version = await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow);
 
         var response = await _client.GetAsync($"/secret-versions/{version.Id}");
         response.EnsureSuccessStatusCode();
@@ -178,12 +181,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
             Note = _mockEncryptedString
         });
 
-        var version = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = "OldValue",
-            VersionDate = DateTime.UtcNow.AddDays(-1)
-        });
+        var version = await AddVersionAsync(secret, "OldValue", DateTime.UtcNow.AddDays(-1));
 
         var request = new RestoreSecretVersionRequestModel
         {
@@ -213,19 +211,8 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
             Note = _mockEncryptedString
         });
 
-        var version1 = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = _mockEncryptedString,
-            VersionDate = DateTime.UtcNow.AddDays(-2)
-        });
-
-        var version2 = await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = _mockEncryptedString,
-            VersionDate = DateTime.UtcNow.AddDays(-1)
-        });
+        var version1 = await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow.AddDays(-2));
+        var version2 = await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow.AddDays(-1));
 
         var ids = new List<Guid> { version1.Id, version2.Id };
 
@@ -251,26 +238,9 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         // Create versions in random order
-        await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = "Version2",
-            VersionDate = DateTime.UtcNow.AddDays(-1)
-        });
-
-        await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = "Version3",
-            VersionDate = DateTime.UtcNow
-        });
-
-        await _secretVersionRepository.CreateAsync(new SecretVersion
-        {
-            SecretId = secret.Id,
-            Value = "Version1",
-            VersionDate = DateTime.UtcNow.AddDays(-2)
-        });
+        await AddVersionAsync(secret, "Version2", DateTime.UtcNow.AddDays(-1));
+        await AddVersionAsync(secret, "Version3", DateTime.UtcNow);
+        await AddVersionAsync(secret, "Version1", DateTime.UtcNow.AddDays(-2));
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
         response.EnsureSuccessStatusCode();
@@ -301,17 +271,12 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
             Note = _mockEncryptedString
         });
 
-        // CreateAsync keeps only the ten most recent versions, so the two oldest of these twelve
+        // Each write keeps only the ten most recent versions, so the two oldest of these twelve
         // should be pruned as the later ones are written.
         var baseDate = DateTime.UtcNow.AddDays(-20);
         for (var i = 0; i < 12; i++)
         {
-            await _secretVersionRepository.CreateAsync(new SecretVersion
-            {
-                SecretId = secret.Id,
-                Value = $"Version{i:D2}",
-                VersionDate = baseDate.AddDays(i)
-            });
+            await AddVersionAsync(secret, $"Version{i:D2}", baseDate.AddDays(i));
         }
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
