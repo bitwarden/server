@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;

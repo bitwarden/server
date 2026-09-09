@@ -1,4 +1,4 @@
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 

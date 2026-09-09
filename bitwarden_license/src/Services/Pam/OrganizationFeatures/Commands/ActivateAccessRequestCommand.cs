@@ -5,7 +5,6 @@ using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
-using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;

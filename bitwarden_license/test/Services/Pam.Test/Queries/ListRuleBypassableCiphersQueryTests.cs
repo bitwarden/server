@@ -1,5 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Models;

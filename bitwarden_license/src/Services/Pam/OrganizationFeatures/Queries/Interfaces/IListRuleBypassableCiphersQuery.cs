@@ -1,4 +1,4 @@
-namespace Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+﻿namespace Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 /// <summary>
 /// Finds where an access rule fails to gate: the collections through which the ciphers it governs are
