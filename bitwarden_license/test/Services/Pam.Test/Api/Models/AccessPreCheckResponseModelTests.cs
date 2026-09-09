@@ -1,4 +1,4 @@
-using Bit.Services.Pam.Api.Models.Response;
+﻿using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.Enums;
 using Bit.Services.Pam.Models;
 using Xunit;
