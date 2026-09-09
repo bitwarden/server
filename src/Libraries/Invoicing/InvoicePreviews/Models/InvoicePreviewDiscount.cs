@@ -18,4 +18,7 @@ public record InvoicePreviewDiscount
 
     /// <summary>Coupon name, used as the row label.</summary>
     public string? Label { get; init; }
+
+    /// <summary>Finite duration in months for a repeating coupon; null for one-time or forever coupons.</summary>
+    public long? DurationInMonths { get; init; }
 }

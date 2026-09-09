@@ -108,6 +108,7 @@ internal static class DiscountMapper
             Value = Coupon.PercentOff ?? (Coupon.AmountOff ?? 0) / 100m,
             Amount = amount,
             Label = Coupon.Name,
+            DurationInMonths = Coupon.DurationInMonths,
         };
     }
 }
