@@ -11,13 +11,11 @@ public class ErrorController : Controller
         var exceptionHandlerPathFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
         TempData["Error"] = HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error.Message;
 
-        if (exceptionHandlerPathFeature != null)
+        if (exceptionHandlerPathFeature != null && Url.IsLocalUrl(exceptionHandlerPathFeature.Path))
         {
             return Redirect(exceptionHandlerPathFeature.Path);
         }
-        else
-        {
-            return Redirect("/Home");
-        }
+
+        return Redirect("/Home");
     }
 }
