@@ -774,7 +774,8 @@ public class OrganizationService : IOrganizationService
         DateTime RevisionDate);
 
     /// <summary>
-    /// Puts promoted staged members back to the state they were provisioned in.
+    /// Puts promoted staged members back to the state they were provisioned in. Collections and groups are
+    /// intentionally not restored here due to the increased chance of failures causing failures
     /// </summary>
     private async Task RestorePromotedStagedUsersAsync(
         List<OrganizationUser> promotedStagedUsers,
