@@ -11,6 +11,7 @@ using Bit.Core.Dirt.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Bot.Schema;
 using NSubstitute;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
@@ -177,6 +178,65 @@ public class TeamsServiceTests
 
         Assert.NotNull(result);
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_SendsViaInjectedHttpClient()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+        var channelId = "19:channel-id@thread.tacv2";
+
+        string? capturedBody = null;
+        var matcher = _handler
+            .When(request =>
+            {
+                capturedBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return true;
+            })
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent("application/json", JsonSerializer.Serialize(new { id = "activity-id" }));
+
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, channelId, "test message");
+
+        // The ConnectorClient only reaches this handler if it was constructed with the injected
+        // (SSRF-protected) HttpClient rather than creating its own.
+        Assert.Single(_handler.CapturedRequests);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_CalledMultipleTimes_DoesNotDisposeInjectedHttpClient()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+
+        _handler
+            .When(_ => true)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent("application/json", JsonSerializer.Serialize(new { id = "activity-id" }));
+
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "first message");
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "second message");
+
+        // Disposing the ConnectorClient must not dispose the shared, factory-provided HttpClient.
+        Assert.Equal(2, _handler.CapturedRequests.Count);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_ServerErrorCode_Throws()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+
+        _handler
+            .When(_ => true)
+            .RespondWith(HttpStatusCode.Forbidden)
+            .WithContent("application/json", JsonSerializer.Serialize(new { error = new { code = "Forbidden" } }));
+
+        await Assert.ThrowsAsync<ErrorResponseException>(() =>
+            sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "test message"));
+
+        Assert.Single(_handler.CapturedRequests);
     }
 
     [Theory, BitAutoData]

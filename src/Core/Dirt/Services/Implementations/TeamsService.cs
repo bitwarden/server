@@ -114,7 +114,7 @@ public class TeamsService(
     public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
         var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret);
-        using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient);
+        using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient, disposeHttpClient: false);
 
         var activity = new Activity
         {
