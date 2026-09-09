@@ -22,7 +22,7 @@ public class OrganizationUserValidationServiceTests
         _sut = new OrganizationUserValidationService(_organizationUserRepository);
     }
 
-    // NOTE: A null `actingUser` represents a non-member. Custom users are granted the ManageUsers permission by
+    // NOTE: A null `performedBy` represents a non-member. Custom users are granted the ManageUsers permission by
     // default, since that is the authority a Custom user needs to act on members.
     private static OrganizationUser? ActingUser(OrganizationUserType? role, bool manageUsers = true)
     {
@@ -210,6 +210,53 @@ public class OrganizationUserValidationServiceTests
             NewRole(OrganizationUserType.Custom, new Permissions { ManageScim = true, ManageSso = true }));
 
         Assert.Null(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenPerformedBySystemUser_ReturnsNull()
+    {
+        // System users act outside the organization role hierarchy and skip the check.
+        var performedBy = new SystemUser(EventSystemUser.SCIM);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.Owner),
+            NewRole(OrganizationUserType.User));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenPerformedByProvider_ActsWithOwnerAuthority()
+    {
+        // A managing provider member holds Owner-level authority, so it can promote a User to Owner.
+        var performedBy = new StandardUser(Guid.NewGuid(), isProvider: true);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+            NewRole(OrganizationUserType.Owner));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenPerformedByMember_UsesTheirRole()
+    {
+        // An Admin member can't promote a User to Owner.
+        var performedBy = new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Admin);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+            NewRole(OrganizationUserType.Owner));
+
+        Assert.IsType<OnlyOwnersCanManageOwners>(result);
+    }
+
+    [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenPerformedByNeitherMemberNorProvider_ReturnsActingUserMustBeMemberOrProvider()
+    {
+        var performedBy = new StandardUser(Guid.NewGuid(), isProvider: false);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+            NewRole(OrganizationUserType.Admin));
+
+        Assert.IsType<ActingUserMustBeMemberOrProvider>(result);
     }
 
     [Theory]

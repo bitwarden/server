@@ -31,11 +31,23 @@ public interface IOrganizationUserValidationService
     /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
     /// custom permissions they hold themselves.
     /// </summary>
-    /// <param name="actingUser">The acting user's role.</param>
+    /// <param name="actingUser">The acting user.</param>
     /// <param name="targetUser">The member being managed, with their current role.</param>
     /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
-    /// <returns><c>null</c> when allowed, otherwise the error describing the denial.</returns>
+    /// <returns><c>null</c> when allowed, otherwise the error describing why.</returns>
     Error? CanManageRoleChange(IOrganizationUserRole actingUser, IOrganizationUserRole targetUser,
+        IOrganizationUserRole newTargetUser);
+
+    /// <summary>
+    /// Checks whether the acting user can change the target member's role without escalating privileges. The acting
+    /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
+    /// custom permissions they hold themselves.
+    /// </summary>
+    /// <param name="performedBy">The caller acting on the member.</param>
+    /// <param name="targetUser">The member being managed, with their current role.</param>
+    /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
+    /// <returns><c>null</c> when allowed, otherwise the error describing why.</returns>
+    Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser,
         IOrganizationUserRole newTargetUser);
 
     /// <summary>

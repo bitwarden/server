@@ -181,5 +181,6 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         public Guid? UserId => Guid.Empty;
         public bool IsOrganizationOwnerOrProvider => false;
         public EventSystemUser? SystemUserType => null;
+        public bool IsProvider => false;
     }
 }

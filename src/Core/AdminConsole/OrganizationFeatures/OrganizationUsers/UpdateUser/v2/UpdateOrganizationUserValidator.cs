@@ -69,7 +69,14 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        var roleChangeError = ValidateRoleChange(request);
+        var roleChangeError = organizationUserValidationService.CanManageRoleChange(
+            request.PerformedBy,
+            request.OrganizationUserToUpdate,
+            new OrganizationUserRole(
+                request.NewType,
+                request.Organization.Id,
+                request.NewPermissions));
+
         if (roleChangeError is not null)
         {
             return Invalid(request, roleChangeError);
@@ -176,34 +183,6 @@ public class UpdateOrganizationUserValidator(
         return membership is not null
             ? new EmailAlreadyInUseByAnotherMemberError()
             : new EmailTakenOutsideOrganizationError();
-    }
-
-    /// <summary>
-    /// Delegates the role-change authority decision to
-    /// <see cref="IOrganizationUserValidationService.CanManageRoleChange"/>. System users and provider users
-    /// hold authority above the organization role hierarchy and skip the check.
-    /// </summary>
-    private Error? ValidateRoleChange(UpdateOrganizationUserRequest request)
-    {
-        if (request.PerformedBy is not StandardUser standardUser)
-        {
-            return null;
-        }
-
-        var actingUser = new OrganizationUserRole(
-            standardUser.OrganizationUserType,
-            request.OrganizationUserToUpdate.OrganizationId,
-            standardUser.Permissions);
-
-        var newTargetUser = new OrganizationUserRole(
-            request.NewType,
-            request.OrganizationUserToUpdate.OrganizationId,
-            request.NewPermissions);
-
-        return organizationUserValidationService.CanManageRoleChange(
-            actingUser,
-            request.OrganizationUserToUpdate,
-            newTargetUser);
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccessToSave,

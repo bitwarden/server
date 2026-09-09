@@ -1,5 +1,4 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -75,39 +74,20 @@ public class GetActingUserForOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetActingUserAsync_ProviderAdmin_ReturnsProviderUser(
+    public async Task GetActingUserAsync_ManagingProvider_ReturnsStandardUserFlaggedAsProvider(
         Guid userId, Guid organizationId, Guid providerId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
         var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
         currentContext.ProviderIdForOrg(organizationId).Returns(providerId);
-        currentContext.ProviderProviderAdmin(providerId).Returns(true);
 
         var result = await sut.GetActingUserAsync(userId, organizationId);
 
-        var providerUser = Assert.IsType<ProviderUser>(result);
-        Assert.Equal(userId, providerUser.UserId);
-        Assert.Equal(providerId, providerUser.ProviderId);
-        Assert.Equal(ProviderUserType.ProviderAdmin, providerUser.ProviderUserType);
-        Assert.True(providerUser.IsOrganizationOwnerOrProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task GetActingUserAsync_ProviderServiceUser_ReturnsProviderUser(
-        Guid userId, Guid organizationId, Guid providerId)
-    {
-        var currentContext = Substitute.For<ICurrentContext>();
-        var sut = new GetActingUserForOrganizationQuery(currentContext);
-        currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        currentContext.ProviderIdForOrg(organizationId).Returns(providerId);
-        currentContext.ProviderProviderAdmin(providerId).Returns(false);
-
-        var result = await sut.GetActingUserAsync(userId, organizationId);
-
-        var providerUser = Assert.IsType<ProviderUser>(result);
-        Assert.Equal(ProviderUserType.ServiceUser, providerUser.ProviderUserType);
+        var standardUser = Assert.IsType<StandardUser>(result);
+        Assert.Equal(userId, standardUser.UserId);
+        Assert.True(standardUser.IsProvider);
+        Assert.Null(standardUser.OrganizationUserType);
     }
 
     [Theory]

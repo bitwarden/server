@@ -302,10 +302,10 @@ public class UpdateOrganizationUserValidatorTests
         // The escalation decision (and which error to return) lives in the validation service; the validator
         // just forwards whatever it returns. The mapping itself is covered by the service's own unit tests.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
+            performedBy: new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManageRoleChange(Arg.Any<IOrganizationUserRole>(), Arg.Any<IOrganizationUserRole>(),
+            .CanManageRoleChange(Arg.Any<IActingUser>(), Arg.Any<IOrganizationUserRole>(),
                 Arg.Any<IOrganizationUserRole>())
             .Returns(new CustomUsersCannotManageAdminsOrOwners());
 

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -14,8 +15,7 @@ public class OrganizationUserValidationService(
     public Error? CanManage(IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser) =>
         IsAuthorizedByRole(actingUser, targetUser.Type) ? null : CannotManageError(targetUser.Type);
 
-    public Error? CanManageRoleChange(IOrganizationUserRole actingUser,
-        IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
+    public Error? CanManageRoleChange(IOrganizationUserRole actingUser, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
         // Must be able to manage both the current and requested role.
         var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
@@ -25,6 +25,29 @@ public class OrganizationUserValidationService(
             ? ValidateCustomPermissionsGrant(actingUser, newTargetUser)
             : CannotManageError(targetUser.Type, newTargetUser.Type);
     }
+
+    public Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
+    {
+        // SystemUsers exist outside the organization hierarchy.
+        if (performedBy is not StandardUser standardUser)
+        {
+            return null;
+        }
+
+        // Must be able to manage both the current and requested role.
+        return GetActingUser(standardUser, targetUser.OrganizationId)
+            .Match(
+                error => error,
+                role => CanManageRoleChange(role, targetUser, newTargetUser));
+    }
+
+    private static CommandResult<OrganizationUserRole> GetActingUser(StandardUser standardUser, Guid organizationId) =>
+        standardUser switch
+        {
+            { IsProvider: true, OrganizationUserType: null } => new OrganizationUserRole(OrganizationUserType.Owner, organizationId),
+            { OrganizationUserType: not null } => new OrganizationUserRole(standardUser.OrganizationUserType.Value, organizationId, standardUser.Permissions),
+            _ => new ActingUserMustBeMemberOrProvider()
+        };
 
     public async Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType,
         OrganizationUserType currentUserType, OrganizationUserType newUserType)
