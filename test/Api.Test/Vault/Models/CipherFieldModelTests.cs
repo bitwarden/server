@@ -25,7 +25,7 @@ public class CipherFieldModelTests
         {
             Type = FieldType.Text,
             Name = plainTextName,
-            Value = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==" // Valid encrypted value
+            Value = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=" // Valid encrypted value
         };
 
         var validationResults = new List<ValidationResult>();
@@ -48,7 +48,7 @@ public class CipherFieldModelTests
         var model = new CipherFieldModel
         {
             Type = FieldType.Text,
-            Name = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==", // Valid encrypted name
+            Name = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=", // Valid encrypted name
             Value = plainTextValue
         };
 
@@ -64,9 +64,9 @@ public class CipherFieldModelTests
     /// Tests that properly encrypted strings in Name and Value pass validation.
     /// </summary>
     [Theory]
-    [InlineData("2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // AesCbc256_HmacSha256_B64
-    [InlineData("0.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // AesCbc256_B64
-    [InlineData("aXY=|Y3Q=|cnNhQ3Q=")] // Legacy format without header
+    [InlineData("2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // AesCbc256_HmacSha256_B64
+    [InlineData("0.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==")] // AesCbc256_B64
+    [InlineData("AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // Legacy format without header
     public void Validate_EncryptedStrings_PassesValidation(string encryptedString)
     {
         var model = new CipherFieldModel

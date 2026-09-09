@@ -239,7 +239,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     {
         // Returns whether the user is a V2 user based on the private key's encryption type.
         ArgumentNullException.ThrowIfNull(user);
-        var isPrivateKeyEncryptionV2 = EncryptionParsing.GetEncryptionType(user.PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+        var isPrivateKeyEncryptionV2 = EncryptionParsing.GetEncryptionType(user.PrivateKey) == EncryptionType.CoseEncrypt0B64;
         return isPrivateKeyEncryptionV2;
     }
 
@@ -267,7 +267,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         {
             throw new InvalidOperationException("Signature key pair data is required for V2 encryption.");
         }
-        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.SignatureKeyPairData.WrappedSigningKey) != EncryptionType.CoseEncrypt0B64)
         {
             throw new InvalidOperationException("The provided signing key data is not wrapped with XChaCha20-Poly1305.");
         }
@@ -276,7 +276,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided signature key pair data does not contain a valid verifying key.");
         }
 
-        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.XChaCha20Poly1305_B64)
+        if (EncryptionParsing.GetEncryptionType(model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey) != EncryptionType.CoseEncrypt0B64)
         {
             throw new InvalidOperationException("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.");
         }

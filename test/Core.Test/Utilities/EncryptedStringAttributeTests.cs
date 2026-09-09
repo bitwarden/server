@@ -8,28 +8,19 @@ public class EncryptedStringAttributeTests
 {
     [Theory]
     [InlineData(null)]
-    [InlineData("aXY=|Y3Q=")] // Valid AesCbc256_B64
-    [InlineData("aXY=|Y3Q=|cnNhQ3Q=")] // Valid AesCbc128_HmacSha256_B64
-    [InlineData("Rsa2048_OaepSha256_B64.cnNhQ3Q=")]
-    [InlineData("0.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc256_B64 as a number
-    [InlineData("AesCbc256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc256_B64 as a number
-    [InlineData("1.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc128_HmacSha256_B64 as a number
-    [InlineData("AesCbc128_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc128_HmacSha256_B64 as a string
-    [InlineData("2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc256_HmacSha256_B64 as a number
-    [InlineData("AesCbc256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid AesCbc256_HmacSha256_B64 as a string
+    [InlineData("AAECAwQFBgcICQoLDA0ODw==|Y3Q=")] // Valid AesCbc256_B64
+    [InlineData("AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // Valid legacy headerless iv|ct|mac
+    [InlineData("0.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==")] // Valid AesCbc256_B64 as a number
+    [InlineData("2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // Valid AesCbc256_HmacSha256_B64 as a number
     [InlineData("3.QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha256_B64.QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_B64 as a string
     [InlineData("4.QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_B64 as a number
-    [InlineData("Rsa2048_OaepSha1_B64.QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_B64 as a string
     [InlineData("5.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_HmacSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_HmacSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")]
-    [InlineData("0.AAAA|Y3Q=")] // Unpadded IV with padded CT
-    [InlineData("lGD=|lGD=")] // Non-canonical = padding on both pieces (headerless)
-    [InlineData("lB==|Y3Q=|AAAA")] // Non-canonical == padding headerless (3 pieces)
-    [InlineData("2.lGD=|lGD=|lGD=")] // Non-canonical = padding on all three pieces
-    [InlineData("0.AAAA|QmFzZTY0UGFydB==")] // Unpadded IV, non-canonical == in longer piece (exercises prefix validation)
+    [InlineData("7.QmFzZTY0UGFydA==")] // Valid CoseEncrypt0B64 as a number
+    [InlineData("0.AAECAwQFBgcICQoLDA0ODw==|AAAA")] // Unpadded CT with padded IV
+    [InlineData("AAECAwQFBgcICQoLDA0OD/==|lGD=")] // Non-canonical = padding on both pieces (headerless)
+    [InlineData("2.AAECAwQFBgcICQoLDA0OD/==|lGD=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh/=")] // Non-canonical padding on all three pieces
+    [InlineData("0.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydB==")] // Non-canonical == in longer piece (exercises prefix validation)
     public void IsValid_ReturnsTrue_WhenValid(string? input)
     {
         var sut = new EncryptedStringAttribute();
@@ -48,31 +39,25 @@ public class EncryptedStringAttributeTests
     [InlineData("|")] // One encrypted part split character but empty parts
     [InlineData("||")] // Two encrypted part split character but empty parts
     [InlineData("!|!")] // Invalid base 64
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.1")] // Invalid length
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.|")] // Empty iv & ct
-    [InlineData("AesCbc128_HmacSha256_B64.1")] // Invalid length
-    [InlineData("AesCbc128_HmacSha256_B64.aXY=|Y3Q=|")] // Empty mac
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.aXY=|Y3Q=|")] // Empty mac
-    [InlineData("Rsa2048_OaepSha256_B64.1|2")] // Invalid length
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.aXY=|")] // Empty mac
     [InlineData("254.QmFzZTY0UGFydA==")] // Bad Encryption type number
     [InlineData("0.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_B64 as a number
-    [InlineData("AesCbc256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_B64 as a number
-    [InlineData("1.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc128_HmacSha256_B64 as a number
-    [InlineData("AesCbc128_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc128_HmacSha256_B64 as a string
+    [InlineData("1.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // Removed encryption type number
     [InlineData("2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_HmacSha256_B64 as a number
-    [InlineData("AesCbc256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_HmacSha256_B64 as a string
     [InlineData("3.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_B64 as a string
     [InlineData("4.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_B64 as a number
-    [InlineData("Rsa2048_OaepSha1_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_B64 as a string
     [InlineData("5.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a string
     [InlineData("0.AA!!AB==|Y3Q=")] // Invalid char in prefix with non-canonical last char
     [InlineData("0.AAAAB==|Y3Q=")] // Piece length not multiple of 4
     [InlineData("0.====|Y3Q=")] // Padding-only piece
+    [InlineData("2.AAECAw==|Y3Q=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=")] // IV decodes to 4 bytes instead of 16
+    [InlineData("0.AAECAw==|Y3Q=")] // IV decodes to 4 bytes instead of 16
+    [InlineData("AAECAw==|Y3Q=")] // Short IV, headerless AesCbc256_B64
+    [InlineData("0.AAAA|Y3Q=")] // IV decodes to 3 bytes instead of 16
+    [InlineData("0.AAECAwQFBgcICQoLDA0ODxA=|Y3Q=")] // IV decodes to 17 bytes, length is an equality check
+    [InlineData("2.AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAw==")] // Mac decodes to 4 bytes instead of 32
+    [InlineData("AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAw==")] // Short mac, headerless iv|ct|mac
+    [InlineData("2.lGD=|lGD=|lGD=")] // Non-canonical padding, but short IV and mac
     public void IsValid_ReturnsFalse_WhenInvalid(string input)
     {
         var sut = new EncryptedStringAttribute();
