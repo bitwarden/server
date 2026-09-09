@@ -143,7 +143,6 @@ public static partial class FeatureFlagKeys
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
     public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
