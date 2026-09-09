@@ -1,4 +1,4 @@
-﻿using  Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
