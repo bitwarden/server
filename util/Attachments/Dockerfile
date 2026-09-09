@@ -58,6 +58,6 @@ COPY --from=build /source/util/Server/out /bitwarden_server
 COPY util/Attachments/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

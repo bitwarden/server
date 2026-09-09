@@ -18,6 +18,7 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,7 +44,7 @@ public class ServiceAccountsController : Controller
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
     private readonly IPricingClient _pricingClient;
     private readonly IEventService _eventService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGlobalSettings _globalSettings;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -62,7 +63,7 @@ public class ServiceAccountsController : Controller
         IRevokeAccessTokensCommand revokeAccessTokensCommand,
         IPricingClient pricingClient,
         IEventService eventService,
-        IOrganizationUserRepository organizationUserRepository)
+        IGlobalSettings globalSettings)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -80,7 +81,7 @@ public class ServiceAccountsController : Controller
         _createAccessTokenCommand = createAccessTokenCommand;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _eventService = eventService;
-        _organizationUserRepository = organizationUserRepository;
+        _globalSettings = globalSettings;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -136,8 +137,13 @@ public class ServiceAccountsController : Controller
             .CountNewServiceAccountSlotsRequiredAsync(organizationId, 1);
         if (newServiceAccountSlotsRequired > 0)
         {
+            // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
+            if (_globalSettings.SelfHosted)
+            {
+                throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+            }
+
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            // TODO: https://bitwarden.atlassian.net/browse/PM-17002
             var plan = await _pricingClient.GetPlanOrThrow(org!.PlanType);
             var update = new SecretsManagerSubscriptionUpdate(org, plan, true)
                 .AdjustServiceAccounts(newServiceAccountSlotsRequired);

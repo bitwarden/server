@@ -21,25 +21,26 @@ public static class UserInviteDebuggingLogger
     {
         try
         {
-            var invalidInviteState = allOrgUsers.Any(user => user.Status == OrganizationUserStatusType.Invited && user.Email.IsNullOrWhiteSpace());
+            var orgUserList = allOrgUsers.ToList();
+
+            var invalidInviteState = orgUserList.Any(user => user.Status == OrganizationUserStatusType.Invited && user.Email.IsNullOrWhiteSpace());
 
             if (invalidInviteState)
             {
-                var logData = MapObjectDataToLog(allOrgUsers);
+                var logData = MapObjectDataToLog(orgUserList);
                 logger.LogWarning("Warning invalid invited state. {logData}", logData);
             }
 
-            var invalidConfirmedOrAcceptedState = allOrgUsers.Any(user => (user.Status == OrganizationUserStatusType.Confirmed || user.Status == OrganizationUserStatusType.Accepted) && !user.Email.IsNullOrWhiteSpace());
+            var invalidConfirmedOrAcceptedState = orgUserList.Any(user => user.Status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Accepted && !user.Email.IsNullOrWhiteSpace());
 
             if (invalidConfirmedOrAcceptedState)
             {
-                var logData = MapObjectDataToLog(allOrgUsers);
-                logger.LogWarning("Warning invalid confirmed or accepted state. {logData}", logData);
+                var logData = MapObjectDataToLog(orgUserList);
+                logger.LogWarning("Warning invalid confirmed or accepted state. {LogData}", logData);
             }
         }
         catch (Exception exception)
         {
-
             // Ensure that this debugging instrument does not interfere with the current flow.
             logger.LogWarning(exception, "Unexpected exception from UserInviteDebuggingLogger");
         }

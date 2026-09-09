@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -48,7 +50,7 @@ public class SelfServiceChangeEmailCommandTests
         // ChangeEmailCommand intentionally does not push (commit 3a25853d5), so the responsibility
         // sits here in the calling command.
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushSyncSettingsAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -67,8 +69,8 @@ public class SelfServiceChangeEmailCommandTests
             .CheckPasswordAsync(default!, default!);
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -91,8 +93,8 @@ public class SelfServiceChangeEmailCommandTests
         // effect that would have followed token verification.
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -113,8 +115,8 @@ public class SelfServiceChangeEmailCommandTests
 
         await sutProvider.GetDependency<IChangeEmailCommand>().DidNotReceiveWithAnyArgs()
             .ChangeEmailAsync(default!, default!);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(default!);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]

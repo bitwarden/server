@@ -235,7 +235,11 @@ public class Startup
         app.UseFeatureFlagChecks();
 
         // Add Mvc stuff
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);

@@ -31,20 +31,19 @@ public class SalesAssistedTrialController(
         // Defaults reflect the most common sales-assisted trial shape. They are applied only
         // here, on the initial GET — never as property initializers on the model itself — so a
         // POST redisplay always reflects exactly what the user submitted, never a reasserted
-        // default (see Products, which has no hidden-input fallback for an all-unchecked submit).
-        return View(new SalesTrialInviteModel
+        // default.
+        return View(new SalesAssistedTrialInviteModel
         {
             ProductTier = ProductTierType.Enterprise,
-            Products = new List<ProductType> { ProductType.PasswordManager },
-            TrialLength = 30,
-            PaymentOptional = true
+            Product = ProductType.PasswordManager,
+            TrialLength = 30
         });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Org_InitiateSalesAssistedTrial)]
-    public async Task<IActionResult> Index(SalesTrialInviteModel model)
+    public async Task<IActionResult> Index(SalesAssistedTrialInviteModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -55,14 +54,19 @@ public class SalesAssistedTrialController(
 
         try
         {
+            // Client /trial-initiation prioritizes a single product via parseInt
+            // and Secrets Manager trial initiation also provides Password Manager trial
+            // initiation at the selected product tier. PM-41426
+            // Self-service trial command has an IEnumerable shape for Product(s), however
+            // to ensure proper parsing and enrollment, sales-assisted will enforce a
+            // single product selection policy.
             await sendCommand.HandleAsync(
                 model.Email,
                 model.Name,
                 senderEmail,
                 model.ProductTier,
-                model.Products,
-                model.TrialLength,
-                model.PaymentOptional);
+                new[] { model.Product },
+                model.TrialLength);
         }
         catch (BadRequestException ex)
         {

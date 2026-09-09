@@ -33,6 +33,7 @@ public static class KeyManagementServiceCollectionExtensions
         services.AddScoped<IChangeKdfCommand, ChangeKdfCommand>();
         services.AddScoped<ISetKeyConnectorKeyCommand, SetKeyConnectorKeyCommand>();
         services.AddScoped<IConvertUserToKeyConnectorCommand, ConvertUserToKeyConnectorCommand>();
+        services.AddScoped<ISetUserKeyIdCommand, SetUserKeyIdCommand>();
     }
 
     private static void AddKeyManagementQueries(this IServiceCollection services)

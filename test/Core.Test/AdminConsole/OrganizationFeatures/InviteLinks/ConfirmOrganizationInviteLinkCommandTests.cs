@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -46,6 +47,9 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     [Theory, BitAutoData]
@@ -79,6 +83,11 @@ public class ConfirmOrganizationInviteLinkCommandTests
                 ou.UserId == user.Id &&
                 ou.Email == null &&
                 ou.Key == request.OrgUserKey));
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(
+                Arg.Is<OrganizationUser>(ou => ou.Id == existingOrganizationUser.Id),
+                EventType.OrganizationUser_InviteLinkConfirmed);
     }
 
     [Theory, BitAutoData]
@@ -109,6 +118,14 @@ public class ConfirmOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(
+                Arg.Is<OrganizationUser>(ou =>
+                    ou.OrganizationId == organization.Id &&
+                    ou.UserId == user.Id &&
+                    ou.Status == OrganizationUserStatusType.Confirmed),
+                EventType.OrganizationUser_InviteLinkConfirmed);
     }
 
     [Theory, BitAutoData]
@@ -286,7 +303,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -306,7 +323,7 @@ public class ConfirmOrganizationInviteLinkCommandTests
         Assert.True(result.IsError);
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncOrgKeysAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     private static ConfirmOrganizationInviteLinkRequest BuildRequest(OrganizationInviteLink inviteLink, User user) =>

@@ -60,6 +60,6 @@ COPY ./src/Notifications/entrypoint.sh /entrypoint.sh
 RUN echo "net.ipv4.ip_local_port_range = 5024 65000" >> /etc/sysctl.d/99-sysctl.conf
 RUN echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.d/99-sysctl.conf
 RUN chmod +x /entrypoint.sh
-HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

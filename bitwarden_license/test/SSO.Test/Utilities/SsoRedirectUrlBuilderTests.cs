@@ -164,6 +164,31 @@ public class SsoRedirectUrlBuilderTests
     }
 
     [Fact]
+    public void SsoLoginFailedErrorKind_NoSeatsAvailable_HasStableValue()
+    {
+        // Cross-language contract with the web client's
+        // SsoLoginFailedErrorKind.NoSeatsAvailable. Changing it requires
+        // a coordinated client change.
+        Assert.Equal(
+            "no-seats-available",
+            SsoRedirectUrlBuilder.SsoLoginFailedErrorKind.NoSeatsAvailable);
+    }
+
+    [Fact]
+    public void BuildSsoLoginFailedRedirectUrl_ComposesExpectedUrl()
+    {
+        // Terminal-page redirect: no /login layover, no email/org context appended,
+        // just the kind. Client's SsoLoginFailedComponent reads kind from the query.
+        var url = SsoRedirectUrlBuilder.BuildSsoLoginFailedRedirectUrl(
+            VaultWithHash,
+            SsoRedirectUrlBuilder.SsoLoginFailedErrorKind.NoSeatsAvailable);
+
+        Assert.Equal(
+            "https://vault.bitwarden.com/#/sso-login-failed?kind=no-seats-available",
+            url);
+    }
+
+    [Fact]
     public void BuildLoginRedirectUrl_OrgMembershipRequiredErrorCode_ComposesExpectedUrl()
     {
         // Smoke test: the builder is errorCode-agnostic (takes a string), so encoding

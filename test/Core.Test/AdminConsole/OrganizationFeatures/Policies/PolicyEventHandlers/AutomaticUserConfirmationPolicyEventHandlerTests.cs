@@ -45,7 +45,7 @@ public class AutomaticUserConfirmationPolicyEventHandlerTests
         var result = await sutProvider.Sut.ValidateAsync(new SavePolicyModel(policyUpdate), null);
 
         // Assert
-        Assert.Contains("compliant with the Single organization policy", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(new UserNotCompliantWithSingleOrganization().Message, result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory, BitAutoData]

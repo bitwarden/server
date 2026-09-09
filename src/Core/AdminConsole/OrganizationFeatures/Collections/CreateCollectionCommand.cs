@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -16,15 +17,18 @@ public class CreateCollectionCommand : ICreateCollectionCommand
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IFeatureService _featureService;
 
     public CreateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository,
+        IFeatureService featureService)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
+        _featureService = featureService;
     }
 
     public async Task<Collection> CreateAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -66,7 +70,8 @@ public class CreateCollectionCommand : ICreateCollectionCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
             if (org.MaxCollections.Value <= collectionCount)
             {
-                throw new BadRequestException("You have reached the maximum number of collections " +
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
+                throw new BadRequestException($"You have reached the maximum number of {collectionTerm} " +
                 $"({org.MaxCollections.Value}) for this organization.");
             }
         }

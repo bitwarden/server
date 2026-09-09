@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Bit.OrganizationAuthorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization;
 

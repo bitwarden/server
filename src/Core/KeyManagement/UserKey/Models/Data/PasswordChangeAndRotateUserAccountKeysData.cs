@@ -27,5 +27,7 @@ public class PasswordChangeAndRotateUserAccountKeysData
         {
             throw new InvalidOperationException("The provided master password unlock data is not valid for this user.");
         }
+
+        MasterPasswordUnlockData.ValidateKeyIdMatchesNewUserKeyId(BaseData.NewUserKeyId);
     }
 }

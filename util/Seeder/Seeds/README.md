@@ -18,6 +18,7 @@ Presets wire everything together. Org presets compose org + roster + ciphers; in
 
 | Folder        | Purpose                                                                     | CLI prefix    | Example                                             |
 | ------------- | --------------------------------------------------------------------------- | ------------- | --------------------------------------------------- |
+| `dev/`        | Day-to-day local development with memorable role-based logins               | `dev.`        | `--name dev.playground`                             |
 | `features/`   | Test specific Bitwarden features (SSO, TDE, policies)                       | `features.`   | `--name features.sso-enterprise`                    |
 | `qa/`         | Known users, groups, collections, and permissions you can point a client to | `qa.`         | `--name qa.enterprise-basic`                        |
 | `scale/`      | Production-calibrated density presets for performance testing               | `scale.`      | `--name scale.md-balanced-sterling-cooper`          |

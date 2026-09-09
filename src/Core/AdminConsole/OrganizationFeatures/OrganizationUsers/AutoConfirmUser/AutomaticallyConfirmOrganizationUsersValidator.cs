@@ -66,7 +66,7 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
 
         if (await OrganizationUserConformsToAutomaticUserConfirmationPolicyAsync(request) is { } error)
         {
-            return Invalid(request, error);
+            return Invalid(request, WithEmail(error, request.OrganizationUser?.Email));
         }
 
         return Valid(request);
@@ -121,4 +121,12 @@ public class AutomaticallyConfirmOrganizationUsersValidator(
                 _ => null
             );
     }
+
+    private static Error WithEmail(Error error, string? email) =>
+        (error, email) switch
+        {
+            (UserCannotBelongToAnotherOrganization, not null) => new UserCannotBelongToAnotherOrganization(email),
+            (OtherOrganizationDoesNotAllowOtherMembership, not null) => new OtherOrganizationDoesNotAllowOtherMembership(email),
+            _ => error
+        };
 }

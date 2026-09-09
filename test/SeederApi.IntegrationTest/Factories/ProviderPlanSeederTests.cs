@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Xunit;
 
@@ -13,7 +13,9 @@ public class ProviderPlanSeederTests
     [InlineData(PlanType.EnterpriseMonthly)]
     public void Create_ProducesConfiguredProviderPlan(PlanType planType)
     {
-        var provider = ProviderSeeder.Create("Acme MSP", "acme-msp.test", ProviderType.Msp, new NoOpManglerService());
+        var provider = ProviderSeeder.Create(
+            new ProviderSeed { Name = "Acme MSP", Domain = "acme-msp.test" },
+            new NoOpManglerService());
 
         var providerPlan = ProviderPlanSeeder.Create(provider, planType, 10);
 

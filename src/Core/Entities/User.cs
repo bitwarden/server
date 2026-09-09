@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
@@ -115,6 +114,26 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(256)]
     public string? MasterPasswordSalt { get; set; }
     public DateTime? LastApiKeyRotationDate { get; set; }
+    /// <summary>
+    /// A hex-endcoded key-id of the user's current user-key.
+    /// 
+    /// Each user-key has a unique key-id, and this value will change after a rotation.
+    /// It is not set by default for old users, but is set in a migration process during
+    /// a sync.
+    /// 
+    /// A key rotation will set a new key id. Account registrations will carry a key id.
+    /// </summary>
+    [MaxLength(32)]
+    [KeyId]
+    public string? UserKeyId { get; set; }
+
+    public void SetUserKeyId(KeyId? userKeyId)
+    {
+        UserKeyId = userKeyId?.ToString();
+    }
+
+    public KeyId? GetUserKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(UserKeyId) ? null : UserKeyId);
 
     public string GetMasterPasswordSalt()
     {
@@ -202,7 +221,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
             return _twoFactorProviders;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return null;
         }
@@ -228,7 +247,10 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return HasV2KeyShape() && IsSecurityVersionTwo();
     }
 
-    private bool HasV2KeyShape()
+    /// <summary>
+    /// Whether the private key is wrapped with V2 encryption.
+    /// </summary>
+    public bool HasV2KeyShape()
     {
         if (string.IsNullOrEmpty(PrivateKey))
         {

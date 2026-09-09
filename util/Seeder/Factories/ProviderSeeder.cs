@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 
@@ -8,33 +8,25 @@ namespace Bit.Seeder.Factories;
 
 internal static class ProviderSeeder
 {
-    internal static Provider Create(
-        string name,
-        string domain,
-        ProviderType type,
-        IManglerService manglerService)
+    internal static Provider Create(ProviderSeed seed, IManglerService manglerService)
     {
         return new Provider
         {
             Id = CombGuid.Generate(),
-            Name = manglerService.Mangle(name),
-            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(domain),
-            Type = type,
-            Status = ProviderStatusType.Billable,
-            Enabled = true,
-            UseEvents = false,
-            Gateway = GatewayType.Stripe
+            Name = manglerService.Mangle(seed.Name),
+            BillingEmail = BillingEmailSeeder.DeriveBillingEmail(seed.Domain),
+            BusinessName = seed.BusinessName,
+            BusinessCountry = seed.BusinessCountry,
+            BillingPhone = seed.BillingPhone,
+            Type = seed.Type,
+            Status = seed.Status,
+            Enabled = seed.Enabled,
+            UseEvents = seed.UseEvents,
+            // Unlike User and Organization, Provider carries a gateway default — preserve it when
+            // the caller supplies none, or seeded providers lose their billing surface.
+            Gateway = seed.Gateway ?? GatewayType.Stripe,
+            GatewayCustomerId = seed.GatewayCustomerId,
+            GatewaySubscriptionId = seed.GatewaySubscriptionId
         };
-    }
-
-    /// <summary>
-    /// Applies billing gateway identity to a provider so it resembles a real billed provider.
-    /// Only non-null values are set; nulls leave the field unchanged.
-    /// </summary>
-    internal static void ApplyBilling(Provider provider, GatewayType? gateway, string? gatewayCustomerId, string? gatewaySubscriptionId)
-    {
-        provider.Gateway = gateway ?? provider.Gateway;
-        provider.GatewayCustomerId = gatewayCustomerId ?? provider.GatewayCustomerId;
-        provider.GatewaySubscriptionId = gatewaySubscriptionId ?? provider.GatewaySubscriptionId;
     }
 }

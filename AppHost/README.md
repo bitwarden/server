@@ -85,6 +85,7 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | `MailCatcher:SmtpPort`      | `10250`                            | Host SMTP port                                                                       |
 | `MailCatcher:WebPort`       | `1080`                             | MailCatcher web UI port                                                              |
 | `NgrokAuthToken`            | _(empty)_                          | ngrok auth token (used only when ngrok plugin is enabled)                            |
+| `Parameters:sso-org-id`     | `yourOrgIdHere`                    | Org ID for SAML SSO testing; the IdP builds its SP entity ID and ACS URL from it     |
 | `WebFrontend:Port`          | `8080`                             | Web frontend port (incremented by 1 in self-hosted mode)                            |
 | `WebFrontend:Url`           | `https://bitwarden.test`           | Web frontend base URL; the resolved port is appended automatically                  |
 

@@ -2,10 +2,13 @@
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Organizations.PlanMigration;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Schedules;
+using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
@@ -31,8 +34,9 @@ public interface IUpdateOrganizationSubscriptionCommand
     /// <param name="changeSet">The set of changes to apply to the subscription.</param>
     /// <param name="subscription">
     /// An optional pre-fetched subscription. When supplied and it carries the required expansions
-    /// (an expanded <see cref="Subscription.Customer"/>), it is reused to avoid a redundant Stripe
-    /// call; otherwise the subscription is re-fetched.
+    /// (an expanded <see cref="Subscription.Customer"/> and, if a schedule is attached, an expanded
+    /// <see cref="Subscription.Schedule"/>), it is reused to avoid a redundant Stripe call;
+    /// otherwise the subscription is re-fetched.
     /// </param>
     /// <returns>
     /// A <see cref="BillingCommandResult{T}"/> containing the updated <see cref="Subscription"/>
@@ -68,7 +72,11 @@ public class UpdateOrganizationSubscriptionCommand(
         OrganizationSubscriptionChangeSet changeSet,
         Subscription? subscription = null) => HandleAsync<Subscription>(async () =>
     {
-        subscription = HasRequiredExpansions(subscription) ? subscription : await FetchSubscriptionAsync(organization);
+        subscription = HasRequiredExpansions(subscription)
+            ? subscription
+            : await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+                stripeAdapter, _logger, organization,
+                ["customer", "customer.discount.source.coupon", "test_clock", "schedule", "discounts.source.coupon"]);
 
         if (subscription is null)
         {
@@ -117,18 +125,17 @@ public class UpdateOrganizationSubscriptionCommand(
             items.Add(validationResult.AsT0);
         }
 
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-        var activeSchedule = schedules.Data.FirstOrDefault(s =>
-            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscription.Id);
+        var activeSchedule = subscription.Schedule is { Status: SubscriptionScheduleStatus.Active } attached
+            ? attached
+            : null;
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules we created for a migration — rewriting a schedule we
-            // didn't create (e.g. a Finance-built renewal) would corrupt its negotiated phases, so those
-            // fall through to the direct update. Accepted gap: a stale cohort assignment can mis-flag one.
-            var migrationPlans = await ResolvePhasePlansAsync(organization);
-            if (migrationPlans is { } plans)
+            // PM-40537: only rewrite schedules our code created, identified by phase metadata.
+            var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
+            var schedulePlans = annualUpgradePlans
+                                ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
+            if (schedulePlans is { } plans)
             {
                 var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
@@ -157,8 +164,12 @@ public class UpdateOrganizationSubscriptionCommand(
                     "{Command}: Active migration schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating {PhaseCount} active phase(s)",
                     CommandName, activeSchedule.Id, subscription.Id, migrationPhases.Count);
 
-                var phases = BuildUpdatedPhases(migrationPhases, changeSet.Changes,
-                    plans.source, plans.target, subscription.Customer?.Discount);
+                // Annual upgrade reuses existing discounts and adds no coupon.
+                var phases = annualUpgradePlans is not null
+                    ? AnnualUpgradeSchedulePhaseRebuilder.BuildUpdatedPhases(
+                        migrationPhases, changeSet.Changes, plans.source, plans.target)
+                    : BuildUpdatedPhases(migrationPhases, changeSet.Changes,
+                        plans.source, plans.target, subscription);
 
                 await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
                     new SubscriptionScheduleUpdateOptions
@@ -172,7 +183,7 @@ public class UpdateOrganizationSubscriptionCommand(
             }
 
             _logger.LogInformation(
-                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not a Bitwarden migration schedule; leaving it untouched and updating the subscription directly",
+                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is one our code did not create; leaving it untouched and updating the subscription directly",
                 CommandName, activeSchedule.Id, subscription.Id);
         }
 
@@ -216,30 +227,50 @@ public class UpdateOrganizationSubscriptionCommand(
         return updatedSubscription;
     });
 
-    // PM-37510: the command body dereferences subscription.Customer for tax reconciliation, so a
-    // reused subscription is only safe when Customer is expanded. test_clock is optional here.
+    // Reused subscriptions must carry Customer for tax reconciliation, the attached schedule (which
+    // ownership classification reads), a fully-expanded discounts list, and an expanded test clock —
+    // the same expansions BuildPhaseOptions' discount builders rely on. A mis-expanded subscription
+    // fails this check and gets re-fetched instead of reaching the discount builders unexpanded.
     private static bool HasRequiredExpansions(Subscription? subscription) =>
-        subscription is { Customer: not null };
+        subscription is { Customer: not null } &&
+        (string.IsNullOrEmpty(subscription.ScheduleId) || subscription.Schedule is not null) &&
+        !(subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d is null)) &&
+        (subscription.TestClockId is null || subscription.TestClock is not null);
 
-    private async Task<Subscription?> FetchSubscriptionAsync(Organization organization)
+    // An annual-upgrade schedule (PM-38333) is recognised by the marker redemption stamps on its
+    // phases. When recognised, source is the current monthly plan and target is the annual-latest
+    // plan, so phase 1 stays monthly (identity) and phase 2 maps to annual-latest. Returns null
+    // when this is not an annual-upgrade schedule, letting the caller fall back to cohort-migration
+    // resolution.
+    private async Task<(Plan source, Plan target)?> ResolveAnnualUpgradePhasePlansAsync(
+        Organization organization, Subscription subscription)
     {
-        try
+        if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
+            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
         {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
-            {
-                Expand = ["customer", "test_clock"]
-            });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            _logger.LogError("{Command}: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                CommandName, organization.GatewaySubscriptionId, organization.Id);
             return null;
         }
+
+        var annualLatestPlanType = AnnualUpgradeOfferPlans.ResolveAnnualLatestPlanType(organization.PlanType);
+        if (annualLatestPlanType is null)
+        {
+            return null;
+        }
+
+        var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        var annualLatestPlan = await pricingClient.GetPlanOrThrow(annualLatestPlanType.Value);
+        return (currentPlan, annualLatestPlan);
     }
 
-    private async Task<(Plan source, Plan target)?> ResolvePhasePlansAsync(Organization organization)
+    private async Task<(Plan source, Plan target)?> ResolveCohortMigrationPhasePlansAsync(
+        Organization organization, Subscription subscription)
     {
+        if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
+            OrganizationSubscriptionScheduleOwnership.PriceMigration)
+        {
+            return null;
+        }
+
         var migrationPath = await TryResolveMigrationPathAsync(organization.Id);
         if (migrationPath is null)
         {
@@ -344,10 +375,10 @@ public class UpdateOrganizationSubscriptionCommand(
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan sourcePlan,
         Plan targetPlan,
-        Discount? customerDiscount)
+        Subscription subscription)
     {
         var phase1IsPostMigration = migrationPhases.Count == 1
-            && IsPostMigrationPhase(migrationPhases[0], targetPlan);
+            && SchedulePhaseMapper.PhaseUsesTargetPlanPrices(migrationPhases[0], targetPlan);
 
         var phases = new List<SubscriptionSchedulePhaseOptions>();
 
@@ -356,8 +387,8 @@ public class UpdateOrganizationSubscriptionCommand(
             phase1, changes,
             source: sourcePlan,
             target: phase1IsPostMigration ? targetPlan : sourcePlan,
-            suppressDiscounts: phase1IsPostMigration,
-            customerDiscount: null));
+            subscription: subscription,
+            isFuture: false));
 
         if (migrationPhases.Count >= 2)
         {
@@ -365,33 +396,11 @@ public class UpdateOrganizationSubscriptionCommand(
                 migrationPhases[1], changes,
                 source: sourcePlan,
                 target: targetPlan,
-                suppressDiscounts: false,
-                customerDiscount: customerDiscount));
+                subscription: subscription,
+                isFuture: true));
         }
 
         return phases;
-    }
-
-    // A lone remaining phase counts as post-migration only when it actually uses target-plan price
-    // IDs. A legacy source-priced single-phase schedule (cancelled without releasing) would otherwise
-    // have its still-valid migration discount wrongly suppressed.
-    private static bool IsPostMigrationPhase(SubscriptionSchedulePhase phase, Plan target)
-    {
-        var targetIds = new HashSet<string>(StringComparer.Ordinal)
-        {
-            target.PasswordManager.StripeSeatPlanId,
-            target.PasswordManager.StripeStoragePlanId
-        };
-        if (target.SecretsManager?.StripeSeatPlanId is { } smSeat)
-        {
-            targetIds.Add(smSeat);
-        }
-        if (target.SecretsManager?.StripeServiceAccountPlanId is { } smServiceAccount)
-        {
-            targetIds.Add(smServiceAccount);
-        }
-
-        return phase.Items.Any(item => targetIds.Contains(item.PriceId));
     }
 
     private static SubscriptionSchedulePhaseOptions BuildPhaseOptions(
@@ -399,92 +408,18 @@ public class UpdateOrganizationSubscriptionCommand(
         IReadOnlyList<OrganizationSubscriptionChange> changes,
         Plan source,
         Plan target,
-        bool suppressDiscounts,
-        Discount? customerDiscount) =>
+        Subscription subscription,
+        bool isFuture) =>
         new()
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
-            Items = ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
-            // A future phase carries the customer-level discount so it stacks at renewal; the active
-            // phase (customerDiscount is null) mirrors verbatim — re-adding would double-apply now.
-            Discounts = suppressDiscounts
-                ? []
-                : customerDiscount is null
-                    ? sourcePhase.Discounts?.Select(d =>
-                        new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId }).ToList()
-                    : customerDiscount.MergeDiscountCouponIds(sourcePhase.Discounts?.Select(d => d.CouponId))
-                        .ToPhaseDiscountOptions(),
+            Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
+            Discounts = isFuture
+                ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                    subscription, [], preservedCouponIds: sourcePhase.Discounts?.Select(d => d.CouponId))
+                : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             Metadata = sourcePhase.Metadata,
             ProrationBehavior = sourcePhase.ProrationBehavior
         };
-
-    private static List<SubscriptionSchedulePhaseItemOptions> ApplyChangesToPhaseItems(
-        IList<SubscriptionSchedulePhaseItem> phaseItems,
-        IReadOnlyList<OrganizationSubscriptionChange> changes,
-        Plan sourcePlan,
-        Plan targetPlan)
-    {
-        string Translate(string priceId) =>
-            OrganizationPlanMigrationPriceMapper.MapOrPassThrough(priceId, sourcePlan, targetPlan);
-
-        var items = phaseItems
-            .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
-            .ToList();
-
-        foreach (var change in changes)
-        {
-            change.Switch(
-                addItem => items.Add(new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = Translate(addItem.PriceId),
-                    Quantity = addItem.Quantity
-                }),
-                changeItemPrice =>
-                {
-                    var translatedCurrent = Translate(changeItemPrice.CurrentPriceId);
-                    var translatedUpdated = Translate(changeItemPrice.UpdatedPriceId);
-                    var existing = items.FirstOrDefault(i => i.Price == translatedCurrent);
-                    if (existing != null)
-                    {
-                        existing.Price = translatedUpdated;
-                        if (changeItemPrice.Quantity.HasValue)
-                        {
-                            existing.Quantity = changeItemPrice.Quantity.Value;
-                        }
-                    }
-                },
-                removeItem =>
-                {
-                    var translated = Translate(removeItem.PriceId);
-                    items.RemoveAll(i => i.Price == translated);
-                },
-                updateItemQuantity =>
-                {
-                    var translated = Translate(updateItemQuantity.PriceId);
-                    if (updateItemQuantity.Quantity == 0)
-                    {
-                        items.RemoveAll(i => i.Price == translated);
-                    }
-                    else
-                    {
-                        var existing = items.FirstOrDefault(i => i.Price == translated);
-                        if (existing != null)
-                        {
-                            existing.Quantity = updateItemQuantity.Quantity;
-                        }
-                        else
-                        {
-                            items.Add(new SubscriptionSchedulePhaseItemOptions
-                            {
-                                Price = translated,
-                                Quantity = updateItemQuantity.Quantity
-                            });
-                        }
-                    }
-                });
-        }
-
-        return items;
-    }
 }

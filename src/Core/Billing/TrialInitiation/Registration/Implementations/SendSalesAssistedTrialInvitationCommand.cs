@@ -23,22 +23,16 @@ public class SendSalesAssistedTrialInvitationCommand(
         string senderEmail,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength,
-        bool paymentOptional)
+        int trialLength)
     {
         if (productTier == ProductTierType.TeamsStarter)
         {
             throw new BadRequestException("Teams Starter is no longer available for new trials.");
         }
 
-        if (trialLength is < 0 or > 30)
+        if (trialLength is < 1 or > 30)
         {
-            throw new BadRequestException("Trial length must be between 0 and 30 days.");
-        }
-
-        if (paymentOptional && trialLength == 0)
-        {
-            throw new BadRequestException("Payment cannot be optional when there is no trial period.");
+            throw new BadRequestException("Trial length must be between 1 and 30 days.");
         }
 
         var existingUser = await userRepository.GetByEmailAsync(email);
@@ -57,7 +51,6 @@ public class SendSalesAssistedTrialInvitationCommand(
             ProductTier = productTier,
             Products = products,
             TrialLength = trialLength,
-            PaymentOptional = paymentOptional,
             SenderEmail = senderEmail,
             ExpiryDays = globalSettings.SalesAssistedRegistrationTokenLifetimeDays,
         };

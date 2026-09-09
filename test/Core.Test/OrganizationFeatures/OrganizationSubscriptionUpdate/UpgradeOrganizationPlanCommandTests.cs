@@ -14,6 +14,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -46,6 +47,99 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(owner.Id)
             .Returns(owner);
+    }
+
+    // Test-only plan with a MaxCollections cap, used to exercise the collection-limit validation
+    // in UpgradePlanAsync (none of the real MockPlans set PasswordManager.MaxCollections other than Free,
+    // which cannot be used as an upgrade target).
+    private sealed record LimitedCollectionsPlan : Plan
+    {
+        public LimitedCollectionsPlan()
+        {
+            Type = PlanType.TeamsAnnually;
+            ProductTier = ProductTierType.Teams;
+            Name = "Teams (Limited Collections Test)";
+            UpgradeSortOrder = 100;
+            DisplaySortOrder = 100;
+            PasswordManager = new LimitedPasswordManagerFeatures();
+            SecretsManager = new SecretsManagerPlanFeatures();
+        }
+
+        private record LimitedPasswordManagerFeatures : PasswordManagerPlanFeatures
+        {
+            public LimitedPasswordManagerFeatures()
+            {
+                BaseSeats = 20;
+                MaxCollections = 5;
+            }
+        }
+    }
+
+    [Theory, FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_MaxCollectionsExceedsNewPlan_ThrowsBadRequest(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        User owner,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        SetupOrganizationOwner(sutProvider, organization, owner);
+        upgrade.Plan = PlanType.TeamsAnnually;
+
+        organization.MaxCollections = 10;
+
+        var newPlan = new LimitedCollectionsPlan();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(newPlan);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetCountByOrganizationIdAsync(organization.Id)
+            .Returns(6);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Equal(
+            "Your organization currently has 6 collections. Your new plan allows for a maximum of (5) collections. Remove some collections.",
+            exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+    }
+
+    [Theory, FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_MaxCollectionsExceedsNewPlan_Vfo1FoundationEnabled_ThrowsBadRequestWithSharedFolderTerminology(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        User owner,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        SetupOrganizationOwner(sutProvider, organization, owner);
+        upgrade.Plan = PlanType.TeamsAnnually;
+
+        organization.MaxCollections = 10;
+
+        var newPlan = new LimitedCollectionsPlan();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(MockPlans.Get(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(upgrade.Plan).Returns(newPlan);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetCountByOrganizationIdAsync(organization.Id)
+            .Returns(6);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VFO1Foundation)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Equal(
+            "Your organization currently has 6 shared folders. Your new plan allows for a maximum of (5) shared folders. Remove some shared folders.",
+            exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
     }
 
     [Theory, BitAutoData]

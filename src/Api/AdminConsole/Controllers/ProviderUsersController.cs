@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,7 +37,7 @@ public class ProviderUsersController : Controller
 
     [HttpGet("{id:guid}")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ProviderUserResponseModel> Get(Guid providerId, Guid id)
+    public async Task<ProviderUserResponseModel> Get([FromRoute] Guid providerId, Guid id)
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
         if (providerUser == null || providerUser.ProviderId != providerId)
@@ -49,7 +50,7 @@ public class ProviderUsersController : Controller
 
     [HttpGet("")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> GetAll(Guid providerId)
+    public async Task<ListResponseModel<ProviderUserUserDetailsResponseModel>> GetAll([FromRoute] Guid providerId)
     {
         var providerUsers = await _providerUserRepository.GetManyDetailsByProviderAsync(providerId);
         var responses = providerUsers.Select(o => new ProviderUserUserDetailsResponseModel(o));
@@ -58,7 +59,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("invite")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task Invite(Guid providerId, [FromBody] ProviderUserInviteRequestModel model)
+    public async Task Invite([FromRoute] Guid providerId, [FromBody] ProviderUserInviteRequestModel model)
     {
         var invite = ProviderUserInviteFactory.CreateInitialInvite(model.Emails, model.Type.Value,
             _userService.GetProperUserId(User).Value, providerId);
@@ -67,7 +68,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("reinvite")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite([FromRoute] Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         var invite = ProviderUserInviteFactory.CreateReinvite(model.Ids, _userService.GetProperUserId(User).Value, providerId);
         var result = await _providerService.ResendInvitesAsync(invite);
@@ -77,7 +78,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("{id:guid}/reinvite")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task Reinvite(Guid providerId, Guid id)
+    public async Task Reinvite([FromRoute] Guid providerId, Guid id)
     {
         var invite = ProviderUserInviteFactory.CreateReinvite(new[] { id },
             _userService.GetProperUserId(User).Value, providerId);
@@ -86,7 +87,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("{id:guid}/accept")]
     [NoopAuthorize]
-    public async Task Accept(Guid providerId, Guid id, [FromBody] ProviderUserAcceptRequestModel model)
+    public async Task Accept([FromRoute] Guid providerId, Guid id, [FromBody] ProviderUserAcceptRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -99,7 +100,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("{id:guid}/confirm")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task Confirm(Guid providerId, Guid id, [FromBody] ProviderUserConfirmRequestModel model)
+    public async Task Confirm([FromRoute] Guid providerId, Guid id, [FromBody] ProviderUserConfirmRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
         await _providerService.ConfirmUsersAsync(providerId, new Dictionary<Guid, string> { [id] = model.Key }, userId.Value);
@@ -107,7 +108,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("confirm")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm(Guid providerId,
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm([FromRoute] Guid providerId,
         [FromBody] ProviderUserBulkConfirmRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
@@ -119,7 +120,7 @@ public class ProviderUsersController : Controller
 
     [HttpPost("public-keys")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys([FromRoute] Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         var result = await _providerUserRepository.GetManyPublicKeysByProviderUserAsync(providerId, model.Ids);
         var responses = result.Select(r => new ProviderUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey)).ToList();
@@ -128,7 +129,7 @@ public class ProviderUsersController : Controller
 
     [HttpPut("{id:guid}")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task Put(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
+    public async Task Put([FromRoute] Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
         if (providerUser == null || providerUser.ProviderId != providerId)
@@ -143,14 +144,14 @@ public class ProviderUsersController : Controller
     [HttpPost("{id:guid}")]
     [Obsolete("This endpoint is deprecated. Use PUT method instead")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task PostPut(Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
+    public async Task PostPut([FromRoute] Guid providerId, Guid id, [FromBody] ProviderUserUpdateRequestModel model)
     {
         await Put(providerId, id, model);
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task Delete(Guid providerId, Guid id)
+    public async Task Delete([FromRoute] Guid providerId, Guid id)
     {
         var userId = _userService.GetProperUserId(User);
         await _providerService.DeleteUsersAsync(providerId, new[] { id }, userId.Value);
@@ -159,14 +160,14 @@ public class ProviderUsersController : Controller
     [HttpPost("{id:guid}/delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task PostDelete(Guid providerId, Guid id)
+    public async Task PostDelete([FromRoute] Guid providerId, Guid id)
     {
         await Delete(providerId, id);
     }
 
     [HttpDelete("")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete([FromRoute] Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         var userId = _userService.GetProperUserId(User);
         var result = await _providerService.DeleteUsersAsync(providerId, model.Ids, userId.Value);
@@ -177,7 +178,7 @@ public class ProviderUsersController : Controller
     [HttpPost("delete")]
     [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
     [Authorize<ManageProviderUsersRequirement>]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> PostBulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> PostBulkDelete([FromRoute] Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
     {
         return await BulkDelete(providerId, model);
     }

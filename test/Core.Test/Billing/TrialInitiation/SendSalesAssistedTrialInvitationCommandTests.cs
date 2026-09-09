@@ -47,7 +47,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
             .Returns(protectedToken);
 
         // Act
-        await sutProvider.Sut.HandleAsync(email, name, senderEmail, productTier, products, trialLength, false);
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, productTier, products, trialLength);
 
         // Assert
         sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
@@ -66,7 +66,6 @@ public class SendSalesAssistedTrialInvitationCommandTests
                 mail.View.ProductTier == productTier &&
                 mail.View.Products.SequenceEqual(products) &&
                 mail.View.TrialLength == trialLength &&
-                mail.View.PaymentOptional == false &&
                 mail.View.SenderEmail == senderEmail &&
                 mail.View.ExpiryDays == tokenLifetimeDays));
     }
@@ -88,7 +87,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.HandleAsync(existingUser.Email, name, senderEmail, ProductTierType.Enterprise, products, 7, false));
+            sutProvider.Sut.HandleAsync(existingUser.Email, name, senderEmail, ProductTierType.Enterprise, products, 7));
 
         sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
             .DidNotReceiveWithAnyArgs()
@@ -119,7 +118,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
             .Returns(new SalesAssistedRegistrationTokenable { Email = email, Name = name });
 
         // Act
-        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, trialLength, false);
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, trialLength);
 
         // Assert
         await sutProvider.GetDependency<IMailer>()
@@ -147,7 +146,7 @@ public class SendSalesAssistedTrialInvitationCommandTests
             .Returns(new SalesAssistedRegistrationTokenable { Email = email, Name = name });
 
         // Act
-        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7, false);
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7);
 
         // Assert
         await sutProvider.GetDependency<IMailer>()
@@ -156,8 +155,19 @@ public class SendSalesAssistedTrialInvitationCommandTests
                 mail.View.SenderEmail == senderEmail));
     }
 
+    /// <summary>
+    /// Because sales-assisted trials are always payment-optional,
+    /// all trials must be time-bounded 1-30 days. 0-length (unbounded)
+    /// trials are not allowed.
+    /// </summary>
+    /// <param name="trialLength"></param>
+    /// <param name="email"></param>
+    /// <param name="name"></param>
+    /// <param name="senderEmail"></param>
+    /// <param name="sutProvider"></param>
+    /// <returns></returns>
     [Theory]
-    [BitAutoData(-1)]
+    [BitAutoData(0)]
     [BitAutoData(31)]
     public async Task HandleAsync_TrialLengthOutOfRange_ThrowsBadRequest(
         int trialLength,
@@ -171,27 +181,11 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, trialLength, false));
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, trialLength));
 
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task HandleAsync_PaymentOptionalWithZeroTrialLength_ThrowsBadRequest(
-        string email,
-        string name,
-        string senderEmail,
-        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
-    {
-        // Arrange
-        var products = new[] { ProductType.PasswordManager };
-
-        // Act & Assert
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 0, true));
     }
 
     [Theory]
@@ -207,10 +201,46 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.TeamsStarter, products, 7, false));
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.TeamsStarter, products, 7));
 
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    /// <summary>
+    /// All Sales-assisted trials should be payment-optional.
+    /// In order for the client to honor this constraint, `paymentOptional=true` must appear
+    /// in ths invite link; this helps configure the stepper at registration time.
+    /// </summary>
+    /// <param name="email"></param>
+    /// <param name="name"></param>
+    /// <param name="senderEmail"></param>
+    /// <param name="sutProvider"></param>
+    /// <returns></returns>
+    [Theory]
+    [BitAutoData]
+    public async Task HandleAsync_PaymentOptional_IsTrueAndAppearsInInviteLink(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        // Arrange
+        var products = new[] { ProductType.PasswordManager };
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
+        sutProvider.GetDependency<ISalesAssistedRegistrationTokenableFactory>()
+            .CreateToken(email, name)
+            .Returns(new SalesAssistedRegistrationTokenable { Email = email, Name = name });
+
+        // Act
+        await sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7);
+
+        // Assert
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<SalesAssistedTrialInvitationEmail>(mail =>
+                mail.View.Url.Contains("paymentOptional=true")));
     }
 }

@@ -16,6 +16,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -28,6 +29,7 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -394,7 +396,8 @@ public class OrganizationsController : Controller
 
                 if (model.MaxCollections > freePlan.PasswordManager.MaxCollections)
                 {
-                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} collections cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} collections.";
+                    var collectionTerm = CollectionTerminology.Plural(_featureService);
+                    TempData["Error"] = $"Organizations with more than {freePlan.PasswordManager.MaxCollections} {collectionTerm} cannot be downgraded to the Free plan. Your organization currently has {organization.MaxCollections} {collectionTerm}.";
                     return RedirectToAction("Edit", new { id });
                 }
 
@@ -585,7 +588,10 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationRepository.DeleteAsync(organization);
+        // Enqueue the event-log cleanup in the same transaction as the delete. This is an
+        // established organization, so its events must be purged from storage for GDPR.
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+            organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");

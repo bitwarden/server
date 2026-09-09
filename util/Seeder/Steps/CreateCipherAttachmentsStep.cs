@@ -16,7 +16,7 @@ namespace Bit.Seeder.Steps;
 /// A no-op when the fixture declares no attachments. A v2 (cipher-key-wrapped) attachment requires the host
 /// cipher to have been created with <see cref="CipherEncryptionType.CipherKey"/> so <c>Cipher.Key</c> is populated.
 /// </remarks>
-internal sealed class CreateCipherAttachmentsStep : IStep
+internal sealed class CreateCipherAttachmentsStep : IAsyncStep
 {
     private readonly string _fixtureName;
     private readonly bool _personal;
@@ -33,7 +33,7 @@ internal sealed class CreateCipherAttachmentsStep : IStep
     internal static CreateCipherAttachmentsStep ForPersonalVault(string fixtureName) =>
         new(fixtureName, personal: true);
 
-    public void Execute(SeederContext context)
+    public async Task ExecuteAsync(SeederContext context)
     {
         var seedFile = context.GetSeedReader().Read<SeedFile>($"ciphers.{_fixtureName}");
         var itemsWithAttachments = seedFile.Items.Where(i => i.Attachments is { Count: > 0 }).ToList();
@@ -109,12 +109,17 @@ internal sealed class CreateCipherAttachmentsStep : IStep
                 var fileBytes = reader.ReadBytes(attachment.File);
                 var displayName = attachment.FileName ?? attachment.File;
 
-                var (id, meta, blob) = AttachmentSeeder.Create(fileBytes, vaultKey, wrappedCipherKey, displayName, version);
+                var (id, meta, blob) = AttachmentSeeder.Create(
+                    fileBytes,
+                    vaultKey: vaultKey,
+                    wrappedCipherKey: wrappedCipherKey,
+                    fileName: displayName,
+                    version: version);
 
                 cipher.AddAttachment(id, meta);
 
                 using var stream = new MemoryStream(blob);
-                storage.UploadNewAttachmentAsync(stream, cipher, meta).GetAwaiter().GetResult();
+                await storage.UploadNewAttachmentAsync(stream, cipher, meta);
 
                 progress?.Report(new PhaseAdvanced(SeederPhases.CreatingAttachments, 1));
             }

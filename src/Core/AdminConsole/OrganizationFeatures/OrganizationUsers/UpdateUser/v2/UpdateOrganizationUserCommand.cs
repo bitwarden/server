@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -53,6 +54,7 @@ public class UpdateOrganizationUserCommand(
         var organizationUser = request.OrganizationUserToUpdate.UpdateOrganizationUser(request.NewType,
             request.NewPermissions,
             request.NewAccessSecretsManager,
+            request.NewAccessPam,
             timeProvider);
 
         if (request.IsEnablingSecretsManager())
@@ -66,7 +68,7 @@ public class UpdateOrganizationUserCommand(
 
         if (request.IsEmailChanged() || request.IsNameChanged())
         {
-            var commandError = await TryApplyAccountChangesAsync(request);
+            var commandError = await TryApplyAccountChangesAsync(request, organizationUser);
             if (commandError is not null)
             {
                 return commandError;
@@ -94,7 +96,7 @@ public class UpdateOrganizationUserCommand(
         return new None();
     }
 
-    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request)
+    private async Task<CommandError?> TryApplyAccountChangesAsync(UpdateOrganizationUserRequest request, OrganizationUser organizationUser)
     {
         if (request.UserToUpdate is null)
         {
@@ -118,6 +120,7 @@ public class UpdateOrganizationUserCommand(
                 await changeEmailCommand.ChangeEmailAsync(request.UserToUpdate, request.NewEmail!);
 
                 await TrySendEmailChangedNotificationAsync(previousEmail, request);
+                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
             }
             else
             {
@@ -139,8 +142,8 @@ public class UpdateOrganizationUserCommand(
     private static CommandError MapEmailChangeError(BadRequestException ex) => ex.Message switch
     {
         ChangeEmailCommand.EmailAlreadyInUseError => new EmailAlreadyInUseError(),
-        OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError => new EmailClaimedByAnotherOrganizationError(),
-        OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError => new NewEmailDomainNotClaimedError(),
+        var msg when msg == new EmailClaimedByOrganizationError().Message => new EmailClaimedByAnotherOrganizationError(),
+        var msg when msg == new EmailNotOnVerifiedDomainError().Message => new NewEmailDomainNotClaimedError(),
         _ => new EmailChangeFailedError(ex.Message)
     };
 

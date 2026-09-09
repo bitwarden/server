@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
@@ -68,8 +69,7 @@ public class OrganizationsControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Leave(orgId));
 
-        Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
-            exception.Message);
+        Assert.Contains(new LeaveOrgSsoBlockedError().Message, exception.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);
     }
@@ -102,8 +102,7 @@ public class OrganizationsControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Leave(orgId));
 
-        Assert.Contains("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.",
-            exception.Message);
+        Assert.Contains(new LeaveOrgClaimedAccountError().Message, exception.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
     }

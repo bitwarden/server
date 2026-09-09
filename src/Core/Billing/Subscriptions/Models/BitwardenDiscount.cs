@@ -57,5 +57,5 @@ public record BitwardenDiscount
     }
 
     public static implicit operator BitwardenDiscount?(Discount? discount) =>
-        discount?.Coupon;
+        discount?.Source?.Coupon;
 }

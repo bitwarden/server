@@ -39,7 +39,14 @@ public class AutomaticUserConfirmationPolicyEnforcementHandler(
         var violation = GetAutoConfirmPolicyViolation(policyRequirement, request.OrganizationId,
             isProviderUser, request.AllOrganizationUsers.Count);
 
-        return violation is not null ? Invalid(request, violation) : Valid(request);
+        var violationWithEmail = violation switch
+        {
+            UserCannotBelongToAnotherOrganization => new UserCannotBelongToAnotherOrganization(request.User.Email),
+            OtherOrganizationDoesNotAllowOtherMembership => new OtherOrganizationDoesNotAllowOtherMembership(request.User.Email),
+            _ => violation
+        };
+
+        return violationWithEmail is not null ? Invalid(request, violationWithEmail) : Valid(request);
     }
 
     public Error? GetAutoConfirmPolicyViolation(
@@ -57,13 +64,13 @@ public class AutomaticUserConfirmationPolicyEnforcementHandler(
 
             if (orgMembershipCount > 1)
             {
-                return new UserCannotBelongToAnotherOrganization();
+                return new UserCannotBelongToAnotherOrganization(string.Empty);
             }
         }
 
         if (policyRequirement.IsEnabledForOrganizationsOtherThan(organizationId))
         {
-            return new OtherOrganizationDoesNotAllowOtherMembership();
+            return new OtherOrganizationDoesNotAllowOtherMembership(string.Empty);
         }
 
         return null;

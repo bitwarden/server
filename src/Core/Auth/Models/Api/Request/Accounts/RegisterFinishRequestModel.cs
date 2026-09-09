@@ -72,6 +72,8 @@ public class RegisterFinishRequestModel : IValidatableObject
 
     public string? SalesAssistedToken { get; set; }
 
+    public OpenOrgInviteRequestModel? OpenOrgInvite { get; set; }
+
     public User ToUser(bool isV2Encryption)
     {
         // TODO remove IsV2Encryption bool and simplify logic below after a compatibility period - once V2 accounts are supported
@@ -89,6 +91,8 @@ public class RegisterFinishRequestModel : IValidatableObject
                 KdfParallelism = MasterPasswordUnlock?.Kdf.Parallelism ?? KdfParallelism,
                 MasterPasswordSalt = MasterPasswordUnlock?.Salt,
                 Key = MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? UserSymmetricKey
+                // Note: V1 register flows do not set the UserKeyId; those accounts report it later
+                // through the backfill endpoint.
             };
 
             user = UserAsymmetricKeys?.ToUser(user)!;
@@ -132,6 +136,7 @@ public class RegisterFinishRequestModel : IValidatableObject
             MasterKeyWrappedUserKey = unlockData?.MasterKeyWrappedUserKey ?? UserSymmetricKey ?? throw new BadRequestException("MasterKeyWrappedUserKey couldn't be found on either the MasterPasswordUnlockData or the UserSymmetricKey property passed in."),
             MasterPasswordAuthenticationHash = authenticationData?.MasterPasswordAuthenticationHash ?? MasterPasswordHash ?? throw new BadRequestException("MasterPasswordHash couldn't be found on either the MasterPasswordAuthenticationData or the MasterPasswordHash property passed in."),
             Salt = unlockData?.Salt,
+            UserKeyId = unlockData?.ContainedKeyId,
         };
     }
 
@@ -245,7 +250,8 @@ public class RegisterFinishRequestModel : IValidatableObject
                 [nameof(AccountKeys.PublicKeyEncryptionKeyPair.PublicKey), nameof(AccountKeys.PublicKeyEncryptionKeyPair.WrappedPrivateKey)]);
         }
 
-        // 4. Lastly, validate access token type and presence. Must be done last because of yield break.
+        // 4. Resolve access token type; short-circuit if no valid token was provided.
+        //    Must be done after all other checks above because of the yield break below.
         RegisterFinishTokenType tokenType;
         var tokenTypeResolved = true;
         try
@@ -264,6 +270,15 @@ public class RegisterFinishRequestModel : IValidatableObject
             yield break;
         }
 
+        // 5. OpenOrgInvite is only compatible with the EmailVerification token type.
+        if (OpenOrgInvite is not null && tokenType != RegisterFinishTokenType.EmailVerification)
+        {
+            yield return new ValidationResult(
+                $"{nameof(OpenOrgInvite)} is only valid with an {nameof(EmailVerificationToken)}.",
+                [nameof(OpenOrgInvite)]);
+        }
+
+        // 6. Validate token presence per resolved type.
         switch (tokenType)
         {
             case RegisterFinishTokenType.EmailVerification:

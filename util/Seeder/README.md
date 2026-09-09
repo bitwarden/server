@@ -52,7 +52,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **When to use:** New bulk operations, especially with presets. Provides ultimate flexibility.
 
-**Flow**: Preset JSON → Loader → Builder → Steps → Executor → Context → BulkCommitter
+**Flow**: Preset JSON → Loader → Builder → Steps (sync or async) → Executor → Context → BulkCommitter → post-commit steps
 
 **Why this architecture wins**:
 
@@ -94,10 +94,10 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - Use BulkCopy for performance optimization
 - Interact with database directly
 - Compose Factories for individual entity creation
-- **SHALL have a `Seed()` method** that executes the complete recipe
+- **SHALL have a single public entry point** that executes the complete recipe — `Seed()` if synchronous, `SeedAsync()` if it returns a Task
 - Use method parameters (with defaults) for variations, not separate methods
 
-**Naming:** `{DomainConcept}Recipe` with a `Seed()` method
+**Naming:** `{DomainConcept}Recipe`, with `Seed()` when synchronous or `SeedAsync()` when async. Sharing the `SeedAsync()` name with Scenes is fine — the type suffix distinguishes the patterns.
 
 #### Models
 

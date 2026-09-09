@@ -8,4 +8,4 @@ public record CustomUsersCannotManageAdminsOrOwners() : BadRequestError("Custom 
 
 public record CustomUsersCanOnlyGrantOwnPermissions() : BadRequestError("Custom users can only grant the same custom permissions that they have.");
 
-public record CannotBeAdminOfMultipleFreeOrganizations() : BadRequestError("User can only be an admin of one free organization.");
+public record CannotBeAdminOfMultipleFreeOrganizations() : BadRequestError("User can only be an admin of 1 free organization vault.");

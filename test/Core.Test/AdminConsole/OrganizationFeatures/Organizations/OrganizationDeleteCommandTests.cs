@@ -1,12 +1,14 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -34,7 +36,11 @@ public class OrganizationDeleteCommandTests
         await sutProvider.Sut.DeleteAsync(organization);
 
         await cipherService.Received(1).DeleteAttachmentsForOrganizationAsync(organization.Id);
-        await organizationRepository.Received(1).DeleteAsync(organization);
+        // The deletion and the events-cleanup task enqueue happen atomically in one repository call.
+        await organizationRepository.Received(1).DeleteAndCreateDeleteTasksAsync(
+            organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
+        await organizationRepository.DidNotReceive().DeleteAsync(organization);
         await organizationAbilityCacheService.Received(1).DeleteOrganizationAbilityAsync(organization.Id);
     }
 
@@ -53,9 +59,9 @@ public class OrganizationDeleteCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DeleteAsync(organization));
 
-        Assert.Contains("You cannot delete an Organization that is using Key Connector.", exception.Message);
+        Assert.Contains(new CannotDeleteOrganizationWithKeyConnectorError().Message, exception.Message);
 
-        await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default);
+        await organizationRepository.DidNotReceiveWithAnyArgs().DeleteAndCreateDeleteTasksAsync(default, default);
         await organizationAbilityCacheService.DidNotReceiveWithAnyArgs().DeleteOrganizationAbilityAsync(default);
     }
 
@@ -89,8 +95,9 @@ public class OrganizationDeleteCommandTests
 
         await sutProvider.Sut.DeleteAsync(organization);
 
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).DeleteAsync(organization);
-
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -108,7 +115,7 @@ public class OrganizationDeleteCommandTests
             .Returns(Task.CompletedTask)
             .AndDoes(_ => callOrder.Add("file"));
         sutProvider.GetDependency<IOrganizationRepository>()
-            .DeleteAsync(organization)
+            .DeleteAndCreateDeleteTasksAsync(organization, Arg.Any<IEnumerable<OrganizationDeleteTaskType>>())
             .Returns(Task.CompletedTask)
             .AndDoes(_ => callOrder.Add("db"));
 
@@ -117,7 +124,8 @@ public class OrganizationDeleteCommandTests
         await sutProvider.GetDependency<ISendFileStorageService>()
             .Received(1).DeleteFilesForOrganizationAsync(organization.Id);
         await sutProvider.GetDependency<IOrganizationRepository>()
-            .Received(1).DeleteAsync(organization);
+            .Received(1).DeleteAndCreateDeleteTasksAsync(organization, Arg.Is<IEnumerable<OrganizationDeleteTaskType>>(
+                taskTypes => taskTypes.SequenceEqual(new[] { OrganizationDeleteTaskType.EventsCleanup })));
         Assert.Equal(new[] { "file", "db" }, callOrder);
     }
 }

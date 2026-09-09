@@ -4,10 +4,10 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Providers.Repositories;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -84,12 +84,16 @@ public class SingleProviderScene(
             : request.Domain;
         var providerKey = RustSdkService.GenerateOrganizationKeys().Key;
 
-        var provider = ProviderSeeder.Create(request.Name, domain, request.Type, manglerService);
-        ProviderSeeder.ApplyBilling(
-            provider,
-            GatewayType.Stripe,
-            request.GatewayCustomerId,
-            request.GatewaySubscriptionId);
+        var provider = ProviderSeeder.Create(
+            new ProviderSeed
+            {
+                Name = request.Name,
+                Domain = domain,
+                Type = request.Type,
+                GatewayCustomerId = request.GatewayCustomerId,
+                GatewaySubscriptionId = request.GatewaySubscriptionId
+            },
+            manglerService);
         await providerRepository.CreateAsync(provider);
 
         var providerUser = ProviderUserSeeder.CreateConfirmedAdmin(provider, owner, providerKey);

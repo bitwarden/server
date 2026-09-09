@@ -23,6 +23,7 @@ public record UpdateOrganizationUserRequest(
     OrganizationUserType NewType,
     Permissions? NewPermissions,
     bool NewAccessSecretsManager,
+    bool NewAccessPam,
     List<CollectionAccessSelection>? CollectionsToSave,
     IEnumerable<Guid>? NewGroups,
     string? NewEmail,
@@ -36,6 +37,12 @@ public record UpdateOrganizationUserRequest(
         && NewType is not (OrganizationUserType.Admin or OrganizationUserType.Owner);
 
     public bool IsEnablingSecretsManager() => !_existingAccessSecretsManager && NewAccessSecretsManager;
+
+    /// <summary>
+    /// Only a false → true transition is a grant. Revoking access stays possible on an organization whose PAM
+    /// entitlement has lapsed, so <see cref="Organization.UsePam"/> is not checked when disabling.
+    /// </summary>
+    public bool IsEnablingPam() => !_existingAccessPam && NewAccessPam;
 
     public bool IsEmailChanged() =>
         !string.IsNullOrWhiteSpace(NewEmail)
@@ -54,4 +61,5 @@ public record UpdateOrganizationUserRequest(
 
     private readonly OrganizationUserType _existingOrganizationUserType = OrganizationUserToUpdate.Type;
     private readonly bool _existingAccessSecretsManager = OrganizationUserToUpdate.AccessSecretsManager;
+    private readonly bool _existingAccessPam = OrganizationUserToUpdate.AccessPam;
 }

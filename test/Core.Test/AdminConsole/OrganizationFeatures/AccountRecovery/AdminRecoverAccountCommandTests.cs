@@ -9,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -76,7 +77,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -124,7 +125,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -183,7 +184,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -231,7 +232,7 @@ public class AdminRecoverAccountCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
 
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory]
@@ -323,7 +324,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Any<OrganizationUser>(), Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     // Atomicity: a service failure must leave the system unchanged — no persist, no email,
@@ -375,7 +376,7 @@ public class AdminRecoverAccountCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
 
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory]
@@ -430,7 +431,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(organizationUser), Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     // PrepareSetInitialOrUpdateExistingMasterPasswordAsync routes set-initial vs
@@ -566,7 +567,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(organizationUser), Arg.Is(EventType.OrganizationUser_AdminResetPassword));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     // Atomicity: a legacy-path failure must also leave the system unchanged.
@@ -616,7 +617,7 @@ public class AdminRecoverAccountCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
 
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory]
@@ -665,7 +666,7 @@ public class AdminRecoverAccountCommandTests
             Arg.Is(organizationUser), Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     private static RecoverAccountRequest CreateRequest(

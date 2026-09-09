@@ -36,6 +36,7 @@ public class ConfirmOrganizationInviteLinkCommand(
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
     IPushNotificationService pushNotificationService,
+    IEventService eventService,
     ILogger<ConfirmOrganizationInviteLinkCommand> logger)
     : IConfirmOrganizationInviteLinkCommand
 {
@@ -74,6 +75,8 @@ public class ConfirmOrganizationInviteLinkCommand(
         }
 
         var organizationUser = membershipResult.AsSuccess;
+
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_InviteLinkConfirmed);
 
         await CreateDefaultCollectionAsync(organization, organizationUser, request.DefaultUserCollectionName);
 

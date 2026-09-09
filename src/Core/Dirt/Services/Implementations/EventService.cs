@@ -338,6 +338,9 @@ public class EventService : IEventService
     }
 
     public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
+        => await LogOrganizationEventAsync(new OrganizationAbility(organization), type, date);
+
+    public async Task LogOrganizationEventAsync(OrganizationAbility organization, EventType type, DateTime? date = null)
     {
         if (!organization.Enabled || !organization.UseEvents)
         {

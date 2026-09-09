@@ -45,9 +45,15 @@ internal static class ConsoleOutput
         Console.Error.WriteLine();
         Console.Error.WriteLine("--- SSO wiring (cloud Sso profile :51822) ---");
         Console.Error.WriteLine($"  Login identifier : {identifier}");
-        Console.Error.WriteLine("  The org GUID is generated per seed. Paste these into dev/.env, then restart the IdP:  docker compose --profile idp up -d");
-        Console.Error.WriteLine($"    IDP_SP_ENTITY_ID={sp}");
-        Console.Error.WriteLine($"    IDP_SP_ACS_URL={sp}/Acs");
+        Console.Error.WriteLine("  The org GUID is generated per seed. Wire it up one of two ways:");
+        Console.Error.WriteLine();
+        Console.Error.WriteLine("  ▸ Aspire (AppHost) — set the sso-org-id parameter to this org GUID, then start/restart");
+        Console.Error.WriteLine("    the idp resource from the dashboard. No dev/.env edit needed.");
+        Console.Error.WriteLine($"      sso-org-id: {organizationId}");
+        Console.Error.WriteLine();
+        Console.Error.WriteLine("  ▸ docker compose — paste these into dev/.env, then restart the IdP:  docker compose --profile idp up -d");
+        Console.Error.WriteLine($"      IDP_SP_ENTITY_ID={sp}");
+        Console.Error.WriteLine($"      IDP_SP_ACS_URL={sp}/Acs");
 
         if (ownerEmail is not null)
         {

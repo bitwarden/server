@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -12,7 +13,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 public class GetOrganizationInviteCommand(
     IOrganizationInviteLinkRepository organizationInviteLinkRepository,
-    IOrganizationAbilityCacheService organizationAbilityCacheService)
+    IOrganizationAbilityCacheService organizationAbilityCacheService,
+    IOrganizationRepository organizationRepository)
     : IGetOrganizationInviteCommand
 {
     public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request)
@@ -38,7 +40,8 @@ public class GetOrganizationInviteCommand(
 
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
-            return new EmailDomainNotAllowed();
+            var organization = await organizationRepository.GetByIdAsync(link.OrganizationId);
+            return new EmailDomainNotAllowed(organization?.DisplayName() ?? string.Empty);
         }
 
         return link.Invite;

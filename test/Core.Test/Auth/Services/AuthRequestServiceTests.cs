@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
@@ -227,7 +228,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received()
-            .PushAuthRequestAsync(createdAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequest && n.Payload.Id == createdAuthRequest.Id));
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received()
@@ -586,7 +587,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == udpatedAuthRequest.Id));
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
         await sutProvider.GetDependency<IEventService>()
@@ -665,8 +666,8 @@ public class AuthRequestServiceTests
             .ReplaceAsync(udpatedAuthRequest);
 
         await sutProvider.GetDependency<IPushNotificationService>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<AuthRequestPushNotification>>());
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
 
@@ -686,6 +687,7 @@ public class AuthRequestServiceTests
     [Theory]
     [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
     [BitAutoData(AuthRequestType.Unlock)]
+    [BitAutoData(AuthRequestType.AdminApproval)]
     public async Task UpdateAuthRequestAsync_InvalidUser_ThrowsNotFound(
         AuthRequestType authRequestType,
         SutProvider<AuthRequestService> sutProvider,
@@ -696,7 +698,7 @@ public class AuthRequestServiceTests
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         // The request hasn't been Approved/Disapproved already
         authRequest.Approved = null;
-        // Has an type that needs the UserId property validated
+        // Set a type whose update path validates the UserId property
         authRequest.Type = authRequestType;
 
         // Auth request should not be null
@@ -876,7 +878,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(authRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == authRequest.Id));
     }
 
     [Theory, BitAutoData]

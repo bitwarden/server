@@ -153,10 +153,10 @@ internal sealed class GeneratePersonalCiphersStep(
         for (var u = 0; u < userDigests.Count; u++)
         {
             var localCiphers = userCiphers[u];
-            for (var i = 0; i < localCiphers.Length; i++)
+            foreach (var t in localCiphers)
             {
-                ciphers.Add(localCiphers[i]);
-                cipherIds.Add(localCiphers[i].Id);
+                ciphers.Add(t);
+                cipherIds.Add(t.Id);
             }
         }
 

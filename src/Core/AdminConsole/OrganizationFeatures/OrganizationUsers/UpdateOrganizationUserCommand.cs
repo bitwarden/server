@@ -13,6 +13,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -30,6 +32,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly IPricingClient _pricingClient;
     private readonly TimeProvider _timeProvider;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IGlobalSettings _globalSettings;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -43,7 +46,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         TimeProvider timeProvider,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery,
+        IGlobalSettings globalSettings)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -57,6 +61,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _pricingClient = pricingClient;
         _timeProvider = timeProvider;
         _policyRequirementQuery = policyRequirementQuery;
+        _globalSettings = globalSettings;
     }
 
     /// <summary>
@@ -129,6 +134,14 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             }
         }
 
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        // Only the grant is gated — revoking access stays possible on an organization whose entitlement has lapsed.
+        if (!originalOrganizationUser.AccessPam && organizationUser.AccessPam && !organization.UsePam)
+        {
+            throw new BadRequestException(new V2_UpdateUserCommand.PamNotEnabled().Message);
+        }
+
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
         if (!originalOrganizationUser.AccessSecretsManager && organizationUser.AccessSecretsManager)
@@ -136,7 +149,12 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                // Self-hosted instances can't autoscale their Stripe subscription, so reject before touching billing.
+                if (_globalSettings.SelfHosted)
+                {
+                    throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+                }
+
                 var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
                 var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);
@@ -199,7 +217,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             return;
         }
 
-        throw new BadRequestException("User can only be an admin of one free organization.");
+        throw new BadRequestException(new UserFreeOrgAdminLimitError().Message);
     }
 
     private async Task<List<CollectionAccessSelection>> ValidateAccessAndFilterDefaultUserCollectionsAsync(

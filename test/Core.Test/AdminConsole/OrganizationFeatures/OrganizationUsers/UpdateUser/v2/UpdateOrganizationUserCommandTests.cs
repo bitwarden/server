@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
@@ -52,10 +53,54 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(userToUpdate, "new@claimed.example.com");
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(organizationUser, Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenGrantingPam_PersistsAccessPam(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: true);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenRevokingPam_PersistsAccessPamAsFalse(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = true;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessPam: false);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => !ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]
@@ -103,7 +148,27 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WhenNotEmailChanging_LogsUpdatedEvent(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        var request = Setup(sutProvider, organization, organizationUser, newEmail: null);
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceive()
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_AdminChangedEmail);
     }
 
     [Theory]
@@ -129,7 +194,7 @@ public class UpdateOrganizationUserCommandTests
             .ChangeEmailAsync(Arg.Any<User>(), Arg.Any<string>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<MemberEmailChangedNotificationView>(default);
@@ -137,8 +202,6 @@ public class UpdateOrganizationUserCommandTests
 
     [Theory]
     [BitAutoData(ChangeEmailCommand.EmailAlreadyInUseError, typeof(EmailAlreadyInUseError), "email_already_in_use")]
-    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailClaimedByOrganizationError, typeof(EmailClaimedByAnotherOrganizationError), "email_claimed_by_another_organization")]
-    [BitAutoData(OrganizationDomainAllowEmailChangeQuery.EmailNotOnVerifiedDomainError, typeof(NewEmailDomainNotClaimedError), "new_email_domain_not_claimed")]
     [BitAutoData("Something unexpected went wrong.", typeof(EmailChangeFailedError), "email_change_failed")]
     public async Task UpdateUserAsync_WhenChangeEmailThrowsBadRequest_MapsToTypedErrorAndDoesNotPersist(
         string thrownMessage,
@@ -175,10 +238,58 @@ public class UpdateOrganizationUserCommandTests
             .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
         await sutProvider.GetDependency<IMailer>()
             .DidNotReceiveWithAnyArgs()
             .SendEmail<MemberEmailChangedNotificationView>(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenChangeEmailThrowsEmailClaimedByOrganization_MapsToEmailClaimedByAnotherOrganizationError(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com" };
+        var request = Setup(sutProvider, organization, organizationUser, newEmail: "new@claimed.example.com");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+        sutProvider.GetDependency<IChangeEmailCommand>()
+            .ChangeEmailAsync(userToUpdate, "new@claimed.example.com")
+            .ThrowsAsync(new BadRequestException(new EmailClaimedByOrganizationError().Message));
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<EmailClaimedByAnotherOrganizationError>(result.AsError);
+        Assert.Equal("email_claimed_by_another_organization", Assert.IsAssignableFrom<IValidationError>(result.AsError).Type);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenChangeEmailThrowsEmailNotOnVerifiedDomain_MapsToNewEmailDomainNotClaimedError(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.UserId = Guid.NewGuid();
+        var userToUpdate = new User { Id = organizationUser.UserId!.Value, Email = "old@claimed.example.com" };
+        var request = Setup(sutProvider, organization, organizationUser, newEmail: "new@claimed.example.com");
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(organizationUser.UserId!.Value)
+            .Returns(userToUpdate);
+        sutProvider.GetDependency<IChangeEmailCommand>()
+            .ChangeEmailAsync(userToUpdate, "new@claimed.example.com")
+            .ThrowsAsync(new BadRequestException(new EmailNotOnVerifiedDomainError().Message));
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<NewEmailDomainNotClaimedError>(result.AsError);
+        Assert.Equal("new_email_domain_not_claimed", Assert.IsAssignableFrom<IValidationError>(result.AsError).Type);
     }
 
     [Theory]
@@ -205,7 +316,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(userToUpdate);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         // A name-only change never touches the email command.
         await sutProvider.GetDependency<IChangeEmailCommand>()
             .DidNotReceiveWithAnyArgs()
@@ -262,7 +373,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory]
@@ -314,7 +425,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncSettingsAsync(userToUpdate.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == userToUpdate.Id));
         await sutProvider.GetDependency<IMailer>()
             .Received(1)
             .SendEmail(Arg.Is<MemberEmailChangedNotificationMail>(mail =>
@@ -343,7 +454,7 @@ public class UpdateOrganizationUserCommandTests
             .ReplaceAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .DidNotReceiveWithAnyArgs()
-            .PushSyncSettingsAsync(Arg.Any<Guid>());
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     private static UpdateOrganizationUserRequest Setup(
@@ -357,7 +468,8 @@ public class UpdateOrganizationUserCommandTests
         bool targetAccessSecretsManager = false,
         string defaultUserCollectionName = null,
         string newEmail = null,
-        string newName = null)
+        string newName = null,
+        bool targetAccessPam = false)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         organizationUser.OrganizationId = organization.Id;
@@ -374,6 +486,7 @@ public class UpdateOrganizationUserCommandTests
             type,
             null,
             targetAccessSecretsManager,
+            targetAccessPam,
             collections,
             groups,
             newEmail,

@@ -21,13 +21,13 @@ public class CreateSsoConfigStepTests
     // not here. These cover the guards that don't need a running IdP.
 
     [Fact]
-    public void Execute_NonSamlProvider_SkipsWithoutMutating()
+    public async Task Execute_NonSamlProvider_SkipsWithoutMutatingAsync()
     {
         var org = new Organization { Id = Guid.NewGuid(), Identifier = "unchanged" };
         var context = BuildContext(org);
         var step = new CreateSsoConfigStep("local-sso", "oidc", MemberDecryptionType.MasterPassword);
 
-        step.Execute(context);
+        await step.ExecuteAsync(context);
 
         Assert.Empty(context.SsoConfigs);
         Assert.Equal("unchanged", org.Identifier);

@@ -150,6 +150,41 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_WithLinkThatDoesNotSupportConfirmation_ReturnsConfirmationNotSupported(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        inviteLink.SupportsConfirmation = false;
+
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        var error = Assert.IsType<ConfirmInviteLinkConfirmationNotSupported>(result.AsError);
+        Assert.IsAssignableFrom<IValidationError>(error);
+
+        // The check must short-circuit before the membership is resolved so no membership can be mutated.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationEmailAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_WithEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -609,6 +644,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         link.OrganizationId = org.Id;
         link.Code = Guid.NewGuid().ToString();
         link.AllowedDomains = "[\"example.com\"]";
+        link.SupportsConfirmation = true;
         user.Email = "user@example.com";
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()

@@ -40,6 +40,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<IPolicyUpdateEvent, SendOptionsSyncPolicyEvent>();
         services.AddScoped<IPolicyUpdateEvent, SendControlsSyncPolicyEvent>();
         services.AddScoped<IPolicyUpdateEvent, OrganizationUserNotificationPolicyEventHandler>();
+        services.AddScoped<IPolicyUpdateEvent, FillAssistPolicyEventHandler>();
     }
 
     private static void AddPolicyRequirements(this IServiceCollection services)
