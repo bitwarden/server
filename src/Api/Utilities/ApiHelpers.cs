@@ -82,7 +82,7 @@ public static class ApiHelpers
     /// <remarks>
     /// A supplied bound is always honored; the missing bound is inferred from it.
     /// With neither supplied, returns the last 30 days.
-    /// With only <paramref name="start"/>, the range runs to the end of the current day.
+    /// With only <paramref name="start"/>, the range runs to the current time.
     /// With only <paramref name="end"/>, the range covers the 30 days before it.
     /// An inverted range is swapped. A range greater than 367 days throws BadRequestException.
     /// </remarks>
@@ -93,7 +93,7 @@ public static class ApiHelpers
             start = end.HasValue ? ThirtyDaysBefore(end.Value) : DateTime.UtcNow.Date.AddDays(-30);
         }
 
-        end ??= DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
+        end ??= DateTime.UtcNow;
 
         if (start.Value > end.Value)
         {

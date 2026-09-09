@@ -26,21 +26,24 @@ public class ApiHelpersTests
     [Fact]
     public void GetDateRange_NeitherBoundSupplied_ReturnsLastThirtyDays()
     {
+        var before = DateTime.UtcNow;
+
         var (start, end) = ApiHelpers.GetDateRange(null, null);
 
         Assert.Equal(DateTime.UtcNow.Date.AddDays(-30), start);
-        Assert.Equal(DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1), end);
+        Assert.InRange(end, before, DateTime.UtcNow);
     }
 
     [Fact]
-    public void GetDateRange_OnlyStartSupplied_KeepsStartAndRunsToEndOfToday()
+    public void GetDateRange_OnlyStartSupplied_KeepsStartAndRunsToNow()
     {
         var suppliedStart = DateTime.UtcNow.AddDays(-3);
+        var before = DateTime.UtcNow;
 
         var (start, end) = ApiHelpers.GetDateRange(suppliedStart, null);
 
         Assert.Equal(suppliedStart, start);
-        Assert.Equal(DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1), end);
+        Assert.InRange(end, before, DateTime.UtcNow);
     }
 
     [Fact]

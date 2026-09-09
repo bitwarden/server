@@ -52,7 +52,7 @@ public class EventsController : Controller
     /// <remarks>
     /// Returns a filtered list of your organization's event logs, paged by a continuation token.
     /// If no date filters are provided, it will return the last 30 days of events for the organization.
-    /// Providing only <c>start</c> returns events from then through the end of the current day;
+    /// Providing only <c>start</c> returns events from then through the current time;
     /// providing only <c>end</c> returns the 30 days before it. A range greater than 367 days is rejected.
     /// </remarks>
     [HttpGet]
