@@ -1472,15 +1472,25 @@ public class OrganizationServiceTests
     /// so the invite flow has to decide between skipping it and promoting it.
     /// </summary>
     private void InviteUser_ArrangeExistingOrgUser(Organization organization, OrganizationUserInvite invite,
-        OrganizationUser existingOrgUser, SutProvider<OrganizationService> sutProvider)
+        OrganizationUser existingOrgUser, SutProvider<OrganizationService> sutProvider) =>
+        InviteUser_ArrangeExistingOrgUsers(organization, invite, [existingOrgUser], sutProvider);
+
+    private void InviteUser_ArrangeExistingOrgUsers(Organization organization, OrganizationUserInvite invite,
+        List<OrganizationUser> existingOrgUsers, SutProvider<OrganizationService> sutProvider)
     {
-        invite.Emails = [invite.Emails.First()];
-        existingOrgUser.OrganizationId = organization.Id;
-        existingOrgUser.Email = invite.Emails.First();
+        invite.Emails = existingOrgUsers
+            .Select((_, index) => $"existing-{index}-{Guid.NewGuid()}@example.com")
+            .ToList();
+
+        foreach (var (existingOrgUser, email) in existingOrgUsers.Zip(invite.Emails))
+        {
+            existingOrgUser.OrganizationId = organization.Id;
+            existingOrgUser.Email = email;
+        }
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
-            .Returns(new List<string> { invite.Emails.First() });
+            .Returns(invite.Emails.ToList());
 
         sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
         sutProvider.Create();
@@ -1491,7 +1501,7 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByOrganizationEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>())
-            .Returns(new List<OrganizationUser> { existingOrgUser });
+            .Returns(existingOrgUsers);
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
             .Returns(true);
@@ -1665,6 +1675,63 @@ public class OrganizationServiceTests
         Assert.Equal(provisionedRevisionDate, stagedUser.RevisionDate);
 
         // The row predates this call, so demoting it is the revert; it must never be deleted.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_WhenAStagedPromotionFailsMidBatch_DemotesTheMembersAlreadyPromoted(
+        Organization organization, OrganizationUserInvite invite, OrganizationUser invitor,
+        OrganizationUser firstStagedUser, OrganizationUser secondStagedUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        List<OrganizationUser> stagedUsers = [firstStagedUser, secondStagedUser];
+
+        // Provisioned state deliberately differs from what the invite would write, so the revert is visible.
+        foreach (var stagedUser in stagedUsers)
+        {
+            stagedUser.Status = OrganizationUserStatusType.Staged;
+            stagedUser.Type = OrganizationUserType.Custom;
+            stagedUser.AccessSecretsManager = false;
+        }
+
+        InviteUser_ArrangeExistingOrgUsers(organization, invite, stagedUsers, sutProvider);
+
+        invite.Collections = [];
+        invite.Groups = [Guid.NewGuid()];
+
+        // The group update is the last write in the batch, so failing the second one leaves the first member
+        // fully promoted - row and groups both committed - which is what the revert has to undo.
+        var groupUpdates = 0;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .UpdateGroupsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<DateTime>())
+            .Returns(_ => ++groupUpdates == 2
+                ? Task.FromException(new InvalidOperationException("group membership write failed"))
+                : Task.CompletedTask);
+
+        await Assert.ThrowsAsync<AggregateException>(() => sutProvider.Sut
+            .InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, [(invite, null)]));
+
+        Assert.Equal(2, groupUpdates);
+
+        // Every promoted row occupies a seat, so all of them go back before the seat count is reverted -
+        // including the member whose own writes all succeeded.
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users =>
+                users.Count() == 2 && users.All(user => stagedUsers.Contains(user))));
+
+        Assert.All(stagedUsers, stagedUser =>
+        {
+            Assert.Equal(OrganizationUserStatusType.Staged, stagedUser.Status);
+            Assert.Equal(OrganizationUserType.Custom, stagedUser.Type);
+            Assert.False(stagedUser.AccessSecretsManager);
+        });
+
+        // The rows predate this call, so demoting them is the revert; they must never be deleted.
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => !ids.Any()));

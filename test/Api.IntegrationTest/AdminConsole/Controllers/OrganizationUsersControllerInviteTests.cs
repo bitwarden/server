@@ -210,7 +210,7 @@ public class OrganizationUsersControllerInviteTests
     }
 
     [Fact]
-    public async Task Invite_WhenSendingInvitationsFails_RestoresTheStagedMemberAndDeletesTheNewOne()
+    public async Task Invite_WhenSendingInvitationsFails_NeverPromotesTheStagedMemberAndDeletesTheNewOne()
     {
         var stagedEmail = $"staged-{Guid.NewGuid()}@bitwarden.com";
         var staged = await OrganizationTestHelpers.CreateStagedUserAsync(_factory, _organization, stagedEmail,
@@ -233,8 +233,9 @@ public class OrganizationUsersControllerInviteTests
         // Every invite failure is collected into an AggregateException, which the Api maps to 400.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-        // The staged row existed before this call and belongs to whatever provisioned it, so it is put back
-        // rather than deleted.
+        // Invitations are sent before any staged row is written, so this failure happens before the promotion
+        // rather than after it: the row is never touched, and there is nothing to roll back. The rollback of an
+        // already-promoted row is exercised in OrganizationServiceTests, where a write can be failed mid-batch.
         var reverted = await _organizationUserRepository.GetByIdAsync(staged.Id);
         Assert.NotNull(reverted);
         Assert.Equal(OrganizationUserStatusType.Staged, reverted.Status);
