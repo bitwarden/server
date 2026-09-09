@@ -342,7 +342,7 @@ env "${SEED_ENV[@]}" \
     "${DB_CONNECTION}" \
     dotnet run --project . -- preset --name "${PRESET_NAME}" | tee "${SEED_LOG}"
 
-OWNER_EMAIL=$(grep -E '^\s*(Owner|Email)\s*:' "${SEED_LOG}" | head -1 | sed -E 's/^\s*(Owner|Email)\s*:\s*//')
+OWNER_EMAIL=$(grep -E '^[[:space:]]*(Owner|Email)[[:space:]]*:' "${SEED_LOG}" | head -1 | sed -E 's/^[[:space:]]*(Owner|Email)[[:space:]]*:[[:space:]]*//')
 rm -f "${SEED_LOG}"
 
 # --- Dump database ---
