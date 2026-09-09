@@ -1,4 +1,4 @@
-using Bit.HttpExtensions;
+﻿using Bit.HttpExtensions;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 

@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
 using Bit.Services.Pam.Api.Models.Response;

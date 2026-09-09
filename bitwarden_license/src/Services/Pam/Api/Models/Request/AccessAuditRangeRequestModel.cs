@@ -1,4 +1,4 @@
-namespace Bit.Services.Pam.Api.Models.Request;
+﻿namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
 /// The range an Item-filter read covers, as query parameters: the same two bounds the trail read takes, and

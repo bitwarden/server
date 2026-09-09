@@ -17,10 +17,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Endpoints;

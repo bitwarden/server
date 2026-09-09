@@ -5,7 +5,6 @@ using Bit.Core.Services;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
-using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Services.Pam.Services;
 
