@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -75,12 +74,12 @@ public class GetActingUserForOrganizationQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetActingUserAsync_ManagingProvider_ReturnsStandardUserFlaggedAsProvider(
-        Guid userId, Guid organizationId, Guid providerId)
+        Guid userId, Guid organizationId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
         var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        currentContext.ProviderIdForOrg(organizationId).Returns(providerId);
+        currentContext.ProviderUserForOrgAsync(organizationId).Returns(true);
 
         var result = await sut.GetActingUserAsync(userId, organizationId);
 
@@ -92,13 +91,19 @@ public class GetActingUserForOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetActingUserAsync_NeitherMemberNorProvider_Throws(Guid userId, Guid organizationId)
+    public async Task GetActingUserAsync_NeitherMemberNorProvider_ReturnsStandardUserWithNoAuthority(
+        Guid userId, Guid organizationId)
     {
         var currentContext = Substitute.For<ICurrentContext>();
         var sut = new GetActingUserForOrganizationQuery(currentContext);
         currentContext.GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
-        currentContext.ProviderIdForOrg(organizationId).Returns((Guid?)null);
+        currentContext.ProviderUserForOrgAsync(organizationId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sut.GetActingUserAsync(userId, organizationId));
+        var result = await sut.GetActingUserAsync(userId, organizationId);
+
+        var standardUser = Assert.IsType<StandardUser>(result);
+        Assert.Equal(userId, standardUser.UserId);
+        Assert.False(standardUser.IsProvider);
+        Assert.Null(standardUser.OrganizationUserType);
     }
 }

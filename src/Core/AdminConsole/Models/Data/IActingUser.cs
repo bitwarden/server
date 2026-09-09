@@ -8,5 +8,4 @@ public interface IActingUser
     [Obsolete("This property is obsolete. Use isProvider or the OrganizationUserType where available instead.")]
     bool IsOrganizationOwnerOrProvider { get; }
     EventSystemUser? SystemUserType { get; }
-    bool IsProvider { get; }
 }

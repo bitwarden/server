@@ -8,5 +8,4 @@ public class SystemUser(EventSystemUser systemUser) : IActingUser
     [Obsolete("This property is obsolete.")]
     public bool IsOrganizationOwnerOrProvider => false;
     public EventSystemUser? SystemUserType { get; } = systemUser;
-    public bool IsProvider => false;
 }

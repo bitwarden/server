@@ -237,6 +237,18 @@ public class OrganizationUserValidationServiceTests
     }
 
     [Fact]
+    public void CanManageRoleChange_ByActingUser_WhenPerformedByProviderWhoIsAlsoMember_ActsWithOwnerAuthority()
+    {
+        // Provider authority takes precedence over the caller's own membership role.
+        var performedBy = new StandardUser(Guid.NewGuid(), isProvider: true, OrganizationUserType.Admin);
+
+        var result = _sut.CanManageRoleChange(performedBy, TargetUser(OrganizationUserType.User),
+            NewRole(OrganizationUserType.Owner));
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void CanManageRoleChange_ByActingUser_WhenPerformedByMember_UsesTheirRole()
     {
         // An Admin member can't promote a User to Owner.

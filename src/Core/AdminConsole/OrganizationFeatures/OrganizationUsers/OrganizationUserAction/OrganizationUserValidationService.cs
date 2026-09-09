@@ -34,7 +34,6 @@ public class OrganizationUserValidationService(
             return null;
         }
 
-        // Must be able to manage both the current and requested role.
         return GetActingUser(standardUser, targetUser.OrganizationId)
             .Match(
                 error => error,
@@ -44,7 +43,8 @@ public class OrganizationUserValidationService(
     private static CommandResult<OrganizationUserRole> GetActingUser(StandardUser standardUser, Guid organizationId) =>
         standardUser switch
         {
-            { IsProvider: true, OrganizationUserType: null } => new OrganizationUserRole(OrganizationUserType.Owner, organizationId),
+            // Providers can act as owners when managing organization members
+            { IsProvider: true } => new OrganizationUserRole(OrganizationUserType.Owner, organizationId),
             { OrganizationUserType: not null } => new OrganizationUserRole(standardUser.OrganizationUserType.Value, organizationId, standardUser.Permissions),
             _ => new ActingUserMustBeMemberOrProvider()
         };

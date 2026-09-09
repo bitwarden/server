@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Context;
-using Bit.Core.Exceptions;
 
 namespace Bit.Api.AdminConsole.Authorization;
 
@@ -9,17 +8,8 @@ public class GetActingUserForOrganizationQuery(ICurrentContext currentContext) :
     public async Task<IActingUser> GetActingUserAsync(Guid userId, Guid organizationId)
     {
         var membership = currentContext.GetOrganization(organizationId);
-        if (membership is not null)
-        {
-            return new StandardUser(userId, false, membership.Type, membership.Permissions);
-        }
+        var isProvider = await currentContext.ProviderUserForOrgAsync(organizationId);
 
-        var providerId = await currentContext.ProviderIdForOrg(organizationId);
-        if (providerId is not null)
-        {
-            return new StandardUser(userId, true);
-        }
-
-        throw new NotFoundException();
+        return new StandardUser(userId, isProvider, membership?.Type, membership?.Permissions);
     }
 }
