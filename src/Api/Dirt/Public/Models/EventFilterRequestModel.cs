@@ -8,11 +8,11 @@ namespace Bit.Api.Dirt.Public.Models;
 public class EventFilterRequestModel
 {
     /// <summary>
-    /// The start date. If omitted, defaults to 30 days before the end date.
+    /// The start date. If omitted, defaults to 30 days before the end date (or 30 days ago when no end date is given).
     /// </summary>
     public DateTime? Start { get; set; }
     /// <summary>
-    /// The end date. If omitted, defaults to the end of the current day.
+    /// The end date. If omitted, defaults to the current time.
     /// </summary>
     public DateTime? End { get; set; }
     /// <summary>
