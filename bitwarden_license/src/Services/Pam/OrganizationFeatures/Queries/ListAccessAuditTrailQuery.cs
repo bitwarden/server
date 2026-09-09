@@ -1,4 +1,4 @@
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;

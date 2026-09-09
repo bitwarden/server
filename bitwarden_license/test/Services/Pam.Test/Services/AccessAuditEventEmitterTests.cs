@@ -8,7 +8,6 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
