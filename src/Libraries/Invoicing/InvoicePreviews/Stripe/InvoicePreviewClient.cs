@@ -1,9 +1,12 @@
 ﻿using Bit.Core.Billing.Services;
+using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews.Stripe;
 
-internal sealed class InvoicePreviewClient(IStripeAdapter stripeAdapter) : IInvoicePreviewClient
+internal sealed class InvoicePreviewClient(
+    IStripeAdapter stripeAdapter,
+    ILogger<InvoicePreviewClient> logger) : IInvoicePreviewClient
 {
     public async Task<Invoice> GetInvoiceForPreviewAsync(InvoiceCreatePreviewOptions options)
     {
@@ -44,9 +47,12 @@ internal sealed class InvoicePreviewClient(IStripeAdapter stripeAdapter) : IInvo
             {
                 enriched = await stripeAdapter.GetCouponAsync(couponId, new CouponGetOptions { Expand = ["applies_to"] });
             }
-            catch (StripeException)
+            catch (StripeException stripeException)
             {
                 // The coupon may have been deleted since it was attached; keep the un-enriched coupon.
+                logger.LogWarning(
+                    "InvoicePreviewClient: Could not retrieve coupon ({CouponId}) for applies_to expansion | Code = {Code}",
+                    couponId, stripeException.StripeError?.Code);
                 continue;
             }
 

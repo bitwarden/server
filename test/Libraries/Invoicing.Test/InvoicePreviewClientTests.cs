@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Billing.Services;
 using Bit.Invoicing.InvoicePreviews.Stripe;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
@@ -14,7 +16,7 @@ public class InvoicePreviewClientTests
     {
         var adapter = Substitute.For<IStripeAdapter>();
         adapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(new Invoice());
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, new FakeLogger<InvoicePreviewClient>());
 
         var options = new InvoiceCreatePreviewOptions();
         await client.GetInvoiceForPreviewAsync(options);
@@ -47,7 +49,7 @@ public class InvoicePreviewClientTests
         adapter.ListInvoiceLineItemsAsync(Arg.Any<string>(), Arg.Any<InvoiceLineItemListOptions>())
             .Returns(fullSet);
 
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, new FakeLogger<InvoicePreviewClient>());
 
         var result = await client.GetInvoiceForPreviewAsync(new InvoiceCreatePreviewOptions());
 
@@ -74,7 +76,7 @@ public class InvoicePreviewClientTests
         };
         adapter.CreateInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>()).Returns(invoice);
 
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, new FakeLogger<InvoicePreviewClient>());
 
         var result = await client.GetInvoiceForPreviewAsync(new InvoiceCreatePreviewOptions());
 
@@ -109,7 +111,7 @@ public class InvoicePreviewClientTests
         adapter.GetCouponAsync("cp_a", Arg.Any<CouponGetOptions>()).Returns(enriched);
         adapter.GetCouponAsync("cp_b", Arg.Any<CouponGetOptions>()).Returns(new Coupon { Id = "cp_b", Name = "B" });
 
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, new FakeLogger<InvoicePreviewClient>());
 
         var result = await client.GetInvoiceForPreviewAsync(new InvoiceCreatePreviewOptions());
 
@@ -136,14 +138,19 @@ public class InvoicePreviewClientTests
             """));
         adapter.GetCouponAsync("cp_gone", Arg.Any<CouponGetOptions>())
             .Throws(new StripeException(System.Net.HttpStatusCode.BadRequest, new StripeError { Code = "resource_missing" }, "gone"));
+        var logger = new FakeLogger<InvoicePreviewClient>();
 
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, logger);
 
         var result = await client.GetInvoiceForPreviewAsync(new InvoiceCreatePreviewOptions());
 
         var coupon = result.TotalDiscountAmounts[0].Discount.Source.Coupon;
         Assert.Equal("cp_gone", coupon.Id);
         Assert.Null(coupon.AppliesTo);
+
+        var log = Assert.Single(logger.Collector.GetSnapshot());
+        Assert.Equal(LogLevel.Warning, log.Level);
+        Assert.Contains("cp_gone", log.Message);
     }
 
     [Fact]
@@ -158,7 +165,7 @@ public class InvoicePreviewClientTests
             }
             """));
 
-        var client = new InvoicePreviewClient(adapter);
+        var client = new InvoicePreviewClient(adapter, new FakeLogger<InvoicePreviewClient>());
 
         await client.GetInvoiceForPreviewAsync(new InvoiceCreatePreviewOptions());
 
