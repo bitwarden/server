@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -87,6 +88,37 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
 
         Assert.Equal(1, result.UsersCount);
         Assert.Equal(1, UsersInDb());
+    }
+
+    [Fact]
+    public async Task PostCommitStep_GatewayIdsOnOrganization_ReachTheResultAsync()
+    {
+        // The one documented exception to "a post-commit step cannot contribute to the result":
+        // RecipeExecutor re-projects the organization's gateway IDs after the post-commit loop.
+        var builder = _services.AddRecipe(_recipe);
+        builder.AddStep(_ => new RecordingStep("pre", _log, context =>
+        {
+            StageOwner(NewUser())(context);
+            context.Organization = new Organization { Id = CombGuid.Generate() };
+        }));
+        builder.AddAsyncStep(_ => new GatewayStampingPostCommitStep("cus_seeded", "sub_seeded"));
+
+        var result = await BuildExecutor().ExecuteAsync();
+
+        Assert.Equal("cus_seeded", result.GatewayCustomerId);
+        Assert.Equal("sub_seeded", result.GatewaySubscriptionId);
+    }
+
+    [Fact]
+    public async Task NoBillingStep_LeavesGatewayIdsNullAsync()
+    {
+        var builder = _services.AddRecipe(_recipe);
+        builder.AddStep(_ => new RecordingStep("pre", _log, StageOwner(NewUser())));
+
+        var result = await BuildExecutor().ExecuteAsync();
+
+        Assert.Null(result.GatewayCustomerId);
+        Assert.Null(result.GatewaySubscriptionId);
     }
 
     [Fact]
@@ -246,6 +278,19 @@ public sealed class RecipeExecutorPostCommitTests : IDisposable
         public Task ExecuteAsync(SeederContext context)
         {
             log.Add(Observation.Capture(label, context));
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>Stands in for <c>FinalizeOrganizationBillingStep</c>: stamps gateway IDs onto the committed org.</summary>
+    private sealed class GatewayStampingPostCommitStep(string customerId, string subscriptionId)
+        : IAsyncStep, IPostCommitStep
+    {
+        public Task ExecuteAsync(SeederContext context)
+        {
+            var organization = context.RequireOrganization();
+            organization.GatewayCustomerId = customerId;
+            organization.GatewaySubscriptionId = subscriptionId;
             return Task.CompletedTask;
         }
     }

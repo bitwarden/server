@@ -116,10 +116,10 @@ public class MigrationCohortTests(StripeTestsFixture fixture) : IClassFixture<St
     [BillingFact]
     public async Task RedeemChurnMitigationOffer_WithCustomerDiscount_PreservesItInMergedSet()
     {
-        // RedeemForChurnOnlyCohortAsync passes subscription.Customer?.Discount into
-        // MergeDiscountCouponIds, which reads `customerDiscount?.Source?.Coupon?.Id`.
-        // Without `customer.discount.source.coupon` in the expand, Source is null
-        // and the customer coupon silently drops from the merged set — the redeem
+        // RedeemForChurnOnlyCohortAsync builds via DiscountExtensions.BuildSubscriptionLevelDiscounts,
+        // which reads `subscription.Customer?.Discount?.Source?.CouponId`.
+        // Without `customer.discount.source.coupon` in the expand,
+        // the customer coupon silently drops from the merged set — the redeem
         // succeeds (200) but the customer coupon is lost on the subscription's
         // Discounts list, so Stripe's sub-overrides-customer stacking behavior
         // effectively cancels the customer discount.

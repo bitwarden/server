@@ -4,6 +4,9 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Options;
 using CommandDotNet;
 
+// Aliased because this class has its own string PlanType property, which would otherwise shadow the enum.
+using CorePlanType = Bit.Core.Billing.Enums.PlanType;
+
 namespace Bit.SeederUtility.Commands;
 
 /// <summary>
@@ -75,6 +78,15 @@ public class OrganizationArgs : IArgumentModel
     [Option("limit-collection-deletion", Description = "Restrict collection deletion to admins/owners")]
     public bool? LimitCollectionDeletion { get; set; }
 
+    [Option("stripe-billing", Description = "Create a real Stripe test-environment customer and subscription for the organization. Requires a sk_test_ key and pricingUri; not valid with --plan-type free.")]
+    public bool StripeBilling { get; set; }
+
+    [Option("skip-trial", Description = "Start the subscription active instead of trialing (charges the Stripe test card). Requires --stripe-billing.")]
+    public bool SkipTrial { get; set; }
+
+    [Option("trial-days", Description = "Trial length in days, 1-30 (default: 30). Requires --stripe-billing; not valid with --skip-trial.")]
+    public int? TrialDays { get; set; }
+
     public void Validate()
     {
         if (Users < 1)
@@ -102,7 +114,15 @@ public class OrganizationArgs : IArgumentModel
             DensityProfiles.Parse(Density);
         }
 
-        PlanFeatures.Parse(PlanType);
+        var planType = PlanFeatures.Parse(PlanType);
+
+        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays);
+
+        if (StripeBilling && planType == CorePlanType.Free)
+        {
+            throw new ArgumentException(
+                "The Free plan has no Stripe subscription. Choose a paid --plan-type or drop --stripe-billing.");
+        }
 
         if (KdfIterations < 5_000)
         {
@@ -132,6 +152,7 @@ public class OrganizationArgs : IArgumentModel
         OwnerEmail = OwnerEmail,
         PlanType = PlanFeatures.Parse(PlanType),
         KdfIterations = KdfIterations,
+        StripeBilling = StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays),
         Overrides = new()
         {
             UseAutomaticUserConfirmation = UseAutomaticUserConfirmation,
