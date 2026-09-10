@@ -880,6 +880,51 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .AdjustServiceAccountsAsync(default, default, default);
     }
 
+    [Theory]
+    [BitMemberAutoData(nameof(CurrentTeamsAndEnterprise))]
+    public async Task UpdateSubscriptionAsync_WithFeatureFlag_FetchesSubscriptionWithCustomerDiscountSourceCouponExpanded(
+        Plan plan,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = plan.Type;
+        organization.Seats = 400;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 10;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, plan, false)
+        {
+            SmSeats = 15,
+            SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + 20,
+            MaxAutoscaleSmSeats = 16,
+            MaxAutoscaleSmServiceAccounts = 351
+        };
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
+            .Returns(true);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(new Subscription { Customer = new Customer(), Metadata = new Dictionary<string, string>() });
+
+        BillingCommandResult<Subscription> successResult = new Subscription();
+        sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+            .Run(organization, Arg.Any<OrganizationSubscriptionChangeSet>(), Arg.Any<Subscription>())
+            .Returns(successResult);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        // The reused subscription is handed to UpdateOrganizationSubscriptionCommand, which carries the
+        // customer coupon into the rebuilt future schedule phase; without this expand Customer.Discount
+        // .Source is null and the coupon is silently dropped from that phase.
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionAsync(
+            organization.GatewaySubscriptionId,
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+    }
+
     private static Subscription SubscriptionWithGrace(int grace) => new()
     {
         Customer = new Customer(),

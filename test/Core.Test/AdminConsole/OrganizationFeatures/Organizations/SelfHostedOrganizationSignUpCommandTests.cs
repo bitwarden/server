@@ -10,6 +10,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -84,7 +85,7 @@ public class SelfHostedOrganizationSignUpCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(owner.Id);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == owner.Id));
     }
 
     [Theory, BitAutoData]

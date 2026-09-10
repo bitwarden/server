@@ -110,4 +110,10 @@ internal record UserSeed
     /// WebAuthn credentials) is the caller's to supply.
     /// </summary>
     public Dictionary<TwoFactorProviderType, TwoFactorProvider>? TwoFactorProviders { get; init; }
+
+    /// <summary>
+    /// Backdates <see cref="User.CreationDate"/> for aged-account scenarios. Null leaves the entity default
+    /// (UtcNow). RevisionDate/AccountRevisionDate are unaffected.
+    /// </summary>
+    public DateTime? CreationDate { get; init; }
 }

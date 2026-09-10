@@ -17,6 +17,7 @@ public class Permissions
     public bool ManageUsers { get; set; }
     public bool ManageResetPassword { get; set; }
     public bool ManageScim { get; set; }
+    public bool ManageAccessRules { get; set; }
 
     [JsonIgnore]
     public List<(bool Permission, string ClaimName)> ClaimsMap => new()
@@ -33,5 +34,6 @@ public class Permissions
         (ManageUsers, Claims.CustomPermissions.ManageUsers),
         (ManageResetPassword, Claims.CustomPermissions.ManageResetPassword),
         (ManageScim, Claims.CustomPermissions.ManageScim),
+        (ManageAccessRules, Claims.CustomPermissions.ManageAccessRules),
     };
 }

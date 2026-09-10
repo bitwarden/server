@@ -23,6 +23,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
@@ -195,6 +196,77 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
             newUserData.OrganizationId,
             Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenGrantingPam_AndOrganizationDoesNotUsePam_Throws(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        Setup(sutProvider, organization, newUserData, oldUserData);
+        organization.UsePam = false;
+        newUserData.Permissions = null;
+        oldUserData.AccessPam = false;
+        newUserData.AccessPam = true;
+        newUserData.Type = OrganizationUserType.User;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, savingUser.UserId, null, null));
+
+        Assert.Equal(new V2_UpdateUserCommand.PamNotEnabled().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default(IEnumerable<CollectionAccessSelection>));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenGrantingPam_AndOrganizationUsesPam_Persists(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        Setup(sutProvider, organization, newUserData, oldUserData);
+        organization.UsePam = true;
+        newUserData.Permissions = null;
+        oldUserData.AccessPam = false;
+        newUserData.AccessPam = true;
+        newUserData.Type = OrganizationUserType.User;
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, savingUser.UserId, null, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateUserAsync_WhenRevokingPam_AndOrganizationDoesNotUsePam_Persists(
+        Organization organization,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        // Revoking access must stay possible on an organization whose PAM entitlement has lapsed.
+        Setup(sutProvider, organization, newUserData, oldUserData);
+        organization.UsePam = false;
+        newUserData.Permissions = null;
+        oldUserData.AccessPam = true;
+        newUserData.AccessPam = false;
+        newUserData.Type = OrganizationUserType.User;
+
+        await sutProvider.Sut.UpdateUserAsync(newUserData, OrganizationUserType.User, savingUser.UserId, null, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => !ou.AccessPam),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]

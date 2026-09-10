@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Pam.Enums;
 
 namespace Bit.Services.Pam.Api.Models.Request;
 

@@ -12,6 +12,7 @@ public record ManageMutuallyExclusive() : BadRequestError("The Manage property i
 public record CustomPermissionsNotEnabled() : BadRequestError("To enable custom permissions the organization must be on an Enterprise plan.");
 public record CannotAssignDefaultCollection() : BadRequestError("Default collections cannot be assigned to a member.");
 public record CannotAutoscaleSecretsManagerSeatsOnSelfHost() : BadRequestError("Cannot autoscale on a self-hosted instance.");
+public record PamNotEnabled() : BadRequestError("To grant PAM access the organization must have PAM enabled.");
 public record CouldNotIncreaseSeatsOfSecretManager(string Message) : BadRequestError(Message);
 
 public abstract record EmailValidationError(string Message, string Type) : BadRequestError(Message), IValidationError

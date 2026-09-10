@@ -173,6 +173,7 @@ internal record SeedRosterUser
     public required string LastName { get; init; }
     public string? Title { get; init; }
     public string Role { get; init; } = "user";
+    public string? Email { get; init; }
     public string? Branch { get; init; }
     public string? Department { get; init; }
     public List<string>? Folders { get; init; }

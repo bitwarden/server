@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
-using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -12,39 +12,35 @@ namespace Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using static StripeConstants;
 
 public class GetChurnMitigationOfferQuery(
-    IOrganizationPlanMigrationCohortAssignmentRepository assignmentRepository,
-    IOrganizationPlanMigrationCohortRepository cohortRepository,
+    IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IStripeAdapter stripeAdapter,
     ILogger<GetChurnMitigationOfferQuery> logger) : IGetChurnMitigationOfferQuery
 {
     public async Task<ChurnMitigationOfferResult?> Run(Organization organization)
     {
-        // DB pre-filter -- short-circuit non-cohort organizations before any Stripe call.
-        var assignment = await assignmentRepository.GetByOrganizationIdAsync(organization.Id);
-        if (assignment is null)
+        var membership = await getChurnOfferCohortMembershipQuery.Run(organization);
+        if (membership is null)
         {
             return null;
         }
 
-        var cohort = await cohortRepository.GetByIdAsync(assignment.CohortId);
-        if (cohort is not { IsActive: true } || string.IsNullOrEmpty(cohort.ChurnDiscountCouponCode))
-        {
-            return null;
-        }
+        var (assignment, cohort) = membership;
 
         // Migration cohort: inspect the active subscription schedule -- the coupon goes on
         // Phase 2 only. Churn-only cohort (MigrationPathId is null): inspect live subscription
         // discounts plus the per-assignment one-shot guard for `once` coupons.
         return cohort.MigrationPathId is not null
-            ? await EvaluateMigrationCohortAsync(organization, cohort.ChurnDiscountCouponCode)
-            : await EvaluateChurnOnlyCohortAsync(organization, assignment, cohort.ChurnDiscountCouponCode);
+            ? await EvaluateMigrationCohortAsync(organization, cohort.ChurnDiscountCouponCode!)
+            : await EvaluateChurnOnlyCohortAsync(organization, assignment, cohort.ChurnDiscountCouponCode!);
     }
 
     private async Task<ChurnMitigationOfferResult?> EvaluateMigrationCohortAsync(
         Organization organization,
         string churnDiscountCouponCode)
     {
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -116,7 +112,9 @@ public class GetChurnMitigationOfferQuery(
             return null;
         }
 
-        var subscription = await TryGetSubscriptionAsync(organization);
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -125,41 +123,19 @@ public class GetChurnMitigationOfferQuery(
         // Churn-only branch never writes Customer.Discount -- it's managed elsewhere (manual
         // ops adjustments, audience filters via SubscriptionDiscountService). We still inspect
         // it here so an org already carrying this coupon at the customer layer is ineligible.
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId
+        if (subscription.Customer?.Discount?.Source?.Coupon?.Id is { Length: > 0 } customerCouponId
             && string.Equals(customerCouponId, churnDiscountCouponCode, StringComparison.Ordinal))
         {
             return null;
         }
 
         if (subscription.Discounts is { Count: > 0 }
-            && subscription.Discounts.Any(d => string.Equals(d.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
+            && subscription.Discounts.Any(d => string.Equals(d.Source?.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
         {
             return null;
         }
 
         return BuildOfferResult(coupon);
-    }
-
-    private async Task<Subscription?> TryGetSubscriptionAsync(Organization organization)
-    {
-        try
-        {
-            // `test_clock` is included so the migration-cohort current_phase check is honest
-            // against test customers; `discount`/`discounts.coupon` give us the churn-only
-            // ineligibility surfaces without a second round-trip.
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions
-                {
-                    Expand = ["customer", "test_clock", "discounts.coupon"]
-                });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            logger.LogWarning(
-                "GetChurnMitigationOfferQuery: Subscription ({SubscriptionId}) for Organization ({OrganizationId}) was not found",
-                organization.GatewaySubscriptionId, organization.Id);
-            return null;
-        }
     }
 
     private async Task<ChurnMitigationOfferResult?> TryBuildOfferResultAsync(string couponId)

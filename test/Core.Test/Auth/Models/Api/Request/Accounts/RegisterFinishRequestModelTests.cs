@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -212,6 +213,72 @@ public class RegisterFinishRequestModelTests
         Assert.Equal(newData.Salt, email.ToLowerInvariant());
         Assert.Equal(newData.MasterPasswordAuthenticationHash, masterPasswordAuthenticationHash);
         Assert.Equal(newData.UserAccountKeysData, accountKeysRequest.ToAccountKeysData());
+    }
+
+    [Theory]
+    [BitAutoData]
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToData_CarriesTheUserKeyIdFromTheUnlockData(string email, KdfRequestModel kdfRequest,
+        string masterPasswordAuthenticationHash, AccountKeysRequestModel accountKeysRequest, string userSymmetricKey)
+    {
+        // Arrange
+        const string keyId = "0123456789abcdef0123456789abcdef";
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim(),
+                ContainedKeyId = keyId
+            },
+            AccountKeys = accountKeysRequest
+        };
+
+        // Act
+        var data = model.ToData();
+
+        // Assert
+        Assert.Equal(KeyId.FromHexEncodedString(keyId), data.UserKeyId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    [SignatureKeyPairRequestModelCustomize]
+    public void ToData_NoUserKeyIdSupplied_LeavesItUnset(string email, KdfRequestModel kdfRequest,
+        string masterPasswordAuthenticationHash, AccountKeysRequestModel accountKeysRequest, string userSymmetricKey)
+    {
+        // Arrange - a client that predates the key id field sends none
+        var model = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterPasswordAuthenticationHash = masterPasswordAuthenticationHash,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+            {
+                Kdf = kdfRequest,
+                MasterKeyWrappedUserKey = userSymmetricKey,
+                Salt = email.ToLowerInvariant().Trim()
+            },
+            AccountKeys = accountKeysRequest
+        };
+
+        // Act
+        var data = model.ToData();
+
+        // Assert
+        Assert.Null(data.UserKeyId);
     }
 
     [Theory]
@@ -512,6 +579,104 @@ public class RegisterFinishRequestModelTests
         var results = Validate(model);
 
         Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
+    }
+
+    private static RegisterFinishRequestModel BuildValidBaseModelWithoutToken() => new()
+    {
+        Email = "user@example.com",
+        UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+        MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = "salt"
+        },
+        MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterPasswordAuthenticationHash = "auth-hash",
+            Salt = "salt"
+        }
+    };
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithEmailVerificationToken_IsValid()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.EmailVerificationToken = "token";
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithOrgInviteToken_ReturnsError()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.OrgInviteToken = "org-invite-token";
+        model.OrganizationUserId = Guid.NewGuid();
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r =>
+            r.ErrorMessage == $"{nameof(RegisterFinishRequestModel.OpenOrgInvite)} is only valid with an {nameof(RegisterFinishRequestModel.EmailVerificationToken)}.");
+    }
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithOrgSponsoredFreeFamilyPlanToken_ReturnsError()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.OrgSponsoredFreeFamilyPlanToken = "org-sponsored-token";
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r =>
+            r.ErrorMessage == $"{nameof(RegisterFinishRequestModel.OpenOrgInvite)} is only valid with an {nameof(RegisterFinishRequestModel.EmailVerificationToken)}.");
+    }
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithAcceptEmergencyAccessInviteToken_ReturnsError()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.AcceptEmergencyAccessInviteToken = "emergency-access-token";
+        model.AcceptEmergencyAccessId = Guid.NewGuid();
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r =>
+            r.ErrorMessage == $"{nameof(RegisterFinishRequestModel.OpenOrgInvite)} is only valid with an {nameof(RegisterFinishRequestModel.EmailVerificationToken)}.");
+    }
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithProviderInviteToken_ReturnsError()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.ProviderInviteToken = "provider-invite-token";
+        model.ProviderUserId = Guid.NewGuid();
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r =>
+            r.ErrorMessage == $"{nameof(RegisterFinishRequestModel.OpenOrgInvite)} is only valid with an {nameof(RegisterFinishRequestModel.EmailVerificationToken)}.");
+    }
+
+    [Fact]
+    public void Validate_OpenOrgInviteWithSalesAssistedToken_ReturnsError()
+    {
+        var model = BuildValidBaseModelWithoutToken();
+        model.SalesAssistedToken = "sales-assisted-token";
+        model.OpenOrgInvite = new OpenOrgInviteRequestModel { OrganizationId = Guid.NewGuid(), Code = Guid.NewGuid() };
+
+        var results = Validate(model);
+
+        Assert.Contains(results, r =>
+            r.ErrorMessage == $"{nameof(RegisterFinishRequestModel.OpenOrgInvite)} is only valid with an {nameof(RegisterFinishRequestModel.EmailVerificationToken)}.");
     }
 
     [Fact]

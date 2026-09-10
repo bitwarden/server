@@ -78,6 +78,18 @@ public class SendResponseModelTests
     }
 
     [Fact]
+    public void ItemSend_NonDeserializableData_Throws()
+    {
+        var send = new Send
+        {
+            Type = SendType.Item,
+            Data = "bad_data"
+        };
+        SendResponseModel responseModel;
+        Assert.Throws<JsonException>(() => responseModel = new SendResponseModel(send));
+    }
+
+    [Fact]
     public void FromSend_Success()
     {
         var send = new Send
