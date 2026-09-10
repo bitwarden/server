@@ -133,9 +133,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
+        IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings,
         IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand)
-        IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
