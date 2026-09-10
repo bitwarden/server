@@ -51,6 +51,8 @@ public class DomainNameValidatorAttributeTests
     [InlineData("http://example.com")]              // URL scheme
     [InlineData("https://example.com")]             // URL scheme (https)
     [InlineData("www.example.com")]                 // www prefix
+    [InlineData("WWW.example.com")]                 // www prefix, uppercase
+    [InlineData("Www.example.com")]                 // www prefix, mixed case
     [InlineData("example.com/path")]                // path component
     [InlineData("user@example.com")]                // email format
     [InlineData("example")]                         // no top-level domain
