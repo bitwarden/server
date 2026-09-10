@@ -48,6 +48,20 @@ public class ResetUserTwoFactorCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ResetAsync_RotatesSecurityStamp(User user)
+    {
+        // Arrange
+        var originalStamp = user.SecurityStamp;
+        var sutProvider = GetSutProvider();
+
+        // Act
+        await sutProvider.Sut.ResetAsync(user);
+
+        // Assert
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
+    }
+
+    [Theory, BitAutoData]
     public async Task ResetAsync_BumpsRevisionAndAccountRevisionDates(User user)
     {
         // Arrange
