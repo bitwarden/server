@@ -480,6 +480,26 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_RotatesSecurityStamp(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Act
+        await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
+    }
+
+    [Theory, BitAutoData]
     public async Task RecoverTwoFactorAsync_IncorrectCode_ReturnsFalse(
         User user, SutProvider<UserService> sutProvider)
     {

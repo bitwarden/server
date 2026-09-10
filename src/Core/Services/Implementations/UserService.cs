@@ -751,6 +751,7 @@ public class UserService : UserManager<User>, IUserService
 
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        user.SecurityStamp = Guid.NewGuid().ToString();
         await SaveUserAsync(user);
         await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
