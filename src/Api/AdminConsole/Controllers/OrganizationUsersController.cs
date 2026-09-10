@@ -94,6 +94,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
     private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
+    private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -130,6 +131,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
+        IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -166,6 +168,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
         _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
+        _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
     }
 
@@ -447,8 +450,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
-        var actingContext = _currentContext.GetOrganization(organization.Id);
-
         var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
             organizationUser,
             organization,
@@ -461,11 +462,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             model.Email,
             model.Name,
             model.DefaultUserCollectionName,
-            new StandardUser(
-                userId,
-                await _currentContext.OrganizationOwner(organization.Id),
-                actingContext?.Type,
-                actingContext?.Permissions));
+            await _getActingUserForOrganizationQuery.GetActingUserAsync(userId, organization.Id));
 
         var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
         return Handle(result);
