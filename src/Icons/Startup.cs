@@ -1,24 +1,20 @@
 ﻿using System.Globalization;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Icons.Extensions;
 using Bit.Icons.Models;
-using Bit.SharedWeb.Utilities;
+using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Net.Http.Headers;
 
 namespace Bit.Icons;
 
 public class Startup
 {
-    public Startup(IWebHostEnvironment env, IConfiguration configuration)
+    public Startup(IConfiguration configuration)
     {
         CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
         Configuration = configuration;
-        Environment = env;
     }
 
     public IConfiguration Configuration { get; }
-    public IWebHostEnvironment Environment { get; }
 
     public void ConfigureServices(IServiceCollection services)
     {
@@ -26,7 +22,7 @@ public class Startup
         services.AddOptions();
 
         // Settings
-        var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
         var iconsSettings = new IconsSettings();
         var changePasswordUriSettings = new ChangePasswordUriSettings();
         ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
@@ -60,15 +56,15 @@ public class Startup
     public void Configure(
         IApplicationBuilder app,
         IWebHostEnvironment env,
-        GlobalSettings globalSettings)
+        IBitwardenEnvironment environment)
     {
         // Add general security headers
-        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseSecurityHeaders();
 
         // Forwarding Headers
-        if (globalSettings.SelfHosted)
+        if (environment.SelfHosted)
         {
-            app.UseForwardedHeaders(globalSettings);
+            app.UseForwardedHeaders();
         }
 
         if (env.IsDevelopment())
@@ -94,10 +90,13 @@ public class Startup
             await next();
         });
 
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+        app.UseCors();
 
         app.UseRouting();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }

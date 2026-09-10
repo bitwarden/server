@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -10,12 +11,23 @@ using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Request;
 
-public class CipherRequestModel
+public class CipherRequestModel : IValidatableObject
 {
     /// <summary>
     /// The Id of the user that encrypted the cipher. It should always represent a UserId.
     /// </summary>
+    [Obsolete("Use EncryptedByKeyId instead, which identifies the key the cipher was encrypted with.")]
     public Guid? EncryptedFor { get; set; }
+
+    /// <summary>
+    /// Hex-encoded key id of the key the client held when it encrypted this cipher: the user key for a
+    /// user-owned cipher, the organization key for an organization cipher. Absent for clients that
+    /// predate the field. For a user-owned cipher it must match the acting user's current user key id;
+    /// for an organization cipher it is not validated, because organizations carry no key id yet.
+    /// </summary>
+    [KeyId]
+    public string EncryptedByKeyId { get; set; }
+
     public CipherType Type { get; set; }
 
     [StringLength(36)]
@@ -24,7 +36,6 @@ public class CipherRequestModel
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
-    [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
@@ -67,9 +78,36 @@ public class CipherRequestModel
     public DateTime? LastKnownRevisionDate { get; set; } = null;
     public DateTime? ArchivedDate { get; set; }
 
+    /// <summary>
+    /// The key the client encrypted this cipher with, or null when it did not supply one.
+    /// </summary>
+    public KeyId GetEncryptedByKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(EncryptedByKeyId) ? null : EncryptedByKeyId);
+
+    /// <summary>
+    /// Blob-encrypted ciphers carry all their content in <see cref="Data"/> and leave Name unused.
+    /// Every other format still stores Name as a structured field, so it stays required there.
+    /// </summary>
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var isBlobEncrypted = new Cipher { Data = Data }.IsDataBlobEncrypted();
+
+        if (!isBlobEncrypted && string.IsNullOrWhiteSpace(Name))
+        {
+            yield return new ValidationResult(
+                "The Name field is required.", new[] { nameof(Name) });
+        }
+    }
+
+    /// <summary>
+    /// True when this cipher is owned by an organization, and so is encrypted with the organization
+    /// key rather than the acting user's key.
+    /// </summary>
+    public bool IsOrganizationCipher => !string.IsNullOrWhiteSpace(OrganizationId);
+
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
     {
-        var hasOrgId = !string.IsNullOrWhiteSpace(OrganizationId);
+        var hasOrgId = IsOrganizationCipher;
         var cipher = new CipherDetails
         {
             Type = Type,

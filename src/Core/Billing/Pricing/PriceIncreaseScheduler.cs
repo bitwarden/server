@@ -37,8 +37,10 @@ public interface IPriceIncreaseScheduler
     /// behind the <c>PM35215_BusinessPlanPriceMigration</c> feature flag.
     /// </summary>
     /// <remarks>
-    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts</c>,
-    /// <c>customer</c>, and <c>customer.discount</c> expanded, and <see cref="Subscription.Metadata"/>
+    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts.source.coupon</c>,
+    /// <c>customer</c>, and <c>customer.discount.source.coupon</c> expanded (the 2025-09-30.clover refactor
+    /// moved Coupon under Discount.Source, so stopping at <c>discounts</c>/<c>customer.discount</c> leaves
+    /// <c>Source.Coupon.Id</c> unexpanded), and <see cref="Subscription.Metadata"/>
     /// must contain an <c>organizationId</c> key (the scheduler throws if missing). The caller is
     /// responsible for confirming the organization belongs to <paramref name="cohort"/>.
     /// </remarks>
@@ -78,6 +80,14 @@ public interface IPriceIncreaseScheduler
     /// schedule is released, dropping it from the deferred business migration.
     /// </param>
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
+
+    /// <summary>
+    /// Releases an already-resolved schedule, skipping the lookup <see cref="Release(string, string, Guid?)"/>
+    /// performs, so a caller that has classified the schedule does not resolve it twice. Pass null when no
+    /// schedule is attached; the cohort assignment is still dropped when <paramref name="organizationId"/> is
+    /// supplied.
+    /// </summary>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -218,14 +228,19 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = customerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
+
+        await ReleaseSchedule(activeSchedule, organizationId);
+    }
+
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    {
         try
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = customerId });
-
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
-
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
@@ -244,16 +259,16 @@ public class PriceIncreaseScheduler(
                 catch (Exception ex)
                 {
                     logger.LogError(ex,
-                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
-                        subscriptionId, organizationId.Value);
+                        "Released the subscription schedule but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        organizationId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
-                subscriptionId);
+                "Failed to release subscription schedule ({ScheduleId}). Manual release required.",
+                activeSchedule?.Id);
             throw;
         }
     }
@@ -295,15 +310,11 @@ public class PriceIncreaseScheduler(
                 Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                 {
                     Price = i.PriceId,
-                    Quantity = i.Quantity
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                        i.Discounts?.Select(d => d.CouponId) ?? [])
                 })],
-                Discounts = phase1.Discounts is null ? null :
-                [
-                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                    {
-                        Coupon = d.CouponId
-                    })
-                ],
+                Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                 ProrationBehavior = ProrationBehavior.None
             };
 
@@ -345,14 +356,15 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
@@ -429,9 +441,8 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription, [CouponIDs.Milestone2SubscriptionDiscount]);
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -480,10 +491,9 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
-            .ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? [CouponIDs.Milestone3SubscriptionDiscount] : []);
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -499,7 +509,7 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -509,14 +519,15 @@ public class PriceIncreaseScheduler(
         OrganizationPlanMigrationCohort cohort,
         Guid organizationId)
     {
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
@@ -590,10 +601,10 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
+        // BuildPhaseLevelDiscounts de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
@@ -610,7 +621,7 @@ public class PriceIncreaseScheduler(
             StartDate = currentEnd,
             EndDate = currentEnd + periodLength,
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }

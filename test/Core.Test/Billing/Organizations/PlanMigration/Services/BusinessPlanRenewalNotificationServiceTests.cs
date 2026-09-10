@@ -479,7 +479,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "churn-5", PercentOff = 5 } }],
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "churn-5", PercentOff = 5 } } }],
             frozenTime: now);
         StubActiveScheduleWithPhases(sutProvider, subscription, now, futurePhaseCouponId: "cohort-20");
         sutProvider.GetDependency<IStripeAdapter>().GetCouponAsync("cohort-20")
@@ -518,7 +518,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "loyalty-20", PercentOff = 20 } }],
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "loyalty-20", PercentOff = 20 } } }],
             frozenTime: now);
         StubActiveScheduleWithPhases(sutProvider, subscription, now, futurePhaseCouponId: "loyalty-20");
         sutProvider.GetDependency<IStripeAdapter>().GetCouponAsync("loyalty-20")
@@ -558,7 +558,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "sub-10", PercentOff = 10 } }]);
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sub-10", PercentOff = 10 } } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 
@@ -631,7 +631,7 @@ public class BusinessPlanRenewalNotificationServiceTests
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
             // $100.00 off reported in minor units (cents).
-            discounts: [new Discount { Coupon = new Coupon { Id = "hundred-off", AmountOff = 10000 } }]);
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "hundred-off", AmountOff = 10000 } } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 
@@ -668,7 +668,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "once-10", PercentOff = 10, Duration = "once" } }]);
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "once-10", PercentOff = 10, Duration = "once" } } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 
@@ -781,7 +781,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } }]);
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 
@@ -826,7 +826,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Id = "di_unexpanded", Coupon = null }]);
+            discounts: [new Discount { Id = "di_unexpanded", Source = new DiscountSource { Coupon = null } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 
@@ -870,7 +870,7 @@ public class BusinessPlanRenewalNotificationServiceTests
 
         var subscription = BusinessSubscription(
             sourcePlan.PasswordManager.StripeSeatPlanId,
-            discounts: [new Discount { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } }]);
+            discounts: [new Discount { Source = new DiscountSource { Coupon = new Coupon { Id = "sub-5", PercentOff = 5 } } }]);
 
         await sutProvider.Sut.SendRenewalEmailAsync(organization, subscription, cohort);
 

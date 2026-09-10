@@ -38,7 +38,8 @@ public class OrganizationClaimsExtensionsTests
                 {
                     Id = Guid.NewGuid(),
                     Type = role,
-                    AccessSecretsManager = true
+                    AccessSecretsManager = true,
+                    AccessPam = true
                 }
             ];
         }

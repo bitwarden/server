@@ -34,6 +34,21 @@ public class OrganizationDomainControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Get_ShouldReturnOrganizationDomainList_WhenOrgIdCanManagePoliciesOnly(Guid orgId,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().ManagePolicies(orgId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
+        sutProvider.GetDependency<IGetOrganizationDomainByOrganizationIdQuery>()
+            .GetDomainsByOrganizationIdAsync(orgId).Returns(new List<OrganizationDomain>());
+
+        var result = await sutProvider.Sut.GetAll(orgId);
+
+        Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task Get_ShouldNotFound_WhenOrganizationDoesNotExist(Guid orgId,
         SutProvider<OrganizationDomainController> sutProvider)
     {

@@ -1057,6 +1057,11 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
+        if (permissions.ManageAccessRules && !org.Permissions.ManageAccessRules)
+        {
+            return false;
+        }
+
         return true;
     }
 }

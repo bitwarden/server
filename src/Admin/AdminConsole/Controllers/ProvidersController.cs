@@ -449,7 +449,14 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-        var payByInvoice = ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
+        var customer = await _subscriberService.GetCustomer(provider);
+        if (customer is { Deleted: true })
+        {
+            TempData["Warning"] =
+                "Billing information could not be fully loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the provider and set a valid Gateway Customer ID.";
+        }
+        var payByInvoice = customer?.ApprovedToPayByInvoice() ?? false;
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,

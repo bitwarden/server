@@ -83,6 +83,12 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*payment* @bitwarden/team-billing-dev
 **/*invoice* @bitwarden/team-billing-dev
 **/*OrganizationLicense* @bitwarden/team-billing-dev
+src/Libraries/Invoicing @bitwarden/team-billing-dev
+test/Libraries/Invoicing.Test @bitwarden/team-billing-dev
+src/Libraries/Subscriptions.Organization @bitwarden/team-billing-dev
+test/Libraries/Subscriptions.Organization.Test @bitwarden/team-billing-dev
+src/Libraries/Subscriptions.User @bitwarden/team-billing-dev
+test/Libraries/Subscriptions.User.Test @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
 test/Billing.IntegrationTest @bitwarden/team-billing-dev
 **/AppHost @bitwarden/team-billing-dev @bitwarden/dept-architecture # joint ownership
@@ -103,8 +109,9 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 src/Core/Platform/Push/PushType.cs
 
 # PAM
-bitwarden_license/src/Services/Pam @bitwarden/team-pam-dev
-bitwarden_license/test/Services/Pam.Test @bitwarden/team-pam-dev
+**/Pam* @bitwarden/team-pam-dev
+# PAM DB schema stays with DBOps, consistent with src/Sql/** above
+src/Sql/dbo/Pam @bitwarden/dept-dbops
 
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership

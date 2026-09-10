@@ -7,6 +7,7 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Tools.Models.Response;
@@ -17,10 +18,15 @@ public class OrganizationExportResponseModel : ResponseModel
     {
     }
 
+    /// <remarks>
+    /// Expects ciphers already reduced to those the witness authorizes. An export carries full data or
+    /// nothing, so a cipher the witness does not cover throws here rather than being quietly reshaped or
+    /// dropped.
+    /// </remarks>
     public OrganizationExportResponseModel(IEnumerable<CipherOrganizationDetailsWithCollections> ciphers,
-        IEnumerable<Collection> collections, GlobalSettings globalSettings) : this()
+        IEnumerable<Collection> collections, GlobalSettings globalSettings, FullCipherAccess fullCipherAccess) : this()
     {
-        Ciphers = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, globalSettings));
+        Ciphers = ciphers.Select(c => new FullCipherMiniDetailsResponseModel(fullCipherAccess, c, globalSettings));
         Collections = collections.Select(c => new CollectionResponseModel(c));
     }
 

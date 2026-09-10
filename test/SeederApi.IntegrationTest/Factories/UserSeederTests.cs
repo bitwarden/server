@@ -86,6 +86,48 @@ public class UserSeederTests
     }
 
     [Fact]
+    public void Create_WithCreationDate_BackdatesCreationDate()
+    {
+        var aged = DateTime.UtcNow.AddDays(-365);
+
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, CreationDate = aged },
+            _passwordHasher,
+            new NoOpManglerService());
+
+        Assert.Equal(aged, user.CreationDate);
+    }
+
+    [Fact]
+    public void Create_WithoutCreationDate_LeavesDatesAtNow()
+    {
+        var before = DateTime.UtcNow;
+
+        var (user, _) = UserSeeder.Create(new UserSeed { Email = _email }, _passwordHasher, new NoOpManglerService());
+
+        var after = DateTime.UtcNow;
+        Assert.InRange(user.CreationDate, before, after);
+        Assert.InRange(user.RevisionDate, before, after);
+        Assert.InRange(user.AccountRevisionDate, before, after);
+    }
+
+    [Fact]
+    public void Create_WithCreationDate_DoesNotBackdateRevisionDates()
+    {
+        var before = DateTime.UtcNow;
+        var aged = before.AddDays(-365);
+
+        var (user, _) = UserSeeder.Create(
+            new UserSeed { Email = _email, CreationDate = aged },
+            _passwordHasher,
+            new NoOpManglerService());
+
+        var after = DateTime.UtcNow;
+        Assert.InRange(user.RevisionDate, before, after);
+        Assert.InRange(user.AccountRevisionDate, before, after);
+    }
+
+    [Fact]
     public void Create_NullName_DefaultsToEmailLocalPart()
     {
         var (user, _) = UserSeeder.Create(new UserSeed { Email = _email }, _passwordHasher, new NoOpManglerService());

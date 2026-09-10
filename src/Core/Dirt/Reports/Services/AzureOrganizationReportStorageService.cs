@@ -110,7 +110,7 @@ public class AzureOrganizationReportStorageService : IOrganizationReportStorageS
     {
         await InitAsync();
         var prefix = $"{report.OrganizationId}/{report.CreationDate:MM-dd-yyyy}/{report.Id}/{reportFileId}/";
-        await foreach (var blobItem in _containerClient!.GetBlobsAsync(prefix: prefix))
+        await foreach (var blobItem in _containerClient!.GetBlobsAsync(new GetBlobsOptions { Prefix = prefix }))
         {
             var blobClient = _containerClient.GetBlobClient(blobItem.Name);
             await blobClient.DeleteIfExistsAsync();

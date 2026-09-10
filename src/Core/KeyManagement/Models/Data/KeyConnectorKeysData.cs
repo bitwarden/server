@@ -10,5 +10,9 @@ public class KeyConnectorKeysData
 
     public required string OrgIdentifier { get; init; }
 
+    /// <summary>
+    /// Key id of the user key wrapped by <see cref="KeyConnectorKeyWrappedUserKey"/>, when the client
+    /// supplied it.
+    /// </summary>
     public KeyId? ContainedKeyId { get; init; }
 }

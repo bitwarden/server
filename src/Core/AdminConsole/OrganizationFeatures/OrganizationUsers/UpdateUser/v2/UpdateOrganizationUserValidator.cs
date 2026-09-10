@@ -69,7 +69,14 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        var roleChangeError = await ValidateRoleChangeAsync(request);
+        var roleChangeError = organizationUserValidationService.CanManageRoleChange(
+            request.PerformedBy,
+            request.OrganizationUserToUpdate,
+            new OrganizationUserRole(
+                request.NewType,
+                request.Organization.Id,
+                request.NewPermissions));
+
         if (roleChangeError is not null)
         {
             return Invalid(request, roleChangeError);
@@ -79,6 +86,13 @@ public class UpdateOrganizationUserValidator(
         if (request is { NewType: OrganizationUserType.Custom, Organization.UseCustomPermissions: false })
         {
             return Invalid(request, new CustomPermissionsNotEnabled());
+        }
+
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        if (request.IsEnablingPam() && !request.Organization.UsePam)
+        {
+            return Invalid(request, new PamNotEnabled());
         }
 
         if (request.NewType != OrganizationUserType.Owner &&
@@ -169,34 +183,6 @@ public class UpdateOrganizationUserValidator(
         return membership is not null
             ? new EmailAlreadyInUseByAnotherMemberError()
             : new EmailTakenOutsideOrganizationError();
-    }
-
-    /// <summary>
-    /// Delegates the role-change authority decision to
-    /// <see cref="IOrganizationUserValidationService.CanManageRoleChangeAsync"/>. System users skip the check.
-    /// </summary>
-    private async Task<Error?> ValidateRoleChangeAsync(UpdateOrganizationUserRequest request)
-    {
-        if (request.PerformedBy is not StandardUser standardUser)
-        {
-            return null;
-        }
-
-        var actingUser = new OrganizationUserRole(
-            standardUser.OrganizationUserType!.Value,
-            request.OrganizationUserToUpdate.OrganizationId,
-            standardUser.Permissions);
-
-        var newTargetUser = new OrganizationUserRole(
-            request.NewType,
-            request.OrganizationUserToUpdate.OrganizationId,
-            request.NewPermissions);
-
-        return await organizationUserValidationService.CanManageRoleChangeAsync(
-            standardUser.UserId!.Value,
-            actingUser,
-            request.OrganizationUserToUpdate,
-            newTargetUser);
     }
 
     private static bool CollectionsAreValid(List<CollectionAccessSelection> collectionAccessToSave,

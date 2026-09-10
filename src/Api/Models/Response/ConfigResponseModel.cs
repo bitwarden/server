@@ -9,7 +9,7 @@ using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Environment;
 
 namespace Bit.Api.Models.Response;
 
@@ -24,22 +24,14 @@ public class ConfigResponseModel : ResponseModel
     public CommunicationSettings Communication { get; set; }
     public ServerSettingsResponseModel Settings { get; set; }
 
-    public ConfigResponseModel() : base("config")
-    {
-        Version = AssemblyHelpers.GetVersion();
-        GitHash = AssemblyHelpers.GetGitHash();
-        Environment = new EnvironmentConfigResponseModel();
-        FeatureStates = new Dictionary<string, JsonValue>();
-        Settings = new ServerSettingsResponseModel();
-    }
-
     public ConfigResponseModel(
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
-        IGlobalSettings globalSettings
+        IGlobalSettings globalSettings,
+        IBitwardenEnvironment bitwardenEnvironment
         ) : base("config")
     {
-        Version = AssemblyHelpers.GetVersion();
-        GitHash = AssemblyHelpers.GetGitHash();
+        Version = bitwardenEnvironment.Version;
+        GitHash = bitwardenEnvironment.GitHash;
         Environment = new EnvironmentConfigResponseModel
         {
             CloudRegion = globalSettings.BaseServiceUri.CloudRegion,
