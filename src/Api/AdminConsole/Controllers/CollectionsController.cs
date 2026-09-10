@@ -84,10 +84,11 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("details")]
-    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId,
+        [FromQuery] bool includeDefaultCollections = false)
     {
         var allOrgCollections = await _collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
-            orgId, _currentContext.UserId.Value, true);
+            orgId, _currentContext.UserId.Value, true, includeDefaultCollections);
         if (await _currentContext.ProviderUserForOrgAsync(orgId))
         {
             await _providerService.LogProviderAccessToOrganizationAsync(orgId);
