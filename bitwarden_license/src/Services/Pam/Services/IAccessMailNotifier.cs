@@ -27,7 +27,8 @@ public interface IAccessMailNotifier
     /// <summary>
     /// The <see cref="SendToUserAsync{TView}" /> contract for several recipients, resolved in one read. Each gets
     /// their own message: a shared <c>ToEmails</c> would disclose an organization's approvers to one another.
-    /// One recipient failing does not stop the rest.
+    /// One recipient failing does not stop the rest, but a delivery path that is down or too slow abandons the
+    /// remainder rather than let the caller's wait grow with the recipient count.
     /// </summary>
     Task SendToUsersAsync<TView>(IEnumerable<Guid> recipientUserIds, Func<string, BaseMail<TView>> buildMail)
         where TView : BaseMailView;
