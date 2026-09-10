@@ -74,8 +74,10 @@ public class OrganizationCollectionManagementAccessHandler(
         // have Can Manage permissions on at least one collection instead.
         if (organizationClaims is not null)
         {
+            // includeDefaultCollections must stay false: a member always has Manage on their own My Items
+            // collection, so including them would let every confirmed member satisfy this requirement.
             var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
-                orgId, userId.Value, includeAccessRelationships: false);
+                orgId, userId.Value, includeAccessRelationships: false, includeDefaultCollections: false);
             if (collections.Any(c => c.Manage))
             {
                 context.Succeed(requirement);

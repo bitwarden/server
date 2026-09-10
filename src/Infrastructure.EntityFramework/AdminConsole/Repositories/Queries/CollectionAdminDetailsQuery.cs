@@ -14,12 +14,14 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
     private readonly Guid? _userId;
     private readonly Guid? _organizationId;
     private readonly Guid? _collectionId;
+    private readonly bool _includeDefaultCollections;
 
-    private CollectionAdminDetailsQuery(Guid? userId, Guid? organizationId, Guid? collectionId)
+    private CollectionAdminDetailsQuery(Guid? userId, Guid? organizationId, Guid? collectionId, bool includeDefaultCollections)
     {
         _userId = userId;
         _organizationId = organizationId;
         _collectionId = collectionId;
+        _includeDefaultCollections = includeDefaultCollections;
     }
 
     public virtual IQueryable<CollectionAdminDetails> Run(DatabaseContext dbContext)
@@ -63,9 +65,20 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 
         if (_organizationId.HasValue)
         {
-            baseCollectionQuery = baseCollectionQuery.Where(x =>
-                x.c.OrganizationId == _organizationId &&
-                x.c.Type == CollectionType.SharedCollection);
+            baseCollectionQuery = baseCollectionQuery.Where(x => x.c.OrganizationId == _organizationId);
+
+            // Two predicates rather than one that captures the flag: each shape produces its own SQL, so
+            // providers cache a plan per shape.
+            if (_includeDefaultCollections)
+            {
+                baseCollectionQuery = baseCollectionQuery.Where(x =>
+                    x.c.Type == CollectionType.SharedCollection ||
+                    x.c.Type == CollectionType.DefaultUserCollection);
+            }
+            else
+            {
+                baseCollectionQuery = baseCollectionQuery.Where(x => x.c.Type == CollectionType.SharedCollection);
+            }
         }
         else if (_collectionId.HasValue)
         {
@@ -85,6 +98,7 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             CreationDate = x.c.CreationDate,
             RevisionDate = x.c.RevisionDate,
             DefaultUserCollectionEmail = x.c.DefaultUserCollectionEmail,
+            Type = x.c.Type,
             ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,
@@ -97,12 +111,12 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 
     public static CollectionAdminDetailsQuery ByCollectionId(Guid collectionId, Guid? userId)
     {
-        return new CollectionAdminDetailsQuery(userId, null, collectionId);
+        return new CollectionAdminDetailsQuery(userId, null, collectionId, includeDefaultCollections: false);
     }
 
-    public static CollectionAdminDetailsQuery ByOrganizationId(Guid organizationId, Guid? userId)
+    public static CollectionAdminDetailsQuery ByOrganizationId(Guid organizationId, Guid? userId, bool includeDefaultCollections = false)
     {
-        return new CollectionAdminDetailsQuery(userId, organizationId, null);
+        return new CollectionAdminDetailsQuery(userId, organizationId, null, includeDefaultCollections);
     }
 
 }

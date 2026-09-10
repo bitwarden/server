@@ -310,12 +310,14 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     }
 
     public async Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(
-        Guid organizationId, Guid userId, bool includeAccessRelationships)
+        Guid organizationId, Guid userId, bool includeAccessRelationships, bool includeDefaultCollections = false)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = CollectionAdminDetailsQuery.ByOrganizationId(organizationId, userId).Run(dbContext);
+            var query = CollectionAdminDetailsQuery
+                .ByOrganizationId(organizationId, userId, includeDefaultCollections)
+                .Run(dbContext);
 
             ICollection<CollectionAdminDetails> collections;
 
@@ -333,7 +335,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         c.ExternalId,
                         c.Unmanaged,
                         c.DefaultUserCollectionEmail,
-                        c.HasEnabledAccessRule
+                        c.HasEnabledAccessRule,
+                        c.Type
                     }).Select(collectionGroup => new CollectionAdminDetails
                     {
                         Id = collectionGroup.Key.Id,
@@ -349,7 +352,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                         Unmanaged = collectionGroup.Key.Unmanaged,
                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
-                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
+                        Type = collectionGroup.Key.Type
                     }).ToList();
             }
             else
@@ -365,7 +369,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          c.ExternalId,
                                          c.Unmanaged,
                                          c.DefaultUserCollectionEmail,
-                                         c.HasEnabledAccessRule
+                                         c.HasEnabledAccessRule,
+                                         c.Type
                                      }
                     into collectionGroup
                                      select new CollectionAdminDetails
@@ -383,7 +388,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                          Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
                                          Unmanaged = collectionGroup.Key.Unmanaged,
                                          DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
-                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule,
+                                         Type = collectionGroup.Key.Type
                                      }).ToListAsync();
             }
 
