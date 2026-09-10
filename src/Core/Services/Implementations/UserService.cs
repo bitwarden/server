@@ -731,6 +731,7 @@ public class UserService : UserManager<User>, IUserService
 
         providers.Remove(type);
         user.SetTwoFactorProviders(providers);
+        user.SecurityStamp = Guid.NewGuid().ToString();
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 

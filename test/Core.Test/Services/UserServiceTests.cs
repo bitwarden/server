@@ -324,6 +324,28 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_RotatesSecurityStamp(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true }
+        });
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+
+        // Assert
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
+    }
+
+    [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
         SutProvider<UserService> sutProvider, User user, Organization organization)
     {
