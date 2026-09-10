@@ -54,11 +54,31 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// </summary>
     Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
 
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>: a new collection is always created ungoverned, whatever the
+    /// caller set on <paramref name="obj"/>. Use <see cref="SetAccessRuleAssociationsAsync"/> to associate it with an
+    /// access rule.
+    /// </remarks>
     Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>, whatever the caller set on <paramref name="obj"/>, so an
+    /// ordinary collection edit can neither erase nor forge a PAM association. Use
+    /// <see cref="SetAccessRuleAssociationsAsync"/> to change it.
+    /// </remarks>
     Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
+
+    /// <summary>
+    /// Returns the distinct user ids of every confirmed member who can Manage the collection: direct Manage
+    /// assignments, Manage via group, org Owners/Admins (when the organization allows admin access to all collection
+    /// items), and Custom users with the EditAnyCollection permission.
+    /// </summary>
+    Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId);
+
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
 
     /// <summary>
@@ -92,4 +112,14 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
     Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
 
+    /// <summary>
+    /// Points the given collections at the access rule and clears the rule from any collections that should no
+    /// longer reference it. Both sets are scoped to the organization.
+    /// </summary>
+    /// <param name="organizationId">The organization that owns the access rule and collections.</param>
+    /// <param name="accessRuleId">The access rule to associate.</param>
+    /// <param name="collectionIdsToAssign">Collections that should reference the access rule.</param>
+    /// <param name="collectionIdsToClear">Collections whose reference to the access rule should be removed.</param>
+    Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear);
 }

@@ -26,7 +26,7 @@ public class SalesAssistedTrialControllerTests
         Email = "prospect@example.com",
         Name = "Prospect Company",
         ProductTier = ProductTierType.Enterprise,
-        Products = new[] { ProductType.PasswordManager },
+        Product = ProductType.PasswordManager,
         TrialLength = 14
     };
 
@@ -52,7 +52,7 @@ public class SalesAssistedTrialControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
         Assert.Equal(ProductTierType.Enterprise, model.ProductTier);
-        Assert.Equal(new[] { ProductType.PasswordManager }, model.Products);
+        Assert.Equal(ProductType.PasswordManager, model.Product);
         Assert.Equal(30, model.TrialLength);
     }
 
@@ -76,7 +76,7 @@ public class SalesAssistedTrialControllerTests
                 model.Name,
                 SenderEmail,
                 model.ProductTier,
-                model.Products,
+                Arg.Is<IEnumerable<ProductType>>(products => products.SequenceEqual(new[] { model.Product })),
                 model.TrialLength);
     }
 
@@ -106,7 +106,7 @@ public class SalesAssistedTrialControllerTests
         SutProvider<SalesAssistedTrialController> sutProvider)
     {
         var model = BuildValidModel();
-        model.Products = new[] { ProductType.SecretsManager };
+        model.Product = ProductType.SecretsManager;
         SetUpAuthenticatedSender(sutProvider);
         sutProvider.Sut.ModelState.AddModelError(nameof(model.Email), "The Email field is required.");
 
@@ -116,7 +116,7 @@ public class SalesAssistedTrialControllerTests
         // Ensure when a model is returned to the view for validation errors (POST round-trip)
         // that user's choices are persisted; the defaults do not change their prior selections.
         var redisplayedModel = Assert.IsType<SalesAssistedTrialInviteModel>(viewResult.Model);
-        Assert.Equal(model.Products, redisplayedModel.Products);
+        Assert.Equal(model.Product, redisplayedModel.Product);
 
         await sutProvider.GetDependency<ISendSalesAssistedTrialInvitationCommand>()
             .DidNotReceiveWithAnyArgs()

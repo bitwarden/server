@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer.Services;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
 namespace Bit.Sso;
@@ -44,6 +45,9 @@ public class Startup
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
+
+        // Metrics
+        services.TryAddSingleton<Saml2AssertionMetrics>();
 
         // Caching
         services.AddMemoryCache();
@@ -150,7 +154,11 @@ public class Startup
         // Gates endpoints carrying IFeatureMetadata; required in any app that
         // routes requests through endpoints tagged with [RequireFeature].
         app.UseFeatureFlagChecks();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);

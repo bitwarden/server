@@ -4,7 +4,6 @@ using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -195,12 +194,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         try
         {
@@ -218,14 +220,14 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
+            entity.UserKeyId = user.UserKeyId;
 
             await dbContext.SaveChangesAsync();
 
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
-                // connection and transaction aren't used in EF
-                await action();
+                await action(connection, transaction);
             }
 
             await transaction.CommitAsync();
@@ -240,12 +242,15 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
 
     public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
 
         // Update user
         var userEntity = await dbContext.Users.FindAsync(user.Id);
@@ -279,13 +284,14 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         userEntity.V2UpgradeToken = user.V2UpgradeToken;
 
+        userEntity.UserKeyId = user.UserKeyId;
+
         await dbContext.SaveChangesAsync();
 
         //  Update re-encrypted data
         foreach (var action in updateDataActions)
         {
-            // connection and transaction aren't used in EF
-            await action();
+            await action(connection, transaction);
         }
 
         await transaction.CommitAsync();
@@ -623,6 +629,27 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             userEntity.Key = registerFinishData.MasterKeyWrappedUserKey;
             userEntity.RevisionDate = timestamp;
             userEntity.AccountRevisionDate = timestamp;
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
+    /// <inheritdoc />
+    public UpdateUserData SetUserKeyId(Guid userId, KeyId userKeyId)
+    {
+        return async (connection, transaction) =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = await GetUpdateUserDataContextAsync(scope, connection, transaction);
+
+            var userEntity = await dbContext.Users.FindAsync(userId);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(userId));
+            }
+
+            userEntity.UserKeyId = userKeyId.ToString();
+            userEntity.RevisionDate = DateTime.UtcNow;
 
             await dbContext.SaveChangesAsync();
         };

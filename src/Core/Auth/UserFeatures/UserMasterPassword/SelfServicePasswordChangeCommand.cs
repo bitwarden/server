@@ -27,6 +27,7 @@ public class SelfServicePasswordChangeCommand(
         {
             return IdentityResult.Failed(identityErrorDescriber.PasswordMismatch());
         }
+        unlockData.ValidateKeyIdUnchangedForUser(user);
 
         var result = await masterPasswordService.SaveUpdateExistingMasterPasswordAsync(user,
             new UpdateExistingPasswordData

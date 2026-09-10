@@ -2,7 +2,6 @@
 #nullable disable
 
 using System.Text.Json;
-using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response;
@@ -38,6 +37,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -144,10 +144,13 @@ public class OrganizationsController : Controller
     public async Task<ListResponseModel<ProfileOrganizationResponseModel>> GetUser()
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
+        var organizationsTask = _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
+        var claimingTask = _userService.GetOrganizationsClaimingUserAsync(userId);
+        await Task.WhenAll(organizationsTask, claimingTask);
 
-        var organizationsClaimingActiveUser = await _userService.GetOrganizationsClaimingUserAsync(userId);
+        var organizations = await organizationsTask;
+        var organizationsClaimingActiveUser = await claimingTask;
         var organizationIdsClaimingActiveUser = organizationsClaimingActiveUser.Select(o => o.Id);
 
         var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsClaimingActiveUser));
@@ -485,7 +488,7 @@ public class OrganizationsController : Controller
     [HttpGet("{orgId}/private-key")]
     [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     [Authorize<ManageUsersRequirement>]
-    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey(Guid orgId)
+    public async Task<OrganizationPrivateKeyResponseModel> GetPrivateKey([FromRoute] Guid orgId)
     {
         var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)

@@ -20,7 +20,9 @@ public class UpdateOrganizationUserValidator(
     IOrganizationUserValidationService organizationUserValidationService,
     ICollectionRepository collectionRepository,
     IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
-    IOrganizationDomainRepository organizationDomainRepository)
+    IOrganizationDomainRepository organizationDomainRepository,
+    IUserRepository userRepository,
+    IOrganizationUserRepository organizationUserRepository)
     : IUpdateOrganizationUserValidator
 {
     public async Task<ValidationResult<UpdateOrganizationUserRequest>> ValidateAsync(
@@ -79,6 +81,13 @@ public class UpdateOrganizationUserValidator(
             return Invalid(request, new CustomPermissionsNotEnabled());
         }
 
+        // Granting PAM access to a member of an organization without PAM would be inert: claim emission ANDs
+        // AccessPam with the organization's UsePam. Reject so the admin gets an actionable error instead.
+        if (request.IsEnablingPam() && !request.Organization.UsePam)
+        {
+            return Invalid(request, new PamNotEnabled());
+        }
+
         if (request.NewType != OrganizationUserType.Owner &&
             !await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
                 [organizationUser.Id]))
@@ -127,8 +136,7 @@ public class UpdateOrganizationUserValidator(
             return new MemberHasMasterPasswordError();
         }
 
-        var claimedStatus = await getOrganizationUsersClaimedStatusQuery
-            .GetUsersOrganizationClaimedStatusAsync(request.Organization.Id, [organizationUser.Id]);
+        var claimedStatus = await getOrganizationUsersClaimedStatusQuery.GetUsersOrganizationClaimedStatusAsync(request.Organization.Id, [organizationUser.Id]);
         if (!(claimedStatus.TryGetValue(organizationUser.Id, out var isClaimed) && isClaimed))
         {
             return isEmailChanging ? new MemberNotClaimedError() : new NameChangeMemberNotClaimedError();
@@ -143,9 +151,31 @@ public class UpdateOrganizationUserValidator(
             {
                 return new NewEmailDomainNotClaimedError();
             }
+
+            return await ValidateNewEmailNotTakenAsync(request);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Rejects a new email already owned by another account: <see cref="EmailAlreadyInUseByAnotherMemberError"/>
+    /// when that account is a member of this organization, otherwise <see cref="EmailTakenOutsideOrganizationError"/>.
+    /// </summary>
+    private async Task<Error?> ValidateNewEmailNotTakenAsync(UpdateOrganizationUserRequest request)
+    {
+        var existingUser = await userRepository.GetByEmailAsync(request.NewEmail!);
+        if (existingUser is null || existingUser.Id == request.UserToUpdate!.Id)
+        {
+            return null;
+        }
+
+        var membership = await organizationUserRepository
+            .GetByOrganizationAsync(request.Organization.Id, existingUser.Id);
+
+        return membership is not null
+            ? new EmailAlreadyInUseByAnotherMemberError()
+            : new EmailTakenOutsideOrganizationError();
     }
 
     /// <summary>

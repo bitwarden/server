@@ -15,7 +15,7 @@ public sealed class StripeWebhookTestsFixture : StripeTestsFixture
         Billing = new BillingApplicationFactory(Api.TestDatabase);
     }
 
-    public override async ValueTask DisposeAsync()
+    public override async Task DisposeAsync()
     {
         await Billing.DisposeAsync();
         await base.DisposeAsync();

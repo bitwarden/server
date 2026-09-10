@@ -1,18 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -147,16 +142,22 @@ public class AcceptOrganizationInviteLinkCommandTests
         Assert.IsType<InviteLinkNotAvailable>(result.AsError);
     }
 
+    // Eligibility and policy validation lives in IAcceptInviteLinkMembershipValidator (covered by its own
+    // tests); the command must surface any validator error and persist nothing.
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithEmailDomainNotAllowed_ReturnsError(
+    public async Task AcceptAsync_WhenValidatorReturnsError_SurfacesErrorAndDoesNotPersist(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        inviteLink.AllowedDomains = "[\"allowed.com\"]";
-        user.Email = "user@notallowed.com";
+
+        sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
+            .ValidateAsync(Arg.Any<AcceptInviteLinkMembershipValidationRequest>())
+            .Returns(ci => Task.FromResult(
+                Invalid(ci.Arg<AcceptInviteLinkMembershipValidationRequest>(),
+                    new TwoFactorRequiredForMembership())));
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -167,125 +168,16 @@ public class AcceptOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<EmailDomainNotAllowed>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        user.EmailVerified = false;
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<EmailNotVerified>(result.AsError);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithRevokedMember_ReturnsOrganizationAccessRevoked(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser revokedOrganizationUser,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedOrganizationUser.Status = OrganizationUserStatusType.Revoked;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(revokedOrganizationUser);
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithRevokedEmailInvite_ReturnsOrganizationAccessRevoked(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser revokedEmailInvite,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        revokedEmailInvite.Status = OrganizationUserStatusType.Revoked;
-        revokedEmailInvite.Email = user.Email;
-        revokedEmailInvite.UserId = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationEmailAsync(organization.Id, user.Email)
-            .Returns(revokedEmailInvite);
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<OrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<OrganizationUser>());
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserStatusType.Accepted)]
-    [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public async Task AcceptAsync_WithAlreadyMember_ReturnsAlreadyOrganizationMember(
-        OrganizationUserStatusType status,
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        OrganizationUser existingOrganizationUser,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-        existingOrganizationUser.Status = status;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, user.Id)
-            .Returns(existingOrganizationUser);
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<AlreadyOrganizationMember>(result.AsError);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -331,8 +223,10 @@ public class AcceptOrganizationInviteLinkCommandTests
             .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
+    // An Invited row already occupies a seat, so accepting it must not consume or expand capacity even when
+    // the organization is full. Guards the Staged handling below from over-reaching.
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithFreeAdmin_AdminLimitReached_ReturnsError(
+    public async Task AcceptAsync_WithExistingEmailInvite_AndOrganizationAtCapacity_DoesNotReserveSeat(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -340,19 +234,18 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.PlanType = PlanType.Free;
         invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
-        invitedOrganizationUser.Type = OrganizationUserType.Admin;
         invitedOrganizationUser.Email = user.Email;
         invitedOrganizationUser.UserId = null;
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationEmailAsync(organization.Id, user.Email)
             .Returns(invitedOrganizationUser);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(1);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -362,35 +255,27 @@ public class AcceptOrganizationInviteLinkCommandTests
         };
         var result = await sutProvider.Sut.AcceptAsync(request);
 
-        Assert.True(result.IsError);
-        Assert.IsType<OnlyOneFreeOrganizationAdminAllowed>(result.AsError);
+        Assert.True(result.IsSuccess);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou => ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IOrganizationService>()
             .DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(Arg.Any<OrganizationUser>());
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
+    // A Staged row is excluded from the occupied seat count, so promoting it to Accepted consumes a seat.
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithFreeAdmin_NotAtLimit_Succeeds(
+    public async Task AcceptAsync_WithStagedMembership_AndSeatsAvailable_AcceptsWithoutAutoscaling(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
-        OrganizationUser invitedOrganizationUser,
+        OrganizationUser stagedOrganizationUser,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        organization.PlanType = PlanType.Free;
-        invitedOrganizationUser.Status = OrganizationUserStatusType.Invited;
-        invitedOrganizationUser.Type = OrganizationUserType.Admin;
-        invitedOrganizationUser.Email = user.Email;
-        invitedOrganizationUser.UserId = null;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationEmailAsync(organization.Id, user.Email)
-            .Returns(invitedOrganizationUser);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(user.Id)
-            .Returns(0);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        stagedOrganizationUser.ExternalId = "ext-123";
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -404,24 +289,68 @@ public class AcceptOrganizationInviteLinkCommandTests
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
-                ou.Id == invitedOrganizationUser.Id &&
-                ou.Type == OrganizationUserType.Admin));
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Accepted &&
+                ou.UserId == user.Id &&
+                ou.Email == null &&
+                ou.ExternalId == "ext-123"));
+        await sutProvider.GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .AutoAddSeatsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithSingleOrgPolicyViolation_ReturnsError(
+    public async Task AcceptAsync_WithStagedMembership_AndOrganizationAtCapacity_AutoAddsSeat(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
+        OrganizationUser stagedOrganizationUser,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
 
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
-            .Returns(Task.FromResult(
-                Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new UserIsAMemberOfAnotherOrganization())));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        var request = new AcceptOrganizationInviteLinkRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user
+        };
+        var result = await sutProvider.Sut.AcceptAsync(request);
+
+        Assert.True(result.IsSuccess);
+        await sutProvider.GetDependency<IOrganizationService>()
+            .Received(1)
+            .AutoAddSeatsAsync(organization, 1);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationUser>(ou =>
+                ou.Id == stagedOrganizationUser.Id &&
+                ou.Status == OrganizationUserStatusType.Accepted));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AcceptAsync_WithStagedMembership_AndNoSeatsAvailable_ReturnsError(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        OrganizationUser stagedOrganizationUser,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+    {
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -432,28 +361,41 @@ public class AcceptOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
+        Assert.IsType<OrganizationHasNoAvailableSeats>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithTwoFactorPolicy_UserLacks2FA_ReturnsError(
+    [Theory]
+    [BitAutoData(typeof(BadRequestException))]
+    [BitAutoData(typeof(GatewayException))]
+    public async Task AcceptAsync_WithStagedMembership_AndAutoAddSeatsBusinessFailure_ReturnsSeatAddFailed(
+        Type exceptionType,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
+        OrganizationUser stagedOrganizationUser,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        SetupStagedMembership(organization, user, stagedOrganizationUser, sutProvider);
+        organization.Seats = 2;
+        organization.MaxAutoscaleSeats = 5;
 
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
-            .Returns(Task.FromResult(
-                Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new TwoFactorRequiredForMembership())));
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Users = 2, Sponsored = 0 });
+
+        Exception businessFailure = exceptionType == typeof(BadRequestException)
+            ? new BadRequestException("seat failure")
+            : new GatewayException("seat failure");
+        sutProvider.GetDependency<IOrganizationService>()
+            .AutoAddSeatsAsync(organization, 1)
+            .Throws(businessFailure);
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -464,51 +406,10 @@ public class AcceptOrganizationInviteLinkCommandTests
         var result = await sutProvider.Sut.AcceptAsync(request);
 
         Assert.True(result.IsError);
-        Assert.IsType<TwoFactorRequiredForMembership>(result.AsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
+        Assert.IsType<SeatAddFailed>(result.AsError);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationUser>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoEnroll_MissingResetPasswordKey_ReturnsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user,
-            ResetPasswordKey = null
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ResetPasswordKeyRequired>(result.AsError);
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
     }
 
     [Theory, BitAutoData]
@@ -552,7 +453,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
         organization.Seats = 2;
         organization.MaxAutoscaleSeats = 2;
 
@@ -656,7 +557,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         var adminDetails = new OrganizationUserUserDetails { Email = "admin@example.com" };
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -716,18 +617,8 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
 
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement(
-            [
-                new PolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.ResetPassword,
-                    OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                    PolicyData = "{\"autoEnrollEnabled\": true}"
-                }
-            ]));
+        // The command reads the account-recovery policy and acts on the resulting auto-enroll flag.
+        SetupAutoEnrollPolicy(organization, sutProvider);
 
         var resetPasswordKey = "valid-key-123";
         var request = new AcceptOrganizationInviteLinkRequest
@@ -778,7 +669,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         var request = new AcceptOrganizationInviteLinkRequest
         {
@@ -818,71 +709,6 @@ public class AcceptOrganizationInviteLinkCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AcceptAsync_WithProviderUser_ReturnsProviderUsersCannotAcceptInviteLink(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        ProviderUser providerUser,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([providerUser]);
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<ProviderUsersCannotAcceptInviteLink>(result.AsError);
-        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task AcceptAsync_WithAutoConfirmPolicy_AndMultiOrgUser_ReturnsError(
-        Organization organization,
-        OrganizationInviteLink inviteLink,
-        User user,
-        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
-    {
-        SetupHappyPath(organization, inviteLink, user, sutProvider);
-
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
-            .Returns(Task.FromResult(
-                Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new UserCannotBelongToAnotherOrganization(string.Empty))));
-
-        var request = new AcceptOrganizationInviteLinkRequest
-        {
-            OrganizationId = organization.Id,
-            Code = Guid.Parse(inviteLink.Code),
-            User = user
-        };
-        var result = await sutProvider.Sut.AcceptAsync(request);
-
-        Assert.True(result.IsError);
-        Assert.IsType<UserCannotBelongToAnotherOrganization>(result.AsError);
-        await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .DeleteAllByUserIdAsync(Arg.Any<Guid>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<OrganizationUser>());
-    }
-
-    [Theory, BitAutoData]
     public async Task AcceptAsync_WithAutoConfirmPolicy_EaDeleteThrows_ThrowsWithoutPersisting(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -890,7 +716,7 @@ public class AcceptOrganizationInviteLinkCommandTests
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
-        SetupAutoConfirmPolicy(organization, user, sutProvider);
+        SetupAutoConfirmPolicy(organization, sutProvider);
 
         sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DeleteAllByUserIdAsync(user.Id)
@@ -913,19 +739,43 @@ public class AcceptOrganizationInviteLinkCommandTests
             .CreateAsync(Arg.Any<OrganizationUser>());
     }
 
+    // The command reads the Auto-Confirm policy state itself and passes it into the validator; enabling it
+    // drives the emergency-access deletion and auto-confirm push side effects.
     private static void SetupAutoConfirmPolicy(
         Organization organization,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+        => sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.AutomaticUserConfirmation) { Enabled = true });
+
+    // The command reads the account-recovery auto-enroll state itself; enabling it drives reset-password enrollment.
+    private static void SetupAutoEnrollPolicy(
+        Organization organization,
+        SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
+        => sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(organization.Id, PolicyType.ResetPassword)
+            {
+                Enabled = true,
+                Data = "{\"autoEnrollEnabled\": true}"
+            });
+
+    // A Staged membership: SCIM/Directory-Connector provisioned, email set, not yet linked to a User.
+    // Call after SetupHappyPath, which stubs the email lookup as returning no membership.
+    private static void SetupStagedMembership(
+        Organization organization,
         User user,
+        OrganizationUser stagedOrganizationUser,
         SutProvider<AcceptOrganizationInviteLinkCommand> sutProvider)
     {
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
-                r.OrganizationId == organization.Id && r.User == user))
-            .Returns(Task.FromResult(
-                Valid(new AcceptOrganizationMembershipValidationResult
-                {
-                    AutoConfirmPolicyEnabled = true
-                })));
+        stagedOrganizationUser.OrganizationId = organization.Id;
+        stagedOrganizationUser.Status = OrganizationUserStatusType.Staged;
+        stagedOrganizationUser.Email = user.Email;
+        stagedOrganizationUser.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(stagedOrganizationUser);
     }
 
     private static void SetupHappyPath(
@@ -936,6 +786,7 @@ public class AcceptOrganizationInviteLinkCommandTests
     {
         org.Enabled = true;
         org.UseInviteLinks = true;
+        org.UsePolicies = true;
         org.Seats = 10;
         org.MaxAutoscaleSeats = null;
         link.OrganizationId = org.Id;
@@ -964,23 +815,19 @@ public class AcceptOrganizationInviteLinkCommandTests
             .GetByOrganizationEmailAsync(org.Id, user.Email)
             .Returns((OrganizationUser?)null);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns(new List<OrganizationUser>());
+        // Auto-Confirm and account-recovery policies are disabled by default; specific tests opt in via
+        // SetupAutoConfirmPolicy / SetupAutoEnrollPolicy.
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(org.Id, PolicyType.AutomaticUserConfirmation)
+            .Returns(new PolicyStatus(org.Id, PolicyType.AutomaticUserConfirmation));
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(org.Id, PolicyType.ResetPassword)
+            .Returns(new PolicyStatus(org.Id, PolicyType.ResetPassword));
 
-        sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyByUserAsync(user.Id)
-            .Returns([]);
-
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<ResetPasswordPolicyRequirement>(user.Id)
-            .Returns(new ResetPasswordPolicyRequirement([]));
-
-        sutProvider.GetDependency<IAcceptOrganizationMembershipValidator>()
-            .ValidateAsync(Arg.Is<AcceptOrganizationMembershipValidationRequest>(r =>
-                r.OrganizationId == org.Id && r.User == user))
-            .Returns(Task.FromResult(
-                Valid(new AcceptOrganizationMembershipValidationResult())));
+        sutProvider.GetDependency<IAcceptInviteLinkMembershipValidator>()
+            .ValidateAsync(Arg.Is<AcceptInviteLinkMembershipValidationRequest>(r =>
+                r.Organization.Id == org.Id && r.User == user))
+            .Returns(ci => Task.FromResult(Valid(ci.Arg<AcceptInviteLinkMembershipValidationRequest>())));
 
         sutProvider.GetDependency<IStripePaymentService>()
             .HasSecretsManagerStandalone(org)

@@ -13,6 +13,7 @@ public class MasterPasswordUnlockResponseModel
     /// </summary>
     [EncryptedString] public required string MasterKeyEncryptedUserKey { get; init; }
     [StringLength(256)] public required string Salt { get; init; }
+    [KeyId] public string? ContainedKeyId { get; init; }
 }
 
 public class MasterPasswordUnlockKdfResponseModel

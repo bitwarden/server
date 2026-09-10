@@ -492,7 +492,27 @@ public static class CoreHelpers
         return val.ToString();
     }
 
-    public static string SanitizeForEmail(string value, bool htmlEncode = true)
+    /// <summary>
+    /// Keeps a display value from being auto-linked by mail clients (e.g. Gmail turning
+    /// "Client.Org" into a hyperlink) by inserting a zero-width non-joiner after each "."
+    /// and "@". The visible text is unchanged, unlike <see cref="SanitizeForEmail"/> which
+    /// rewrites it to "[dot]"/"[at]".
+    /// </summary>
+    public static string PreventEmailAutoLinking(string value)
+    {
+        const string zeroWidthNonJoiner = "\u200C";
+        return value
+            .Replace(".", $".{zeroWidthNonJoiner}")
+            .Replace("@", $"@{zeroWidthNonJoiner}");
+    }
+
+    /// <summary>
+    /// Sanitizes a value for display in an email by neutralizing anything that looks like an
+    /// address or link (e.g. "@" and "scheme://"). It deliberately does NOT HTML-encode the
+    /// result: the mail templates are rendered by Handlebars, which HTML-encodes interpolated
+    /// values ({{ }}) by default. Encoding here as well produced double-encoded output.
+    /// </summary>
+    public static string SanitizeForEmail(string value)
     {
         var cleanedValue = value.Replace("@", "[at]");
         var regexOptions = RegexOptions.CultureInvariant |
@@ -505,7 +525,7 @@ public static class CoreHelpers
             cleanedValue = Regex.Replace(cleanedValue, @"((^|\b)(\w*)://)",
                 string.Empty, regexOptions);
         }
-        return htmlEncode ? HttpUtility.HtmlEncode(cleanedValue) : cleanedValue;
+        return cleanedValue;
     }
 
     public static string DateTimeToTableStorageKey(DateTime? date = null)
@@ -751,6 +771,12 @@ public static class CoreHelpers
                     {
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
                     }
+                }
+
+                // Privileged Access Manager
+                foreach (var org in group.Where(o => o.AccessPam))
+                {
+                    claims.Add(new KeyValuePair<string, string>(Claims.PamAccess, org.Id.ToString()));
                 }
             }
         }

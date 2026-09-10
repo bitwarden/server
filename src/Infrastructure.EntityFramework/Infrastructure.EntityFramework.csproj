@@ -19,5 +19,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Core\Core.csproj" />
+      <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
     </ItemGroup>
 </Project>

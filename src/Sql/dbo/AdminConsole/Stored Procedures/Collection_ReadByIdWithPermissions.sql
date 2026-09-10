@@ -52,7 +52,8 @@ BEGIN
                 )
             THEN 1
             ELSE 0
-        END AS [Unmanaged]
+        END AS [Unmanaged],
+        MAX(CASE WHEN AR.[Enabled] = 1 THEN 1 ELSE 0 END) AS [HasEnabledAccessRule]
 	FROM
 	    [dbo].[CollectionView] C
 	LEFT JOIN
@@ -65,6 +66,8 @@ BEGIN
 	    [dbo].[Group] G ON G.[Id] = GU.[GroupId]
 	LEFT JOIN
 	    [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
+	LEFT JOIN
+	    [dbo].[AccessRule] AR ON AR.[Id] = C.[AccessRuleId]
 	WHERE
 	    C.[Id] = @CollectionId
     GROUP BY
@@ -75,7 +78,8 @@ BEGIN
     	C.[RevisionDate],
     	C.[ExternalId],
         C.[DefaultUserCollectionEmail],
-        C.[Type]
+        C.[Type],
+        C.[AccessRuleId]
 
    IF (@IncludeAccessRelationships = 1)
     BEGIN

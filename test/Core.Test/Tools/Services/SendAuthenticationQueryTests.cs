@@ -105,7 +105,7 @@ public class SendAuthenticationQueryTests
 
     public static IEnumerable<object[]> AuthenticationMethodTestCases()
     {
-        yield return new object[] { null, typeof(NeverAuthenticate) };
+        yield return new object[] { null, typeof(SendInaccessible) };
         yield return new object[] { CreateSend(accessCount: 5, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(SendInaccessible) };
         yield return new object[] { CreateSend(accessCount: 6, maxAccessCount: 5, emails: null, password: null, AuthType.None), typeof(SendInaccessible) };
         yield return new object[] { CreateSend(accessCount: 0, maxAccessCount: 10, emails: "person@company.com", password: null, AuthType.Email), typeof(EmailOtp) };

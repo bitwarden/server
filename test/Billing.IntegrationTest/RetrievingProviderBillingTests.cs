@@ -50,4 +50,38 @@ public class RetrievingProviderBillingTests(StripeTestsFixture fixture) : IClass
         Assert.Equal("card", paymentMethod["type"]!.GetValue<string>());
         Assert.Equal("visa", paymentMethod["brand"]!.GetValue<string>());
     }
+
+    [BillingFact]
+    public async Task Subscription_WithCustomerLevelPercentOffCoupon_ReturnsDiscountPercentage()
+    {
+        // Drives ProviderBillingController.GetSubscriptionAsync + ProviderSubscriptionResponse.
+        // The response's DiscountPercentage reads `discount?.Source?.Coupon?.PercentOff`
+        // where `discount` is `subscription.Customer?.Discount ?? subscription.Discounts?.FirstOrDefault()`.
+        // Requires `customer.discount.source.coupon` in the expand (4 levels — Stripe's cap)
+        // for the customer-level branch of that null-coalescing selector.
+        var (client, providerId) = await fixture.PrepareProviderAdminAsync("provider-customer-coupon@example.com");
+
+        var customerId = await fixture.GetProviderGatewayCustomerIdAsync(providerId);
+        var couponId = $"prov_cust_{Guid.NewGuid():N}";
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, couponId, percentOff: 30);
+
+        var response = await client.GetAsync($"/providers/{providerId}/billing/subscription");
+        await Assert.SuccessResponseAsync(response);
+
+        var subscription = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        Assert.Equal(30m, subscription["discountPercentage"]!.GetValue<decimal>());
+    }
+
+    [BillingFact]
+    public async Task Subscription_IsCreatedWithClassicBillingMode()
+    {
+        // The SDK bump sets BillingMode = { Type = "classic" } on the provider subscription
+        // (ProviderBillingService.SetupSubscription). Verifies the mode lands on Stripe.
+        var (_, providerId) = await fixture.PrepareProviderAdminAsync("provider-billing-mode@example.com");
+
+        var subscriptionId = await fixture.GetProviderGatewaySubscriptionIdAsync(providerId);
+        var billingModeType = await fixture.GetSubscriptionBillingModeTypeAsync(subscriptionId);
+
+        Assert.Equal("classic", billingModeType);
+    }
 }

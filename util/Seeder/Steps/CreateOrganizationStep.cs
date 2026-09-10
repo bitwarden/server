@@ -80,9 +80,18 @@ internal sealed class CreateOrganizationStep : IStep
 
         var seats = _seats ?? PlanFeatures.GenerateRealisticSeatCount(_planType, domain);
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
-        var organization = OrganizationSeeder.Create(name, domain, seats, context.GetMangler(), orgKeys.PublicKey, orgKeys.PrivateKey, _planType);
-
-        PlanFeatures.ApplyOrganizationOverrides(organization, _overrides);
+        var organization = OrganizationSeeder.Create(
+            new OrganizationSeed
+            {
+                Name = name,
+                Domain = domain,
+                Seats = seats,
+                PlanType = _planType,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey,
+                Overrides = _overrides
+            },
+            context.GetMangler());
 
         context.Organization = organization;
         context.OrgKeys = orgKeys;

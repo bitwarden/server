@@ -31,6 +31,7 @@ public enum PolicyType : byte
     /// Supersedes DisableSend (6) and SendOptions (7) when the pm-31885-send-controls feature flag is active.
     /// </summary>
     SendControls = 21,
+    FillAssist = 22,
 }
 
 public static class PolicyTypeExtensions
@@ -65,6 +66,7 @@ public static class PolicyTypeExtensions
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
             PolicyType.OrganizationUserNotification => "Vault banner message",
             PolicyType.SendControls => "Send controls",
+            PolicyType.FillAssist => "Activate fill assist",
         };
     }
 }

@@ -10,6 +10,27 @@ These options apply to any preset that uses generated (count-based) ciphers — 
 | ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
 
+## Developer
+
+Day-to-day local development: one org with memorable role-based logins, production-shaped collections, and a realistic vault. No attachments, so no Azurite required.
+
+```bash
+dotnet run -- preset --name dev.playground
+```
+
+| Preset     | Org Fixture | Roster    | Ciphers        | Use Case                                    |
+| ---------- | ----------- | --------- | -------------- | ------------------------------------------- |
+| playground | dev-org     | dev-roles | dev-playground | Convenient logins over production-like data |
+
+The four role accounts use the roster `email` override (`roster.schema.json`), so the login is the role — password `asdfasdfasdf` unless overridden:
+
+| Login               | Role   | What they see                                                                                   |
+| ------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| `owner@bw.example`  | Owner  | Everything — direct Can Manage on every collection                                              |
+| `admin@bw.example`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
+| `custom@bw.example` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)                  |
+| `user@bw.example`   | User   | Company-Wide plus the Engineering collections, with folders and favorites                       |
+
 ## Features
 
 Test specific Bitwarden features. Fixture-based data for deterministic results.

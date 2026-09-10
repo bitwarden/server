@@ -59,6 +59,6 @@ COPY --from=build /source/bitwarden_license/src/Sso/out /app
 COPY ./bitwarden_license/src/Sso/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-HEALTHCHECK CMD wget --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
+HEALTHCHECK CMD wget -Y off --quiet --tries=1 --output-document=/dev/null http://localhost:5000/alive || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

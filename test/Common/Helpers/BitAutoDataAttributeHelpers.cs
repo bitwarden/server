@@ -5,6 +5,7 @@ using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Test.Common.Helpers;
@@ -19,6 +20,9 @@ public static class BitAutoDataAttributeHelpers
         var methodCustomizations = testMethod.GetCustomAttributes<BitCustomizeAttribute>().Select(attr => attr.GetCustomization());
 
         fixedTestParameters ??= Array.Empty<object>();
+
+        // Key ids are only valid in one shape, so they always need customizing; see KeyIdBuilder.
+        fixture.Customize(new KeyIdCustomization());
 
         fixture = ApplyCustomizations(ApplyCustomizations(fixture, classCustomizations), methodCustomizations);
 
