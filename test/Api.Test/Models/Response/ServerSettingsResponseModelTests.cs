@@ -60,7 +60,9 @@ public class ServerSettingsResponseModelTests
         var featureService = Substitute.For<IFeatureService>();
         featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
 
-        var model = new ConfigResponseModel(featureService, globalSettings);
+        var bitwardenEnvironment = Substitute.For<IBitwardenEnvironment>();
+
+        var model = new ConfigResponseModel(featureService, globalSettings, bitwardenEnvironment);
 
         Assert.True(model.Settings.EnableEmailVerification);
     }
@@ -77,7 +79,9 @@ public class ServerSettingsResponseModelTests
         var featureService = Substitute.For<IFeatureService>();
         featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
 
-        var model = new ConfigResponseModel(featureService, globalSettings);
+        var bitwardenEnvironment = Substitute.For<IBitwardenEnvironment>();
+
+        var model = new ConfigResponseModel(featureService, globalSettings, bitwardenEnvironment);
 
         Assert.False(model.Settings.EnableEmailVerification);
     }
