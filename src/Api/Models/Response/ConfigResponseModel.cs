@@ -58,7 +58,8 @@ public class ConfigResponseModel : ResponseModel
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration,
-            SuppressOnboardingInterstitials = globalSettings.SuppressOnboardingInterstitials
+            SuppressOnboardingInterstitials = globalSettings.SuppressOnboardingInterstitials,
+            EnableEmailVerification = globalSettings.EnableEmailVerification
         };
     }
 }
@@ -136,4 +137,5 @@ public class ServerSettingsResponseModel
 {
     public bool DisableUserRegistration { get; set; }
     public bool SuppressOnboardingInterstitials { get; set; }
+    public bool EnableEmailVerification { get; set; }
 }
