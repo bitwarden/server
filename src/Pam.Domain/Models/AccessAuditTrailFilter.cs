@@ -1,4 +1,4 @@
-using Bit.Pam.Enums;
+﻿using Bit.Pam.Enums;
 
 namespace Bit.Pam.Models;
 

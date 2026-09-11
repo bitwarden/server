@@ -1,8 +1,7 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
 using Bit.Services.Pam.Api.Models.Request;
-using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Api.Models.Request;

@@ -1,5 +1,5 @@
-﻿using  Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
-using Bit.Services.Pam.AccessConnector.Models;
+﻿using Bit.Services.Pam.AccessConnector.Models;
+using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 
