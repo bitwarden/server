@@ -109,6 +109,6 @@ jobs:
         with:
           flags: >-
             --tag test-id=${{ env.TEST_ID }}
-            -o experimental-opentelemetry
+            -o opentelemetry
             ${{ inputs.k6-flags }}
           path: ${{ env.K6_TEST_PATH }}
