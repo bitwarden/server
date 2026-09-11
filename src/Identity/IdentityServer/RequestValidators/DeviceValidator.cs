@@ -42,6 +42,13 @@ public class DeviceValidator(
 
     private const string PasswordGrantType = "password";
 
+    /// <summary>
+    /// Upper bound on the client-supplied device identifier, matching the max length of
+    /// <see cref="Device.Identifier"/>. A longer value can never be persisted, so it is rejected up front
+    /// rather than after it has been carried through verification.
+    /// </summary>
+    private const int MaxDeviceIdentifierLength = 50;
+
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
         // Parse device from request and return early if no device information is provided.
@@ -94,14 +101,14 @@ public class DeviceValidator(
             context is { TwoFactorRequired: false, SsoRequired: false } &&
             _globalSettings.EnableNewDeviceVerification)
         {
-            var validationResult = await HandleNewDeviceVerificationAsync(context.User, request);
+            var validationResult = await HandleNewDeviceVerificationAsync(context.User, request, requestDevice.Identifier);
             if (validationResult != DeviceValidationResultType.Success)
             {
                 (context.ValidationErrorResult, context.CustomResponse) =
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(context.User);
+                    await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(context.User, requestDevice.Identifier);
                 }
                 return false;
             }
@@ -126,8 +133,10 @@ public class DeviceValidator(
     /// </summary>
     /// <param name="user">user attempting to authenticate</param>
     /// <param name="ValidatedRequest">The Request is used to check for the NewDeviceOtp and for the raw device data</param>
+    /// <param name="deviceIdentifier">Identifier of the requesting device, which the OTP is scoped to</param>
     /// <returns>returns deviceValidationResultType</returns>
-    private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
+    private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request,
+        string deviceIdentifier)
     {
         // currently unreachable due to backward compatibility
         // PM-13340: will address this
@@ -166,8 +175,9 @@ public class DeviceValidator(
         // we only check null here since an empty OTP will be considered an incorrect OTP
         if (newDeviceOtp != null)
         {
-            // verify the NewDeviceOtp
-            var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
+            // verify the NewDeviceOtp against the device it was issued for
+            var otpValid = await _twoFactorEmailService.VerifyNewDeviceVerificationOtpAsync(
+                user, deviceIdentifier, newDeviceOtp);
             if (otpValid)
             {
                 // In order to get here they would have to have access to their email so we verify it if it's not already
@@ -231,6 +241,7 @@ public class DeviceValidator(
         var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
 
         if (string.IsNullOrWhiteSpace(deviceIdentifier) ||
+            deviceIdentifier.Length > MaxDeviceIdentifierLength ||
             string.IsNullOrWhiteSpace(requestDeviceType) ||
             string.IsNullOrWhiteSpace(deviceName) ||
             !Enum.TryParse(requestDeviceType, out DeviceType parsedDeviceType))
