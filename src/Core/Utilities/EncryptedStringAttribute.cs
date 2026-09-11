@@ -11,16 +11,23 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
-    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap = new()
+    private const int _ivBytes = 16;
+    private const int _macBytes = 32; // HMAC-SHA256
+    private const int _anyLength = -1; // The piece has no fixed decoded length
+
+    /// <summary>
+    /// The expected decoded byte length of every piece of an encrypted string, per encryption type.
+    /// The number of entries is the number of required pieces.
+    /// </summary>
+    internal static readonly Dictionary<EncryptionType, int[]> _encryptionTypeToRequiredPiecesMap = new()
     {
-        [EncryptionType.AesCbc256_B64] = 2, // iv|ct
-        [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
-        [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
-        [EncryptionType.XChaCha20Poly1305_B64] = 1, // cose bytes
-        [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
-        [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
-        [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
-        [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
+        [EncryptionType.AesCbc256_B64] = [_ivBytes, _anyLength], // iv|ct
+        [EncryptionType.AesCbc256_HmacSha256_B64] = [_ivBytes, _anyLength, _macBytes], // iv|ct|mac
+        [EncryptionType.CoseEncrypt0B64] = [_anyLength], // cose bytes
+        [EncryptionType.Rsa2048_OaepSha256_B64] = [_anyLength], // rsaCt
+        [EncryptionType.Rsa2048_OaepSha1_B64] = [_anyLength], // rsaCt
+        [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = [_anyLength, _anyLength], // rsaCt|mac
+        [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = [_anyLength, _anyLength], // rsaCt|mac
     };
 
     public EncryptedStringAttribute()
@@ -57,13 +64,13 @@ public class EncryptedStringAttribute : ValidationAttribute
         {
             // We couldn't find a header part, this is the slow path, because we have to do two loops over
             // the data.
-            // If it has 3 encryption parts that means it is AesCbc128_HmacSha256_B64
-            // else we assume it is AesCbc256_B64
+            // If it has 3 encryption parts it is the legacy headerless iv|ct|mac format, which shares
+            // its piece layout with AesCbc256_HmacSha256_B64, else we assume it is AesCbc256_B64
             var splitChars = rest.Count('|');
 
             if (splitChars == 2)
             {
-                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc128_HmacSha256_B64]);
+                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc256_HmacSha256_B64]);
             }
             else
             {
@@ -93,25 +100,27 @@ public class EncryptedStringAttribute : ValidationAttribute
         // numbers will be filtered out there.
         encryptionType = (EncryptionType)encryptionTypeNumber;
 
-        if (!_encryptionTypeToRequiredPiecesMap.TryGetValue(encryptionType, out var encryptionPieces))
+        if (!_encryptionTypeToRequiredPiecesMap.TryGetValue(encryptionType, out var expectedByteLengths))
         {
             // Could not find a configuration map for the given header piece. This is an invalid string
             return false;
         }
 
-        return ValidatePieces(rest, encryptionPieces);
+        return ValidatePieces(rest, expectedByteLengths);
     }
 
-    private static bool ValidatePieces(ReadOnlySpan<char> encryptionPart, int requiredPieces)
+    private static bool ValidatePieces(ReadOnlySpan<char> encryptionPart, ReadOnlySpan<int> expectedByteLengths)
     {
         var rest = encryptionPart;
 
-        while (requiredPieces != 0)
+        for (var i = 0; i < expectedByteLengths.Length; i++)
         {
-            if (requiredPieces == 1)
+            var expectedByteLength = expectedByteLengths[i];
+
+            if (i == expectedByteLengths.Length - 1)
             {
                 // Only one more part is needed so don't split and check the chunk
-                if (rest.IsEmpty || !IsValidBase64Permissive(rest))
+                if (!IsValidPiece(rest, expectedByteLength))
                 {
                     return false;
                 }
@@ -119,27 +128,42 @@ public class EncryptedStringAttribute : ValidationAttribute
                 // Make sure there isn't another split character possibly denoting another chunk
                 return rest.IndexOf('|') == -1;
             }
-            else
-            {
-                // More than one part is required so split it out
-                if (!rest.TrySplitBy('|', out var chunk, out rest))
-                {
-                    return false;
-                }
 
-                // Is the required chunk valid base 64?
-                if (chunk.IsEmpty || !IsValidBase64Permissive(chunk))
-                {
-                    return false;
-                }
+            // More than one part is required so split it out
+            if (!rest.TrySplitBy('|', out var chunk, out rest))
+            {
+                return false;
             }
 
-            // This current piece is valid so we can count down
-            requiredPieces--;
+            if (!IsValidPiece(chunk, expectedByteLength))
+            {
+                return false;
+            }
         }
 
         // No more parts are required, so check there are no extra parts
         return rest.IndexOf('|') == -1;
+    }
+
+    private static bool IsValidPiece(ReadOnlySpan<char> piece, int expectedByteLength)
+    {
+        if (piece.IsEmpty || !IsValidBase64Permissive(piece))
+        {
+            return false;
+        }
+
+        return expectedByteLength == _anyLength || DecodedByteLength(piece) == expectedByteLength;
+    }
+
+    /// <summary>
+    /// The number of bytes a valid base64 piece decodes to. E.g. "AAECAwQFBgcICQoLDA0ODw==" -> 24 / 4 * 3 - 2 = 16.
+    /// </summary>
+    private static int DecodedByteLength(ReadOnlySpan<char> piece)
+    {
+        var padCount = 0;
+        if (piece[^1] == '=') { padCount++; if (piece[^2] == '=') { padCount++; } }
+
+        return piece.Length / 4 * 3 - padCount;
     }
 
     private const string _base64Chars =

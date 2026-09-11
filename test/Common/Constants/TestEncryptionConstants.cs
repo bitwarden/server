@@ -8,9 +8,9 @@ public static class TestEncryptionConstants
     public const string AES256_CBC_B64_Encstring = "0.stub";
     public const string AES256_CBC_HMAC_EmptySuffix = "2.";
     // Intended for use as a V1 encrypted string, accepted by validators
-    public const string AES256_CBC_HMAC_Encstring = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+    public const string AES256_CBC_HMAC_Encstring = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
     public const string RSA2048_OAEPSHA1_B64_Encstring = "4.stub";
-    public const string XCHACHA20POLY1305_B64_Encstring = "7.stub";
+    public const string CoseEncrypt0B64_Encstring = "7.stub";
 
     // Public key test placeholder
     public const string PublicKey = "pk_test";
