@@ -882,7 +882,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
-        if (!organizationUserCollection.Any())
+        var organizationUsersList = organizationUserCollection.ToList();
+        if (organizationUsersList.Count == 0)
         {
             return;
         }
@@ -893,8 +894,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         // Match the stored procedure: a collection or group is only attached when it belongs to the same
         // organization as the user it is being attached to.
-        var requestedCollectionIds = organizationUserCollection.SelectMany(x => x.Collections).Select(c => c.Id).Distinct().ToList();
-        var requestedGroupIds = organizationUserCollection.SelectMany(x => x.Groups).Distinct().ToList();
+        var requestedCollectionIds = organizationUsersList.SelectMany(x => x.Collections).Select(c => c.Id).Distinct().ToList();
+        var requestedGroupIds = organizationUsersList.SelectMany(x => x.Groups).Distinct().ToList();
         var requestedCollections = requestedCollectionIds.Count == 0
             ? []
             : await dbContext.Collections.Where(c => requestedCollectionIds.Contains(c.Id)).ToListAsync();
@@ -905,8 +906,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Where(g => requestedGroupIds.Contains(g.Id))
                 .ToDictionaryAsync(g => g.Id, g => g.OrganizationId);
 
-        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
-        var collectionUsers = organizationUserCollection.SelectMany(
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
+        var collectionUsers = organizationUsersList.SelectMany(
             x => x.Collections.Where(c =>
                 collectionOrganizationIds.TryGetValue(c.Id, out var collectionOrganizationId) &&
                 collectionOrganizationId == x.OrganizationUser.OrganizationId),
@@ -919,7 +920,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 ReadOnly = collection.ReadOnly
             }).ToList();
         dbContext.CollectionUsers.AddRange(collectionUsers);
-        dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(
+        dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(
             x => x.Groups.Where(g =>
                 groupOrganizationIds.TryGetValue(g, out var groupOrganizationId) &&
                 groupOrganizationId == x.OrganizationUser.OrganizationId),
@@ -932,7 +933,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         // Bump RevisionDate on the collections that were actually attached, using the same RevisionDate as the
         // created OrganizationUsers
         var attachedCollectionIds = collectionUsers.Select(cu => cu.CollectionId).ToHashSet();
-        var revisionDate = organizationUserCollection.First().OrganizationUser.RevisionDate;
+        var revisionDate = organizationUsersList[0].OrganizationUser.RevisionDate;
         foreach (var c in requestedCollections.Where(c => attachedCollectionIds.Contains(c.Id)))
         {
             c.RevisionDate = revisionDate;
