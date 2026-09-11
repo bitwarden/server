@@ -65,7 +65,7 @@ internal static class DiscountMapper
         {
             if (discount.IsItemScoped && !attached.Contains(discountId))
             {
-                logger.LogError("Item-scoped discount {DiscountId} ({Label}) matched no line; dropped.", discountId, discount.Coupon.Name);
+                logger.LogError("Item-scoped discount {DiscountId} ({Label}) matched no line; dropped.", discountId, discount.Coupon?.Name);
             }
         }
 
@@ -96,19 +96,19 @@ internal static class DiscountMapper
 
     private readonly record struct ResolvedDiscount(Discount Discount, decimal AggregateAmount)
     {
-        internal Coupon Coupon => Discount.Source.Coupon;
+        internal Coupon? Coupon => Discount.Source?.Coupon;
 
         internal bool IsItemScoped =>
             Discount.SubscriptionItem is not null and not "" ||
-            Coupon.AppliesTo?.Products?.Count > 0;
+            Coupon?.AppliesTo?.Products?.Count > 0;
 
         internal InvoicePreviewDiscount ToPreviewDiscount(decimal amount) => new()
         {
-            Type = Coupon.PercentOff is not null ? BitwardenDiscountType.PercentOff : BitwardenDiscountType.AmountOff,
-            Value = Coupon.PercentOff ?? (Coupon.AmountOff ?? 0) / 100m,
+            Type = Coupon?.PercentOff is not null ? BitwardenDiscountType.PercentOff : BitwardenDiscountType.AmountOff,
+            Value = Coupon?.PercentOff ?? (Coupon?.AmountOff ?? 0) / 100m,
             Amount = amount,
-            Label = Coupon.Name,
-            DurationInMonths = Coupon.DurationInMonths,
+            Label = Coupon?.Name,
+            DurationInMonths = Coupon?.DurationInMonths,
         };
     }
 }
