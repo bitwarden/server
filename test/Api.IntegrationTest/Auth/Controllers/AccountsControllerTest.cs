@@ -43,6 +43,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private static readonly string _masterPasswordHash = "master_password_hash";
     private static readonly string _newMasterPasswordHash = "new_master_password_hash";
 
+    // const so it can be a default parameter value on PostResendNewDeviceOtpAsync.
+    private const string _resendDeviceIdentifier = "resend-device-identifier";
+
     private static readonly KdfRequestModel _defaultKdfRequest =
         new() { KdfType = KdfType.PBKDF2_SHA256, Iterations = 600_000 };
 
@@ -2260,7 +2263,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmail()
+    public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmailForRequestingDevice()
     {
         var user = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(user);
@@ -2269,7 +2272,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await _twoFactorEmailService.Received(1)
-            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), _resendDeviceIdentifier);
     }
 
     [Fact]
@@ -2283,7 +2287,8 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         // Silent 200 to avoid account enumeration via response shape.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await _twoFactorEmailService.DidNotReceive()
-            .SendNewDeviceVerificationEmailAsync(Arg.Is<User>(u => u.Id == user.Id));
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
     }
 
     [Fact]
@@ -2297,9 +2302,30 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(string email, string masterPasswordHash)
+    [Fact]
+    public async Task PostResendNewDeviceOtp_NoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail()
+    {
+        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(user);
+
+        // The code is scoped to the requesting device, so it cannot be issued without one.
+        var response = await PostResendNewDeviceOtpAsync(
+            _ownerEmail, _masterPasswordHash, deviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await _twoFactorEmailService.DidNotReceive()
+            .SendNewDeviceVerificationEmailAsync(
+                Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
+    }
+
+    private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(
+        string email, string masterPasswordHash, string? deviceIdentifier = _resendDeviceIdentifier)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
+        if (deviceIdentifier != null)
+        {
+            message.Headers.Add("Device-Identifier", deviceIdentifier);
+        }
         message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
         {
             Email = email,
