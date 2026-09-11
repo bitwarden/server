@@ -11,6 +11,7 @@ public class MemberOrProviderRequirement : IOrganizationRequirement
 {
     public async Task<bool> AuthorizeAsync(
         CurrentContextOrganization? organizationClaims,
-        Func<Task<bool>> isProviderUserForOrg)
+        Func<Task<bool>> isProviderUserForOrg,
+        Func<Task<bool>> isOrganizationManagedByProvider)
         => organizationClaims is not null || await isProviderUserForOrg();
 }

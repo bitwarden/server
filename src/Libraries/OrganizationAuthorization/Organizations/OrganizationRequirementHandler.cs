@@ -15,6 +15,7 @@ namespace Bit.Api.AdminConsole.Authorization;
 public class OrganizationRequirementHandler(
     IHttpContextAccessor httpContextAccessor,
     IProviderUserRepository providerUserRepository,
+    IProviderOrganizationRepository providerOrganizationRepository,
     IUserService userService)
     : AuthorizationHandler<IOrganizationRequirement>
 {
@@ -40,7 +41,9 @@ public class OrganizationRequirementHandler(
 
         Task<bool> IsProviderUserForOrg() => httpContext.IsProviderUserForOrgAsync(providerUserRepository, userId.Value, organizationId);
 
-        var authorized = await requirement.AuthorizeAsync(organizationClaims, IsProviderUserForOrg);
+        Task<bool> IsOrganizationManagedByProvider() => httpContext.IsOrganizationManagedByProviderAsync(providerOrganizationRepository, userId.Value, organizationId);
+
+        var authorized = await requirement.AuthorizeAsync(organizationClaims, IsProviderUserForOrg, IsOrganizationManagedByProvider);
 
         if (authorized)
         {

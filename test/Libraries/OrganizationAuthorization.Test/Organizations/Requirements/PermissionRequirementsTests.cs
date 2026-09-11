@@ -34,7 +34,7 @@ public class PermissionRequirementsTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.User)]
     public async Task Authorizes_Provider(IOrganizationRequirement requirement, string _, CurrentContextOrganization organization)
     {
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(true));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(true), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -43,7 +43,7 @@ public class PermissionRequirementsTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.Owner)]
     public async Task Authorizes_Owner(IOrganizationRequirement requirement, string _, CurrentContextOrganization organization)
     {
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -52,7 +52,7 @@ public class PermissionRequirementsTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.Admin)]
     public async Task Authorizes_Admin(IOrganizationRequirement requirement, string _, CurrentContextOrganization organization)
     {
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -62,7 +62,7 @@ public class PermissionRequirementsTests
     public async Task Authorizes_Custom_With_Correct_Permission(IOrganizationRequirement requirement, string permissionName, CurrentContextOrganization organization)
     {
         organization.Permissions.SetPermission(permissionName, true);
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -73,7 +73,7 @@ public class PermissionRequirementsTests
     {
         organization.Permissions.SetPermission(permissionName, true);
         organization.Permissions = organization.Permissions.Invert();
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.False(result);
     }
 
@@ -82,7 +82,7 @@ public class PermissionRequirementsTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.User)]
     public async Task DoesNotAuthorize_User(IOrganizationRequirement requirement, string _, CurrentContextOrganization organization)
     {
-        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var result = await requirement.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.False(result);
     }
 }

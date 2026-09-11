@@ -9,7 +9,8 @@ public class OrganizationBillingRequirement : IOrganizationRequirement
 {
     public async Task<bool> AuthorizeAsync(
         CurrentContextOrganization? organizationClaims,
-        Func<Task<bool>> isProviderUserForOrg)
+        Func<Task<bool>> isProviderUserForOrg,
+        Func<Task<bool>> isOrganizationManagedByProvider)
         => organizationClaims switch
         {
             { Type: OrganizationUserType.Owner } => true,

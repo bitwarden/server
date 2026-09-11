@@ -13,7 +13,8 @@ public static class OrganizationAuthorizationServiceCollectionExtensions
     /// </summary>
     /// <remarks>
     /// The host is still responsible for registering Core's services: these handlers resolve
-    /// <c>IProviderUserRepository</c> and <c>IUserService</c> from the container.
+    /// <c>IProviderUserRepository</c>, <c>IProviderOrganizationRepository</c>, and <c>IUserService</c>
+    /// from the container.
     /// </remarks>
     public static IServiceCollection AddOrganizationAuthorization(this IServiceCollection services)
     {

@@ -22,7 +22,8 @@ namespace Bit.Services.Pam.AccessConnector.Api.Authorization;
 public class ManageAccessConnectorRequirement : IOrganizationRequirement
 {
     public Task<bool> AuthorizeAsync(CurrentContextOrganization? organizationClaims,
-        Func<Task<bool>> isProviderUserForOrg)
+        Func<Task<bool>> isProviderUserForOrg,
+        Func<Task<bool>> isOrganizationManagedByProvider)
     {
         var authorized = organizationClaims is
         { Type: OrganizationUserType.Owner } or { Type: OrganizationUserType.Admin };

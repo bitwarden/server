@@ -62,6 +62,32 @@ public static class HttpContextExtensions
                 providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed));
 
         /// <summary>
+        /// Returns true if the specified organization is managed by a provider, otherwise false.
+        /// Scoped to the organizations the user is a member of.
+        /// </summary>
+        /// <remarks>
+        /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+        /// </remarks>
+        public async Task<bool> IsOrganizationManagedByProviderAsync(IProviderOrganizationRepository providerOrganizationRepository,
+            Guid userId,
+            Guid organizationId)
+        {
+            var organizations = await httpContext.GetProviderOrganizationsAsync(providerOrganizationRepository, userId);
+            return organizations.Any(o => o.OrganizationId == organizationId);
+        }
+
+        /// <summary>
+        /// Returns the ProviderOrganizations for a user. These are the organizations the user belongs to that a Provider manages, if any.
+        /// </summary>
+        /// <remarks>
+        /// This data is fetched from the database and cached as a HttpContext Feature for the lifetime of the request.
+        /// </remarks>
+        private async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetProviderOrganizationsAsync(IProviderOrganizationRepository providerOrganizationRepository,
+            Guid userId)
+            => await httpContext.WithFeaturesCacheAsync(() =>
+                providerOrganizationRepository.GetManyByUserAsync(userId));
+
+        /// <summary>
         /// Parses the {orgId} or {organizationId} route parameter into a Guid, or throws if neither are present or are not valid guids.
         /// </summary>
         /// <returns></returns>

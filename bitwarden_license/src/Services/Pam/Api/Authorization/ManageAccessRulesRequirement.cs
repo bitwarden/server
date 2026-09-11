@@ -18,7 +18,8 @@ namespace Bit.Services.Pam.Api.Authorization;
 public class ManageAccessRulesRequirement : IOrganizationRequirement
 {
     public Task<bool> AuthorizeAsync(CurrentContextOrganization? organizationClaims,
-        Func<Task<bool>> isProviderUserForOrg)
+        Func<Task<bool>> isProviderUserForOrg,
+        Func<Task<bool>> isOrganizationManagedByProvider)
     {
         var authorized = organizationClaims is
         { Type: OrganizationUserType.Owner }

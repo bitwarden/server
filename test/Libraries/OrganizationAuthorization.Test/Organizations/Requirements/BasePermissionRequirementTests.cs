@@ -14,7 +14,7 @@ public class BasePermissionRequirementTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.Owner)]
     public async Task Authorizes_Owners(CurrentContextOrganization organizationClaims)
     {
-        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false));
+        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -22,7 +22,7 @@ public class BasePermissionRequirementTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.Admin)]
     public async Task Authorizes_Admins(CurrentContextOrganization organizationClaims)
     {
-        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false));
+        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -30,7 +30,7 @@ public class BasePermissionRequirementTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.User)]
     public async Task Authorizes_Providers(CurrentContextOrganization organizationClaims)
     {
-        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(true));
+        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(true), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -39,7 +39,7 @@ public class BasePermissionRequirementTests
     public async Task Authorizes_CustomPermission(CurrentContextOrganization organizationClaims)
     {
         organizationClaims.Permissions.ManageGroups = true;
-        var result = await new TestCustomPermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false));
+        var result = await new TestCustomPermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.True(result);
     }
 
@@ -47,7 +47,7 @@ public class BasePermissionRequirementTests
     [CurrentContextOrganizationCustomize(Type = OrganizationUserType.User)]
     public async Task DoesNotAuthorize_Users(CurrentContextOrganization organizationClaims)
     {
-        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false));
+        var result = await new PermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.False(result);
     }
 
@@ -57,7 +57,7 @@ public class BasePermissionRequirementTests
     {
         organizationClaims.Permissions.ManageGroups = true;
         organizationClaims.Permissions = organizationClaims.Permissions.Invert();
-        var result = await new TestCustomPermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false));
+        var result = await new TestCustomPermissionRequirement().AuthorizeAsync(organizationClaims, () => Task.FromResult(false), () => Task.FromResult(false));
         Assert.False(result);
     }
 

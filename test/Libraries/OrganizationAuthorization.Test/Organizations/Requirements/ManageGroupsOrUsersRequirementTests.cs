@@ -23,7 +23,7 @@ public class ManageGroupsOrUsersRequirementTests
     {
         organization.Type = type;
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
 
         Assert.True(actual);
     }
@@ -42,7 +42,7 @@ public class ManageGroupsOrUsersRequirementTests
         organization.Type = type;
         organization.Permissions = new Permissions { ManageUsers = canManageUsers, ManageGroups = canManageGroups };
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
 
         Assert.True(actual);
     }
@@ -54,7 +54,7 @@ public class ManageGroupsOrUsersRequirementTests
         CurrentContextOrganization organization,
         SutProvider<ManageGroupsOrUsersRequirement> sutProvider)
     {
-        var actual = await sutProvider.Sut.AuthorizeAsync(organization, IsProviderUserForOrg);
+        var actual = await sutProvider.Sut.AuthorizeAsync(organization, IsProviderUserForOrg, () => Task.FromResult(false));
 
         Assert.True(actual);
         return;
@@ -74,7 +74,7 @@ public class ManageGroupsOrUsersRequirementTests
         organization.Type = type;
         organization.Permissions = new Permissions { ManageUsers = false, ManageGroups = false }; // When Type is User, the canManage permissions don't matter
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(organization, IsNotProviderUserForOrg);
+        var actual = await sutProvider.Sut.AuthorizeAsync(organization, IsNotProviderUserForOrg, () => Task.FromResult(false));
 
         Assert.False(actual);
         return;
