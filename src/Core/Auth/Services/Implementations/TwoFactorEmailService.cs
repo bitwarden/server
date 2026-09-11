@@ -10,24 +10,42 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Core.Auth.Enums;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Auth.Services;
+
+// TODO: PM-43465 - Delete this class once every supported client version sends the Device-Identifier header
+// on the new device verification resend request.
+/// <summary>
+/// Names the cache holding which device each new device verification code was issued to.
+/// </summary>
+public static class NewDeviceVerificationCacheConstants
+{
+    public const string CacheName = "NewDeviceVerification";
+}
 
 public class TwoFactorEmailService : ITwoFactorEmailService
 {
     private readonly ICurrentContext _currentContext;
     private readonly UserManager<User> _userManager;
     private readonly IMailService _mailService;
+    // TODO: PM-43465 - Delete this field and its constructor parameter once every supported client version
+    // sends the Device-Identifier header on the new device verification resend request. Nothing else in this
+    // class uses it.
+    private readonly IFusionCache _pendingDeviceCache;
 
     public TwoFactorEmailService(
         ICurrentContext currentContext,
         IMailService mailService,
-        UserManager<User> userManager
+        UserManager<User> userManager,
+        [FromKeyedServices(NewDeviceVerificationCacheConstants.CacheName)] IFusionCache pendingDeviceCache
     )
     {
         _currentContext = currentContext;
         _userManager = userManager;
         _mailService = mailService;
+        _pendingDeviceCache = pendingDeviceCache;
     }
 
     /// <summary>
@@ -50,23 +68,55 @@ public class TwoFactorEmailService : ITwoFactorEmailService
         await VerifyAndSendTwoFactorEmailAsync(user, TwoFactorEmailPurpose.Setup);
     }
 
-    /// <summary>
-    /// Sends a new device verification email to the user with an OTP token
-    /// </summary>
-    /// <param name="user">The user to whom the email should be sent</param>
-    /// <exception cref="ArgumentNullException">Thrown if the user is not provided</exception>
-    public async Task SendNewDeviceVerificationEmailAsync(User user)
+    /// <inheritdoc />
+    public async Task SendNewDeviceVerificationEmailAsync(User user, string deviceIdentifier)
     {
         ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
 
         var token = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            "otp:" + user.Email);
+            NewDeviceOtpPurpose(deviceIdentifier));
+
+        // TODO: PM-43465 - Delete this cache write once every supported client version sends the
+        // Device-Identifier header on the new device verification resend request.
+        await _pendingDeviceCache.SetAsync(user.Id.ToString(), deviceIdentifier);
 
         var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
 
         await _mailService.SendTwoFactorEmailAsync(
             user.Email, user.Email, token, _currentContext.IpAddress, deviceType, TwoFactorEmailPurpose.NewDeviceVerification);
+    }
+
+    // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
+    // header on the new device verification resend request.
+    /// <inheritdoc />
+    public async Task<string> GetPendingNewDeviceVerificationDeviceIdentifierAsync(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return await _pendingDeviceCache.GetOrDefaultAsync<string>(user.Id.ToString());
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> VerifyNewDeviceVerificationOtpAsync(User user, string deviceIdentifier, string otp)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
+
+        return await _userManager.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+            NewDeviceOtpPurpose(deviceIdentifier), otp);
+    }
+
+    /// <summary>
+    /// Builds the token purpose that scopes a new device verification OTP to a single device. The purpose
+    /// forms part of the generated token's identity, so a code can only be redeemed by the device identifier
+    /// it was issued for. The prefix also gives these codes their own namespace, keeping them separate from
+    /// the general-purpose account OTP used for secret verification.
+    /// </summary>
+    private static string NewDeviceOtpPurpose(string deviceIdentifier)
+    {
+        return "new_device_otp:" + deviceIdentifier;
     }
 
     /// <summary>
