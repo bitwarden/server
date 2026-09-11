@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -21,19 +22,22 @@ public class SecretVersionsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IEventService _eventService;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        IEventService eventService)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
+        _eventService = eventService;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -43,6 +47,16 @@ public class SecretVersionsController : Controller
         if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
         {
             throw new NotFoundException();
+        }
+
+        // For service accounts and organization API, skip user-level access checks
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
+            _currentContext.IdentityClientType == IdentityClientType.Organization)
+        {
+            // Already verified Secrets Manager access above
+            var versionList = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
+            var responseList = versionList.Select(v => new SecretVersionResponseModel(v)).ToList();
+            return new ListResponseModel<SecretVersionResponseModel>(responseList);
         }
 
         var userId = _userService.GetProperUserId(User);
@@ -61,7 +75,7 @@ public class SecretVersionsController : Controller
         }
 
         var versions = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-        var responses = versions.Select(v => new SecretVersionResponseModel(v));
+        var responses = versions.Select(v => new SecretVersionResponseModel(v)).ToList();
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
     }
@@ -170,6 +184,39 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        // Store the current value before restoration
+        var currentValue = secret.Value;
+        var currentValueRevisionDate = secret.RevisionDate;
+
+        // For service accounts and organization API, skip user-level access checks
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
+        {
+            // Save current value as a version before restoring
+            if (currentValue != version.Value)
+            {
+                var editorUserId = _userService.GetProperUserId(User);
+                if (editorUserId.HasValue)
+                {
+                    var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
+                    {
+                        SecretId = secretId,
+                        Value = currentValue!,
+                        VersionDate = currentValueRevisionDate,
+                        EditorServiceAccountId = editorUserId.Value
+                    };
+
+                    await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
+                }
+            }
+
+            // Already verified Secrets Manager access above
+            secret.Value = version.Value;
+            secret.RevisionDate = DateTime.UtcNow;
+            var updatedSec = await _secretRepository.UpdateAsync(secret);
+            await LogSecretEventAsync(updatedSec, EventType.Secret_Edited);
+            return new SecretResponseModel(updatedSec, true, true);
+        }
+
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -222,6 +269,7 @@ public class SecretVersionsController : Controller
         secret.RevisionDate = DateTime.UtcNow;
 
         var updatedSecret = await _secretRepository.UpdateAsync(secret);
+        await LogSecretEventAsync(updatedSecret, EventType.Secret_Edited);
 
         return new SecretResponseModel(updatedSecret, true, true);
     }
@@ -276,4 +324,22 @@ public class SecretVersionsController : Controller
 
         return Ok();
     }
+
+    private async Task LogSecretsEventAsync(IEnumerable<Secret> secrets, EventType eventType)
+    {
+        var userId = _userService.GetProperUserId(User)!.Value;
+
+        switch (_currentContext.IdentityClientType)
+        {
+            case IdentityClientType.ServiceAccount:
+                await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, eventType);
+                break;
+            case IdentityClientType.User:
+                await _eventService.LogUserSecretsEventAsync(userId, secrets, eventType);
+                break;
+        }
+    }
+
+    private Task LogSecretEventAsync(Secret secret, EventType eventType) =>
+        LogSecretsEventAsync(new[] { secret }, eventType);
 }

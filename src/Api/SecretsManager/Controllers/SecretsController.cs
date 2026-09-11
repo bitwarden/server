@@ -177,6 +177,9 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
+        var originalValue = secret.Value;
+        var valueRevisionDate = secret.RevisionDate;
+
         var updatedSecret = updateRequest.ToSecret(secret);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -200,8 +203,6 @@ public class SecretsController : Controller
         // Create a version record if the value changed
         if (updateRequest.ValueChanged)
         {
-            // Store the old value before updating
-            var oldValue = secret.Value;
             var userId = _userService.GetProperUserId(User)!.Value;
             Guid? editorServiceAccountId = null;
             Guid? editorOrganizationUserId = null;
@@ -217,21 +218,24 @@ public class SecretsController : Controller
                 {
                     editorOrganizationUserId = orgUser.Id;
                 }
-                else
+            }
+            else if (_currentContext.IdentityClientType == IdentityClientType.Organization)
+            {
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
+                if (orgUser != null)
                 {
-                    throw new NotFoundException();
+                    editorOrganizationUserId = orgUser.Id;
                 }
             }
 
             var secretVersion = new SecretVersion
             {
                 SecretId = id,
-                Value = oldValue,
-                VersionDate = DateTime.UtcNow,
+                Value = originalValue,
+                VersionDate = valueRevisionDate,
                 EditorServiceAccountId = editorServiceAccountId,
                 EditorOrganizationUserId = editorOrganizationUserId
             };
-
             await _secretVersionRepository.CreateAsync(secretVersion);
         }
 
