@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Pam.Models;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
