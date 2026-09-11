@@ -158,20 +158,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // Scope access rows to the organization, matching CollectionGroup_ReadByOrganizationId and
             // CollectionUser_ReadByOrganizationId. Without this a row pointing at another organization's group or
             // member is reported as access on this organization's collection.
-            var groups =
-                from c in collections
-                join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
+            // Queried against the DbSets rather than joined onto the materialized collection list, so the
+            // organization filter runs in SQL. Joining onto the list binds to Enumerable.Join, which reads both
+            // access tables into memory, and the deferred grouping then repeats that read for every collection.
+            var groups = (await (
+                from cg in dbContext.CollectionGroups
                 join grp in dbContext.Groups on cg.GroupId equals grp.Id
                 where grp.OrganizationId == organizationId
-                group cg by cg.CollectionId into g
-                select g;
-            var users =
-                from c in collections
-                join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
+                select cg).ToListAsync()).GroupBy(cg => cg.CollectionId);
+            var users = (await (
+                from cu in dbContext.CollectionUsers
                 join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
                 where ou.OrganizationId == organizationId
-                group cu by cu.CollectionId into u
-                select u;
+                select cu).ToListAsync()).GroupBy(cu => cu.CollectionId);
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
