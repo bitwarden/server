@@ -84,6 +84,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.TryAddScoped<IAccessMailNotifier, AccessMailNotifier>();
+        services.TryAddScoped<IApproverMailNotifier, ApproverMailNotifier>();
 
         // Registered explicitly, unlike a parameterless-constructor filter, since it resolves services of its own.
         services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
