@@ -23,11 +23,11 @@ public class LeaseRevokedMailNotifier : ILeaseRevokedMailNotifier
         IFeatureService featureService,
         ILogger<LeaseRevokedMailNotifier> logger)
     {
-        _accessMailNotifier = accessMailNotifier;
-        _organizationRepository = organizationRepository;
-        _globalSettings = globalSettings;
-        _featureService = featureService;
-        _logger = logger;
+        _accessMailNotifier = accessMailNotifier ?? throw new ArgumentNullException(nameof(accessMailNotifier));
+        _organizationRepository = organizationRepository ?? throw new ArgumentNullException(nameof(organizationRepository));
+        _globalSettings = globalSettings ?? throw new ArgumentNullException(nameof(globalSettings));
+        _featureService = featureService ?? throw new ArgumentNullException(nameof(featureService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task NotifyLeaseEndedAsync(AccessLease lease, AccessLeaseAction endAction)
