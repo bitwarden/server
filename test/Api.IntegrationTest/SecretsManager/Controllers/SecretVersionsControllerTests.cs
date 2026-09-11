@@ -84,7 +84,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -104,7 +104,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -150,7 +150,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -176,7 +176,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -206,7 +206,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -234,7 +234,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -276,7 +276,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         // should be pruned as the later ones are written.
         var baseDate = DateTime.UtcNow.AddDays(-20);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -314,7 +314,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         await _loginHelper.LoginAsync(_email);
 
         // A secret stored before versioning existed has no version rows at all.
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -359,7 +359,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -386,7 +386,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithoutVersionHistoryAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,

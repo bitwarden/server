@@ -19,11 +19,15 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
     /// <summary>
-    /// Creates a secret, and when <paramref name="initialVersion"/> is supplied writes it in the
-    /// same transaction so a secret is never persisted without its version snapshot.
+    /// Creates a secret together with its initial version snapshot, in the same transaction, so a
+    /// secret created here is never persisted without version history.
     /// </summary>
-    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null,
-        SecretVersion initialVersion = null);
+    /// <remarks>
+    /// <see cref="ImportAsync"/> is the one create path that writes no version, which is what
+    /// <see cref="UpdateAsync"/>'s backfill exists to recover from.
+    /// </remarks>
+    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates,
+        SecretVersion initialVersion);
 
     /// <summary>
     /// Updates a secret, and when <paramref name="newVersion"/> is supplied writes it in the same

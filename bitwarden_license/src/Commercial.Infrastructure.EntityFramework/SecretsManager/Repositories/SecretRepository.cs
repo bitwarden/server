@@ -160,8 +160,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
-        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null,
-        Core.SecretsManager.Entities.SecretVersion? initialVersion = null)
+        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates,
+        Core.SecretsManager.Entities.SecretVersion initialVersion)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -185,12 +185,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
 
-        if (initialVersion != null)
-        {
-            initialVersion.SecretId = entity.Id;
-            await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, initialVersion);
-            await dbContext.SaveChangesAsync();
-        }
+        initialVersion.SecretId = entity.Id;
+
+        // Shares the update path's writer so the snapshot gets an id - SecretVersion.Id is
+        // ValueGeneratedNever, so an unassigned id collides with the last secret created.
+        await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, initialVersion);
+        await dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
         return secret;

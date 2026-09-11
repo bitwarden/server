@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Seeder.Extensions;
 using Bit.Seeder.Factories;
@@ -49,7 +50,14 @@ public class OrganizationSecretScene(
             request.Note,
             request.ProjectIds);
 
-        var created = await secretRepository.CreateAsync(secret);
+        // Seeded secrets start with the same initial version the API writes, so seeded data is
+        // not a shape that only pre-versioning secrets have. No editor is attributed because the
+        // seeder acts as nobody.
+        var created = await secretRepository.CreateAsync(secret, null, new SecretVersion
+        {
+            Value = secret.Value ?? string.Empty,
+            VersionDate = secret.RevisionDate
+        });
 
         return new SceneResult<Result>(
             result: new Result

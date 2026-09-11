@@ -29,7 +29,6 @@ public class SecretsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
-    private readonly IBuildSecretVersionCommand _buildSecretVersionCommand;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
@@ -44,7 +43,6 @@ public class SecretsController : Controller
         ICurrentContext currentContext,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
-        IBuildSecretVersionCommand buildSecretVersionCommand,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
@@ -58,7 +56,6 @@ public class SecretsController : Controller
         _currentContext = currentContext;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
-        _buildSecretVersionCommand = buildSecretVersionCommand;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
@@ -113,10 +110,7 @@ public class SecretsController : Controller
             }
         }
 
-        var userId = _userService.GetProperUserId(User)!.Value;
-        var initialVersion = await _buildSecretVersionCommand.BuildAsync(secret, userId);
-
-        var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates, initialVersion);
+        var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
 
         await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
@@ -196,14 +190,8 @@ public class SecretsController : Controller
             }
         }
 
-        SecretVersion newVersion = null;
-        if (updateRequest.ValueChanged)
-        {
-            var versionEditorId = _userService.GetProperUserId(User)!.Value;
-            newVersion = await _buildSecretVersionCommand.BuildAsync(updatedSecret, versionEditorId);
-        }
-
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates, newVersion);
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates,
+            updateRequest.ValueChanged);
 
         await LogSecretEventAsync(secret, EventType.Secret_Edited);
 
