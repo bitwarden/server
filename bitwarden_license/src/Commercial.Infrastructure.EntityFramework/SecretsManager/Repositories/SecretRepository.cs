@@ -160,7 +160,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
-        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates,
+        Core.SecretsManager.Entities.SecretVersion initialVersion)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -183,12 +184,19 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.AddAsync(entity);
         await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
+
+        initialVersion.SecretId = entity.Id;
+
+        await SecretVersionWriter.AddAsync(dbContext, Mapper, initialVersion);
+        await dbContext.SaveChangesAsync();
+
         await transaction.CommitAsync();
         return secret;
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret,
-        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null,
+        Core.SecretsManager.Entities.SecretVersion? newVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -201,6 +209,10 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             .Include(s => s.GroupAccessPolicies)
             .Include(s => s.ServiceAccountAccessPolicies)
             .FirstAsync(s => s.Id == secret.Id);
+
+        // Captured before SetValues overwrites the tracked entity with the incoming values.
+        var previousValue = entity.Value;
+        var previousRevisionDate = entity.RevisionDate;
 
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
@@ -216,6 +228,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         await dbContext.SaveChangesAsync();
+
+        if (newVersion != null)
+        {
+            newVersion.SecretId = entity.Id;
+
+            // Saved before pruning so AddWithPruningAsync counts it against the retention limit.
+            if (await SecretVersionWriter.TryBackfillPreviousVersionAsync(
+                    dbContext, Mapper, entity.Id, previousValue, previousRevisionDate))
+            {
+                await dbContext.SaveChangesAsync();
+            }
+
+            await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, newVersion);
+            await dbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
         return Mapper.Map<Core.SecretsManager.Entities.Secret>(entity);
     }
