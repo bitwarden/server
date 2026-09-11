@@ -24,7 +24,7 @@ public class MemberRequirementTests
     {
         organization.Type = type;
 
-        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false));
+        var actual = await sutProvider.Sut.AuthorizeAsync(organization, () => Task.FromResult(false), () => Task.FromResult(false));
 
         Assert.True(actual);
     }
@@ -33,7 +33,7 @@ public class MemberRequirementTests
     public async Task AuthorizeAsync_WhenUserIsNotOrganizationMember_ThenRequestShouldBeDenied(
         SutProvider<MemberRequirement> sutProvider)
     {
-        var actual = await sutProvider.Sut.AuthorizeAsync(null, () => Task.FromResult(false));
+        var actual = await sutProvider.Sut.AuthorizeAsync(null, () => Task.FromResult(false), () => Task.FromResult(false));
 
         Assert.False(actual);
     }
@@ -42,7 +42,7 @@ public class MemberRequirementTests
     public async Task AuthorizeAsync_WhenUserIsProviderButNotMember_ThenRequestShouldBeDenied(
         SutProvider<MemberRequirement> sutProvider)
     {
-        var actual = await sutProvider.Sut.AuthorizeAsync(null, () => Task.FromResult(true));
+        var actual = await sutProvider.Sut.AuthorizeAsync(null, () => Task.FromResult(true), () => Task.FromResult(false));
 
         Assert.False(actual);
     }

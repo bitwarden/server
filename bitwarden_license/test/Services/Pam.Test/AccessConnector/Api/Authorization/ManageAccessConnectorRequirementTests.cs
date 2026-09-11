@@ -37,7 +37,7 @@ public class ManageAccessConnectorRequirementTests
     [InlineData(OrganizationUserType.Admin)]
     public async Task AuthorizeAsync_AuthorizesOwnersAndAdmins(OrganizationUserType type)
     {
-        Assert.True(await _sut.AuthorizeAsync(Member(type), () => IsProviderUserForOrg()));
+        Assert.True(await _sut.AuthorizeAsync(Member(type), () => IsProviderUserForOrg(), () => Task.FromResult(false)));
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class ManageAccessConnectorRequirementTests
         // connectors that rotate it.
         var claims = Member(OrganizationUserType.Custom, new Permissions { ManageAccessRules = true });
 
-        Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg()));
+        Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg(), () => Task.FromResult(false)));
     }
 
     [Fact]
@@ -70,13 +70,13 @@ public class ManageAccessConnectorRequirementTests
             ManageAccessRules = true
         });
 
-        Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg()));
+        Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg(), () => Task.FromResult(false)));
     }
 
     [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizePlainUser()
     {
-        Assert.False(await _sut.AuthorizeAsync(Member(OrganizationUserType.User), () => IsProviderUserForOrg()));
+        Assert.False(await _sut.AuthorizeAsync(Member(OrganizationUserType.User), () => IsProviderUserForOrg(), () => Task.FromResult(false)));
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class ManageAccessConnectorRequirementTests
     {
         // A provider user is not a member, so they arrive with no organization claims. BasePermissionRequirement's
         // final arm would authorize them here; this requirement must not.
-        Assert.False(await _sut.AuthorizeAsync(null, () => IsProviderUserForOrg()));
+        Assert.False(await _sut.AuthorizeAsync(null, () => IsProviderUserForOrg(), () => Task.FromResult(false)));
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class ManageAccessConnectorRequirementTests
                      Member(OrganizationUserType.Custom, new Permissions { ManageAccessRules = true })
                  })
         {
-            await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg());
+            await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg(), () => Task.FromResult(false));
         }
 
         Assert.False(_providerConsulted);
