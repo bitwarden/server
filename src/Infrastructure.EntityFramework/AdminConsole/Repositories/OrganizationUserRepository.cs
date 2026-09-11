@@ -882,7 +882,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task CreateManyAsync(IEnumerable<CreateOrganizationUser> organizationUserCollection)
     {
-        if (!organizationUserCollection.Any())
+        var organizationUsersList = organizationUserCollection.ToList();
+        if (organizationUsersList.Count == 0)
         {
             return;
         }
@@ -891,40 +892,49 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await using var dbContext = GetDatabaseContext(scope);
 
-        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
-        dbContext.CollectionUsers.AddRange(organizationUserCollection.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
-        {
-            CollectionId = collection.Id,
-            HidePasswords = collection.HidePasswords,
-            OrganizationUserId = user.OrganizationUser.Id,
-            Manage = collection.Manage,
-            ReadOnly = collection.ReadOnly
-        }));
-        dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(x => x.Groups, (user, group) => new GroupUser
-        {
-            GroupId = group,
-            OrganizationUserId = user.OrganizationUser.Id
-        }));
+        var requestedCollectionIds = organizationUsersList.SelectMany(x => x.Collections).Select(c => c.Id).Distinct().ToList();
+        var requestedGroupIds = organizationUsersList.SelectMany(x => x.Groups).Distinct().ToList();
+        var requestedCollections = requestedCollectionIds.Count == 0
+            ? []
+            : await dbContext.Collections.Where(c => requestedCollectionIds.Contains(c.Id)).ToListAsync();
+        var collectionOrganizationIds = requestedCollections.ToDictionary(c => c.Id, c => c.OrganizationId);
+        var groupOrganizationIds = requestedGroupIds.Count == 0
+            ? []
+            : await dbContext.Groups
+                .Where(g => requestedGroupIds.Contains(g.Id))
+                .ToDictionaryAsync(g => g.Id, g => g.OrganizationId);
 
-        // Bump RevisionDate on all affected collections
-        var affectedCollectionIds = organizationUserCollection
-            .SelectMany(x => x.Collections)
-            .Select(c => c.Id)
-            .Distinct()
-            .ToList();
-        if (affectedCollectionIds.Count > 0)
-        {
-            var organizationId = organizationUserCollection.First().OrganizationUser.OrganizationId;
-            var affectedCollections = await dbContext.Collections
-                .Where(c => c.OrganizationId == organizationId
-                    && affectedCollectionIds.Contains(c.Id))
-                .ToListAsync();
-            // Use the same RevisionDate as the created OrganizationUsers
-            var revisionDate = organizationUserCollection.First().OrganizationUser.RevisionDate;
-            foreach (var c in affectedCollections)
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUsersList.Select(x => x.OrganizationUser)));
+        var collectionUsers = organizationUsersList.SelectMany(
+            x => x.Collections.Where(c =>
+                collectionOrganizationIds.TryGetValue(c.Id, out var collectionOrganizationId) &&
+                collectionOrganizationId == x.OrganizationUser.OrganizationId),
+            (user, collection) => new CollectionUser
             {
-                c.RevisionDate = revisionDate;
-            }
+                CollectionId = collection.Id,
+                HidePasswords = collection.HidePasswords,
+                OrganizationUserId = user.OrganizationUser.Id,
+                Manage = collection.Manage,
+                ReadOnly = collection.ReadOnly
+            }).ToList();
+        dbContext.CollectionUsers.AddRange(collectionUsers);
+        dbContext.GroupUsers.AddRange(organizationUsersList.SelectMany(
+            x => x.Groups.Where(g =>
+                groupOrganizationIds.TryGetValue(g, out var groupOrganizationId) &&
+                groupOrganizationId == x.OrganizationUser.OrganizationId),
+            (user, group) => new GroupUser
+            {
+                GroupId = group,
+                OrganizationUserId = user.OrganizationUser.Id
+            }));
+
+        // Bump RevisionDate on the collections that were actually attached, using the same RevisionDate as the
+        // created OrganizationUsers
+        var attachedCollectionIds = collectionUsers.Select(cu => cu.CollectionId).ToHashSet();
+        var revisionDate = organizationUsersList[0].OrganizationUser.RevisionDate;
+        foreach (var c in requestedCollections.Where(c => attachedCollectionIds.Contains(c.Id)))
+        {
+            c.RevisionDate = revisionDate;
         }
 
         await dbContext.SaveChangesAsync();

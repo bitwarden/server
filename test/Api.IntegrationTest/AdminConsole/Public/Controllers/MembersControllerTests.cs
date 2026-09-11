@@ -498,4 +498,37 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.Equal(_organization.Id, orgUser.OrganizationId);
     }
+
+    [Fact]
+    public async Task Post_CollectionFromAnotherOrganization_ReturnsBadRequestAndWritesNothing()
+    {
+        // Create a different organization that owns a collection
+        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (otherOrganization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+        var otherCollection = await OrganizationTestHelpers.CreateCollectionAsync(_factory, otherOrganization.Id, "other org collection");
+
+        // Re-authenticate with the original organization
+        await _loginHelper.LoginWithOrganizationApiKeyAsync(_organization.Id);
+
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var request = new MemberCreateRequestModel
+        {
+            Email = email,
+            Type = OrganizationUserType.User,
+            Collections = [new AssociationWithPermissionsRequestModel { Id = otherCollection.Id, Manage = true }],
+            Groups = []
+        };
+
+        var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var collectionUsers = await _factory.GetService<ICollectionRepository>().GetManyUsersByIdAsync(otherCollection.Id);
+        Assert.Empty(collectionUsers);
+
+        var organizationUsers = await _factory.GetService<IOrganizationUserRepository>().GetManyByOrganizationAsync(_organization.Id, null);
+        Assert.DoesNotContain(organizationUsers, ou => ou.Email == email);
+    }
 }
