@@ -685,6 +685,125 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_WithNewAuthorizationEnabled_Success(User actingUser,
+        List<Collection> collections, Organization organization, SutProvider<CollectionsController> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        var userId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var model = BulkAccessModel(collections, userId, groupId);
+        IReadOnlySet<Guid> allCollectionIds = collections.Select(c => c.Id).ToHashSet();
+
+        ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(allCollectionIds);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(allCollectionIds);
+
+        await sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model);
+
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received(1)
+            .AddAccessAsync(
+                Arg.Is<ICollection<Collection>>(c => c.SequenceEqual(collections)),
+                Arg.Is<ICollection<CollectionAccessSelection>>(u => u.All(c => c.Id == userId && c.Manage)),
+                Arg.Is<ICollection<CollectionAccessSelection>>(g => g.All(c => c.Id == groupId && c.ReadOnly)));
+        await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<IEnumerable<Collection>>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_WithNewAuthorizationEnabled_UserAccessUnauthorizedForOneCollection_Throws(
+        User actingUser, List<Collection> collections, Organization organization,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        var model = BulkAccessModel(collections, Guid.NewGuid(), Guid.NewGuid());
+        IReadOnlySet<Guid> allCollectionIds = collections.Select(c => c.Id).ToHashSet();
+        IReadOnlySet<Guid> authorizedForUserAccess = collections.Skip(1).Select(c => c.Id).ToHashSet();
+
+        ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(authorizedForUserAccess);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(allCollectionIds);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
+            .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_WithNewAuthorizationEnabled_GroupAccessUnauthorizedForOneCollection_Throws(
+        User actingUser, List<Collection> collections, Organization organization,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        var model = BulkAccessModel(collections, Guid.NewGuid(), Guid.NewGuid());
+        IReadOnlySet<Guid> allCollectionIds = collections.Select(c => c.Id).ToHashSet();
+        IReadOnlySet<Guid> authorizedForGroupAccess = collections.Skip(1).Select(c => c.Id).ToHashSet();
+
+        ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyUserAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(allCollectionIds);
+        sutProvider.GetDependency<ICollectionAuthorizationService>()
+            .AuthorizeModifyGroupAccessManyAsync(organization.Id, Arg.Any<IReadOnlyCollection<Guid>>())
+            .Returns(authorizedForGroupAccess);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
+            .AddAccessAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostBulkCollectionAccess_WithNewAuthorizationEnabled_NoCollections_ThrowsNotFound(
+        User actingUser, Organization organization, SutProvider<CollectionsController> sutProvider)
+    {
+        var collections = new List<Collection>();
+        var model = BulkAccessModel(collections, Guid.NewGuid(), Guid.NewGuid());
+
+        ArrangeBulkCollectionAccess(sutProvider, actingUser, collections, model, newAuthorizationEnabled: true);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.PostBulkCollectionAccess(organization.Id, model));
+        await sutProvider.GetDependency<ICollectionAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeModifyUserAccessManyAsync(default, default);
+        await sutProvider.GetDependency<ICollectionAuthorizationService>().DidNotReceiveWithAnyArgs()
+            .AuthorizeModifyGroupAccessManyAsync(default, default);
+        await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
+            .AddAccessAsync(default, default, default);
+    }
+
+    private static BulkCollectionAccessRequestModel BulkAccessModel(IEnumerable<Collection> collections,
+        Guid userId, Guid groupId) =>
+        new()
+        {
+            CollectionIds = collections.Select(c => c.Id).ToList(),
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
+            Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
+        };
+
+    private static void ArrangeBulkCollectionAccess(SutProvider<CollectionsController> sutProvider, User actingUser,
+        List<Collection> collections, BulkCollectionAccessRequestModel model, bool newAuthorizationEnabled)
+    {
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(model.CollectionIds)
+            .Returns(collections);
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(actingUser.Id);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AuthorizationServices)
+            .Returns(newAuthorizationEnabled);
+    }
+
+    [Theory, BitAutoData]
     public async Task Put_With_NonNullName_DoesNotPreserveExistingName(Collection existingCollection, UpdateCollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
