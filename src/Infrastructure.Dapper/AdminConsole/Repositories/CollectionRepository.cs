@@ -154,16 +154,27 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships)
+    public async Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships, bool includeDefaultCollections = false)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
                 $"[{Schema}].[Collection_ReadSharedCollectionsByOrganizationIdWithPermissions]",
-                new { OrganizationId = organizationId, UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
+                new
+                {
+                    OrganizationId = organizationId,
+                    UserId = userId,
+                    IncludeAccessRelationships = includeAccessRelationships,
+                    IncludeDefaultCollections = includeDefaultCollections
+                },
                 commandType: CommandType.StoredProcedure);
 
             var collections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
+
+            if (includeDefaultCollections)
+            {
+                collections.AddRange(await results.ReadAsync<CollectionAdminDetails>());
+            }
 
             if (!includeAccessRelationships)
             {

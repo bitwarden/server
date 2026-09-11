@@ -312,7 +312,8 @@ public class CollectionRepositoryTests
             }
         });
 
-        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, user.Id, true);
+        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
+            organization.Id, user.Id, true, includeDefaultCollections: false);
 
         Assert.NotNull(collections);
 
@@ -352,6 +353,166 @@ public class CollectionRepositoryTests
             Assert.False(c3.HidePasswords);
             Assert.False(c3.Unmanaged);
         });
+    }
+
+    /// <summary>
+    /// Test to ensure default user collections are returned, with their owner, when explicitly requested
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManySharedByOrganizationIdWithPermissionsAsync_IncludeDefaultCollections_ReturnsDefaultCollectionWithOwner(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var sharedCollection = new Collection { Name = "Shared Collection", OrganizationId = organization.Id, };
+
+        await collectionRepository.CreateAsync(sharedCollection, null, users: new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+            }
+        });
+
+        var defaultCollection = new Collection
+        {
+            Name = "My Items Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        await collectionRepository.CreateAsync(defaultCollection, null, users: new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+            }
+        });
+
+        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
+            organization.Id, user.Id, true, includeDefaultCollections: true);
+
+        Assert.NotNull(collections);
+        Assert.Equal(2, collections.Count);
+
+        var actualDefault = Assert.Single(collections, c => c.Id == defaultCollection.Id);
+
+        // Guards the EF projection: without Type in the projection and GroupBy key this reports as
+        // SharedCollection on every provider except SQL Server.
+        Assert.Equal(CollectionType.DefaultUserCollection, actualDefault.Type);
+
+        // The owner arrives via the access relationship result set, which is what attributes their items.
+        var owner = Assert.Single(actualDefault.Users);
+        Assert.Equal(orgUser.Id, owner.Id);
+        Assert.True(owner.Manage);
+        Assert.Empty(actualDefault.Groups);
+        Assert.False(actualDefault.Unmanaged);
+
+        Assert.Single(collections, c => c.Id == sharedCollection.Id);
+    }
+
+    /// <summary>
+    /// Test to ensure another member's default user collection is returned unassigned to the calling user
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManySharedByOrganizationIdWithPermissionsAsync_IncludeDefaultCollections_OtherMembersCollectionIsNotAssigned(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var callingUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Calling User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var otherUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Other User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = callingUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var otherOrgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = otherUser.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var otherDefaultCollection = new Collection
+        {
+            Name = "My Items Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+
+        await collectionRepository.CreateAsync(otherDefaultCollection, null, users: new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = otherOrgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+            }
+        });
+
+        var collections = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(
+            organization.Id, callingUser.Id, true, includeDefaultCollections: true);
+
+        var actualDefault = Assert.Single(collections);
+        Assert.Equal(otherDefaultCollection.Id, actualDefault.Id);
+        Assert.Equal(CollectionType.DefaultUserCollection, actualDefault.Type);
+
+        // Permissions are the calling user's, so they hold none on someone else's default collection.
+        Assert.False(actualDefault.Assigned);
+        Assert.False(actualDefault.Manage);
+        Assert.False(actualDefault.Unmanaged);
+
+        // The owner is still reported, which is what the report needs to attribute their items.
+        var owner = Assert.Single(actualDefault.Users);
+        Assert.Equal(otherOrgUser.Id, owner.Id);
     }
 
     /// <summary>

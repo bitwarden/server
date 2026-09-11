@@ -178,11 +178,14 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
+    [BitAutoData(true, false, false, false, false)]
+    [BitAutoData(false, true, false, false, false)]
+    [BitAutoData(false, false, true, false, false)]
+    [BitAutoData(false, false, false, true, false)]
+    [BitAutoData(false, false, false, false, true)]
     public async Task CanReadAllWithAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection, bool manageUsers,
+        bool editAnyCollection, bool deleteAnyCollection, bool manageUsers, bool manageGroups,
+        bool accessReports,
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
@@ -193,7 +196,9 @@ public class CollectionAuthorizationHandlerTests
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
-            ManageUsers = manageUsers
+            ManageUsers = manageUsers,
+            ManageGroups = manageGroups,
+            AccessReports = accessReports
         };
 
         var context = new AuthorizationHandlerContext(
@@ -224,11 +229,38 @@ public class CollectionAuthorizationHandlerTests
         {
             EditAnyCollection = false,
             DeleteAnyCollection = false,
-            AccessImportExport = false
+            AccessImportExport = false,
+            AccessReports = false
         };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    /// <summary>
+    /// AccessReports is only accepted by ReadAllWithAccess. ReadAll must keep its existing permission set.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task CanReadAllAsync_WhenCustomUserWithAccessReports_NoSuccess(
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { AccessReports = true };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null);
 

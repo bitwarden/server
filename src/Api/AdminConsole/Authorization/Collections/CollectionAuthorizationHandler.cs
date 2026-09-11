@@ -79,14 +79,16 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
     private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection
-        // permission can always read a collection
+        // Owners, Admins, and users with EditAnyCollection, DeleteAnyCollection, ManageUsers, ManageGroups,
+        // or AccessReports permission can always read a collection. AccessReports is included because Access
+        // Intelligence needs the collection -> user/group access relationships to attribute items to members.
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
         { Permissions.ManageUsers: true } or
-        { Permissions.ManageGroups: true })
+        { Permissions.ManageGroups: true } or
+        { Permissions.AccessReports: true })
         {
             context.Succeed(requirement);
             return;

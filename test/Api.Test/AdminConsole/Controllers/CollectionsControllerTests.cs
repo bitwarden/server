@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -256,6 +257,67 @@ public class CollectionsControllerTests
         await sutProvider.Sut.GetManyWithDetails(organization.Id);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_WithIncludeDefaultCollections_PassesFlagToRepository(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Success());
+
+        await sutProvider.Sut.GetManyWithDetails(organization.Id, includeDefaultCollections: true);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1)
+            .GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true, true);
+    }
+
+    /// <summary>
+    /// Default collections carry the calling user's own permissions, so the Manage fallback returns their own
+    /// My Items collection and not another member's.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithGroups_MissingReadAllPermissions_WithIncludeDefaultCollections_GetsOnlyOwnDefaultCollection(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider,
+        CollectionAdminDetails ownDefaultCollection, CollectionAdminDetails otherDefaultCollection)
+    {
+        ownDefaultCollection.OrganizationId = organization.Id;
+        ownDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        ownDefaultCollection.Manage = true;
+
+        otherDefaultCollection.OrganizationId = organization.Id;
+        otherDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        otherDefaultCollection.Manage = false;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Failed());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManySharedByOrganizationIdWithPermissionsAsync(organization.Id, userId, true, true)
+            .Returns(new List<CollectionAdminDetails> { ownDefaultCollection, otherDefaultCollection });
+
+        var response = await sutProvider.Sut.GetManyWithDetails(organization.Id, includeDefaultCollections: true);
+
+        Assert.Single(response.Data);
+        Assert.Equal(ownDefaultCollection.Id, response.Data.Single().Id);
     }
 
     [Theory, BitAutoData]
