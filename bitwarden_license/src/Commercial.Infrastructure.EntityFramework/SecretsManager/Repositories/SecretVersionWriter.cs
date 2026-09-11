@@ -41,14 +41,28 @@ internal static class SecretVersionWriter
             VersionDate = previousRevisionDate
         };
 
-        previousVersion.SetNewId();
-        await dbContext.AddAsync(mapper.Map<SecretVersion>(previousVersion));
+        await AddAsync(dbContext, mapper, previousVersion);
         return true;
     }
 
     /// <summary>
+    /// Assigns an id and adds the version to the change tracker. SecretVersion.Id is
+    /// ValueGeneratedNever, so an unassigned id collides with the last secret created.
+    /// </summary>
+    public static async Task AddAsync(
+        DatabaseContext dbContext,
+        IMapper mapper,
+        Core.SecretsManager.Entities.SecretVersion secretVersion)
+    {
+        secretVersion.SetNewId();
+        await dbContext.AddAsync(mapper.Map<SecretVersion>(secretVersion));
+    }
+
+    /// <summary>
     /// Trims the secret's history so that adding <paramref name="secretVersion"/> leaves at most
-    /// <see cref="MaxVersionsToKeep"/> versions, then adds it to the change tracker.
+    /// <see cref="MaxVersionsToKeep"/> versions, then adds it to the change tracker. Only the update
+    /// path needs this - a newly created secret has no history to trim, so it calls
+    /// <see cref="AddAsync"/> instead and skips the retention query.
     /// </summary>
     public static async Task AddWithPruningAsync(
         DatabaseContext dbContext,
@@ -71,7 +85,6 @@ internal static class SecretVersionWriter
                 .ExecuteDeleteAsync();
         }
 
-        secretVersion.SetNewId();
-        await dbContext.AddAsync(mapper.Map<SecretVersion>(secretVersion));
+        await AddAsync(dbContext, mapper, secretVersion);
     }
 }

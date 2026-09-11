@@ -187,9 +187,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         initialVersion.SecretId = entity.Id;
 
-        // Shares the update path's writer so the snapshot gets an id - SecretVersion.Id is
-        // ValueGeneratedNever, so an unassigned id collides with the last secret created.
-        await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, initialVersion);
+        await SecretVersionWriter.AddAsync(dbContext, Mapper, initialVersion);
         await dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
