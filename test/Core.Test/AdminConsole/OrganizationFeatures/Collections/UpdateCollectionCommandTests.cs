@@ -13,6 +13,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Collections;
 
@@ -35,6 +36,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdWithAccessAsync(collection.Id)
             .Returns(new Tuple<Collection?, CollectionAccessDetails>(
@@ -70,6 +72,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
 
         await sutProvider.Sut.UpdateAsync(collection, groups, users);
 
@@ -100,6 +103,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
 
         await sutProvider.Sut.UpdateAsync(collection, groups, users);
 
@@ -143,6 +147,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
         // groups is null so the command will fetch existing access; return no manage access
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdWithAccessAsync(collection.Id)
@@ -195,6 +200,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection));
         Assert.Contains("You cannot edit a collection with the type as DefaultUserCollection.", ex.Message);
@@ -223,6 +229,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdWithAccessAsync(collection.Id)
             .Returns(new Tuple<Collection?, CollectionAccessDetails>(
@@ -255,6 +262,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
         // users is null, so existing users are fetched — they have Can Manage
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdWithAccessAsync(collection.Id)
@@ -288,6 +296,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
         sutProvider.GetDependency<ICollectionRepository>()
             .GetByIdWithAccessAsync(collection.Id)
             .Returns(new Tuple<Collection?, CollectionAccessDetails>(
@@ -312,6 +321,7 @@ public class UpdateCollectionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
+        ArrangeValidAccess(sutProvider);
 
         await sutProvider.Sut.UpdateAsync(collection, null, null);
 
@@ -323,6 +333,53 @@ public class UpdateCollectionCommandTests
             .ReplaceAsync(collection, null, null);
     }
 
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithUseGroupsDisabled_DoesNotValidateGroups(
+        Organization organization, Collection collection,
+        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> groups,
+        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
+        SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        organization.UseGroups = false;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        ArrangeValidAccess(sutProvider);
+
+        await sutProvider.Sut.UpdateAsync(collection, groups, users);
+
+        await sutProvider.GetDependency<ICollectionAccessValidator>()
+            .Received(1)
+            .ValidateAsync(Arg.Is<CollectionAccessValidationRequest>(r => r.Groups == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_WithInvalidAccess_ThrowsBadRequest(
+        Organization organization, Collection collection,
+        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> groups,
+        SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        organization.UseGroups = true;
+        organization.AllowAdminAccessToAllCollectionItems = false;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        ArrangeInvalidAccess(sutProvider);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateAsync(collection, groups, null));
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default, default, default);
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogCollectionEventAsync(default, default);
+        // The command checks access before the manage rule, which reads the database
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByIdWithAccessAsync(default);
+    }
+
     private static SutProvider<UpdateCollectionCommand> SetupSutProvider()
     {
         var sutProvider = new SutProvider<UpdateCollectionCommand>()
@@ -330,5 +387,20 @@ public class UpdateCollectionCommandTests
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
         return sutProvider;
+    }
+
+    private static void ArrangeValidAccess(SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<CollectionAccessValidationRequest>())
+            .Returns(callInfo => Valid(callInfo.Arg<CollectionAccessValidationRequest>()));
+    }
+
+    private static void ArrangeInvalidAccess(SutProvider<UpdateCollectionCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ICollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<CollectionAccessValidationRequest>())
+            .Returns(callInfo => Invalid(
+                callInfo.Arg<CollectionAccessValidationRequest>(), new CollectionAccessInvalidError()));
     }
 }
