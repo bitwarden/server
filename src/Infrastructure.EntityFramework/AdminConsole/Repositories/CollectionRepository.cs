@@ -171,24 +171,22 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     collection,
                     new CollectionAccessDetails
                     {
-                        Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)?
+                        Groups = groups[collection.Id]
                             .Select(g => new CollectionAccessSelection
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
                                 ReadOnly = g.ReadOnly,
                                 Manage = g.Manage
-                            }).ToList() ?? new List<CollectionAccessSelection>(),
-                        Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)?
+                            }).ToList(),
+                        Users = users[collection.Id]
                             .Select(c => new CollectionAccessSelection
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
                                 ReadOnly = c.ReadOnly,
                                 Manage = c.Manage
-                            }).ToList() ?? new List<CollectionAccessSelection>()
+                            }).ToList()
                     }
                 )
             ).ToList();
