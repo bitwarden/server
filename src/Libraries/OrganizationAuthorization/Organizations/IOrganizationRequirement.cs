@@ -26,6 +26,8 @@ public interface IOrganizationRequirement : IAuthorizationRequirement
     /// </param>
     /// <param name="isOrganizationManagedByProvider">
     /// A callback that returns true if the organization is managed by a provider, otherwise false.
+    /// Scoped to the organizations the user is a member of: this returns false for a user with no
+    /// membership in the organization (a ProviderUser, for example) even if a provider manages it.
     /// This requires a database query, call it last.
     /// </param>
     /// <returns>True if the requirement has been satisfied, otherwise false.</returns>
