@@ -2,6 +2,7 @@
 BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
 BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
 BACKUP_TIMEZONE=${BACKUP_TIMEZONE:-UTC}
+BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
 export TZ="$BACKUP_TIMEZONE"
 
 while true
@@ -18,9 +19,9 @@ do
   # Do a new backup
   /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -C -i /backup-db.sql
 
-  # Delete backup files older than 30 days
+  # Delete backup files after the configured retention period (30 days by default).
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
-  find /etc/bitwarden/mssql/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +32 -delete
+  find /etc/bitwarden/mssql/backups/ -mindepth 1 -type f -name '*.BAK' -mtime +"$BACKUP_RETENTION_DAYS" -delete
 
   # Break if called manually (without loop option)
   [ "$1" != "loop" ] && break
