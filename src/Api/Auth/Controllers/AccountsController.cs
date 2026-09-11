@@ -19,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -58,6 +59,7 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly ICurrentContext _currentContext;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -78,7 +80,8 @@ public class AccountsController : Controller
         IChangeKdfCommand changeKdfCommand,
         IUserRepository userRepository,
         IRotateUserApiKeyCommand rotateUserApiKeyCommand,
-        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand
+        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand,
+        ICurrentContext currentContext
         )
     {
         _organizationService = organizationService;
@@ -100,6 +103,7 @@ public class AccountsController : Controller
         _userRepository = userRepository;
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
         _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
+        _currentContext = currentContext;
     }
 
 
@@ -881,7 +885,32 @@ public class AccountsController : Controller
             // a success response, to avoid account enumeration via response shape.
             return;
         }
-        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
+
+        // The code is scoped to a device, so prefer the device making this request.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // TODO: PM-43465 - Delete this fallback block once every supported client version sends the
+        // Device-Identifier header on this request. It covers clients that do not identify themselves by
+        // reusing the device the pending code was originally issued to (mobile clients don't send it yet).
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            deviceIdentifier = await _twoFactorEmailService
+                .GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
+        }
+
+        // No device to scope to means no code can be issued. Return the same success shape as above rather
+        // than an error, so the response reveals nothing about why.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            return;
+        }
+
+        // TODO PM-43468: a user can send up a different device identifier than the one they started with, but this is fine
+        // because this basically creates a new new device verification session and the new device will only be saved
+        // to the user's devices table upon successful verification of the OTP + MP login re-submission. 
+        // We should eventually mitigate this by leveraging a similar approach to the SsoEmail2faSessionTokenable
+        // which enshrines the session data (e.g., like device identifier) in the server token itself. 
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
     }
 
     [HttpPut("verify-devices")]
