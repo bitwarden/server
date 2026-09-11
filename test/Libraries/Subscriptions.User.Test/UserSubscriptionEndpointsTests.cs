@@ -44,4 +44,27 @@ public class UserSubscriptionEndpointsTests
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
     }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsPreviewPremiumUpgrade()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/invoice/preview", StringComparison.Ordinal));
+
+        Assert.Equal(["POST"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("PreviewPremiumUpgrade", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
+
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+        Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
+        Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
+    }
 }

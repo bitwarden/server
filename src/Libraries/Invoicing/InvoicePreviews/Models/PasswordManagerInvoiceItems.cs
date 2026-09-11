@@ -1,9 +1,10 @@
 ﻿namespace Bit.Invoicing.InvoicePreviews.Models;
 
-/// <summary>Password Manager line items. Seats is required; a preview without it is invalid.</summary>
+/// <summary>Password Manager line items. Present on every preview; a preview without a seats line or a proration is invalid.</summary>
 public record PasswordManagerInvoiceItems
 {
-    public required InvoicePreviewItem Seats { get; init; }
+    /// <summary>Null when the invoice carries only Password Manager prorations, such as a Premium to organization upgrade previewed under always_invoice.</summary>
+    public InvoicePreviewItem? Seats { get; init; }
     public InvoicePreviewItem? AdditionalStorage { get; init; }
     public PurchasableProration[]? Prorations { get; init; }
 }

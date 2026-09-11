@@ -1,5 +1,8 @@
 ﻿using Bit.Invoicing;
+using Bit.Subscriptions.User.Commands;
+using Bit.Subscriptions.User.Handlers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Subscriptions.User;
 
@@ -10,6 +13,8 @@ public static class SubscriptionsUserServiceCollectionExtensions
     public static IServiceCollection AddUserSubscriptions(this IServiceCollection services)
     {
         services.AddInvoicing();
+        services.TryAddScoped<IPreviewPremiumUpgradeCommand, PreviewPremiumUpgradeCommand>();
+        services.TryAddScoped<UserSubscriptionEndpointsHandler>();
         return services;
     }
 }
