@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Public.Request;
+﻿using System.Net;
+using Bit.Api.AdminConsole.Models.Public.Request;
 using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
@@ -26,6 +27,7 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
 
     private string _ownerEmail = null!;
     private Organization _organization = null!;
+    private OrganizationUser _organizationOwner = null!;
 
     public CollectionsControllerTests(ApiApplicationFactory factory)
     {
@@ -38,10 +40,10 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
 
     public async Task InitializeAsync()
     {
-        _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        _ownerEmail = $"integration-test{Guid.NewGuid()}@example.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+        (_organization, _organizationOwner) = await OrganizationTestHelpers.SignUpAsync(_factory,
             plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail,
             passwordManagerSeats: 10,
@@ -175,5 +177,25 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
         Assert.False(groupResponse.ReadOnly);
         Assert.False(groupResponse.HidePasswords);
         Assert.True(groupResponse.Manage);
+    }
+
+    [Fact]
+    public async Task Get_CollectionBelongsToRouteOrg_ReturnsOk()
+    {
+        var collection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            "Same Org Collection",
+            users:
+            [
+                new CollectionAccessSelection { Id = _organizationOwner.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+            ]);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/collections/{collection.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
