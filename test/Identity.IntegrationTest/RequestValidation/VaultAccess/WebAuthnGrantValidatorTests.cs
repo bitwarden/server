@@ -6,6 +6,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.IntegrationTestCommon.Fido2;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityModel;
 using Xunit;

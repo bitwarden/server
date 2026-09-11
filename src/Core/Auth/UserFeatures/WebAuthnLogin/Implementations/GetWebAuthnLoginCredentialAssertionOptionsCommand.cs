@@ -14,6 +14,10 @@ internal class GetWebAuthnLoginCredentialAssertionOptionsCommand : IGetWebAuthnL
 
     public AssertionOptions GetWebAuthnLoginCredentialAssertionOptions()
     {
-        return _fido2.GetAssertionOptions(Enumerable.Empty<PublicKeyCredentialDescriptor>(), UserVerificationRequirement.Required);
+        return _fido2.GetAssertionOptions(new GetAssertionOptionsParams
+        {
+            AllowedCredentials = Array.Empty<PublicKeyCredentialDescriptor>(),
+            UserVerification = UserVerificationRequirement.Required
+        });
     }
 }

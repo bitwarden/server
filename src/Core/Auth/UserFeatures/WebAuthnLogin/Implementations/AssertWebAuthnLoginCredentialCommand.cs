@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Fido2NetLib;
+using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
@@ -47,7 +48,7 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
         }
 
         var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var assertedCredentialId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
+        var assertedCredentialId = assertionResponse.Id;
         var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertedCredentialId);
         if (credential == null)
         {
@@ -57,17 +58,27 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
         // Always return true, since we've already filtered the credentials after user id
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
-        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
 
-        // Update SignatureCounter
-        credential.Counter = (int)assertionVerificationResult.Counter;
-        await _webAuthnCredentialRepository.ReplaceAsync(credential);
-
-        if (assertionVerificationResult.Status != "ok")
+        VerifyAssertionResult assertionVerificationResult;
+        try
+        {
+            assertionVerificationResult = await _fido2.MakeAssertionAsync(new MakeAssertionParams
+            {
+                AssertionResponse = assertionResponse,
+                OriginalOptions = options,
+                StoredPublicKey = credentialPublicKey,
+                StoredSignatureCounter = (uint)credential.Counter,
+                IsUserHandleOwnerOfCredentialIdCallback = callback
+            });
+        }
+        catch (Fido2VerificationException)
         {
             throw new BadRequestException("Invalid credential.");
         }
+
+        // Update SignatureCounter
+        credential.Counter = (int)assertionVerificationResult.SignCount;
+        await _webAuthnCredentialRepository.ReplaceAsync(credential);
 
         return (user, credential);
     }
