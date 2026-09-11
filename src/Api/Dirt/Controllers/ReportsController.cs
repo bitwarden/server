@@ -1,4 +1,5 @@
-﻿using Bit.Api.Dirt.Models;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+using Bit.Api.Dirt.Models;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core;
@@ -11,6 +12,7 @@ using Bit.Core.Dirt.Reports.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Dirt.Reports.ReportFeatures.Requests;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +24,7 @@ public class ReportsController : Controller
 {
     private readonly ICurrentContext _currentContext;
     private readonly IMemberAccessReportQuery _memberAccessReportQuery;
+    private readonly IMemberAdoptionReportQuery _memberAdoptionReportQuery;
     private readonly IRiskInsightsReportQuery _riskInsightsReportQuery;
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
@@ -33,6 +36,7 @@ public class ReportsController : Controller
     public ReportsController(
         ICurrentContext currentContext,
         IMemberAccessReportQuery memberAccessReportQuery,
+        IMemberAdoptionReportQuery memberAdoptionReportQuery,
         IRiskInsightsReportQuery riskInsightsReportQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
         IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
@@ -44,6 +48,7 @@ public class ReportsController : Controller
     {
         _currentContext = currentContext;
         _memberAccessReportQuery = memberAccessReportQuery;
+        _memberAdoptionReportQuery = memberAdoptionReportQuery;
         _riskInsightsReportQuery = riskInsightsReportQuery;
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
@@ -100,6 +105,25 @@ public class ReportsController : Controller
         var responses = accessDetails.Select(x => new MemberAccessDetailReportResponseModel(x));
 
         return responses;
+    }
+
+    /// <summary>
+    /// Adoption metrics for an organization's members: recent activity, browser extension installs,
+    /// vault and shared item counts, and redeemed Families sponsorships.
+    /// </summary>
+    /// <param name="organizationId">Organization Id</param>
+    /// <returns>A MemberAdoptionReportResponseModel holding organization-wide counts and every member row</returns>
+    [HttpGet("member-adoption/{organizationId:guid}")]
+    [Authorize<AccessReportsRequirement>]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.MemberAdoptionReport)]
+    public async Task<ActionResult<MemberAdoptionReportResponseModel>> GetMemberAdoptionReportAsync([FromRoute] Guid organizationId)
+    {
+        await AuthorizePlanAsync(organizationId);
+
+        var result = await _memberAdoptionReportQuery.GetMemberAdoptionReportAsync(
+            new MemberAdoptionReportRequest { OrganizationId = organizationId });
+
+        return new MemberAdoptionReportResponseModel(result);
     }
 
     /// <summary>
@@ -198,6 +222,11 @@ public class ReportsController : Controller
             throw new NotFoundException();
         }
 
+        await AuthorizePlanAsync(organizationId);
+    }
+
+    private async Task AuthorizePlanAsync(Guid organizationId)
+    {
         var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
         if (orgAbility is null || !orgAbility.UseRiskInsights)
         {
