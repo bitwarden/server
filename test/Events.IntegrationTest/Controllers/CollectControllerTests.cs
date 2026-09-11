@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -441,6 +442,56 @@ public class CollectControllerTests : IAsyncLifetime
         ]);
 
         response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Post_UserClientExportedVault_WithSkewedClientDate_StoresServerTime()
+    {
+        var eventRepository = _factory.GetService<IEventRepository>();
+        var skewedClientDate = DateTime.UtcNow.AddMinutes(-4);
+        var sentAt = DateTime.UtcNow;
+
+        var response = await _client.PostAsJsonAsync<IEnumerable<EventModel>>("collect",
+        [
+            new EventModel
+            {
+                Type = EventType.User_ClientExportedVault,
+                Date = skewedClientDate,
+            },
+        ]);
+
+        response.EnsureSuccessStatusCode();
+
+        var stored = await GetSingleExportedVaultEventAsync(eventRepository);
+        Assert.True(stored.Date >= sentAt.AddSeconds(-30),
+            $"stored the client's date instead of server time. stored={stored.Date:O} client={skewedClientDate:O}");
+    }
+
+    [Fact]
+    public async Task Post_UserClientExportedVault_WithoutClientDate_StoresServerTime()
+    {
+        var eventRepository = _factory.GetService<IEventRepository>();
+        var sentAt = DateTime.UtcNow;
+
+        var response = await _client.PostAsJsonAsync<IEnumerable<EventModel>>("collect",
+        [
+            new EventModel { Type = EventType.User_ClientExportedVault },
+        ]);
+
+        response.EnsureSuccessStatusCode();
+
+        var stored = await GetSingleExportedVaultEventAsync(eventRepository);
+        Assert.True(stored.Date >= sentAt.AddSeconds(-30),
+            $"an absent date should not be stored verbatim. stored={stored.Date:O}");
+    }
+
+    private async Task<IEvent> GetSingleExportedVaultEventAsync(IEventRepository eventRepository)
+    {
+        var events = await eventRepository.GetManyByUserAsync(
+            _ownerId, DateTime.UtcNow.AddDays(-30), DateTime.UtcNow.AddDays(1),
+            new PageOptions { PageSize = 100 });
+
+        return Assert.Single(events.Data.Where(e => e.Type == EventType.User_ClientExportedVault));
     }
 
     private async Task<Cipher> CreateCipherForUserAsync(Guid userId)
