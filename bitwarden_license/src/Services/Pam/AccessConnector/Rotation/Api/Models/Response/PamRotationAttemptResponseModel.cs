@@ -1,5 +1,5 @@
-﻿using  Bit.Pam.Enums;
-using Bit.Pam.Entities;
+﻿using Bit.Pam.Entities;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
