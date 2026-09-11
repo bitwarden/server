@@ -11,13 +11,14 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 `AddOrganizationAuthorization()` registers the two handlers that back the requirement interfaces.
 The host is still responsible for registering its data layer — the handlers resolve
-`IProviderUserRepository` from the container.
+`IProviderUserRepository` and `IProviderOrganizationRepository` from the container.
 
 `IOrganizationRequirement` and `IProviderRequirement` are the extension points. A requirement
 implementing either interface is dispatched by the matching handler, which pulls the organization or
 provider ID off the route and hands the user's claims to the requirement. Requirements are pure
-claims predicates; the one database-backed check (is this user a provider for this organization?) is
-passed in as a lazy callback so requirements can avoid it unless the claims-based checks fail.
+claims predicates; the database-backed checks (is this user a provider for this organization? is the
+organization managed by a provider?) are passed in as lazy callbacks so requirements can avoid them
+unless the claims-based checks fail.
 
 The library ships the common requirements — `MemberRequirement`, `MemberOrProviderRequirement`,
 `BasePermissionRequirement` and the custom-permission requirements derived from it, plus the
@@ -73,6 +74,8 @@ prioritised for extraction. This library sits *above* Core rather than below it,
 | `Bit.Core.Auth.Identity.Claims` | Claim type constants for parsing organization and provider claims |
 | `Bit.Core.AdminConsole.Repositories.IProviderUserRepository` | The provider-for-organization database check |
 | `Bit.Core.AdminConsole.Models.Data.Provider.ProviderUserOrganizationDetails` | Result of that check |
+| `Bit.Core.AdminConsole.Repositories.IProviderOrganizationRepository` | The organization-managed-by-provider database check |
+| `Bit.Core.AdminConsole.Models.Data.Provider.ProviderOrganizationProviderDetails` | Result of that check |
 | `Bit.Core.AdminConsole.Enums.Provider.ProviderUserStatusType` | Filtering that check to confirmed provider users |
 | `Bit.Core.Services.IUserService` | Reading the authenticated user's ID out of their claims |
 
