@@ -155,16 +155,19 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var groups =
-                from c in collections
-                join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                group cg by cg.CollectionId into g
-                select g;
-            var users =
-                from c in collections
-                join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                group cu by cu.CollectionId into u
-                select u;
+            // Scope access rows to the organization, matching CollectionGroup_ReadByOrganizationId and
+            // CollectionUser_ReadByOrganizationId. Without this a row pointing at another organization's group or
+            // member is reported as access on this organization's collection.
+            var groups = (await (
+                from cg in dbContext.CollectionGroups
+                join g in dbContext.Groups on cg.GroupId equals g.Id
+                where g.OrganizationId == organizationId
+                select cg).ToListAsync()).GroupBy(cg => cg.CollectionId);
+            var users = (await (
+                from cu in dbContext.CollectionUsers
+                join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                where ou.OrganizationId == organizationId
+                select cu).ToListAsync()).GroupBy(cu => cu.CollectionId);
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
