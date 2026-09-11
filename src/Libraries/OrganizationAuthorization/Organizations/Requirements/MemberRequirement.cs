@@ -9,6 +9,7 @@ public class MemberRequirement : IOrganizationRequirement
 {
     public Task<bool> AuthorizeAsync(
         CurrentContextOrganization? organizationClaims,
-        Func<Task<bool>> isProviderUserForOrg)
+        Func<Task<bool>> isProviderUserForOrg,
+        Func<Task<bool>> isOrganizationManagedByProvider)
         => Task.FromResult(organizationClaims is not null);
 }
