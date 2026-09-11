@@ -892,8 +892,6 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await using var dbContext = GetDatabaseContext(scope);
 
-        // Match the stored procedure: a collection or group is only attached when it belongs to the same
-        // organization as the user it is being attached to.
         var requestedCollectionIds = organizationUsersList.SelectMany(x => x.Collections).Select(c => c.Id).Distinct().ToList();
         var requestedGroupIds = organizationUsersList.SelectMany(x => x.Groups).Distinct().ToList();
         var requestedCollections = requestedCollectionIds.Count == 0
