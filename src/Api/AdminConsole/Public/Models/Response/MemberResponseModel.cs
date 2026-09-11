@@ -75,7 +75,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     [Required]
     public Guid? UserId { get; set; }
     /// <summary>
-    /// The member's name, set from their user account profile.
+    /// The member's name, set from their user account profile. random change.
     /// </summary>
     /// <example>John Smith</example>
     public string Name { get; set; }
