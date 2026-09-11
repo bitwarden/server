@@ -81,7 +81,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
-    private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
     private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
@@ -95,6 +94,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
     private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
+    private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
@@ -122,7 +122,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
-        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
@@ -132,6 +131,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
+        IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -155,7 +155,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
-        _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
         _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
@@ -169,6 +168,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
         _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
+        _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
     }
 
@@ -450,8 +450,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
-        var actingContext = _currentContext.GetOrganization(organization.Id);
-
         var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
             organizationUser,
             organization,
@@ -464,11 +462,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             model.Email,
             model.Name,
             model.DefaultUserCollectionName,
-            new StandardUser(
-                userId,
-                await _currentContext.OrganizationOwner(organization.Id),
-                actingContext?.Type,
-                actingContext?.Permissions));
+            await _getActingUserForOrganizationQuery.GetActingUserAsync(userId, organization.Id));
 
         var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
         return Handle(result);
@@ -842,25 +836,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("{id}/auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync(
+        [BindOrganization] Organization organization,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User);
-
-        if (userId is null || userId.Value == Guid.Empty)
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
-            return TypedResults.Unauthorized();
-        }
-        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
-            new AutomaticallyConfirmOrganizationUserRequest
-            {
-                OrganizationId = orgId,
-                OrganizationUserId = id,
-                Key = model.Key,
-                DefaultUserCollectionName = model.DefaultUserCollectionName,
-                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
-            }));
+            Organization = organization,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            UsersToConfirm = [new BulkAutoConfirmUserEntry { OrganizationUserId = id, Key = model.Key }],
+        };
+
+        var result = (await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request)).Single();
+
+        return Handle(result.Result);
     }
 
     [HttpGet("pending-auto-confirm")]
