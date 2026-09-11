@@ -159,12 +159,12 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 from cg in dbContext.CollectionGroups
                 join grp in dbContext.Groups on cg.GroupId equals grp.Id
                 where grp.OrganizationId == organizationId
-                select cg).ToListAsync()).GroupBy(cg => cg.CollectionId);
+                select cg).ToListAsync()).ToLookup(cg => cg.CollectionId);
             var users = (await (
                 from cu in dbContext.CollectionUsers
                 join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
                 where ou.OrganizationId == organizationId
-                select cu).ToListAsync()).GroupBy(cu => cu.CollectionId);
+                select cu).ToListAsync()).ToLookup(cu => cu.CollectionId);
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
