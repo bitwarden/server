@@ -3,7 +3,7 @@ import { check, fail } from "k6";
 
 // Identity rejects password grants that omit the "Bitwarden-Client-Version"
 // header (see ClientVersionValidator), so every request must supply one.
-const CLIENT_VERSION = __ENV.CLIENT_VERSION || "2026.9.0";
+const CLIENT_VERSION = __ENV.CLIENT_VERSION || "2026.8.0";
 
 /**
  * Authenticate using OAuth against Bitwarden
