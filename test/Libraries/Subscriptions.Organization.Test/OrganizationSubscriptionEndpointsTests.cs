@@ -49,4 +49,22 @@ public class OrganizationSubscriptionEndpointsTests
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
     }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PreviewRequiresStandaloneOrganizationOwner()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var preview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("preview"));
+
+        var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+    }
 }
