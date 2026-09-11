@@ -133,6 +133,82 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
     }
 
     [Fact]
+    public async Task OrganizationAccessTokenScene_MintsDecodableTokenForServiceAccount()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var serviceAccountResult = await PostSceneAsync(playId, nameof(OrganizationServiceAccountScene), new OrganizationServiceAccountScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "CI Runner"
+        });
+        var serviceAccountId = serviceAccountResult.GetProperty("serviceAccountId").GetGuid();
+
+        var accessTokenResult = await PostSceneAsync(playId, nameof(OrganizationAccessTokenScene), new OrganizationAccessTokenScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            ServiceAccountId = serviceAccountId,
+            Name = "deploy token"
+        });
+
+        var accessToken = accessTokenResult.GetProperty("accessToken").GetString()!;
+        var apiKeyId = accessTokenResult.GetProperty("apiKeyId").GetGuid();
+
+        Assert.Matches(@"^0\.[0-9a-f-]{36}\.[A-Za-z0-9]{30}:[A-Za-z0-9+/=]+$", accessToken);
+        Assert.Equal(apiKeyId, Guid.Parse(accessToken.Split(':')[0].Split('.')[1]));
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var apiKey = await db.ApiKeys.SingleAsync(k => k.Id == apiKeyId);
+        Assert.Equal(serviceAccountId, apiKey.ServiceAccountId);
+        Assert.Equal("[\"api.secrets\"]", apiKey.Scope);
+        Assert.Equal("deploy token", RustSdkService.DecryptString(apiKey.Name, organizationKeyB64));
+
+        var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(accessToken.Split(':')[1]);
+        var payload = RustSdkService.DecryptString(apiKey.EncryptedPayload, derivedKeyB64);
+        using var payloadDocument = JsonDocument.Parse(payload);
+        Assert.Equal(organizationKeyB64, payloadDocument.RootElement.GetProperty("encryptionKey").GetString());
+    }
+
+    [Fact]
+    public async Task OrganizationAccessTokenScene_ServiceAccountNotInOrganization_ReturnsBadRequest()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+
+        var missingServiceAccountId = Guid.NewGuid();
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(OrganizationAccessTokenScene),
+            Arguments = JsonSerializer.SerializeToElement(new OrganizationAccessTokenScene.Request
+            {
+                OrganizationId = organizationId,
+                OrganizationKeyB64 = organizationKeyB64,
+                ServiceAccountId = missingServiceAccountId,
+                Name = "deploy token"
+            })
+        }, playId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("not in organization", body);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.ApiKeys.AnyAsync(k => k.ServiceAccountId == missingServiceAccountId));
+    }
+
+    [Fact]
     public async Task OrganizationProjectScene_OrganizationWithoutSecretsManager_ReturnsBadRequest()
     {
         var playId = Guid.NewGuid().ToString();
