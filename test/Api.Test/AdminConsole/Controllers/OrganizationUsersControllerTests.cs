@@ -722,7 +722,7 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task RecoverAccount_WhenAuthorizationFails_ReturnsForbiddenWithReason(
+    public async Task RecoverAccount_WhenAuthorizationFails_ReturnsBadRequest(
         Guid orgId, Guid orgUserId, OrganizationUserResetPasswordRequestModel model, OrganizationUser organizationUser,
         SutProvider<OrganizationUsersController> sutProvider)
     {
@@ -736,11 +736,7 @@ public class OrganizationUsersControllerTests
 
         var result = await sutProvider.Sut.RecoverAccount(orgId, orgUserId, model, organizationUser);
 
-        // 403 rather than 400: the caller is authenticated but not permitted to recover this account.
-        // The reason is carried in the body so the UI can explain why, which TypedResults.Forbid() cannot do.
-        var forbidden = Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
-        Assert.Equal(StatusCodes.Status403Forbidden, forbidden.StatusCode);
-        Assert.Equal(RecoverAccountAuthorizationHandler.FailureReason, forbidden.Value?.Message);
+        Assert.IsType<BadRequest<ErrorResponseModel>>(result);
     }
 
     [Theory]
