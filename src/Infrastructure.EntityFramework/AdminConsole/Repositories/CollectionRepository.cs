@@ -155,12 +155,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            // Scope access rows to the organization, matching CollectionGroup_ReadByOrganizationId and
-            // CollectionUser_ReadByOrganizationId. Without this a row pointing at another organization's group or
-            // member is reported as access on this organization's collection.
-            // Queried against the DbSets rather than joined onto the materialized collection list, so the
-            // organization filter runs in SQL. Joining onto the list binds to Enumerable.Join, which reads both
-            // access tables into memory, and the deferred grouping then repeats that read for every collection.
             var groups = (await (
                 from cg in dbContext.CollectionGroups
                 join grp in dbContext.Groups on cg.GroupId equals grp.Id
