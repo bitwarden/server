@@ -29,11 +29,11 @@ public class AccessMailNotifier : IAccessMailNotifier
         TimeProvider timeProvider,
         ILogger<AccessMailNotifier> logger)
     {
-        _mailer = mailer;
-        _userRepository = userRepository;
-        _featureService = featureService;
-        _timeProvider = timeProvider;
-        _logger = logger;
+        _mailer = mailer ?? throw new ArgumentNullException(nameof(mailer));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _featureService = featureService ?? throw new ArgumentNullException(nameof(featureService));
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     private bool Enabled => _featureService.IsEnabled(FeatureFlagKeys.Pam);
