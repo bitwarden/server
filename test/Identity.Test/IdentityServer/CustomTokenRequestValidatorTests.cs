@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -30,6 +31,7 @@ public class CustomTokenRequestValidatorTests
     private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IUpdateMasterPasswordSaltCommand _updateMasterPasswordSaltCommand;
     private readonly ICurrentContext _currentContext;
     private readonly FakeLogger<CustomTokenRequestValidator> _logger;
 
@@ -51,6 +53,7 @@ public class CustomTokenRequestValidatorTests
         _userService = Substitute.For<IUserService>();
         _featureService = Substitute.For<IFeatureService>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        _updateMasterPasswordSaltCommand = Substitute.For<IUpdateMasterPasswordSaltCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _logger = new FakeLogger<CustomTokenRequestValidator>();
 
@@ -74,7 +77,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            _updateMasterPasswordSaltCommand);
     }
 
     private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
@@ -279,7 +283,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            updateCmd);
+            updateCmd,
+            _updateMasterPasswordSaltCommand);
 
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -429,5 +434,120 @@ public class CustomTokenRequestValidatorTests
         await _updateDeviceLastActivityCommand
             .DidNotReceive()
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_FeatureFlagDisabled_UpdateNotCalledAsync()
+    {
+        // Arrange
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: prefill is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_NullSubject_SkipsUpdate()
+    {
+        // Arrange
+        var context = CreateRefreshTokenContext(subject: null);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: prefill is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_InvalidUserIdGuid_SkipsUpdate()
+    {
+        // Arrange — the sub claim is not a valid GUID
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, "not-a-guid"),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: prefill is skipped — no call made
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.DidNotReceive().UpdateAsync(Arg.Any<Guid>());
+    }
+
+    [Fact]
+    public async Task TryUpdateMasterPasswordSaltForRefreshAsync_Succeeds_UpdateCalledWithUserIdAsync()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.Result.IsError);
+        await _updateMasterPasswordSaltCommand.Received(1).UpdateAsync(userId);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_UpdateMasterPasswordSaltThrows_RefreshTokenSucceeds()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+        ], "test"));
+
+        var context = CreateRefreshTokenContext(subject);
+
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt).Returns(true);
+        _updateMasterPasswordSaltCommand
+            .UpdateAsync(Arg.Any<Guid>())
+            .Returns<Task>(_ => throw new Exception("Transient failure"));
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert: exception is swallowed — token refresh succeeds
+        Assert.False(context.Result.IsError);
+
+        // Assert: warning was logged
+        var logs = _logger.Collector.GetSnapshot();
+        Assert.Contains(logs, l =>
+            l.Level == LogLevel.Warning &&
+            l.Message.Contains("Failed to update master password salt for user"));
     }
 }
