@@ -58,8 +58,7 @@ public abstract class BaseBillingCommand<T>(
                 _ => Unmapped(stripeException)
             };
 
-            // Every branch that returns Unhandled must log the exception, since BaseBillingController
-            // only surfaces exception detail to the caller in development.
+            // Unhandled is the only branch the caller cannot diagnose from the response, so it has to log.
             Unhandled Unmapped(StripeException exception)
             {
                 logger.LogError(exception,

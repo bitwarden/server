@@ -13,9 +13,7 @@ using Unhandled = Bit.Core.Billing.Commands.Unhandled;
 namespace Bit.Api.Test.Billing.Controllers;
 
 /// <summary>
-/// Regression tests for VULN-845 (PM-42560): <see cref="BaseBillingController"/> used to copy the
-/// exception message and stack trace into every 500 response, with no environment guard, exposing
-/// internal paths and assembly versions to any authenticated user.
+/// Billing 500s must not disclose exception detail outside development (PM-42560).
 /// </summary>
 public class BaseBillingControllerTests
 {
@@ -53,10 +51,6 @@ public class BaseBillingControllerTests
         Assert.Equal(exception.InnerException!.Message, json.Value.InnerExceptionMessage);
     }
 
-    /// <summary>
-    /// The environment is resolved off the request, so an unset <see cref="HttpContext"/> has to fail
-    /// closed rather than throw or leak.
-    /// </summary>
     [Fact]
     public void Handle_Unhandled_WithoutHttpContext_OmitsExceptionDetail()
     {

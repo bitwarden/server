@@ -31,9 +31,7 @@ public abstract class BaseBillingController : Controller
             unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
 
     /// <summary>
-    /// Whether a 500 response may carry exception detail. Only true in development, matching
-    /// <c>ExceptionHandlerFilterAttribute</c>. An absent request context reads as false, so the
-    /// detail is withheld unless development is positively established.
+    /// Exception detail is only disclosed in development, matching <c>ExceptionHandlerFilterAttribute</c>.
     /// </summary>
     private bool IncludeExceptionDetail =>
         HttpContext?.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true;
@@ -51,11 +49,6 @@ public abstract class BaseBillingController : Controller
         public static NotFound<ErrorResponseModel> NotFound() =>
             TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
 
-        /// <summary>
-        /// <c>includeExceptionDetail</c> defaults to false so the exception is never disclosed unless
-        /// the caller positively establishes that it is safe to do so. See
-        /// <see cref="BaseBillingController.IncludeExceptionDetail"/>.
-        /// </summary>
         public static JsonHttpResult<ErrorResponseModel> ServerError(
             string message = "Something went wrong with your request. Please contact support for assistance.",
             Exception? exception = null,
