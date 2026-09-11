@@ -591,7 +591,9 @@ public class DeviceValidatorTests
         var newDeviceOtp = "123456";
         request.Raw.Add("NewDeviceOtp", newDeviceOtp);
 
-        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(true);
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp)
+            .Returns(true);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
@@ -621,7 +623,9 @@ public class DeviceValidatorTests
 
         request.Raw.Add("NewDeviceOtp", newDeviceOtp);
 
-        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(false);
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp)
+            .Returns(false);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
@@ -635,6 +639,37 @@ public class DeviceValidatorTests
         var expectedErrorMessage = "invalid new device otp";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async void HandleNewDeviceVerificationAsync_NewDeviceOtpIssuedForAnotherDevice_ReturnsInvalidNewDeviceOtp(
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        _globalSettings.EnableNewDeviceVerification = true;
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
+
+        var newDeviceOtp = "123456";
+        request.Raw.Add("NewDeviceOtp", newDeviceOtp);
+
+        // The OTP is correct, but was issued for a device other than the one now submitting it.
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, "a-different-device-identifier", newDeviceOtp)
+            .Returns(true);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        await _twoFactorEmailService.Received(1)
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp);
+        await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
+
+        Assert.False(result);
+        var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+        Assert.Equal("invalid new device otp", actualResponse.Message);
     }
 
     [Theory, BitAutoData]
@@ -652,7 +687,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).VerifyOTPAsync(Arg.Any<User>(), Arg.Any<string>());
+        await _twoFactorEmailService.Received(0)
+            .VerifyNewDeviceVerificationOtpAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
         await _userService.Received(0).SendOTPAsync(Arg.Any<User>());
         await _deviceService.Received(1).SaveAsync(context.Device);
 
@@ -677,7 +713,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(context.User, context.Device.Identifier);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);
