@@ -8,22 +8,24 @@ CREATE PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the other half is persisted alone.
+    -- Both writes commit or roll back together (XACT_ABORT).
     SET XACT_ABORT ON
 
-    -- A managing approver retracts a not-yet-activated request (Pending, or an Approved request the requester has not
-    -- activated): transition it to Denied and record the approver's human decision, mirroring
-    -- [AccessRequest_ResolveWithDecision] but over the broader cancellable set. The WHERE guard is race-safe and
-    -- refuses a request that has produced a lease (governed by the lease — revoke instead). The decision is inserted
-    -- only when the transition actually happened (@@ROWCOUNT > 0), so a no-op never orphans an AccessDecision.
+    -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
-    UPDATE [dbo].[AccessRequest]
-    SET [Status] = 2, -- Denied
-        [ResolvedDate] = @Now
+    -- Claims the row first, like [AccessRequest_Cancel], to serialize against a concurrent activation.
+    DECLARE @Claimed TINYINT
+    SELECT @Claimed = [Action]
+    FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
     WHERE [Id] = @AccessRequestId
-        AND [Status] IN (0, 1) -- Pending or Approved
+
+    UPDATE [dbo].[AccessRequest]
+    SET [Action] = 2, -- Denied
+        [ActionDate] = @Now
+    WHERE [Id] = @AccessRequestId
+        AND [Action] IN (0, 1) -- None (open) or Approved
+        AND [NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
     IF @@ROWCOUNT > 0

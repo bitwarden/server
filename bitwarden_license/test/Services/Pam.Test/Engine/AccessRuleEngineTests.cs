@@ -9,9 +9,11 @@ public class AccessRuleEngineTests
 {
     private readonly AccessRuleEngine _sut = new();
 
+    // Fixed instant: none of these cases carry a time-of-day condition, so the value only has to be deterministic.
     private static AccessSignals Signals() => new()
     {
         IpAddress = IPAddress.Parse("10.1.2.3"),
+        Timestamp = new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero),
     };
 
     [Fact]

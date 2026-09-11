@@ -106,6 +106,11 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
         services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
         services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
+        services.AddSingleton<IAccessAuditEventRepository, Pam.Repositories.AccessAuditEventRepository>();
+        services.AddSingleton<IPamTargetSystemRepository, Pam.Repositories.PamTargetSystemRepository>();
+        services.AddSingleton<IPamDaemonRepository, Pam.Repositories.PamDaemonRepository>();
+        services.AddSingleton<IPamRotationConfigRepository, Pam.Repositories.PamRotationConfigRepository>();
+        services.AddSingleton<IPamRotationJobRepository, Pam.Repositories.PamRotationJobRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();

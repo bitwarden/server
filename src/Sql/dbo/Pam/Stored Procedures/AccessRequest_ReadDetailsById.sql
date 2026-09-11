@@ -1,17 +1,12 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadDetailsById]
-    @Id UNIQUEIDENTIFIER
+    @Id UNIQUEIDENTIFIER,
+    @Now DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- A single access request projected for the dedicated request page, returned as two result sets so the caller can
-    -- attach the request's full decision list without an N+1:
-    --   1) the request row with the denormalized requester identity. A row that produced a lease carries
-    --      ProducedLeaseId/ProducedLeaseStatus so the client can show (and gate) lease actions; a request produces at
-    --      most one lease ([IX_AccessLease_AccessRequestId] is unique), so that join adds at most one row.
-    --   2) every decision (human or automatic) for the request, keyed by AccessRequestId and ordered oldest-first;
-    --      DeciderKind says which, and a human decision's identity is denormalized from [User].
-    -- Authorization (requester or managing approver) is enforced by the caller, not this read.
+    -- @Now is accepted but unused now; only stored facts leave this read.
+    -- Two result sets (request, decisions); only stored facts leave this read.
     SELECT
         LR.[Id],
         LR.[ExtensionOfLeaseId],
@@ -22,12 +17,13 @@ BEGIN
         LR.[NotBefore],
         LR.[NotAfter],
         LR.[Reason],
-        LR.[Status],
+        LR.[Action],
         LR.[CreationDate],
-        LR.[ResolvedDate],
+        LR.[ActionDate],
         LR.[RuleId],
         PL.[Id] AS [ProducedLeaseId],
-        PL.[Status] AS [ProducedLeaseStatus],
+        PL.[Action] AS [ProducedLeaseAction],
+        PL.[NotAfter] AS [ProducedLeaseNotAfter],
         U.[Name] AS [RequesterName],
         U.[Email] AS [RequesterEmail]
     FROM [dbo].[AccessRequest] LR

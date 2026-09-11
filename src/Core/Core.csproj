@@ -90,5 +90,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <!-- The commercial PAM library: implements ICipherLeaseGate, the sole minter of FullCipherAccess, whose
+         factories are internal so application code can't fabricate an authorization witness. Widen only for
+         another ICipherLeaseGate implementation. -->
+    <InternalsVisibleTo Include="Pam" />
   </ItemGroup>
 </Project>

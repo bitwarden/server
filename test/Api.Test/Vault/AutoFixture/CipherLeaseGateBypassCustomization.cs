@@ -10,11 +10,8 @@ using NSubstitute;
 namespace Bit.Api.Test.Vault.AutoFixture;
 
 /// <summary>
-/// Injects an <see cref="ICipherLeaseGate"/> substitute pre-configured to authorize full data for every
-/// cipher — the flag-off / not-gated behaviour. This lets leasing-agnostic controller tests assert their
-/// existing full-data expectations without each one having to stub the gate. Tests that exercise gating
-/// re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or <c>AuthorizeWriteReturnAsync</c> return
-/// null) after building the SUT.
+/// Injects an <see cref="ICipherLeaseGate"/> substitute authorizing full data and every mutation, the
+/// flag-off/not-gated behavior; leasing-agnostic tests need not stub the gate themselves.
 /// </summary>
 public class CipherLeaseGateBypassCustomization : ICustomization
 {
@@ -36,6 +33,8 @@ public class CipherLeaseGateBypassCustomization : ICustomization
         gate.AuthorizeWriteReturnAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.AuthorizeAdminWriteReturnAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Cipher>())
             .Returns(unrestricted);
+        gate.EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
+        gate.EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
 
         fixture.Inject(gate);
     }

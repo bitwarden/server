@@ -57,6 +57,67 @@ public class AccessRuleWriteValidatorTests
         Assert.Contains("maximum extension length", ex.Message);
     }
 
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(-1)]
+    public async Task ValidateAsync_NonPositiveDefaultLeaseDuration_ThrowsBadRequest(
+        int defaultLeaseDurationSeconds, AccessRule rule)
+    {
+        var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
+        rule.Name = "rule";
+        rule.AllowsExtensions = false;
+        rule.DefaultLeaseDurationSeconds = defaultLeaseDurationSeconds;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains("default lease duration must be a positive value", ex.Message);
+    }
+
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(-1)]
+    public async Task ValidateAsync_NonPositiveMaxLeaseDuration_ThrowsBadRequest(
+        int maxLeaseDurationSeconds, AccessRule rule)
+    {
+        var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
+        rule.Name = "rule";
+        rule.AllowsExtensions = false;
+        rule.DefaultLeaseDurationSeconds = null;
+        rule.MaxLeaseDurationSeconds = maxLeaseDurationSeconds;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains("maximum lease duration must be a positive value", ex.Message);
+    }
+
+    // A saved default above the cap pre-fills requests with a duration submit then refuses.
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DefaultLeaseDurationAboveMax_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
+        rule.Name = "rule";
+        rule.AllowsExtensions = false;
+        rule.DefaultLeaseDurationSeconds = 3600;
+        rule.MaxLeaseDurationSeconds = 900;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains("cannot exceed the maximum lease duration", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DefaultLeaseDurationWithoutMax_Passes(AccessRule rule)
+    {
+        // An absent max is "no cap", so no default can exceed it.
+        var sutProvider = SetupSutProvider(rule);
+        rule.DefaultLeaseDurationSeconds = 7 * 24 * 60 * 60;
+        rule.MaxLeaseDurationSeconds = null;
+
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.Empty(result);
+    }
+
     [Theory, BitAutoData]
     public async Task ValidateAsync_InvalidConditions_ThrowsBadRequestWithValidatorError(AccessRule rule)
     {
@@ -230,6 +291,9 @@ public class AccessRuleWriteValidatorTests
         var sutProvider = new SutProvider<AccessRuleWriteValidator>().Create();
         rule.Name = "rule";
         rule.Conditions = """[{"kind":"human_approval"}]""";
+        // Pins the lease durations so AutoFixture's int sequence can't trip an unrelated bounds check.
+        rule.DefaultLeaseDurationSeconds = null;
+        rule.MaxLeaseDurationSeconds = null;
         sutProvider.GetDependency<IAccessRuleValidator>()
             .Validate(rule.Conditions)
             .Returns(AccessRuleValidationResult.Valid);
