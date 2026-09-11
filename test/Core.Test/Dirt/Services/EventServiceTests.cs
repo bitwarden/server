@@ -593,6 +593,77 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogSendEvent_NoContext_NullDeviceType_DefaultsToServer(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Create/edit/delete Send events (no org context) can be triggered by a server-to-server
+        // callback with no Device-Type header (e.g. the Azure blob-upload confirmation webhook).
+        // Report Server rather than leaving these rows attributed to an unknown client.
+        var type = EventType.Send_Edited_File;
+
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.DeviceType == DeviceType.Server)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendAccessEvent_NullDeviceType_StaysUnattributed(
+        Guid ownerUserId, Guid sendId, Guid orgId, SutProvider<EventService> sutProvider)
+    {
+        // Access events (org context present) come from real client requests, including anonymous
+        // public-link access, so a null Device-Type here is a genuine unknown client, not a
+        // server-to-server callback. The Server default must not apply.
+        var type = EventType.Send_Accessed_Text;
+
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                { orgId, new OrganizationAbility { UseEvents = true, Enabled = true } }
+            });
+        sutProvider.GetDependency<IProviderAbilityCacheService>()
+            .GetProviderAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, ProviderAbility>());
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextOrganization> { new() { Id = orgId } });
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderMembershipAsync(Arg.Any<IProviderUserRepository>(), ownerUserId)
+            .Returns(new List<CurrentContextProvider>());
+
+        await sutProvider.Sut.LogSendEventAsync(ownerUserId, sendId, type,
+            new Dictionary<Guid, SendAccessEventOrgContext>());
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.DeviceType == null)));
+    }
+
+    [Theory, BitAutoData]
     public async Task LogSendEvent_AccessEvent_ProviderRowIsExternalNotOwner(
         Guid ownerUserId, Guid sendId, Guid providerId, SutProvider<EventService> sutProvider)
     {

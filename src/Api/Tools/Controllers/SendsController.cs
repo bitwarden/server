@@ -98,7 +98,9 @@ public class SendsController : Controller
                             return;
                         }
 
-                        await _nonAnonymousSendCommand.ConfirmFileSize(send);
+                        // This finalizes the upload begun by PostFile, which already logged Send_Created_*;
+                        // don't log a second, redundant Send_Edited_* for what the user experiences as one creation.
+                        await _nonAnonymousSendCommand.ConfirmFileSize(send, logEvent: false);
                     }
                     catch (Exception e)
                     {

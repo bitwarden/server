@@ -44,7 +44,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _logger = logger;
     }
 
-    public async Task SaveSendAsync(Send send)
+    public async Task SaveSendAsync(Send send, bool logEvent = true)
     {
         // Normalize the email list before persisting so every downstream consumer is correct on
         // every DB engine. Runs before Data Protection encrypts the emails.
@@ -58,7 +58,10 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
-            await LogSendCreatedEventAsync(send);
+            if (logEvent)
+            {
+                await LogSendCreatedEventAsync(send);
+            }
         }
         // Edit existing Send
         else
@@ -66,7 +69,10 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             send.RevisionDate = DateTime.UtcNow;
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
-            await LogSendUpdatedEventAsync(send);
+            if (logEvent)
+            {
+                await LogSendUpdatedEventAsync(send);
+            }
         }
     }
 
@@ -220,7 +226,9 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
-        if (!await ConfirmFileSize(send))
+        // This finalizes the upload begun by SaveFileSendAsync, which already logged Send_Created_*;
+        // don't log a second, redundant Send_Edited_* for what the user experiences as one creation.
+        if (!await ConfirmFileSize(send, logEvent: false))
         {
             throw new BadRequestException("File received does not match expected file length.");
         }
@@ -247,7 +255,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         await LogSendDeletedEventAsync(send);
     }
 
-    public async Task<bool> ConfirmFileSize(Send send)
+    public async Task<bool> ConfirmFileSize(Send send, bool logEvent = true)
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
@@ -268,6 +276,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
                 minimum,
                 maximum
             );
+            // Always logged: an anomaly worth an audit trail, unlike the routine confirmation below.
             await DeleteSendAsync(send);
             return false;
         }
@@ -276,7 +285,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         fileData.Size = size;
         fileData.Validated = true;
         send.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
-        await SaveSendAsync(send);
+        await SaveSendAsync(send, logEvent);
 
         return valid;
     }
