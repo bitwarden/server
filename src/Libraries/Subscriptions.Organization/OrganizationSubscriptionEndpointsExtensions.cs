@@ -31,6 +31,7 @@ public static class OrganizationSubscriptionEndpointsExtensions
 
         group.MapGet("preview",
                 async ([FromRoute] Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 
