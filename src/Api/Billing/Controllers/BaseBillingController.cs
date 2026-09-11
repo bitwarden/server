@@ -30,9 +30,6 @@ public abstract class BaseBillingController : Controller
             conflict => Error.Conflict(conflict.Response),
             unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
 
-    /// <summary>
-    /// Exception detail is only disclosed in development, matching <c>ExceptionHandlerFilterAttribute</c>.
-    /// </summary>
     private bool IncludeExceptionDetail =>
         HttpContext?.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true;
 
