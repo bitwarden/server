@@ -23,12 +23,15 @@ public abstract class BaseBillingController : Controller
     /// <typeparam name="T">The type of the successful result.</typeparam>
     /// <param name="result">The result of executing the billing command.</param>
     /// <returns>An HTTP result response representing the outcome of the command execution.</returns>
-    protected static IResult Handle<T>(BillingCommandResult<T> result) =>
+    protected IResult Handle<T>(BillingCommandResult<T> result) =>
         result.Match<IResult>(
             TypedResults.Ok,
             badRequest => Error.BadRequest(badRequest.Response),
             conflict => Error.Conflict(conflict.Response),
-            unhandled => Error.ServerError(unhandled.Response, unhandled.Exception));
+            unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
+
+    private bool IncludeExceptionDetail =>
+        HttpContext?.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true;
 
     protected static class Error
     {
@@ -45,13 +48,17 @@ public abstract class BaseBillingController : Controller
 
         public static JsonHttpResult<ErrorResponseModel> ServerError(
             string message = "Something went wrong with your request. Please contact support for assistance.",
-            Exception? exception = null) =>
+            Exception? exception = null,
+            bool includeExceptionDetail = false) =>
             TypedResults.Json(
-                exception == null ? new ErrorResponseModel(message) : new ErrorResponseModel(message)
-                {
-                    ExceptionMessage = exception.Message,
-                    ExceptionStackTrace = exception.StackTrace
-                },
+                exception != null && includeExceptionDetail
+                    ? new ErrorResponseModel(message)
+                    {
+                        ExceptionMessage = exception.Message,
+                        ExceptionStackTrace = exception.StackTrace,
+                        InnerExceptionMessage = exception.InnerException?.Message
+                    }
+                    : new ErrorResponseModel(message),
                 statusCode: StatusCodes.Status500InternalServerError);
 
         public static JsonHttpResult<ErrorResponseModel> Unauthorized(string message = "Unauthorized.") =>
