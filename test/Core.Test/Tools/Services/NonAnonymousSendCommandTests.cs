@@ -1239,6 +1239,7 @@ public class NonAnonymousSendCommandTests
         // Arrange
         var fileId = "file123";
         var expectedUrl = "https://download.example.com/file123";
+        var sendFileData = new SendFileData { Id = fileId, Size = 1000, Validated = true };
         var send = new Send
         {
             Id = Guid.NewGuid(),
@@ -1248,7 +1249,8 @@ public class NonAnonymousSendCommandTests
             DeletionDate = DateTime.UtcNow.AddDays(7),
             ExpirationDate = null,
             AccessCount = 3,
-            MaxAccessCount = 10
+            MaxAccessCount = 10,
+            Data = JsonSerializer.Serialize(sendFileData)
         };
 
         _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId).Returns(expectedUrl);
@@ -1269,6 +1271,36 @@ public class NonAnonymousSendCommandTests
 
         // Verify file storage service was called
         await _sendFileStorageService.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
+    }
+
+    [Fact]
+    public async Task GetSendFileDownloadUrlAsync_WithMismatchedFileId_ThrowsNotFoundException()
+    {
+        // Arrange
+        var fileId = "file123";
+        var wrongFileId = "wrongfile456";
+        var sendFileData = new SendFileData { Id = wrongFileId, Size = 1000, Validated = true };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = Guid.NewGuid(),
+            Disabled = false,
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            AccessCount = 0,
+            MaxAccessCount = 10,
+            Data = JsonSerializer.Serialize(sendFileData)
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
+            _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId));
+
+        // Verify repository and storage service were not called
+        await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
+        await _sendFileStorageService.DidNotReceive().GetSendFileDownloadUrlAsync(Arg.Any<Send>(), Arg.Any<string>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
     }
 
     [Fact]
