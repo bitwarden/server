@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -224,5 +225,38 @@ public static class OrganizationTestHelpers
             OrganizationUserType.User, externalId: email);
 
         return (user, organizationUser);
+    }
+
+    public static async Task<OrganizationUser> CreateStagedUserAsync(
+        ApiApplicationFactory factory,
+        Organization organization,
+        string email,
+        string? externalId = null)
+    {
+        var command = factory.GetService<ICreateStagedOrganizationUsersCommand>();
+
+        var result = await command.RunAsync(new CreateStagedOrganizationUsersRequest
+        {
+            Organization = organization,
+            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId ?? $"external-{email}" }],
+            EventSystemUser = EventSystemUser.SCIM
+        });
+
+        return result.AsSuccess.Single();
+    }
+
+    /// <summary>
+    /// Puts the organization on a seat limit with gateway identifiers, so seat autoscaling runs its real
+    /// billing path instead of short-circuiting on a missing subscription.
+    /// </summary>
+    public static async Task SetSeatsAsync(
+        ApiApplicationFactory factory, Organization organization, int seats, int? maxAutoscaleSeats)
+    {
+        organization.Seats = seats;
+        organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+        organization.Gateway = GatewayType.Stripe;
+        organization.GatewayCustomerId = "cus_integration_test";
+        organization.GatewaySubscriptionId = "sub_integration_test";
+        await factory.GetService<IOrganizationRepository>().ReplaceAsync(organization);
     }
 }
