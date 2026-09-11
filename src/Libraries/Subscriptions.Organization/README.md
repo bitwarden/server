@@ -25,6 +25,12 @@ The group authorizes **every** endpoint — the `Application` policy plus
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
 
+Individual endpoints may narrow this baseline further. The `preview` endpoint additionally requires
+`StandaloneOrganizationOwnerRequirement`, so it admits **only** an Owner of a standalone organization:
+an owner of a provider-managed (MSP or reseller) organization, and a confirmed provider user, are both
+denied. This mirrors legacy `ICurrentContext.EditSubscription`, which withholds subscription pricing
+from users whose billing is administered through a provider.
+
 ### Endpoints
 
 | Route | Handler | Returns |

@@ -17,7 +17,9 @@ public static class OrganizationSubscriptionEndpointsExtensions
     /// <summary>
     /// Attaches the group's shared cross-cutting chain to an empty group; the host owns the route prefix.
     /// The group authorizes every endpoint (<see cref="Policies.Application"/> + <see cref="OrganizationBillingRequirement"/>),
-    /// so handlers don't repeat the access check.
+    /// so handlers don't repeat the access check. Individual endpoints may narrow this further: the preview
+    /// additionally requires <see cref="StandaloneOrganizationOwnerRequirement"/>, denying provider-managed
+    /// organizations.
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
