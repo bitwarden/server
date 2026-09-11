@@ -24,14 +24,11 @@ public static class UserSubscriptionEndpointsExtensions
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
-        // The host mounts this group at /account/billing/subscription/premium.
         group.MapPost("upgrade/invoice/preview",
-                async (ClaimsPrincipal principal,
-                        PreviewInvoiceForPremiumOrgUpgradeRequest request,
-                        [FromServices] UserSubscriptionEndpointsHandler handler) =>
-                    TypedResults.Ok(await handler.PreviewPremiumOrgUpgradeAsync(principal, request)))
-            .WithName("PreviewPremiumOrgUpgradeInvoice")
-            .WithDescription("Previews the invoice for upgrading a Premium subscription to an organization plan.");
+                async (ClaimsPrincipal principal, PreviewPremiumUpgradeRequest request, [FromServices] UserSubscriptionEndpointsHandler handler) =>
+                    await handler.PreviewPremiumUpgradeAsync(principal, request))
+            .WithName("PreviewPremiumUpgrade")
+            .WithDescription("Previews the invoice for upgrading the user's Premium subscription to an organization plan.");
 
         return group;
     }

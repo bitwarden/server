@@ -13,10 +13,6 @@ internal static class StripeFixtures
     }
     """);
 
-    /// <summary>
-    /// Premium ($10/yr, 1 seat) four months into the term upgrading to Families under always_invoice.
-    /// Every Password Manager line is a proration, so the builder must synthesize the seat.
-    /// </summary>
     internal static Invoice SampleUpgradePreviewInvoiceProrationOnly() => Invoice.FromJson("""
     {
       "id": "in_preview_premium_org_upgrade", "total": 2200, "amount_due": 2200, "starting_balance": 0,

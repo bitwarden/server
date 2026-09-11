@@ -7,22 +7,16 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, the
-`IBuildInvoicePreviewForPremiumOrgUpgradeCommand`, and the feature flag keys the library owns
-(`InvoicingFeatureFlags`) as known flags. The public surface is `IInvoicePreviewService`,
-`IGetSubscriptionPreviewQuery`, the build commands under `InvoicePreviews/Commands/`, and the
-`InvoicePreview` / `SubscriptionPreview` record family under `InvoicePreviews/Models/` (including
-`PlanTierType`). The service, builder, mappers, reference table, and Stripe client are internal.
+`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, and the
+feature flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The public surface is
+`IInvoicePreviewService`, `IGetSubscriptionPreviewQuery`, and the `InvoicePreview` /
+`SubscriptionPreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
+service, builder, mappers, reference table, and Stripe client are internal.
 
 `IGetSubscriptionPreviewQuery.Run(ISubscriber)` builds the `SubscriptionPreview` for a subscriber's
 upcoming renewal: the invoice preview wrapped in the subscription-level envelope (status, storage,
 cancellation, and suspension). The `Organization` path is wired; the `User`/Premium path is stubbed
 for its own screen slice.
-
-`IBuildInvoicePreviewForPremiumOrgUpgradeCommand.Run(User, PlanType, BillingAddress)` previews a
-Premium subscriber's upgrade to an annual organization plan with `proration_behavior=always_invoice`,
-so the projection carries the prorated charge and the credit for unused Premium time. Called by the
-`Subscriptions.User` endpoint group.
 
 ## Stripe boundary
 
@@ -58,8 +52,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IPricingClient` | Mapping an organization's `PlanType` to tier and cadence for the preview |
 | `ISubscriber`, `Organization`, `User` | The subscriber the preview query runs for |
 | `PlanType`, `ProductTierType`, `SubscriptionStatus` | Plan lookup, the `TeamsStarter → Teams` tier collapse, and the status → envelope mapping |
-| `BillingAddress` (`Bit.Core.Billing.Payment.Models`) | The billing address the upgrade preview's tax calculation uses |
-| `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | Caller-input rejections and unmanaged-state faults surfaced by the commands and query |
 | `Utilities.GetSubscriptionSuspensionAsync`, `GetCurrentPeriodEnd` | Suspension timing and the next-charge date on the preview |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
