@@ -26,13 +26,13 @@ public class ApproverMailNotifier : IApproverMailNotifier
         IFeatureService featureService,
         ILogger<ApproverMailNotifier> logger)
     {
-        _accessMailNotifier = accessMailNotifier;
-        _collectionRepository = collectionRepository;
-        _organizationRepository = organizationRepository;
-        _userRepository = userRepository;
-        _globalSettings = globalSettings;
-        _featureService = featureService;
-        _logger = logger;
+        _accessMailNotifier = accessMailNotifier ?? throw new ArgumentNullException(nameof(accessMailNotifier));
+        _collectionRepository = collectionRepository ?? throw new ArgumentNullException(nameof(collectionRepository));
+        _organizationRepository = organizationRepository ?? throw new ArgumentNullException(nameof(organizationRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _globalSettings = globalSettings ?? throw new ArgumentNullException(nameof(globalSettings));
+        _featureService = featureService ?? throw new ArgumentNullException(nameof(featureService));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task NotifyPendingRequestAsync(AccessRequest request)
