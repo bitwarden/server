@@ -105,13 +105,13 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+    public async Task<ICollection<Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore, int batchSize)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Send>(
                 $"[{Schema}].[Send_ReadByDeletionDateBefore]",
-                new { DeletionDate = deletionDateBefore },
+                new { DeletionDate = deletionDateBefore, BatchSize = batchSize },
                 commandType: CommandType.StoredProcedure);
 
             // Don't filter or decrypt here — the cleanup job needs to see every row
@@ -226,6 +226,38 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             new { Ids = ids.ToGuidIdArrayTVP() },
             commandType: CommandType.StoredProcedure);
         return results.Where(UnprotectData).ToList();
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(IEnumerable<Guid> ids)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+
+        // Send_DeleteMany's DELETE + revision bump are transactional: a throw here reliably means
+        // nothing was deleted. It returns the distinct File-type Send owners so storage can be
+        // recomputed per user afterward.
+        var fileUserIds = await connection.QueryAsync<Guid>(
+            $"[{Schema}].[Send_DeleteMany]",
+            new { Ids = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure,
+            commandTimeout: 180);
+
+        foreach (var userId in fileUserIds)
+        {
+            try
+            {
+                await connection.ExecuteAsync(
+                    $"[{Schema}].[User_UpdateStorage]",
+                    new { Id = userId },
+                    commandType: CommandType.StoredProcedure,
+                    commandTimeout: 180);
+            }
+            catch (Exception ex)
+            {
+                // Storage stays stale until their next Send create/delete recomputes it.
+                _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
+            }
+        }
     }
 
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)

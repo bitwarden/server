@@ -41,6 +41,16 @@ public interface INonAnonymousSendCommand
     Task DeleteSendAsync(Send send);
 
     /// <summary>
+    /// Deletes many <see cref="Send" />s from the database and file storage in one batch.
+    /// </summary>
+    /// <param name="sends">The <see cref="Send" />s to delete.</param>
+    /// <returns>
+    /// The ids of the <see cref="Send" />s that were actually deleted. A <see cref="Send" /> whose file-storage
+    /// delete fails is skipped (not deleted from the database) and is retried on the next call.
+    /// </returns>
+    Task<ICollection<Guid>> DeleteManySendsAsync(IEnumerable<Send> sends);
+
+    /// <summary>
     /// Stores the confirmed file size of a send; when the file size cannot be confirmed, the send is deleted.
     /// </summary>
     /// <param name="send">The <see cref="Send" /> this command acts upon</param>

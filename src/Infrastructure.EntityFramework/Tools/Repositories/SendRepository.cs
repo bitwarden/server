@@ -89,12 +89,16 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore, int batchSize)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
+            var results = await dbContext.Sends
+                .Where(s => s.DeletionDate < deletionDateBefore)
+                .OrderBy(s => s.DeletionDate)
+                .Take(batchSize)
+                .ToListAsync();
             // Don't unprotect here DeleteSendsJob needs to succeed regardless of protected values
             // Only the DeletionDate needs to read, and it is not protected
             return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
@@ -210,6 +214,40 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         var dbContext = GetDatabaseContext(scope);
         var results = await dbContext.Sends.Where(s => ids.Contains(s.Id)).ToListAsync();
         return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var sends = dbContext.Sends.Where(s => ids.Contains(s.Id));
+        var userIds = await sends.Where(s => s.UserId != null).Select(s => s.UserId!.Value).Distinct().ToArrayAsync();
+        var fileUserIds = await sends.Where(s => s.UserId != null && s.Type == SendType.File)
+            .Select(s => s.UserId!.Value).Distinct().ToArrayAsync();
+
+        // Wrapping  in one transaction makes this all-or-nothing, matching
+        // the Dapper path's Send_DeleteMany + SET XACT_ABORT ON guarantee.
+        await using (var transaction = await dbContext.Database.BeginTransactionAsync())
+        {
+            await sends.ExecuteDeleteAsync();
+            await dbContext.UserBumpManyAccountRevisionDatesAsync(userIds);
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
+        foreach (var userId in fileUserIds)
+        {
+            try
+            {
+                // Storage stays stale until their next Send create/delete recomputes it.
+                await UserUpdateStorage(userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to recompute storage for User {UserId} after a Send batch delete.", userId);
+            }
+        }
     }
 
     private void ProtectData(Core.Tools.Entities.Send send)

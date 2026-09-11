@@ -225,6 +225,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
             throw new BadRequestException("File received does not match expected file length.");
         }
     }
+
     public async Task DeleteSendAsync(Send send)
     {
         if (send.Type == Enums.SendType.File && send.Data != null)
@@ -245,6 +246,65 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         await _sendRepository.DeleteAsync(send);
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
         await LogSendDeletedEventAsync(send);
+    }
+
+    public async Task<ICollection<Guid>> DeleteManySendsAsync(IEnumerable<Send> sends)
+    {
+        var toDelete = new List<Send>();
+        foreach (var send in sends)
+        {
+            if (send.Type == SendType.File && send.Data != null)
+            {
+                SendFileData data;
+                try
+                {
+                    data = JsonSerializer.Deserialize<SendFileData>(send.Data);
+                }
+                catch (JsonException ex)
+                {
+                    // Retrying changes nothing. JSON exception will never work.
+                    // Match DeleteSendAsync: delete the row and log possible orphan.
+                    _logger.LogWarning(ex, "Failed to deserialize Send {SendId} data; blob may be orphaned.", send.Id);
+                    data = null;
+                }
+
+                if (data?.Id != null)
+                {
+                    try
+                    {
+                        await _sendFileStorageService.DeleteFileAsync(send, data.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Skip this Send, it's retried next run since its DeletionDate is still in the past.
+                        _logger.LogWarning(ex,
+                            "Failed to delete blob for Send {SendId}; skipping this run, will retry.", send.Id);
+                        continue;
+                    }
+                }
+            }
+            toDelete.Add(send);
+        }
+
+        if (toDelete.Count > 0)
+        {
+            await _sendRepository.DeleteManyAsync(toDelete.Select(s => s.Id));
+        }
+
+        foreach (var send in toDelete)
+        {
+            try
+            {
+                await _pushNotificationService.PushSyncSendDeleteAsync(send);
+                await LogSendDeletedEventAsync(send);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to publish delete notification/event for Send {SendId}.", send.Id);
+            }
+        }
+
+        return toDelete.Select(s => s.Id).ToList();
     }
 
     public async Task<bool> ConfirmFileSize(Send send)

@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using Bit.Core;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -66,9 +67,47 @@ public class SendRepositoryTests
             DeletionDate = deletionDate.AddSeconds(2),
         });
 
-        var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate);
+        var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate, 10);
         var toDeleteSend = Assert.Single(toDeleteSends);
         Assert.Equal(shouldDeleteSend.Id, toDeleteSend.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    // This test runs best on a fresh database and may fail on subsequent runs with other tests.
+    public async Task GetManyByDeletionDateAsync_RespectsBatchSizeAndOrdersByOldestFirst(
+        ISendRepository sendRepository)
+    {
+        var deletionDate = DateTime.UtcNow.AddYears(-1);
+
+        var oldest = await sendRepository.CreateAsync(new Send
+        {
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = deletionDate.AddDays(-2),
+        });
+
+        var middle = await sendRepository.CreateAsync(new Send
+        {
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = deletionDate.AddDays(-1),
+        });
+
+        await sendRepository.CreateAsync(new Send
+        {
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = deletionDate.AddSeconds(-2),
+        });
+
+        var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate, 2);
+
+        Assert.Equal(2, toDeleteSends.Count);
+        Assert.Contains(toDeleteSends, s => s.Id == oldest.Id);
+        Assert.Contains(toDeleteSends, s => s.Id == middle.Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -118,9 +157,136 @@ public class SendRepositoryTests
             DeletionDate = deletionDate.AddSeconds(-2),
         });
 
-        var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate);
+        var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate, 10);
 
         Assert.Contains(toDeleteSends, s => s.Id == corruptSend.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteManyAsync_MultipleUsersInOneBatch_BumpsEachDistinctUsersAccountRevisionDate(
+        ISendRepository sendRepository,
+        IUserRepository userRepository)
+    {
+        var firstUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+        var secondUser = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var firstUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = firstUser.Id,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+        var secondUserSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = secondUser.Id,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        var firstUserBeforeDelete = await userRepository.GetByIdAsync(firstUser.Id);
+        var secondUserBeforeDelete = await userRepository.GetByIdAsync(secondUser.Id);
+        Assert.NotNull(firstUserBeforeDelete);
+        Assert.NotNull(secondUserBeforeDelete);
+
+        await sendRepository.DeleteManyAsync(new[] { firstUserSend.Id, secondUserSend.Id });
+
+        Assert.Null(await sendRepository.GetByIdAsync(firstUserSend.Id));
+        Assert.Null(await sendRepository.GetByIdAsync(secondUserSend.Id));
+
+        var firstUserAfterDelete = await userRepository.GetByIdAsync(firstUser.Id);
+        var secondUserAfterDelete = await userRepository.GetByIdAsync(secondUser.Id);
+        Assert.NotNull(firstUserAfterDelete);
+        Assert.NotNull(secondUserAfterDelete);
+        Assert.True(firstUserAfterDelete.AccountRevisionDate - firstUserBeforeDelete.AccountRevisionDate > TimeSpan.Zero,
+            "The first user's AccountRevisionDate is expected to be changed");
+        Assert.True(secondUserAfterDelete.AccountRevisionDate - secondUserBeforeDelete.AccountRevisionDate > TimeSpan.Zero,
+            "The second user's AccountRevisionDate is expected to be changed");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteManyAsync_FileTypeSend_RecomputesUserStorage(
+        ISendRepository sendRepository,
+        IUserRepository userRepository)
+    {
+        // User_UpdateStorage / UserUpdateStorage always touches RevisionDate, even when the
+        // computed byte total doesn't change — that makes it a reliable, provider-agnostic signal
+        // that the [Type] = 1 (File) branch of Send_DeleteMany's cursor actually ran for this user.
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var fileSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Data = "{\"Size\": 100}",
+            Type = SendType.File,
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        var userBeforeDelete = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(userBeforeDelete);
+
+        await sendRepository.DeleteManyAsync(new[] { fileSend.Id });
+
+        var userAfterDelete = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(userAfterDelete);
+        Assert.True(userAfterDelete.RevisionDate - userBeforeDelete.RevisionDate > TimeSpan.Zero,
+            "The user's RevisionDate is expected to be changed by a storage recompute");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteManyAsync_TextTypeSendOnly_DoesNotRecomputeUserStorage(
+        ISendRepository sendRepository,
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var textSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Type = SendType.Text,
+            Key = "2.t|t|t",
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+        });
+
+        var userBeforeDelete = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(userBeforeDelete);
+
+        await sendRepository.DeleteManyAsync(new[] { textSend.Id });
+
+        var userAfterDelete = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(userAfterDelete);
+        Assert.Equal(userBeforeDelete.RevisionDate, userAfterDelete.RevisionDate);
+        Assert.True(userAfterDelete.AccountRevisionDate - userBeforeDelete.AccountRevisionDate > TimeSpan.Zero,
+            "The AccountRevisionDate is still expected to be bumped for a Text-type Send");
     }
 
     [DatabaseTheory, DatabaseData]
