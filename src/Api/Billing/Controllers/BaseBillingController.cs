@@ -28,27 +28,15 @@ public abstract class BaseBillingController : Controller
             TypedResults.Ok,
             badRequest => Error.BadRequest(badRequest.Response),
             conflict => Error.Conflict(conflict.Response),
-            unhandled => ServerError(unhandled.Response, unhandled.Exception));
+            unhandled => Error.ServerError(unhandled.Response, unhandled.Exception, IncludeExceptionDetail));
 
     /// <summary>
-    /// Builds the 500 response for an unhandled billing command failure. Exception detail is only included
-    /// in development, matching <c>ExceptionHandlerFilterAttribute</c>. <see cref="BaseBillingCommand{T}"/>
-    /// has already logged the exception server-side by the time the result reaches here.
+    /// Whether a 500 response may carry exception detail. Only true in development, matching
+    /// <c>ExceptionHandlerFilterAttribute</c>. An absent request context reads as false, so the
+    /// detail is withheld unless development is positively established.
     /// </summary>
-    private JsonHttpResult<ErrorResponseModel> ServerError(string message, Exception? exception)
-    {
-        var model = new ErrorResponseModel(message);
-
-        var environment = HttpContext?.RequestServices.GetService<IWebHostEnvironment>();
-        if (exception != null && environment?.IsDevelopment() == true)
-        {
-            model.ExceptionMessage = exception.Message;
-            model.ExceptionStackTrace = exception.StackTrace;
-            model.InnerExceptionMessage = exception.InnerException?.Message;
-        }
-
-        return TypedResults.Json(model, statusCode: StatusCodes.Status500InternalServerError);
-    }
+    private bool IncludeExceptionDetail =>
+        HttpContext?.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() == true;
 
     protected static class Error
     {
@@ -63,10 +51,24 @@ public abstract class BaseBillingController : Controller
         public static NotFound<ErrorResponseModel> NotFound() =>
             TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
 
+        /// <summary>
+        /// <c>includeExceptionDetail</c> defaults to false so the exception is never disclosed unless
+        /// the caller positively establishes that it is safe to do so. See
+        /// <see cref="BaseBillingController.IncludeExceptionDetail"/>.
+        /// </summary>
         public static JsonHttpResult<ErrorResponseModel> ServerError(
-            string message = "Something went wrong with your request. Please contact support for assistance.") =>
+            string message = "Something went wrong with your request. Please contact support for assistance.",
+            Exception? exception = null,
+            bool includeExceptionDetail = false) =>
             TypedResults.Json(
-                new ErrorResponseModel(message),
+                exception != null && includeExceptionDetail
+                    ? new ErrorResponseModel(message)
+                    {
+                        ExceptionMessage = exception.Message,
+                        ExceptionStackTrace = exception.StackTrace,
+                        InnerExceptionMessage = exception.InnerException?.Message
+                    }
+                    : new ErrorResponseModel(message),
                 statusCode: StatusCodes.Status500InternalServerError);
 
         public static JsonHttpResult<ErrorResponseModel> Unauthorized(string message = "Unauthorized.") =>
