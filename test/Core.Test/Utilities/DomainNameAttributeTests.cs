@@ -14,7 +14,8 @@ public class DomainNameValidatorAttributeTests
     [InlineData("example123.com")]                  // domain with numbers
     [InlineData("e.com")]                           // short domain
     [InlineData("very-long-subdomain-name.example.com")]  // long subdomain
-    [InlineData("wörldé.com")]                      // unicode domain (IDN)
+    [InlineData("Example.COM")]                     // mixed case
+    [InlineData("xn--bitwarden-emd.com")]           // internationalized domain in ASCII (punycode) form
     public void IsValid_ReturnsTrueWhenValid(string domainName)
     {
         var sut = new DomainNameValidatorAttribute();
@@ -48,8 +49,19 @@ public class DomainNameValidatorAttributeTests
     [InlineData("")]                                // empty string
     [InlineData("   ")]                             // whitespace only
     [InlineData("http://example.com")]              // URL scheme
+    [InlineData("https://example.com")]             // URL scheme (https)
+    [InlineData("www.example.com")]                 // www prefix
+    [InlineData("WWW.example.com")]                 // www prefix, uppercase
+    [InlineData("Www.example.com")]                 // www prefix, mixed case
     [InlineData("example.com/path")]                // path component
     [InlineData("user@example.com")]                // email format
+    [InlineData("example")]                         // no top-level domain
+    [InlineData("example.c")]                       // single-character top-level domain
+    [InlineData("example.c0m")]                     // digit in top-level domain
+    [InlineData("wörldé.com")]                      // unicode domain; must be submitted in punycode form
+    [InlineData("bitwarden\u0219.com")]             // non-ASCII character in label (U+0219)
+    [InlineData("bitwarde\u0274.com")]              // non-ASCII character in label (U+0274)
+    [InlineData("example\u00AD.com")]               // soft hyphen (U+00AD)
     public void IsValid_ReturnsFalseWhenInvalid(string domainName)
     {
         var sut = new DomainNameValidatorAttribute();
@@ -80,5 +92,28 @@ public class DomainNameValidatorAttributeTests
         var actual = sut.IsValid(longDomain);
 
         Assert.False(actual);
+    }
+
+    [Fact]
+    public void IsValid_ReturnsFalseWhenLabelTooLong()
+    {
+        var sut = new DomainNameValidatorAttribute();
+        // A single label may be at most 63 characters
+        var longLabelDomain = new string('a', 64) + ".com";
+
+        var actual = sut.IsValid(longLabelDomain);
+
+        Assert.False(actual);
+    }
+
+    [Fact]
+    public void IsValid_ReturnsTrueWhenLabelAtMaxLength()
+    {
+        var sut = new DomainNameValidatorAttribute();
+        var maxLabelDomain = new string('a', 63) + ".com";
+
+        var actual = sut.IsValid(maxLabelDomain);
+
+        Assert.True(actual);
     }
 }
