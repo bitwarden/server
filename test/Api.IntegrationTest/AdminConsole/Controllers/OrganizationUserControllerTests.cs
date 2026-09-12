@@ -57,7 +57,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = [orgUserToDelete.Id]
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
         var content = await httpResponse.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
         Assert.Single(content.Data, r => r.Id == orgUserToDelete.Id && r.Error == string.Empty);
 
@@ -99,7 +103,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = [validOrgUser.Id, invalidOrgUser.Id]
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
 
         Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
         var debug = await httpResponse.Content.ReadAsStringAsync();
@@ -134,7 +142,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = new List<Guid> { Guid.NewGuid() }
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }

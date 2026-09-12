@@ -102,12 +102,4 @@ public class ProviderOrganizationsController : Controller
             providerOrganization,
             organization);
     }
-
-    [HttpPost("{id:guid}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ProviderAdminRequirement>]
-    public async Task PostDelete([FromRoute] Guid providerId, Guid id)
-    {
-        await Delete(providerId, id);
-    }
 }
