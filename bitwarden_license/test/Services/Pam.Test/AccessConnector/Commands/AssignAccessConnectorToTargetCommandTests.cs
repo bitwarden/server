@@ -78,7 +78,7 @@ public class AssignAccessConnectorToTargetCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task AssignAsync_DaemonDisabled_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task AssignAsync_DaemonDisabled_CreatesAssignment(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
     {
         var sutProvider = Setup();
         daemon.Status = PamAccessConnectorStatus.Disabled;
@@ -86,12 +86,13 @@ public class AssignAccessConnectorToTargetCommandTests
         target.Method = PamTargetSystemMethod.Automatic;
         sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+        sutProvider.GetDependency<IPamDaemonRepository>().AssignmentExistsAsync(daemon.Id, target.Id).Returns(false);
 
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AssignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id));
+        await sutProvider.Sut.AssignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id);
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAssignmentAsync(default!);
+        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1)
+            .CreateAssignmentAsync(Arg.Is<PamDaemonTargetAssignment>(
+                a => a.DaemonId == daemon.Id && a.TargetSystemId == target.Id));
     }
 
     [Theory, BitAutoData]

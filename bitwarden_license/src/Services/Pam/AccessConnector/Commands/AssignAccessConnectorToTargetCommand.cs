@@ -44,11 +44,6 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
 
         // Both rows were just loaded against the same route organization, so the same-org invariant holds by
         // construction.
-        if (daemon.Status != PamAccessConnectorStatus.Enabled)
-        {
-            throw new BadRequestException("This daemon is disabled.");
-        }
-
         if (target.Method != PamTargetSystemMethod.Automatic)
         {
             throw new BadRequestException("Only automatic target systems can be assigned a daemon.");
