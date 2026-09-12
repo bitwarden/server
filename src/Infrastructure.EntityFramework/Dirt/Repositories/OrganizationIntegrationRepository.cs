@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Repositories;
 using Bit.Infrastructure.EntityFramework.Dirt.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -35,6 +36,16 @@ public class OrganizationIntegrationRepository :
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new OrganizationIntegrationReadByTeamsConfigurationTenantIdTeamIdQuery(tenantId: tenantId, teamId: teamId);
+            return await query.Run(dbContext).SingleOrDefaultAsync();
+        }
+    }
+
+    public async Task<OrganizationIntegration?> GetByOrganizationIdTypeAsync(Guid organizationId, IntegrationType type)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationIntegrationReadByOrganizationIdTypeQuery(organizationId, type);
             return await query.Run(dbContext).SingleOrDefaultAsync();
         }
     }
