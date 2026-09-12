@@ -52,8 +52,6 @@ public class Startup
         });
 
         // Services
-        var usingServiceBusAppCache = CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName);
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
@@ -67,11 +65,6 @@ public class Startup
         {
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
-
-        if (usingServiceBusAppCache)
-        {
-            services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
-        }
 
         // Add event integration services
         services.AddDistributedCache(globalSettings);
