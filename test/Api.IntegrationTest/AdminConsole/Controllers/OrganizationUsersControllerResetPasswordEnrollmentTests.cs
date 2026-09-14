@@ -44,13 +44,28 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
         _organization.UsePolicies = true;
         await organizationRepository.ReplaceAsync(_organization);
 
+        await SeedResetPasswordPolicyAsync(autoEnrollEnabled: false);
+    }
+
+    private async Task SeedResetPasswordPolicyAsync(bool autoEnrollEnabled)
+    {
         var policyRepository = _factory.GetService<IPolicyRepository>();
+        var existing = await policyRepository.GetByOrganizationIdTypeAsync(_organization.Id, PolicyType.ResetPassword);
+        var data = autoEnrollEnabled ? "{\"autoEnrollEnabled\":true}" : "{}";
+
+        if (existing != null)
+        {
+            existing.Data = data;
+            await policyRepository.ReplaceAsync(existing);
+            return;
+        }
+
         await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = _organization.Id,
             Type = PolicyType.ResetPassword,
             Enabled = true,
-            Data = "{}"
+            Data = data
         });
     }
 
@@ -95,5 +110,58 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
             request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutResetPasswordEnrollment_WhenUserWithdrawsSelfWithEmptyKey_ClearsTheStoredKey()
+    {
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        memberOrgUser.ResetPasswordKey = ValidResetPasswordKey;
+        await organizationUserRepository.ReplaceAsync(memberOrgUser);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        var request = new { ResetPasswordKey = "", MasterPasswordHash = (string?)null };
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{memberOrgUser.UserId}/reset-password-enrollment",
+            request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updated = await organizationUserRepository.GetByIdAsync(memberOrgUser.Id);
+        Assert.Null(updated!.ResetPasswordKey);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task PutResetPasswordEnrollment_WhenAutoEnrollEnabledAndKeyIsBlank_ReturnsBadRequest(
+        string resetPasswordKey)
+    {
+        await SeedResetPasswordPolicyAsync(autoEnrollEnabled: true);
+
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+        memberOrgUser.ResetPasswordKey = ValidResetPasswordKey;
+        await organizationUserRepository.ReplaceAsync(memberOrgUser);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        var request = new { ResetPasswordKey = resetPasswordKey, MasterPasswordHash = "not-my-password" };
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{memberOrgUser.UserId}/reset-password-enrollment",
+            request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var updated = await organizationUserRepository.GetByIdAsync(memberOrgUser.Id);
+        Assert.Equal(ValidResetPasswordKey, updated!.ResetPasswordKey);
     }
 }

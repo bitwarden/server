@@ -50,6 +50,26 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
         await sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
             organizationId, callingUserId, null, callingUserId);
 
+        Assert.Null(orgUser.ResetPasswordKey);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(orgUser);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
+            orgUser, EventType.OrganizationUser_ResetPassword_Withdraw);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsBlank_WithdrawsUser(
+        string resetPasswordKey, Guid organizationId, Guid callingUserId,
+        OrganizationUser orgUser, Organization org,
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
+    {
+        SetupValidRequest(sutProvider, organizationId, callingUserId, orgUser, org);
+
+        await sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
+            organizationId, callingUserId, resetPasswordKey, callingUserId);
+
+        Assert.Null(orgUser.ResetPasswordKey);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(orgUser);
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
             orgUser, EventType.OrganizationUser_ResetPassword_Withdraw);
@@ -211,6 +231,28 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
                 organizationId, callingUserId, null, callingUserId));
 
         Assert.Contains("Due to an Enterprise policy, you are not allowed to withdraw from account recovery.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenAutoEnrollEnabledAndKeyIsBlank_ThrowsBadRequest(
+        string resetPasswordKey, Guid organizationId, Guid callingUserId,
+        OrganizationUser orgUser, Organization org,
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
+    {
+        var policyData = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        SetupValidRequest(sutProvider, organizationId, callingUserId, orgUser, org, policyData);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
+                organizationId, callingUserId, resetPasswordKey, callingUserId));
+
+        Assert.Contains("Due to an Enterprise policy, you are not allowed to withdraw from account recovery.", exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
     }
 
     private static void SetupOrgUser(
