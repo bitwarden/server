@@ -162,6 +162,38 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
+    public void GetDeviceFromRequest_DeviceIdentifierTooLong_ReturnsNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+        request.Raw["DeviceIdentifier"] = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_DeviceIdentifierAtMaxLength_ReturnsDevice(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+        var deviceIdentifier = new string('a', Device.MaxIdentifierLength);
+        request.Raw["DeviceIdentifier"] = deviceIdentifier;
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(deviceIdentifier, result.Identifier);
+    }
+
+    [Theory, BitAutoData]
     public void GetDeviceFromRequest_PopulatesClientVersionFromParameter(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {

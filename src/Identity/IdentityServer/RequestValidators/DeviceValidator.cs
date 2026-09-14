@@ -42,13 +42,6 @@ public class DeviceValidator(
 
     private const string PasswordGrantType = "password";
 
-    /// <summary>
-    /// Upper bound on the client-supplied device identifier, matching the max length of
-    /// <see cref="Device.Identifier"/>. A longer value can never be persisted, so it is rejected up front
-    /// rather than after it has been carried through verification.
-    /// </summary>
-    private const int MaxDeviceIdentifierLength = 50;
-
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
     {
         // Parse device from request and return early if no device information is provided.
@@ -240,8 +233,10 @@ public class DeviceValidator(
         var deviceName = request.Raw["DeviceName"]?.ToString();
         var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
 
+        // An identifier longer than the column can hold could never be persisted, so it is rejected up
+        // front rather than after it has been carried through verification.
         if (string.IsNullOrWhiteSpace(deviceIdentifier) ||
-            deviceIdentifier.Length > MaxDeviceIdentifierLength ||
+            deviceIdentifier.Length > Device.MaxIdentifierLength ||
             string.IsNullOrWhiteSpace(requestDeviceType) ||
             string.IsNullOrWhiteSpace(deviceName) ||
             !Enum.TryParse(requestDeviceType, out DeviceType parsedDeviceType))
