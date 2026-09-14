@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -8,12 +9,14 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
+[RequireFeature(FeatureFlagKeys.SecretsVersioning)]
 public class SecretVersionsController : Controller
 {
     private readonly ICurrentContext _currentContext;
