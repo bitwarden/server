@@ -356,6 +356,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     /// </remarks>
     [HttpPost("send-invite")]
     [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(ListResponseModel<OrganizationUserBulkResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IResult> SendInviteToStagedUsers([FromRoute] Guid orgId,
         [FromBody] OrganizationUserBulkRequestModel model)
     {
