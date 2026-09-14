@@ -171,6 +171,8 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.Equal("deploy token", RustSdkService.DecryptString(apiKey.Name, organizationKeyB64));
 
         var derivedKeyB64 = RustSdkService.DeriveAccessTokenKey(accessToken.Split(':')[1]);
+        Assert.Equal(derivedKeyB64, RustSdkService.DecryptString(apiKey.Key, organizationKeyB64));
+
         var payload = RustSdkService.DecryptString(apiKey.EncryptedPayload, derivedKeyB64);
         using var payloadDocument = JsonDocument.Parse(payload);
         Assert.Equal(organizationKeyB64, payloadDocument.RootElement.GetProperty("encryptionKey").GetString());
