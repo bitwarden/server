@@ -161,7 +161,12 @@ public class EncryptedStringAttribute : ValidationAttribute
     private static int DecodedByteLength(ReadOnlySpan<char> piece)
     {
         var padCount = 0;
-        if (piece[^1] == '=') { padCount++; if (piece[^2] == '=') { padCount++; } }
+        if (piece[^1] == '=') {
+            padCount++;
+            if (piece[^2] == '=') { 
+                padCount++;
+            }
+        }
 
         return piece.Length / 4 * 3 - padCount;
     }
