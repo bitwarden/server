@@ -4,7 +4,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -39,7 +38,6 @@ public class SecretsController : Controller
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IAuthorizationService _authorizationService;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SecretsController(
         ICurrentContext currentContext,
@@ -53,8 +51,7 @@ public class SecretsController : Controller
         ISecretAccessPoliciesUpdatesQuery secretAccessPoliciesUpdatesQuery,
         IUserService userService,
         IEventService eventService,
-        IAuthorizationService authorizationService,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
@@ -68,7 +65,6 @@ public class SecretsController : Controller
         _userService = userService;
         _eventService = eventService;
         _authorizationService = authorizationService;
-        _featureService = featureService;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -194,9 +190,8 @@ public class SecretsController : Controller
             }
         }
 
-        var recordVersion = updateRequest.ValueChanged &&
-                            _featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning);
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates, recordVersion);
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates,
+            updateRequest.ValueChanged);
 
         await LogSecretEventAsync(secret, EventType.Secret_Edited);
 

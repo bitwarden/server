@@ -4,8 +4,8 @@ using Bit.Core.SecretsManager.Repositories;
 namespace Bit.Api.IntegrationTest.SecretsManager.Helpers;
 
 /// <summary>
-/// Seeding helpers that make a test state which version history its secret starts with, now that
-/// <see cref="ISecretRepository.CreateAsync"/> requires an initial version.
+/// Seeding helpers that make a test state which version history its secret starts with, instead
+/// of depending on the feature flag state the create command would consult.
 /// </summary>
 public static class SecretSeedExtensions
 {

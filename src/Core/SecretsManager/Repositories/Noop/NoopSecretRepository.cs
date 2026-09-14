@@ -50,7 +50,7 @@ public class NoopSecretRepository : ISecretRepository
     }
 
     public Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates,
-        SecretVersion initialVersion)
+        SecretVersion initialVersion = null)
     {
         return Task.FromResult(null as Secret);
     }

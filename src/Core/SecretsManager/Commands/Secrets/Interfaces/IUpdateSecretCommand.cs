@@ -12,7 +12,8 @@ public interface IUpdateSecretCommand
     /// </summary>
     /// <param name="valueChanged">
     /// Whether this update changes the secret's value. An edit that leaves the value alone has
-    /// nothing at risk of being lost, so it records no version.
+    /// nothing at risk of being lost, so it records no version. No version is recorded while the
+    /// <see cref="Bit.Core.FeatureFlagKeys.SecretsVersioning"/> feature flag is disabled.
     /// </param>
     Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPolicyUpdates, bool valueChanged);
 }

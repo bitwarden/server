@@ -161,7 +161,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
         Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates,
-        Core.SecretsManager.Entities.SecretVersion initialVersion)
+        Core.SecretsManager.Entities.SecretVersion? initialVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -185,10 +185,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
 
-        initialVersion.SecretId = entity.Id;
+        if (initialVersion != null)
+        {
+            initialVersion.SecretId = entity.Id;
 
-        await SecretVersionWriter.AddAsync(dbContext, Mapper, initialVersion);
-        await dbContext.SaveChangesAsync();
+            await SecretVersionWriter.AddAsync(dbContext, Mapper, initialVersion);
+            await dbContext.SaveChangesAsync();
+        }
 
         await transaction.CommitAsync();
         return secret;
