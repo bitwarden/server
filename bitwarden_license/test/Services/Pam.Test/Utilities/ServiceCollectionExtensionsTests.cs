@@ -95,6 +95,7 @@ public class ServiceCollectionExtensionsTests
     [InlineData(typeof(IAccessAuditEventEmitter), typeof(AccessAuditEventEmitter))]
     [InlineData(typeof(IApproverInboxNotifier), typeof(ApproverInboxNotifier))]
     [InlineData(typeof(IRequesterNotifier), typeof(RequesterNotifier))]
+    [InlineData(typeof(IAccessMailNotifier), typeof(AccessMailNotifier))]
     public void AddPamServices_RegistersSideChannelSeam(Type serviceType, Type expectedImplementation)
     {
         var services = PamServices();
