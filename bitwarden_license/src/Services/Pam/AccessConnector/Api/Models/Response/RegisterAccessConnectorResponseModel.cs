@@ -50,8 +50,8 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
 
     /// <summary>
     /// The id of the access connector's <c>dbo.ApiKey</c> credential. The operator assembles the access connector's
-    /// OAuth client id from it (<c>daemon.&lt;ApiKeyId&gt;</c>, resolved server-side by
-    /// <c>PamAccessConnectorClientProvider</c> in Identity).
+    /// OAuth client id from it (<c>access-connector.&lt;ApiKeyId&gt;</c>, resolved server-side by
+    /// <c>PamDaemonClientProvider</c> in Identity).
     /// </summary>
     public Guid ApiKeyId { get; set; }
 
