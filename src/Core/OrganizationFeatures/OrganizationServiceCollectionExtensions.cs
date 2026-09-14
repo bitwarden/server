@@ -154,8 +154,6 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IOrganizationUserValidationService, OrganizationUserValidationService>();
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
         services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
-        services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
-
         services.AddScoped<V2_UpdateUserCommand.IUpdateOrganizationUserCommand, V2_UpdateUserCommand.UpdateOrganizationUserCommand>();
         services.AddScoped<V2_UpdateUserCommand.IUpdateOrganizationUserValidator, V2_UpdateUserCommand.UpdateOrganizationUserValidator>();
         services.AddScoped<IUpdateUserResetPasswordEnrollmentCommand, UpdateUserResetPasswordEnrollmentCommand>();
@@ -188,6 +186,7 @@ public static class OrganizationServiceCollectionExtensions
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
+        services.TryAddScoped<ICollectionAccessValidator, CollectionAccessValidator>();
         services.AddScoped<ICreateCollectionCommand, CreateCollectionCommand>();
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();

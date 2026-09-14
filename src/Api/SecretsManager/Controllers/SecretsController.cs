@@ -4,6 +4,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -41,6 +42,7 @@ public class SecretsController : Controller
     private readonly IEventService _eventService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SecretsController(
         ICurrentContext currentContext,
@@ -56,7 +58,8 @@ public class SecretsController : Controller
         IUserService userService,
         IEventService eventService,
         IAuthorizationService authorizationService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
@@ -72,6 +75,7 @@ public class SecretsController : Controller
         _eventService = eventService;
         _authorizationService = authorizationService;
         _organizationUserRepository = organizationUserRepository;
+        _featureService = featureService;
 
     }
 
@@ -197,8 +201,7 @@ public class SecretsController : Controller
             }
         }
 
-        // Create a version record if the value changed
-        if (updateRequest.ValueChanged)
+        if (updateRequest.ValueChanged && _featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning))
         {
             // Store the old value before updating
             var oldValue = secret.Value;
