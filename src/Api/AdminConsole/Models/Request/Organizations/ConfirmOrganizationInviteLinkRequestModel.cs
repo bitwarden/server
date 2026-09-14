@@ -20,6 +20,7 @@ public class ConfirmOrganizationInviteLinkRequestModel
     /// <summary>
     /// The user's account recovery key, supplied when the organization enforces automatic enrollment.
     /// </summary>
+    [EncryptedStringLength(1000)]
     public string? ResetPasswordKey { get; set; }
 
     /// <summary>
