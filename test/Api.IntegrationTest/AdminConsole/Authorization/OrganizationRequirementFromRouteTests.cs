@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.IntegrationTestCommon;
+using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Authorization;
 using Xunit;
 
@@ -16,6 +17,7 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
     [
         typeof(OrgUserLinkedToUserIdRequirement),
         typeof(OrganizationCollectionManagementAccessRequirement),
+        typeof(StandaloneOrganizationOwnerRequirement),
     ];
 
     /// <summary>
