@@ -92,6 +92,22 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
     }
 
     [Fact]
+    public async Task PutResetPasswordEnrollment_WhenKeyIsNotAnEncryptedString_ReturnsBadRequest()
+    {
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await _loginHelper.LoginAsync(memberEmail);
+
+        var request = new { ResetPasswordKey = "x", MasterPasswordHash = "master_password_hash" };
+
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{memberOrgUser.UserId}/reset-password-enrollment",
+            request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task PutResetPasswordEnrollment_WhenUserWithdrawsSelf_ReturnsOk()
     {
         var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(

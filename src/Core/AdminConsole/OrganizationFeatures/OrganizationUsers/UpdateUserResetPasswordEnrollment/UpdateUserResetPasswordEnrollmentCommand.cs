@@ -71,6 +71,11 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
             }
         }
 
+        if (!isWithdrawal && !EncryptedStringAttribute.IsValidCore(resetPasswordKey))
+        {
+            throw new BadRequestException(new InvalidResetPasswordKeyError().Message);
+        }
+
         // Store null, not a blank string, to match how the key is read
         orgUser.ResetPasswordKey = isWithdrawal ? null : resetPasswordKey;
         await _organizationUserRepository.ReplaceAsync(orgUser);

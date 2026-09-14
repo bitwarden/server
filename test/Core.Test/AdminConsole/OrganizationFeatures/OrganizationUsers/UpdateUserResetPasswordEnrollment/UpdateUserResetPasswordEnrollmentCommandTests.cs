@@ -75,6 +75,28 @@ public class UpdateUserResetPasswordEnrollmentCommandTests
             orgUser, EventType.OrganizationUser_ResetPassword_Withdraw);
     }
 
+    [Theory]
+    [BitAutoData("x")]
+    [BitAutoData("not-a-key")]
+    [BitAutoData("2.enc-key")]
+    public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsNotAnEncryptedString_ThrowsBadRequest(
+        string resetPasswordKey, Guid organizationId, Guid callingUserId,
+        OrganizationUser orgUser, Organization org,
+        SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
+    {
+        SetupValidRequest(sutProvider, organizationId, callingUserId, orgUser, org);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
+                organizationId, callingUserId, resetPasswordKey, callingUserId));
+
+        Assert.Contains(new InvalidResetPasswordKeyError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceive()
+            .LogOrganizationUserEventAsync(Arg.Any<OrganizationUser>(), Arg.Any<EventType>());
+    }
+
     [Theory, BitAutoData]
     public async Task UpdateUserResetPasswordEnrollmentAsync_WhenUserNotFound_ThrowsBadRequest(
         Guid organizationId, Guid callingUserId, string resetPasswordKey,
