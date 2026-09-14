@@ -4,10 +4,12 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.HttpExtensions;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -30,6 +32,14 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
     public SecretVersionsControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        // SecretVersionsController is gated by [RequireFeature]; the substitution must be
+        // registered before the host is built by CreateClient.
+        _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(featureService =>
+        {
+            featureService
+                .IsEnabled(FeatureFlagKeys.SecretsVersioning)
+                .Returns(true);
+        });
         _client = _factory.CreateClient();
         _secretRepository = _factory.GetService<ISecretRepository>();
         _secretVersionRepository = _factory.GetService<ISecretVersionRepository>();
