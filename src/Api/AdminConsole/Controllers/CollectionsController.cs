@@ -221,13 +221,6 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collectionWithPermissions);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT /{id} instead.")]
-    public async Task<CollectionResponseModel> PostPut(Guid orgId, [InjectCollection] Collection collection, [FromBody] UpdateCollectionRequestModel model)
-    {
-        return await Put(orgId, collection, model);
-    }
-
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
@@ -263,13 +256,6 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{id} instead.")]
-    public async Task PostDelete(Guid orgId, [InjectCollection] Collection collection)
-    {
-        await Delete(orgId, collection);
-    }
-
     [HttpDelete("")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
@@ -286,12 +272,5 @@ public class CollectionsController : Controller
         }
 
         await _deleteCollectionCommand.DeleteManyAsync(collections);
-    }
-
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
-    public async Task PostDeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
-    {
-        await DeleteMany(orgId, model);
     }
 }
