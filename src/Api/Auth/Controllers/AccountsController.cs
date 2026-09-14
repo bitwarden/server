@@ -60,6 +60,7 @@ public class AccountsController : Controller
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
     private readonly ICurrentContext _currentContext;
+    private readonly ILogger<AccountsController> _logger;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -81,7 +82,8 @@ public class AccountsController : Controller
         IUserRepository userRepository,
         IRotateUserApiKeyCommand rotateUserApiKeyCommand,
         ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand,
-        ICurrentContext currentContext
+        ICurrentContext currentContext,
+        ILogger<AccountsController> logger
         )
     {
         _organizationService = organizationService;
@@ -104,6 +106,7 @@ public class AccountsController : Controller
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
         _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
         _currentContext = currentContext;
+        _logger = logger;
     }
 
 
@@ -898,10 +901,14 @@ public class AccountsController : Controller
                 .GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
         }
 
-        // No device to scope to means no code can be issued. Return the same success shape as above rather
-        // than an error, so the response reveals nothing about why.
+        // No device to scope to means no code can be issued. The secret is already verified here, so a
+        // distinguishable response would confirm a correct secret to an anonymous caller — hence the
+        // unchanged success shape, with the log as the only signal.
         if (string.IsNullOrWhiteSpace(deviceIdentifier))
         {
+            _logger.LogWarning(
+                "Could not resend a new device verification code: the request identified no device and no "
+                + "pending device was recorded.");
             return;
         }
 

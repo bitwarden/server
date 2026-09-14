@@ -26,6 +26,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -103,7 +104,8 @@ public class AccountsControllerTests : IDisposable
             _userRepository,
             _rotateUserApiKeyCommand,
             _selfServiceChangeEmailCommand,
-            _currentContext
+            _currentContext,
+            Substitute.For<ILogger<AccountsController>>()
         );
     }
 
