@@ -63,6 +63,8 @@ public class SecretVersionsControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id));
+
+        await AssertNoSecretEventLoggedAsync(sutProvider);
     }
 
     [Theory]
@@ -91,6 +93,11 @@ public class SecretVersionsControllerTests
         Assert.Equal(versions.Count, result.Data.Count());
         await sutProvider.GetDependency<ISecretVersionRepository>().Received(1)
             .GetManyBySecretIdAsync(Arg.Is(secret.Id));
+
+        // Version history exposes past values, so reading it is audited as a secret retrieval.
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserSecretsEventAsync(userId, Arg.Is<IEnumerable<Secret>>(s => s.Single().Id == secret.Id),
+                EventType.Secret_Retrieved);
     }
 
     [Theory]
@@ -126,6 +133,10 @@ public class SecretVersionsControllerTests
 
         Assert.Equal(version.Id, result.Id);
         Assert.Equal(version.SecretId, result.SecretId);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserSecretsEventAsync(userId, Arg.Is<IEnumerable<Secret>>(s => s.Single().Id == secret.Id),
+                EventType.Secret_Retrieved);
     }
 
     [Theory]
@@ -149,6 +160,8 @@ public class SecretVersionsControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.RestoreVersionAsync(secret.Id, request));
+
+        await AssertNoSecretEventLoggedAsync(sutProvider);
     }
 
     [Theory]
@@ -222,10 +235,24 @@ public class SecretVersionsControllerTests
             .GetByOrganizationAsync(secret.OrganizationId, userId).Returns(organizationUser);
         sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
 
+        var originalValue = secret.Value;
+        var originalRevisionDate = secret.RevisionDate;
+
         var result = await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
             .UpdateAsync(Arg.Is<Secret>(s => s.Value == versionValue));
+
+        // The displaced value is snapshotted with the date it was set, not the restore time.
+        await sutProvider.GetDependency<ISecretVersionRepository>().Received(1)
+            .CreateAsync(Arg.Is<SecretVersion>(v =>
+                v.SecretId == secret.Id &&
+                v.Value == originalValue &&
+                v.VersionDate == originalRevisionDate &&
+                v.EditorOrganizationUserId == organizationUser.Id));
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserSecretsEventAsync(userId, Arg.Is<IEnumerable<Secret>>(s => s.Single().Id == secret.Id),
+                EventType.Secret_Edited);
     }
 
     [Theory]
@@ -331,6 +358,7 @@ public class SecretVersionsControllerTests
 
         await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
             .GetManyBySecretIdAsync(default);
+        await AssertNoSecretEventLoggedAsync(sutProvider);
     }
 
     [Theory]
@@ -359,6 +387,7 @@ public class SecretVersionsControllerTests
 
         await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default!);
         await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+        await AssertNoSecretEventLoggedAsync(sutProvider);
     }
 
     [Theory]
@@ -396,6 +425,9 @@ public class SecretVersionsControllerTests
                 v.EditorOrganizationUserId == null));
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .GetByOrganizationAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountSecretsEventAsync(serviceAccountId,
+                Arg.Is<IEnumerable<Secret>>(s => s.Single().Id == secret.Id), EventType.Secret_Edited);
     }
 
     [Theory]
@@ -574,5 +606,177 @@ public class SecretVersionsControllerTests
 
         await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
             .DeleteManyByIdAsync(default!);
+    }
+    [Theory]
+    [BitAutoData]
+    public async Task GetVersionsBySecretId_ServiceAccount_Success_LogsRetrievedAsServiceAccount(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        List<SecretVersion> versions,
+        Guid serviceAccountId)
+    {
+        foreach (var version in versions)
+        {
+            version.SecretId = secret.Id;
+        }
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns((true, false));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyBySecretIdAsync(secret.Id).Returns(versions);
+
+        var result = await sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id);
+
+        Assert.Equal(versions.Count, result.Data.Count());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountSecretsEventAsync(serviceAccountId,
+                Arg.Is<IEnumerable<Secret>>(s => s.Single().Id == secret.Id), EventType.Secret_Retrieved);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetVersionsBySecretId_NoVersions_LogsNothing(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        Guid userId)
+    {
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
+            .ReturnsForAnyArgs((true, false));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyBySecretIdAsync(secret.Id)
+            .Returns(new List<SecretVersion>());
+
+        var result = await sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id);
+
+        // Nothing was disclosed, so there is nothing to audit.
+        Assert.Empty(result.Data);
+        await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetVersionsBySecretId_OrganizationApiKey_NoReadAccess_Throws(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        Guid organizationId)
+    {
+        // Organization API keys resolve to AccessClientType.Organization, which the access query
+        // never grants secret access. They must not bypass the check.
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.Organization);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(organizationId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, organizationId, AccessClientType.Organization)
+            .Returns((false, false));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id));
+
+        await sutProvider.GetDependency<ISecretVersionRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyBySecretIdAsync(default);
+        await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetManyByIds_Success_LogsRetrievedForEachSecret(
+        SutProvider<SecretVersionsController> sutProvider,
+        List<SecretVersion> versions,
+        Guid userId,
+        Guid organizationId)
+    {
+        var firstSecretId = Guid.NewGuid();
+        var secondSecretId = Guid.NewGuid();
+        versions[0].SecretId = firstSecretId;
+        for (var i = 1; i < versions.Count; i++)
+        {
+            versions[i].SecretId = secondSecretId;
+        }
+        var versionIds = versions.Select(v => v.Id).ToList();
+        var secrets = new List<Secret>
+        {
+            new() { Id = firstSecretId, OrganizationId = organizationId },
+            new() { Id = secondSecretId, OrganizationId = organizationId },
+        };
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(versionIds).Returns(versions);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), userId, AccessClientType.User)
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)>
+            {
+                { firstSecretId, (true, false) },
+                { secondSecretId, (true, false) },
+            });
+
+        var result = await sutProvider.Sut.GetManyByIdsAsync(versionIds);
+
+        Assert.Equal(versions.Count, result.Data.Count());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserSecretsEventAsync(userId,
+                Arg.Is<IEnumerable<Secret>>(s => s.Select(x => x.Id).OrderBy(x => x)
+                    .SequenceEqual(new[] { firstSecretId, secondSecretId }.OrderBy(x => x))),
+                EventType.Secret_Retrieved);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetManyByIds_ServiceAccount_MissingAccessToOneSecret_LogsNothing(
+        SutProvider<SecretVersionsController> sutProvider,
+        List<SecretVersion> versions,
+        Guid serviceAccountId,
+        Guid organizationId)
+    {
+        var accessibleSecretId = Guid.NewGuid();
+        var inaccessibleSecretId = Guid.NewGuid();
+        versions[0].SecretId = accessibleSecretId;
+        for (var i = 1; i < versions.Count; i++)
+        {
+            versions[i].SecretId = inaccessibleSecretId;
+        }
+        var versionIds = versions.Select(v => v.Id).ToList();
+        var secrets = new List<Secret>
+        {
+            new() { Id = accessibleSecretId, OrganizationId = organizationId },
+            new() { Id = inaccessibleSecretId, OrganizationId = organizationId },
+        };
+
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyByIdsAsync(versionIds).Returns(versions);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Any<IEnumerable<Guid>>()).Returns(secrets);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(serviceAccountId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), serviceAccountId, AccessClientType.ServiceAccount)
+            .Returns(new Dictionary<Guid, (bool Read, bool Write)>
+            {
+                { accessibleSecretId, (true, false) },
+                { inaccessibleSecretId, (false, false) },
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetManyByIdsAsync(versionIds));
+
+        await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    private static async Task AssertNoSecretEventLoggedAsync(SutProvider<SecretVersionsController> sutProvider)
+    {
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogUserSecretsEventAsync(default, default!, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountSecretsEventAsync(default, default!, default);
     }
 }

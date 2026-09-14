@@ -16,6 +16,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
+/// <summary>
+/// Secret version history. The whole controller sits behind the SecretsVersioning feature flag, so
+/// none of the version reads, restores, or their event logs happen while the flag is off.
+/// </summary>
 [Authorize("secrets")]
 [RequireFeature(FeatureFlagKeys.SecretsVersioning)]
 public class SecretVersionsController : Controller
@@ -52,16 +56,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount ||
-            _currentContext.IdentityClientType == IdentityClientType.Organization)
-        {
-            // Already verified Secrets Manager access above
-            var versionList = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-            var responseList = versionList.Select(v => new SecretVersionResponseModel(v)).ToList();
-            return new ListResponseModel<SecretVersionResponseModel>(responseList);
-        }
-
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -77,7 +71,14 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var versions = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
+        var versions = (await _secretVersionRepository.GetManyBySecretIdAsync(secretId)).ToList();
+        if (versions.Count > 0)
+        {
+            // Each version carries a value the secret once held, so reading history is a secret
+            // retrieval for audit purposes, the same as reading the current value.
+            await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
+        }
+
         var responses = versions.Select(v => new SecretVersionResponseModel(v)).ToList();
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
@@ -112,6 +113,8 @@ public class SecretVersionsController : Controller
         {
             throw new NotFoundException();
         }
+
+        await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
 
         return new SecretVersionResponseModel(secretVersion);
     }
@@ -163,6 +166,8 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        await LogSecretsEventAsync(secrets, EventType.Secret_Retrieved);
+
         var responses = versions.Select(v => new SecretVersionResponseModel(v));
         return new ListResponseModel<SecretVersionResponseModel>(responses);
     }
@@ -187,39 +192,6 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        // Store the current value before restoration
-        var currentValue = secret.Value;
-        var currentValueRevisionDate = secret.RevisionDate;
-
-        // For service accounts and organization API, skip user-level access checks
-        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
-        {
-            // Save current value as a version before restoring
-            if (currentValue != version.Value)
-            {
-                var editorUserId = _userService.GetProperUserId(User);
-                if (editorUserId.HasValue)
-                {
-                    var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
-                    {
-                        SecretId = secretId,
-                        Value = currentValue!,
-                        VersionDate = currentValueRevisionDate,
-                        EditorServiceAccountId = editorUserId.Value
-                    };
-
-                    await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
-                }
-            }
-
-            // Already verified Secrets Manager access above
-            secret.Value = version.Value;
-            secret.RevisionDate = DateTime.UtcNow;
-            var updatedSec = await _secretRepository.UpdateAsync(secret);
-            await LogSecretEventAsync(updatedSec, EventType.Secret_Edited);
-            return new SecretResponseModel(updatedSec, true, true);
-        }
-
         var userId = _userService.GetProperUserId(User);
         if (!userId.HasValue)
         {
@@ -235,7 +207,11 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        // Captured before the restore overwrites them: the displaced value is snapshotted with the
+        // date it was set, not the date it was replaced, so history stays in the order it happened.
         var currentValue = secret.Value;
+        var currentValueRevisionDate = secret.RevisionDate;
+
         if (currentValue != version.Value)
         {
             Guid? editorServiceAccountId = null;
@@ -256,11 +232,11 @@ public class SecretVersionsController : Controller
                 editorOrganizationUserId = orgUser.Id;
             }
 
-            var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
+            var currentVersionSnapshot = new SecretVersion
             {
                 SecretId = secretId,
                 Value = currentValue!,
-                VersionDate = DateTime.UtcNow,
+                VersionDate = currentValueRevisionDate,
                 EditorServiceAccountId = editorServiceAccountId,
                 EditorOrganizationUserId = editorOrganizationUserId
             };
@@ -272,6 +248,8 @@ public class SecretVersionsController : Controller
         secret.RevisionDate = DateTime.UtcNow;
 
         var updatedSecret = await _secretRepository.UpdateAsync(secret);
+
+        // A restore changes the secret's current value, so it is audited as an edit.
         await LogSecretEventAsync(updatedSecret, EventType.Secret_Edited);
 
         return new SecretResponseModel(updatedSecret, true, true);

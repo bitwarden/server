@@ -222,14 +222,6 @@ public class SecretsController : Controller
                     editorOrganizationUserId = orgUser.Id;
                 }
             }
-            else if (_currentContext.IdentityClientType == IdentityClientType.Organization)
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId);
-                if (orgUser != null)
-                {
-                    editorOrganizationUserId = orgUser.Id;
-                }
-            }
 
             var secretVersion = new SecretVersion
             {
