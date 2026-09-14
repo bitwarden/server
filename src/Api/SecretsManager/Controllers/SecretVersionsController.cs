@@ -23,20 +23,20 @@ public class SecretVersionsController : Controller
     private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
-    private readonly IBuildSecretVersionCommand _buildSecretVersionCommand;
+    private readonly IUpdateSecretCommand _updateSecretCommand;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IBuildSecretVersionCommand buildSecretVersionCommand)
+        IUpdateSecretCommand updateSecretCommand)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
-        _buildSecretVersionCommand = buildSecretVersionCommand;
+        _updateSecretCommand = updateSecretCommand;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -193,11 +193,7 @@ public class SecretVersionsController : Controller
         secret.Value = version.Value;
         secret.RevisionDate = DateTime.UtcNow;
 
-        var restoredVersion = valueChanged
-            ? await _buildSecretVersionCommand.BuildAsync(secret, accessClientId)
-            : null;
-
-        var updatedSecret = await _secretRepository.UpdateAsync(secret, null, restoredVersion);
+        var updatedSecret = await _updateSecretCommand.UpdateAsync(secret, null, valueChanged);
 
         return new SecretResponseModel(updatedSecret, true, true);
     }

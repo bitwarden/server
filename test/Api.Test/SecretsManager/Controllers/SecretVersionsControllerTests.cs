@@ -377,12 +377,13 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
             .ReturnsForAnyArgs((true, true));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
-        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>())
+            .Returns(x => x.Arg<Secret>());
 
         await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
 
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .UpdateAsync(Arg.Is<Secret>(s => s.Value == versionValue));
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Is<Secret>(s => s.Value == versionValue), null, Arg.Any<bool>());
     }
 
     [Theory]
@@ -406,14 +407,15 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, AccessClientType.User)
             .Returns((true, true));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
-        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>())
+            .Returns(x => x.Arg<Secret>());
 
         await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
 
-        // A restore sets a new current value, so the version records the restored value rather
-        // than the one it displaced.
-        await sutProvider.GetDependency<IBuildSecretVersionCommand>().Received(1)
-            .BuildAsync(Arg.Is<Secret>(x => x.Id == secret.Id && x.Value == restoredValue), userId);
+        // A restore sets a new current value, so the update is reported as a value change and the
+        // command records the restored value rather than the one it displaced.
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Is<Secret>(x => x.Id == secret.Id && x.Value == restoredValue), null, true);
     }
 
     [Theory]
@@ -440,12 +442,13 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, AccessClientType.User)
             .Returns((true, true));
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
-        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>())
+            .Returns(x => x.Arg<Secret>());
 
         await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
 
-        await sutProvider.GetDependency<IBuildSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Secret>(), null, false);
     }
 
     [Theory]
@@ -461,9 +464,8 @@ public class SecretVersionsControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.RestoreVersionAsync(secret.Id, request));
 
-        await sutProvider.GetDependency<IBuildSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default!);
+        await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(default!, default, default);
     }
 
     [Theory]
@@ -595,9 +597,8 @@ public class SecretVersionsControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.RestoreVersionAsync(secret.Id, request));
 
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default!);
-        await sutProvider.GetDependency<IBuildSecretVersionCommand>().DidNotReceiveWithAnyArgs()
-            .BuildAsync(Arg.Any<Secret>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(default!, default, default);
     }
 
     [Theory]
@@ -621,14 +622,13 @@ public class SecretVersionsControllerTests
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, serviceAccountId, AccessClientType.ServiceAccount)
             .Returns((true, true));
-        sutProvider.GetDependency<ISecretRepository>().UpdateAsync(Arg.Any<Secret>()).Returns(x => x.Arg<Secret>());
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>())
+            .Returns(x => x.Arg<Secret>());
 
         await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
 
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .UpdateAsync(Arg.Is<Secret>(s => s.Value == restoredValue));
-        await sutProvider.GetDependency<IBuildSecretVersionCommand>().Received(1)
-            .BuildAsync(Arg.Is<Secret>(x => x.Id == secret.Id && x.Value == restoredValue), serviceAccountId);
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Is<Secret>(x => x.Id == secret.Id && x.Value == restoredValue), null, true);
     }
 
     [Theory]
