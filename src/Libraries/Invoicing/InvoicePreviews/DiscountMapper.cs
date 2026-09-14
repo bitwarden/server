@@ -84,19 +84,23 @@ internal static class DiscountMapper
                 logger.LogError("Discount amount ({Amount}) has no discount id; dropped.", total.Amount);
                 continue;
             }
-            if (total.Discount?.Source?.Coupon is not { } coupon)
+            if (total.Discount?.Source?.Coupon is null)
             {
                 logger.LogError("Discount {DiscountId} has no expanded coupon; dropped.", total.DiscountId);
                 continue;
             }
-            resolved[total.DiscountId] = new ResolvedDiscount(coupon, total.Amount / 100m);
+            resolved[total.DiscountId] = new ResolvedDiscount(total.Discount, total.Amount / 100m);
         }
         return resolved;
     }
 
-    private readonly record struct ResolvedDiscount(Coupon Coupon, decimal AggregateAmount)
+    private readonly record struct ResolvedDiscount(Discount Discount, decimal AggregateAmount)
     {
-        internal bool IsItemScoped => Coupon.AppliesTo?.Products?.Count > 0;
+        internal Coupon Coupon => Discount.Source.Coupon;
+
+        internal bool IsItemScoped =>
+            Discount.SubscriptionItem is not null and not "" ||
+            Coupon.AppliesTo?.Products?.Count > 0;
 
         internal InvoicePreviewDiscount ToPreviewDiscount(decimal amount) => new()
         {
