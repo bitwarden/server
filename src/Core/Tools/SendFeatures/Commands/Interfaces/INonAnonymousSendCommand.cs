@@ -12,8 +12,11 @@ public interface INonAnonymousSendCommand
     /// Saves a <see cref="Send" /> to the database.
     /// </summary>
     /// <param name="send"><see cref="Send" /> that will save to database</param>
+    /// <param name="logEvent">Whether to log a Send created/edited event. Defaults to <see langword="true" />;
+    /// pass <see langword="false" /> when the save is an internal finalization step of an action that already
+    /// logged its own event.</param>
     /// <returns>Task completes as <see cref="Send" /> saves to the database</returns>
-    Task SaveSendAsync(Send send);
+    Task SaveSendAsync(Send send, bool logEvent = true);
 
     /// <summary>
     /// Saves the <see cref="Send" /> and <see cref="SendFileData" /> to the database.
@@ -44,12 +47,16 @@ public interface INonAnonymousSendCommand
     /// Stores the confirmed file size of a send; when the file size cannot be confirmed, the send is deleted.
     /// </summary>
     /// <param name="send">The <see cref="Send" /> this command acts upon</param>
+    /// <param name="logEvent">Whether to log a Send edited event on successful confirmation. Defaults to
+    /// <see langword="true" />; callers finalizing the initial upload of a newly-created Send should pass
+    /// <see langword="false" /> to avoid a redundant edited event immediately after the created event. Does
+    /// not affect the deleted event logged when the file size cannot be confirmed, which always logs.</param>
     /// <returns><see langword="true" /> when the file is confirmed, otherwise <see langword="false" /></returns>
     /// <remarks>
     /// When a file size cannot be confirmed, we assume we're working with a rogue client. The send is deleted out of
     /// an abundance of caution.
     /// </remarks>
-    Task<bool> ConfirmFileSize(Send send);
+    Task<bool> ConfirmFileSize(Send send, bool logEvent = true);
 
     /// <summary>
     /// If a File type Send can be downloaded, retrieves the download URL.
