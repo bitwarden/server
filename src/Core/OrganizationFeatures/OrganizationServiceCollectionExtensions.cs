@@ -188,6 +188,7 @@ public static class OrganizationServiceCollectionExtensions
 
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
+        services.TryAddScoped<ICollectionAccessValidator, CollectionAccessValidator>();
         services.AddScoped<ICreateCollectionCommand, CreateCollectionCommand>();
         services.AddScoped<IUpdateCollectionCommand, UpdateCollectionCommand>();
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();

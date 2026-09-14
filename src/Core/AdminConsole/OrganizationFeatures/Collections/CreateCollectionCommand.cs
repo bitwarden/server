@@ -17,17 +17,20 @@ public class CreateCollectionCommand : ICreateCollectionCommand
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly ICollectionAccessValidator _collectionAccessValidator;
     private readonly IFeatureService _featureService;
 
     public CreateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
+        ICollectionAccessValidator collectionAccessValidator,
         IFeatureService featureService)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _collectionRepository = collectionRepository;
+        _collectionAccessValidator = collectionAccessValidator;
         _featureService = featureService;
     }
 
@@ -48,11 +51,20 @@ public class CreateCollectionCommand : ICreateCollectionCommand
         var groupsList = groups?.ToList();
         var usersList = users?.ToList();
 
+        var groupsToSave = org.UseGroups ? groupsList : null;
+
         // Cannot use Manage with ReadOnly/HidePasswords permissions
         var invalidAssociations = groupsList?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
         if (invalidAssociations?.Any() ?? false)
         {
             throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+        }
+
+        var accessValidation = await _collectionAccessValidator.ValidateAsync(
+            new CollectionAccessValidationRequest(collection.OrganizationId, groupsToSave, usersList));
+        if (accessValidation.IsError)
+        {
+            throw new BadRequestException(accessValidation.AsError.Message);
         }
 
         // A collection should always have someone with Can Manage permissions
@@ -76,7 +88,7 @@ public class CreateCollectionCommand : ICreateCollectionCommand
             }
         }
 
-        await _collectionRepository.CreateAsync(collection, org.UseGroups ? groupsList : null, usersList);
+        await _collectionRepository.CreateAsync(collection, groupsToSave, usersList);
         await _eventService.LogCollectionEventAsync(collection, EventType.Collection_Created);
 
         return collection;
