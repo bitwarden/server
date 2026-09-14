@@ -49,6 +49,23 @@ public class ResendNewDeviceOtpTests
     }
 
     [Fact]
+    public async Task ResendNewDeviceOtp_OverLongHeader_PendingDeviceRecorded_RejectsAndSendsNothing()
+    {
+        var (factory, mailService, user) = await ArrangeAsync();
+        // A pending device is recorded to show the fallback does not rescue an over-long identifier. The
+        // caller would submit the same over-long value when redeeming, so a code scoped to the pending
+        // device could not be redeemed — and issuing one would overwrite that device's outstanding code.
+        await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+
+        var response = await PostResendAsync(
+            factory, user.Email, new string('a', Device.MaxIdentifierLength + 1));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await mailService.DidNotReceiveWithAnyArgs().SendTwoFactorEmailAsync(
+            default, default, default, default, default, default);
+    }
+
+    [Fact]
     public async Task ResendNewDeviceOtp_NoHeader_NoPendingDevice_SendsNothing()
     {
         var (factory, mailService, user) = await ArrangeAsync();

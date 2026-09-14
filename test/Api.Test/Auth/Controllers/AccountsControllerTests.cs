@@ -899,6 +899,80 @@ public class AccountsControllerTests : IDisposable
         await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user, _deviceIdentifier);
     }
 
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierAtMaxLength_SendsEmailForRequestingDevice(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        var deviceIdentifier = new string('a', Device.MaxIdentifierLength);
+        _currentContext.DeviceIdentifier = deviceIdentifier;
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_ThrowsWithoutSendingEmail(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        Assert.NotNull(exception.ModelState);
+        Assert.Contains("Device-Identifier", exception.ModelState.Keys);
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_RejectsBeforeExaminingTheSecret(
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        // No user lookup is stubbed: an over-long identifier must be rejected on the header alone, so the
+        // response cannot differ by whether the account exists or the secret is correct.
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByEmailAsync(default);
+        await _userService.DidNotReceiveWithAnyArgs().VerifySecretAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_DoesNotReadThePendingDevice(
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        // The pending device fallback covers clients that send no identifier at all. A client that sends an
+        // over-long one would submit the same value when redeeming, so scoping a code to some other device
+        // would mail a code it still could not redeem — and would overwrite any code already outstanding
+        // for that other device.
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs()
+            .GetPendingNewDeviceVerificationDeviceIdentifierAsync(default);
+    }
+
     [Theory]
     [BitAutoData((string)null)]
     [BitAutoData(" ")]

@@ -881,6 +881,16 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
+        // The code is scoped to a device, so prefer the device making this request.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // Login rejects an over-long identifier, so a code scoped to one would be unusable. The check
+        // precedes the secret check, so a 400 never signals whether the secret was correct.
+        if (deviceIdentifier?.Length > Device.MaxIdentifierLength)
+        {
+            throw new BadRequestException("Device-Identifier", "Invalid device identifier.");
+        }
+
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
@@ -888,9 +898,6 @@ public class AccountsController : Controller
             // a success response, to avoid account enumeration via response shape.
             return;
         }
-
-        // The code is scoped to a device, so prefer the device making this request.
-        var deviceIdentifier = _currentContext.DeviceIdentifier;
 
         // TODO: PM-43465 - Delete this fallback block once every supported client version sends the
         // Device-Identifier header on this request. It covers clients that do not identify themselves by
