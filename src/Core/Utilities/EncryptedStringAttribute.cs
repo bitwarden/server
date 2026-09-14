@@ -160,10 +160,21 @@ public class EncryptedStringAttribute : ValidationAttribute
     /// </summary>
     private static int DecodedByteLength(ReadOnlySpan<char> piece)
     {
+        // Base64 maps 6 bits to 1 character. To map back you divide by 4 and multiply by 3
+        // (since 8 bits / 1 char of base64 map to 6 bits of input). Base64 can be padded with
+        // up to 2 '=' characters per base64 block of 4 bytes. These have to be removed from the calculation.
+        //
+        // Examples:
+        // "AAAA" (00 00 00 in hex) -> 4/4*3-0 = 3
+        // "AA==" (00 in hex) -> 4/4*3-2 = 1
+        // "AAAA AA==" (00 00 00 00 in hex) -> 8/4*3-2 = 4
+
         var padCount = 0;
-        if (piece[^1] == '=') {
+        if (piece[^1] == '=')
+        {
             padCount++;
-            if (piece[^2] == '=') { 
+            if (piece[^2] == '=')
+            {
                 padCount++;
             }
         }
