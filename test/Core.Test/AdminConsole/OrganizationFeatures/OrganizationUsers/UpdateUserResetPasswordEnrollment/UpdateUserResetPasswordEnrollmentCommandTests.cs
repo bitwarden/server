@@ -20,17 +20,20 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Upda
 [SutProviderCustomize]
 public class UpdateUserResetPasswordEnrollmentCommandTests
 {
+    private const string ValidResetPasswordKey = "4.YWJjZA==";
+
     [Theory, BitAutoData]
     public async Task UpdateUserResetPasswordEnrollmentAsync_WhenKeyIsProvided_EnrollsUser(
-        Guid organizationId, Guid callingUserId, string resetPasswordKey,
+        Guid organizationId, Guid callingUserId,
         OrganizationUser orgUser, Organization org,
         SutProvider<UpdateUserResetPasswordEnrollmentCommand> sutProvider)
     {
         SetupValidRequest(sutProvider, organizationId, callingUserId, orgUser, org);
 
         await sutProvider.Sut.UpdateUserResetPasswordEnrollmentAsync(
-            organizationId, callingUserId, resetPasswordKey, callingUserId);
+            organizationId, callingUserId, ValidResetPasswordKey, callingUserId);
 
+        Assert.Equal(ValidResetPasswordKey, orgUser.ResetPasswordKey);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(orgUser);
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(
             orgUser, EventType.OrganizationUser_ResetPassword_Enroll);

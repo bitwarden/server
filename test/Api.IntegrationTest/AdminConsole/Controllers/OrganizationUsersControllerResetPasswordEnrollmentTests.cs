@@ -18,6 +18,8 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
 
+    private const string ValidResetPasswordKey = "4.YWJjZA==";
+
     private Organization _organization = null!;
     private string _ownerEmail = null!;
 
@@ -65,7 +67,7 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
             _factory, _organization.Id, OrganizationUserType.User);
         await _loginHelper.LoginAsync(memberEmail);
 
-        var request = new { ResetPasswordKey = "2.enc-key", MasterPasswordHash = "master_password_hash" };
+        var request = new { ResetPasswordKey = ValidResetPasswordKey, MasterPasswordHash = "master_password_hash" };
 
         var response = await _client.PutAsJsonAsync(
             $"organizations/{_organization.Id}/users/{memberOrgUser.UserId}/reset-password-enrollment",
