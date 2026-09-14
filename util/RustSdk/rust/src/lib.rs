@@ -5,7 +5,6 @@ mod cipher;
 mod crypto_util;
 mod provider;
 mod rsa_keys;
-#[path = "sm-access_token.rs"]
 mod sm_access_token;
 
 use std::{

@@ -2,7 +2,7 @@ fn main() {
     csbindgen::Builder::default()
         .input_extern_file("src/lib.rs")
         .input_extern_file("src/cipher.rs")
-        .input_extern_file("src/sm-access_token.rs")
+        .input_extern_file("src/sm_access_token.rs")
         .input_extern_file("src/attachment.rs")
         .input_extern_file("src/provider.rs")
         .csharp_dll_name("libsdk")
