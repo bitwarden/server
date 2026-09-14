@@ -1,14 +1,14 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Api.SecretsManager.Models.Request;
+﻿using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.HttpExtensions;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,20 +23,20 @@ public class SecretVersionsController : Controller
     private readonly ISecretVersionRepository _secretVersionRepository;
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUpdateSecretCommand _updateSecretCommand;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IOrganizationUserRepository organizationUserRepository)
+        IUpdateSecretCommand updateSecretCommand)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
-        _organizationUserRepository = organizationUserRepository;
+        _updateSecretCommand = updateSecretCommand;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -48,22 +48,23 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        if (!userId.HasValue)
-        {
-            throw new NotFoundException();
-        }
+        var (accessClient, accessClientId) = await GetAccessContextAsync(secret.OrganizationId);
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
-
-        var access = await _secretRepository.AccessToSecretAsync(secretId, userId.Value, accessClient);
+        var access = await _secretRepository.AccessToSecretAsync(secretId, accessClientId, accessClient);
         if (!access.Read)
         {
             throw new NotFoundException();
         }
 
-        var versions = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
+        if (!CanReadEditorNames(accessClient))
+        {
+            var versionsWithoutEditors = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
+
+            return new ListResponseModel<SecretVersionResponseModel>(
+                versionsWithoutEditors.Select(v => new SecretVersionResponseModel(v)));
+        }
+
+        var versions = await _secretVersionRepository.GetManyDetailsBySecretIdAsync(secretId);
         var responses = versions.Select(v => new SecretVersionResponseModel(v));
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
@@ -84,22 +85,26 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        if (!userId.HasValue)
-        {
-            throw new NotFoundException();
-        }
+        var (accessClient, accessClientId) = await GetAccessContextAsync(secret.OrganizationId);
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
-
-        var access = await _secretRepository.AccessToSecretAsync(secretVersion.SecretId, userId.Value, accessClient);
+        var access = await _secretRepository.AccessToSecretAsync(secretVersion.SecretId, accessClientId, accessClient);
         if (!access.Read)
         {
             throw new NotFoundException();
         }
 
-        return new SecretVersionResponseModel(secretVersion);
+        if (!CanReadEditorNames(accessClient))
+        {
+            return new SecretVersionResponseModel(secretVersion);
+        }
+
+        var secretVersionDetails = await _secretVersionRepository.GetDetailsByIdAsync(id);
+        if (secretVersionDetails == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new SecretVersionResponseModel(secretVersionDetails);
     }
 
     [HttpPost("secret-versions/get-by-ids")]
@@ -134,29 +139,31 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        if (!userId.HasValue)
+        var (accessClient, accessClientId) = await GetAccessContextAsync(organizationId);
+
+        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, accessClientId, accessClient);
+        if (secretIds.Any(id => !accessResults.TryGetValue(id, out var access) || !access.Read))
         {
             throw new NotFoundException();
         }
 
-        var isAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, isAdmin);
-
-        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Read))
+        if (!CanReadEditorNames(accessClient))
         {
-            throw new NotFoundException();
+            return new ListResponseModel<SecretVersionResponseModel>(
+                versions.Select(v => new SecretVersionResponseModel(v)));
         }
 
-        var responses = versions.Select(v => new SecretVersionResponseModel(v));
-        return new ListResponseModel<SecretVersionResponseModel>(responses);
+        var details = await _secretVersionRepository.GetManyDetailsByIdsAsync(ids);
+
+        return new ListResponseModel<SecretVersionResponseModel>(
+            details.Select(v => new SecretVersionResponseModel(v)));
     }
 
     [HttpPut("secrets/{secretId}/versions/restore")]
     public async Task<SecretResponseModel> RestoreVersionAsync([FromRoute] Guid secretId, [FromBody] RestoreSecretVersionRequestModel request)
     {
-        if (!(_currentContext.IdentityClientType == IdentityClientType.User || _currentContext.IdentityClientType == IdentityClientType.ServiceAccount))
+        if (_currentContext.IdentityClientType != IdentityClientType.User &&
+            _currentContext.IdentityClientType != IdentityClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }
@@ -167,64 +174,26 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        var (accessClient, accessClientId) = await GetAccessContextAsync(secret.OrganizationId);
+
+        var access = await _secretRepository.AccessToSecretAsync(secretId, accessClientId, accessClient);
+        if (!access.Write)
+        {
+            throw new NotFoundException();
+        }
+
         var version = await _secretVersionRepository.GetByIdAsync(request.VersionId);
         if (version == null || version.SecretId != secretId)
         {
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        if (!userId.HasValue)
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
-
-        var access = await _secretRepository.AccessToSecretAsync(secretId, userId.Value, accessClient);
-        if (!access.Write)
-        {
-            throw new NotFoundException();
-        }
-
-        var currentValue = secret.Value;
-        if (currentValue != version.Value)
-        {
-            Guid? editorServiceAccountId = null;
-            Guid? editorOrganizationUserId = null;
-
-            if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
-            {
-                editorServiceAccountId = userId.Value;
-            }
-            else
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(secret.OrganizationId, userId.Value);
-                if (orgUser == null)
-                {
-                    throw new NotFoundException();
-                }
-
-                editorOrganizationUserId = orgUser.Id;
-            }
-
-            var currentVersionSnapshot = new Core.SecretsManager.Entities.SecretVersion
-            {
-                SecretId = secretId,
-                Value = currentValue!,
-                VersionDate = DateTime.UtcNow,
-                EditorServiceAccountId = editorServiceAccountId,
-                EditorOrganizationUserId = editorOrganizationUserId
-            };
-
-            await _secretVersionRepository.CreateAsync(currentVersionSnapshot);
-        }
+        var valueChanged = secret.Value != version.Value;
 
         secret.Value = version.Value;
         secret.RevisionDate = DateTime.UtcNow;
 
-        var updatedSecret = await _secretRepository.UpdateAsync(secret);
+        var updatedSecret = await _updateSecretCommand.UpdateAsync(secret, null, valueChanged);
 
         return new SecretResponseModel(updatedSecret, true, true);
     }
@@ -260,17 +229,10 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        if (!userId.HasValue)
-        {
-            throw new NotFoundException();
-        }
+        var (accessClient, accessClientId) = await GetAccessContextAsync(organizationId);
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
-
-        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, userId.Value, accessClient);
-        if (accessResults.Count != secretIds.Count || accessResults.Values.Any(access => !access.Write))
+        var accessResults = await _secretRepository.AccessToSecretsAsync(secretIds, accessClientId, accessClient);
+        if (secretIds.Any(id => !accessResults.TryGetValue(id, out var access) || !access.Write))
         {
             throw new NotFoundException();
         }
@@ -278,5 +240,22 @@ public class SecretVersionsController : Controller
         await _secretVersionRepository.DeleteManyByIdAsync(ids);
 
         return Ok();
+    }
+
+    private static bool CanReadEditorNames(AccessClientType accessClient) =>
+        accessClient is AccessClientType.User or AccessClientType.NoAccessCheck;
+
+    private async Task<(AccessClientType AccessClient, Guid AccessClientId)> GetAccessContextAsync(Guid organizationId)
+    {
+        var accessClientId = _userService.GetProperUserId(User);
+        if (!accessClientId.HasValue)
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
+
+        return (accessClient, accessClientId.Value);
     }
 }
