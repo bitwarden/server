@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Azure;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1585,5 +1586,163 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_DeletesFilesThenOneBatchDbCall_AndReturnsAllIds()
+    {
+        var fileData = new SendFileData { Id = "file123", FileName = "test.txt", Size = 100 };
+        var fileSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            UserId = Guid.NewGuid()
+        };
+        var textSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = Guid.NewGuid()
+        };
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { fileSend, textSend });
+
+        await _sendFileStorageService.Received(1).DeleteFileAsync(fileSend, fileData.Id);
+        await _sendRepository.Received(1).DeleteManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { fileSend.Id, textSend.Id })));
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == fileSend.Id));
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == textSend.Id));
+        Assert.Equal(new[] { fileSend.Id, textSend.Id }, result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_PushFailsForOneSend_StillPublishesForTheRest()
+    {
+        // The batch DB delete has already committed by this point, so a throw here must not abort
+        // the loop: every remaining Send in the batch is already gone from the database and could
+        // never be retried, so it would silently lose its push/event forever.
+        var firstSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+        var secondSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+
+        // PushSyncSendDeleteAsync is an extension method over PushAsync, so the throw has to be
+        // configured on the real substitutable call underneath it.
+        _pushNotificationService.PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == firstSend.Id))
+            .Throws(new InvalidOperationException("push service unavailable"));
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { firstSend, secondSend });
+
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == secondSend.Id));
+        await _eventService.Received(1).LogSendEventAsync(secondSend.UserId!.Value, secondSend.Id, EventType.Send_Deleted_Text);
+        Assert.Equal(new[] { firstSend.Id, secondSend.Id }, result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_BlobDeleteFails_SkipsThatSend_StillDeletesTheRest()
+    {
+        // A blob-delete failure must not block the rest of the batch's DB delete: the failing
+        // Send is excluded (its DeletionDate stays in the past, so it's retried next run) while
+        // the others still get deleted, pushed, and logged.
+        var goodFileData = new SendFileData { Id = "good-file", FileName = "good.txt", Size = 100 };
+        var goodSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(goodFileData),
+            UserId = Guid.NewGuid()
+        };
+        var badFileData = new SendFileData { Id = "bad-file", FileName = "bad.txt", Size = 100 };
+        var badSend = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(badFileData),
+            UserId = Guid.NewGuid()
+        };
+
+        _sendFileStorageService.DeleteFileAsync(badSend, badFileData.Id)
+            .Throws(new RequestFailedException(500, "blob storage is unavailable"));
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { goodSend, badSend });
+
+        await _sendRepository.Received(1).DeleteManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { goodSend.Id })));
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == goodSend.Id));
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Payload.Id == badSend.Id));
+        Assert.Equal(new[] { goodSend.Id }, result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_LocalStorageDeleteThrowsIOException_SkipsThatSend()
+    {
+        // ISendFileStorageService has multiple implementations (Azure, local disk, no-op) with no
+        // shared exception contract — self-hosted's LocalSendStorageService can throw IOException /
+        // UnauthorizedAccessException, which must be treated the same as an Azure RequestFailedException.
+        var fileData = new SendFileData { Id = "file123", FileName = "test.txt", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            UserId = Guid.NewGuid()
+        };
+
+        _sendFileStorageService.DeleteFileAsync(send, fileData.Id)
+            .Throws(new IOException("disk is full"));
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { send });
+
+        await _sendRepository.DidNotReceiveWithAnyArgs().DeleteManyAsync(default!);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_UnparseableSendData_LogsButStillDeletesRow()
+    {
+        // Unlike a blob-delete failure, a deserialize failure is deterministic — retrying can't fix
+        // it, so (matching the single-item DeleteSendAsync path) the row is still deleted and the
+        // blob is left orphaned rather than permanently blocking the batch.
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            Data = "not valid json",
+            UserId = Guid.NewGuid()
+        };
+
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { send });
+
+        await _sendFileStorageService.DidNotReceiveWithAnyArgs().DeleteFileAsync(default!, default!);
+        await _sendRepository.Received(1).DeleteManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { send.Id })));
+        Assert.Equal(new[] { send.Id }, result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_EmptyBatch_DoesNotCallDeleteManyAsync()
+    {
+        var result = await _nonAnonymousSendCommand.DeleteManySendsAsync(Array.Empty<Send>());
+
+        await _sendRepository.DidNotReceiveWithAnyArgs().DeleteManyAsync(default!);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task DeleteManySendsAsync_DeleteManyAsyncThrows_PropagatesAndPublishesNothing()
+    {
+        // DeleteManyAsync catches its own storage-recompute failures (per-user, both ORMs), so a
+        // throw reaching here reliably means the delete + revision bump itself didn't happen —
+        // nothing was removed, and no push/event should be published for it.
+        var firstSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+        var secondSend = new Send { Id = Guid.NewGuid(), Type = SendType.Text, UserId = Guid.NewGuid() };
+
+        _sendRepository.DeleteManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns<Task>(_ => throw new InvalidOperationException("Send_DeleteMany failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _nonAnonymousSendCommand.DeleteManySendsAsync(new[] { firstSend, secondSend }));
+
+        await _pushNotificationService.DidNotReceiveWithAnyArgs().PushAsync(Arg.Any<PushNotification<SyncSendPushNotification>>());
+        await _eventService.DidNotReceiveWithAnyArgs().LogSendEventAsync(default, default, default);
     }
 }
