@@ -69,6 +69,32 @@
           "StackExchange.Redis": "2.6.80"
         }
       },
+      "AutoFixture": {
+        "type": "Transitive",
+        "resolved": "4.18.1",
+        "contentHash": "BmWZDY4fkrYOyd5/CTBOeXbzsNwV8kI4kDi/Ty1Y5F+WDHBVKxzfWlBE4RSicvZ+EOi2XDaN5uwdrHsItLW6Kw==",
+        "dependencies": {
+          "Fare": "[2.1.1, 3.0.0)"
+        }
+      },
+      "AutoFixture.AutoNSubstitute": {
+        "type": "Transitive",
+        "resolved": "4.18.1",
+        "contentHash": "xJxIsShO/1Ceei7BDFCobFANiw5a+enpdklgX/Xic6vKavHo9gSJO7ZGkKlf2lh+TlblTEet9mjzf9wHWIqWGQ==",
+        "dependencies": {
+          "AutoFixture": "4.18.1",
+          "NSubstitute": "[2.0.3, 6.0.0)"
+        }
+      },
+      "AutoFixture.Xunit2": {
+        "type": "Transitive",
+        "resolved": "4.18.1",
+        "contentHash": "I5Cwv1bvWb0lf2x2zO42bBQ2WaGudBh7tVBCzKIf8KmRJG+hmYY7ku3znnFZDVxbQaihNaqNkztLTwK4PwaoWg==",
+        "dependencies": {
+          "AutoFixture": "4.18.1",
+          "xunit.extensibility.core": "[2.2.0, 3.0.0)"
+        }
+      },
       "AWSSDK.Core": {
         "type": "Transitive",
         "resolved": "4.0.3.3",
@@ -267,6 +293,14 @@
           "Microsoft.IdentityModel.JsonWebTokens": "6.34.0"
         }
       },
+      "Fare": {
+        "type": "Transitive",
+        "resolved": "2.1.1",
+        "contentHash": "HaI8puqA66YU7/9cK4Sgbs1taUTP1Ssa4QT2PIzqJ7GvAbN1QgkjbRsjH+FSbMh1MJdvS0CIwQNLtFT+KF6KpA==",
+        "dependencies": {
+          "NETStandard.Library": "1.6.1"
+        }
+      },
       "Fido2": {
         "type": "Transitive",
         "resolved": "3.0.1",
@@ -295,6 +329,15 @@
         "type": "Transitive",
         "resolved": "2.1.6",
         "contentHash": "WsYWCEXsIM6hEOSOSRHtIYLjC8BnbT5MVmqhNKRqUI7qiv0t8x3nJiBTEv0ZZfvUAMAFnadGIzSsS/U2anVG1Q=="
+      },
+      "Kralizek.AutoFixture.Extensions.MockHttp": {
+        "type": "Transitive",
+        "resolved": "2.2.1",
+        "contentHash": "yNpYOT8k6L9PVS2YPoAe72IjILqGfPixKDzPsAFMz2aVyrmgGjirqORQa+bQNe+Qs5ytB+p41uzy4F9mjUuP9w==",
+        "dependencies": {
+          "AutoFixture": "4.18.1",
+          "RichardSzalay.MockHttp": "7.0.0"
+        }
       },
       "LaunchDarkly.Cache": {
         "type": "Transitive",
@@ -566,6 +609,11 @@
         "resolved": "10.0.8",
         "contentHash": "xVbg4qLWyjKSJVxtL56PQPlHu/URpWPKufhfOj61+tkCmNs6DIgnGxG8BAO/fAfacoBDDYg+p1zBjFzzj/EQog=="
       },
+      "Microsoft.Extensions.TimeProvider.Testing": {
+        "type": "Transitive",
+        "resolved": "10.8.0",
+        "contentHash": "xXcxGfXSO/8o7IfYK36r3eZTl9RMKAl5K6x3x6o/QQBolI0t8vsLIGmhc3HJBTd11u1uPLHz61VnOTSTmY7ZVA=="
+      },
       "Microsoft.Identity.Client": {
         "type": "Transitive",
         "resolved": "4.83.1",
@@ -740,6 +788,11 @@
         "type": "Transitive",
         "resolved": "7.1.2",
         "contentHash": "y3c6ulgULScWthHw5PLM1ShHRLhxg0vCtzX/hh61gRgNecL3ZC3WoBW2HYHoXOVRqTl99Br9E7CZEytGZEsCyQ=="
+      },
+      "RichardSzalay.MockHttp": {
+        "type": "Transitive",
+        "resolved": "7.0.0",
+        "contentHash": "QwnauYiaywp65QKFnP+wvgiQ2D8Pv888qB2dyfd7MSVDF06sIvxqASenk+RxsWybyyt+Hu1Y251wQxpHTv3UYg=="
       },
       "SendGrid": {
         "type": "Transitive",
@@ -947,6 +1000,19 @@
         "contentHash": "gt5ia5PHpCxhnI0hr51Y6L/acrrU17OuBqiU3vJPFXZxS3R1pIj2hr6WGB5fzW64VZDVdHTYsD5gTr2Pu8I+QQ==",
         "dependencies": {
           "ZiggyCreatures.FusionCache": "2.0.2"
+        }
+      },
+      "common": {
+        "type": "Project",
+        "dependencies": {
+          "AutoFixture.AutoNSubstitute": "[4.18.1, )",
+          "AutoFixture.Xunit2": "[4.18.1, )",
+          "Core": "[2026.9.0, )",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
+          "Microsoft.Extensions.TimeProvider.Testing": "[10.8.0, 10.8.0]",
+          "Microsoft.NET.Test.Sdk": "[18.0.1, )",
+          "NSubstitute": "[5.1.0, )",
+          "xunit": "[2.6.6, )"
         }
       },
       "core": {
