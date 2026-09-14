@@ -1,4 +1,53 @@
-CREATE PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
+-- DBOPS-231: remove OPTION (RECOMPILE) from SecurityTask_ReadByUserIdStatus, and give the procedure
+-- a covering index to read from.
+--
+-- The hint was added in PM-21044 (2025-09-12) because the previous body's cost depended on the
+-- caller's organization size, so a single cached plan could not serve every caller. Compiling on
+-- every execution is expensive in CPU, and each compile also takes schema-stability locks across
+-- the referential-integrity closure of the tables in the query, which puts this procedure in the
+-- way of schema changes on those tables.
+--
+-- The new body removes the reason the plan had to vary rather than just dropping the hint: every
+-- step is driven by a small staged set, and the set that decides the plan shape is held in a #temp
+-- table so the optimizer costs it from real statistics rather than from whichever caller compiled
+-- first (see the comments on steps 2 and 3b). Parameters, the projected columns and their order,
+-- and the result ordering are unchanged; result equivalence against the previous body was verified
+-- on a restore of production.
+--
+-- The index rebuild is independent of that and simply removes a lookup per row: the procedure reads
+-- tasks by organization and returns all seven columns. It is a DROP_EXISTING rebuild of an index
+-- that already exists on a table of roughly 17,600 rows, so it is not a large index build. The
+-- previous filter was redundant on a NOT NULL column and the EF model never declared it.
+
+-- Rebuild first, so the procedure below compiles against the covering index.
+--
+-- Two branches because DROP_EXISTING is not a no-op when the index is missing: it fails outright with
+-- Msg 7999, "Could not find any index named ...". In practice the index has existed since
+-- 2024-11-21_00_SecurityTaskReadByUserIdStatus.sql, so the ELSE branch is defence-in-depth for a
+-- database where it was dropped by hand. Both branches must produce the same definition -- keep them
+-- in sync if this is ever edited. Deliberately not DROP INDEX + CREATE INDEX, which would leave a
+-- window with no index on the table.
+IF EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE [object_id] = OBJECT_ID('[dbo].[SecurityTask]')
+        AND [name] = 'IX_SecurityTask_OrganizationId'
+)
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_SecurityTask_OrganizationId]
+        ON [dbo].[SecurityTask] ([OrganizationId] ASC)
+        INCLUDE ([Status], [CipherId], [Type], [CreationDate], [RevisionDate])
+        WITH (DROP_EXISTING = ON);
+END
+ELSE
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_SecurityTask_OrganizationId]
+        ON [dbo].[SecurityTask] ([OrganizationId] ASC)
+        INCLUDE ([Status], [CipherId], [Type], [CreationDate], [RevisionDate]);
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId [UNIQUEIDENTIFIER],   -- who is asking
     @Status [TINYINT] = NULL      -- 0 = Pending, 1 = Completed, NULL = don't filter
 AS
@@ -181,3 +230,4 @@ BEGIN
     ORDER BY
         [ST].[CreationDate] DESC;
 END
+GO
