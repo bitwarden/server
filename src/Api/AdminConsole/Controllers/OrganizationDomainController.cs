@@ -129,13 +129,6 @@ public class OrganizationDomainController : Controller
         await _deleteOrganizationDomainCommand.DeleteAsync(domain);
     }
 
-    [HttpPost("{orgId}/domain/{id}/remove")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostRemoveDomain(Guid orgId, Guid id)
-    {
-        await RemoveDomain(orgId, id);
-    }
-
     [AllowAnonymous]
     [HttpPost("domain/sso/verified")]
     public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
