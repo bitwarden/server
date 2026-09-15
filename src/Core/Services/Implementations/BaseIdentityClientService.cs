@@ -52,11 +52,16 @@ public abstract class BaseIdentityClientService : IDisposable
     protected Task SendAsync(HttpMethod method, string path) =>
         SendAsync<object?>(method, path, null);
 
-    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
-        SendAsync<TRequest, object>(method, path, requestModel, false);
+    /// <param name="serializerOptions">
+    /// Options for serializing <paramref name="requestModel"/>. Defaults to the camelCase web
+    /// conventions of <see cref="JsonContent"/>; pass options when the receiver expects something else.
+    /// </param>
+    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel,
+        JsonSerializerOptions? serializerOptions = null) =>
+        SendAsync<TRequest, object>(method, path, requestModel, false, serializerOptions);
 
     protected async Task<TResult?> SendAsync<TRequest, TResult>(HttpMethod method, string path,
-        TRequest requestModel, bool hasJsonResult)
+        TRequest requestModel, bool hasJsonResult, JsonSerializerOptions? serializerOptions = null)
     {
         var fullRequestPath = string.Concat(Client.BaseAddress, path);
 
@@ -71,7 +76,7 @@ public abstract class BaseIdentityClientService : IDisposable
         // HandleTokenStateAsync should not return true when AccessToken is still null
         Debug.Assert(AccessToken is not null);
 
-        var message = new TokenHttpRequestMessage(requestModel, AccessToken)
+        var message = new TokenHttpRequestMessage(requestModel, AccessToken, serializerOptions)
         {
             Method = method,
             RequestUri = new Uri(fullRequestPath)
@@ -176,12 +181,13 @@ public abstract class BaseIdentityClientService : IDisposable
             Headers.Add("Authorization", $"Bearer {token}");
         }
 
-        public TokenHttpRequestMessage(object? requestObject, string token)
+        public TokenHttpRequestMessage(
+            object? requestObject, string token, JsonSerializerOptions? serializerOptions = null)
             : this(token)
         {
             if (requestObject != null)
             {
-                Content = JsonContent.Create(requestObject);
+                Content = JsonContent.Create(requestObject, options: serializerOptions);
             }
         }
     }

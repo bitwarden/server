@@ -16,10 +16,15 @@ namespace Notifications.Test;
 /// <para><see cref="ReceiveMessagesAsync"/> blocks until a message is available rather than
 /// returning an empty array, so the hosted service never enters its 5-second sleep path during
 /// tests.</para>
+///
+/// <para>Messages carry a <see cref="BinaryData"/> body rather than a string, so a test can queue
+/// exact bytes -- base64-encoded text, for instance -- and not only what a string overload would
+/// produce. Both <c>MessageText</c> and <c>Body</c> come from those same bytes, as they do on a real
+/// queue that is not applying an encoding of its own.</para>
 /// </summary>
 internal sealed class ChannelQueueClient : QueueClient
 {
-    private readonly Channel<string> _channel = Channel.CreateUnbounded<string>(
+    private readonly Channel<BinaryData> _channel = Channel.CreateUnbounded<BinaryData>(
         new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
     // Captures every message written via SendMessageAsync so tests can inspect what
@@ -44,9 +49,16 @@ internal sealed class ChannelQueueClient : QueueClient
         TimeSpan? visibilityTimeout = null,
         TimeSpan? timeToLive = null,
         CancellationToken cancellationToken = default)
+        => SendMessageAsync(BinaryData.FromString(messageText), visibilityTimeout, timeToLive, cancellationToken);
+
+    public override Task<Response<SendReceipt>> SendMessageAsync(
+        BinaryData message,
+        TimeSpan? visibilityTimeout = null,
+        TimeSpan? timeToLive = null,
+        CancellationToken cancellationToken = default)
     {
-        _channel.Writer.TryWrite(messageText);
-        _sentCaptures.Writer.TryWrite(messageText);
+        _channel.Writer.TryWrite(message);
+        _sentCaptures.Writer.TryWrite(message.ToString());
         var receipt = QueuesModelFactory.SendReceipt(
             messageId: Guid.NewGuid().ToString(),
             insertionTime: DateTimeOffset.UtcNow,
@@ -70,12 +82,12 @@ internal sealed class ChannelQueueClient : QueueClient
             return Response.FromValue(Array.Empty<QueueMessage>(), new FakeResponse());
         }
 
-        while (batch.Count < limit && _channel.Reader.TryRead(out var text))
+        while (batch.Count < limit && _channel.Reader.TryRead(out var body))
         {
             batch.Add(QueuesModelFactory.QueueMessage(
                 messageId: Guid.NewGuid().ToString(),
                 popReceipt: "pop",
-                messageText: text,
+                body: body,
                 dequeueCount: 1,
                 nextVisibleOn: DateTimeOffset.UtcNow.AddMinutes(1),
                 insertedOn: DateTimeOffset.UtcNow,
