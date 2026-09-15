@@ -8,7 +8,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddOrganizationSubscriptions()` registers the group's services — the scoped
-`OrganizationSubscriptionEndpointsHandler` — and the `Bit.Invoicing` library they depend on.
+`OrganizationSubscriptionEndpointsHandler` and the `StandaloneOrganizationOwnerRequirementHandler`
+authorization handler — and the `Bit.Invoicing` library they depend on.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -59,6 +60,8 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IOrganizationRepository` (`Bit.Core.Repositories`) | Resolving the organization the preview is for |
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query |
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
+| `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
+| `IUserService` (`Bit.Core.Services`) | Reading the authenticated user's ID out of their claims |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
