@@ -71,7 +71,7 @@ public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPassword
             }
         }
 
-        if (!isWithdrawal && !EncryptedStringAttribute.IsValidCore(resetPasswordKey))
+        if (!OrganizationUser.IsWellFormedResetPasswordKey(resetPasswordKey))
         {
             throw new BadRequestException(new InvalidResetPasswordKeyError().Message);
         }
