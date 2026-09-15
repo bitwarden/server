@@ -141,7 +141,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var joinerLoginHelper = new LoginHelper(_factory, joinerClient);
         await joinerLoginHelper.LoginAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var acceptRequest = new AcceptOrganizationInviteLinkRequestModel
         {
             OrganizationId = created.OrganizationId,
@@ -400,7 +400,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
         await CreatePendingEmailInvitationAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel
@@ -521,7 +521,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
         await CreateStagedMembershipAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel
