@@ -29,6 +29,27 @@ public class StandaloneOrganizationOwnerRequirementTests
         Assert.True(context.HasSucceeded);
     }
 
+    // The provider-organization lookup spans every org the user belongs to, so a membership in another,
+    // provider-managed organization must not deny this route's standalone organization.
+    [Theory, BitAutoData]
+    public async Task HandleAsync_OwnerOfStandaloneOrgMemberOfOtherManagedOrg_Succeeds(
+        Guid organizationId, Guid otherOrganizationId, Guid userId,
+        SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
+    {
+        var httpContext = HttpContextFor(organizationId, OrganizationUserType.Owner);
+        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+        sutProvider.GetDependency<IProviderOrganizationRepository>()
+            .GetManyByUserAsync(userId)
+            .Returns([new ProviderOrganizationProviderDetails { OrganizationId = otherOrganizationId }]);
+        var context = Context(httpContext.User);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData]
     public async Task HandleAsync_OwnerOfManagedOrg_DoesNotSucceed(
         Guid organizationId, Guid userId,
