@@ -68,9 +68,9 @@ public class InvoicePreviewBuilderProrationOnlyTests
         }
         """);
 
-        var exception = Assert.Throws<InvalidOperationException>(
+        var exception = Assert.Throws<ArgumentException>(
             () => Builder().Build(invoice, PlanTierType.Families, PlanCadenceType.Annually));
-        Assert.Contains("no Password Manager seats line", exception.Message);
+        Assert.Contains("seats line or at least one proration", exception.Message);
     }
 
     [Fact]

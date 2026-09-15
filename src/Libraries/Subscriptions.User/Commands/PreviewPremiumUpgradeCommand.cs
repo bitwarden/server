@@ -42,19 +42,19 @@ internal sealed class PreviewPremiumUpgradeCommand(
             throw new ConflictException(InvalidSubscriptionMessage);
         }
 
-        var subscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        var subscription = await FetchSubscriptionAsync(user);
         var premiumPlans = await pricingClient.ListPremiumPlans();
 
-        var passwordManagerItem = subscription.Items.Data.FirstOrDefault(item =>
-            premiumPlans.Any(plan => plan.Seat.StripePriceId == item.Price.Id));
-        if (passwordManagerItem == null)
+        var (passwordManagerItem, premiumPlan) = subscription.Items.Data
+            .Join(premiumPlans, item => item.Price.Id, plan => plan.Seat.StripePriceId, (item, plan) => (item, plan))
+            .FirstOrDefault();
+        if (passwordManagerItem is null)
         {
             logger.LogError("Subscription ({SubscriptionId}) for user ({UserId}) has no Premium password manager item",
                 subscription.Id, user.Id);
             throw new ConflictException(InvalidSubscriptionMessage);
         }
 
-        var premiumPlan = premiumPlans.First(plan => plan.Seat.StripePriceId == passwordManagerItem.Price.Id);
         var targetPlan = await pricingClient.GetPlanOrThrow(targetPlanType);
 
         var items = new List<InvoiceSubscriptionDetailsItemOptions>();
@@ -96,6 +96,21 @@ internal sealed class PreviewPremiumUpgradeCommand(
         {
             throw new BadRequestException(
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
+        }
+    }
+
+    private async Task<Subscription> FetchSubscriptionAsync(UserEntity user)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+        }
+        catch (StripeException stripeException)
+            when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionId}) for user ({UserId}) was not found",
+                user.GatewaySubscriptionId, user.Id);
+            throw new ConflictException(InvalidSubscriptionMessage);
         }
     }
 

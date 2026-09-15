@@ -93,17 +93,16 @@ public class UserSubscriptionEndpointsRequestBindingTests
     private static string ReadBody(HttpContext context)
     {
         context.Response.Body.Position = 0;
-        return new StreamReader(context.Response.Body).ReadToEnd();
+        using var reader = new StreamReader(context.Response.Body);
+        return reader.ReadToEnd();
     }
 
     private static InvoicePreview SamplePreview() => new()
     {
         PlanTier = PlanTierType.Teams,
         Cadence = PlanCadenceType.Annually,
-        PasswordManager = new PasswordManagerInvoiceItems
-        {
-            Prorations = [new PurchasableProration { Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }]
-        },
+        PasswordManager = new PasswordManagerInvoiceItems(
+            prorations: [new PurchasableProration { Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }]),
         EstimatedTax = 2m,
         Total = 22m,
         AmountDue = 22m

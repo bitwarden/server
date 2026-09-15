@@ -101,6 +101,29 @@ public class PreviewPremiumUpgradeCommandTests
     }
 
     [Fact]
+    public async Task Run_WhenStripeHasNoSubscription_ThrowsConflictAndLogs()
+    {
+        _stripeAdapter.GetSubscriptionAsync(SubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns<Subscription>(_ => throw new StripeException { StripeError = new StripeError { Code = "resource_missing" } });
+
+        await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(PremiumUser(), Request(ProductTierType.Families)));
+
+        Assert.Single(_logger.Errors);
+        await _pricingClient.DidNotReceive().ListPremiumPlans();
+    }
+
+    [Fact]
+    public async Task Run_WhenStripeFailsToLoadTheSubscriptionForAnotherReason_PropagatesTheStripeException()
+    {
+        _stripeAdapter.GetSubscriptionAsync(SubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns<Subscription>(_ => throw new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        await Assert.ThrowsAsync<StripeException>(() => _sut.Run(PremiumUser(), Request(ProductTierType.Families)));
+
+        Assert.Empty(_logger.Errors);
+    }
+
+    [Fact]
     public async Task Run_WhenNoPasswordManagerItemOnSubscription_ThrowsConflictAndLogs()
     {
         ArrangeSubscription(SubscriptionWithItems(("si_other", "some-other-price")));
@@ -144,7 +167,7 @@ public class PreviewPremiumUpgradeCommandTests
     public async Task Run_WhenStripeFailsForAnotherReason_PropagatesTheStripeException()
     {
         ArrangeFamiliesUpgrade();
-        ArrangePreviewFailure("resource_missing");
+        ArrangePreviewFailure("api_error");
 
         await Assert.ThrowsAsync<StripeException>(() => _sut.Run(PremiumUser(), Request(ProductTierType.Families)));
     }
@@ -267,10 +290,8 @@ public class PreviewPremiumUpgradeCommandTests
         {
             PlanTier = PlanTierType.Families,
             Cadence = PlanCadenceType.Annually,
-            PasswordManager = new PasswordManagerInvoiceItems
-            {
-                Prorations = [new PurchasableProration { Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }]
-            },
+            PasswordManager = new PasswordManagerInvoiceItems(
+                prorations: [new PurchasableProration { Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }]),
             EstimatedTax = 2m,
             Total = 22m,
             AmountDue = 22m
