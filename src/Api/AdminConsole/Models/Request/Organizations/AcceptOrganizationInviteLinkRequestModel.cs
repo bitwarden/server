@@ -11,6 +11,7 @@ public class AcceptOrganizationInviteLinkRequestModel
     [Required]
     public required Guid Code { get; set; }
 
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string? ResetPasswordKey { get; set; }
 }

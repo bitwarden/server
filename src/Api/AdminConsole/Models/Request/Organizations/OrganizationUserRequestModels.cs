@@ -56,6 +56,7 @@ public class OrganizationUserAcceptRequestModel
     [Required]
     public string Token { get; set; }
     // Used to auto-enroll in master password reset
+    [EncryptedString]
     [EncryptedStringLength(1000)]
     public string ResetPasswordKey { get; set; }
 }
