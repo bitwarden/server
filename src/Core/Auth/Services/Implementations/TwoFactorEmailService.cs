@@ -10,56 +10,27 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Core.Auth.Enums;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Auth.Services;
-
-// TODO: PM-43465 - Delete this class once every supported client version sends the Device-Identifier header
-// on the new device verification resend request.
-/// <summary>
-/// Names the cache holding which device each new device verification code was issued to.
-/// </summary>
-public static class NewDeviceVerificationCacheConstants
-{
-    public const string CacheName = "NewDeviceVerification";
-}
 
 public class TwoFactorEmailService : ITwoFactorEmailService
 {
     private readonly ICurrentContext _currentContext;
     private readonly UserManager<User> _userManager;
     private readonly IMailService _mailService;
-    // TODO: PM-43465 - Delete this field and its constructor parameter once every supported client version
-    // sends the Device-Identifier header on the new device verification resend request. Nothing else in this
-    // class uses it.
-    private readonly IFusionCache _pendingDeviceCache;
-
-    // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
-    // header on the new device verification resend request.
-    /// <summary>
-    /// Entry options that skip the pending device cache's in-memory layer, so every read and write goes to
-    /// the shared distributed store. One service writes this record and another reads it, and each process
-    /// holds its own in-memory copy that only a Redis backplane would invalidate. Deployments without Redis
-    /// would otherwise serve a stale copy and scope a resend to a device the user is no longer on. Derived
-    /// from the registered entry options so the configured duration still applies.
-    /// </summary>
-    private FusionCacheEntryOptions PendingDeviceCacheOptions()
-    {
-        return _pendingDeviceCache.DefaultEntryOptions.Duplicate().SetSkipMemoryCache(true);
-    }
+    private readonly INewDeviceVerificationOtpStore _newDeviceVerificationOtpStore;
 
     public TwoFactorEmailService(
         ICurrentContext currentContext,
         IMailService mailService,
         UserManager<User> userManager,
-        [FromKeyedServices(NewDeviceVerificationCacheConstants.CacheName)] IFusionCache pendingDeviceCache
+        INewDeviceVerificationOtpStore newDeviceVerificationOtpStore
     )
     {
         _currentContext = currentContext;
         _userManager = userManager;
         _mailService = mailService;
-        _pendingDeviceCache = pendingDeviceCache;
+        _newDeviceVerificationOtpStore = newDeviceVerificationOtpStore;
     }
 
     /// <summary>
@@ -88,18 +59,13 @@ public class TwoFactorEmailService : ITwoFactorEmailService
         ArgumentNullException.ThrowIfNull(user);
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
 
-        var token = await _userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            NewDeviceOtpPurpose(deviceIdentifier));
-
-        // TODO: PM-43465 - Delete this cache write once every supported client version sends the
-        // Device-Identifier header on the new device verification resend request.
-        await _pendingDeviceCache.SetAsync(user.Id.ToString(), deviceIdentifier, PendingDeviceCacheOptions());
+        var code = await _newDeviceVerificationOtpStore.IssueAsync(user, deviceIdentifier);
 
         var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
 
         await _mailService.SendTwoFactorEmailAsync(
-            user.Email, user.Email, token, _currentContext.IpAddress, deviceType, TwoFactorEmailPurpose.NewDeviceVerification);
+            user.Email, user.Email, code, _currentContext.IpAddress, deviceType, TwoFactorEmailPurpose.NewDeviceVerification);
     }
 
     // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
@@ -109,8 +75,7 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        return await _pendingDeviceCache.GetOrDefaultAsync<string>(user.Id.ToString(),
-            options: PendingDeviceCacheOptions());
+        return await _newDeviceVerificationOtpStore.GetPendingDeviceIdentifierAsync(user);
     }
 
     /// <inheritdoc />
@@ -119,19 +84,7 @@ public class TwoFactorEmailService : ITwoFactorEmailService
         ArgumentNullException.ThrowIfNull(user);
         ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
 
-        return await _userManager.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-            NewDeviceOtpPurpose(deviceIdentifier), otp);
-    }
-
-    /// <summary>
-    /// Builds the token purpose that scopes a new device verification OTP to a single device. The purpose
-    /// forms part of the generated token's identity, so a code can only be redeemed by the device identifier
-    /// it was issued for. The prefix also gives these codes their own namespace, keeping them separate from
-    /// the general-purpose account OTP used for secret verification.
-    /// </summary>
-    private static string NewDeviceOtpPurpose(string deviceIdentifier)
-    {
-        return "new_device_otp:" + deviceIdentifier;
+        return await _newDeviceVerificationOtpStore.ValidateAndConsumeAsync(user, deviceIdentifier, otp);
     }
 
     /// <summary>

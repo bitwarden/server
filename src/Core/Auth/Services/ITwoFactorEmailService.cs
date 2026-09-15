@@ -9,7 +9,8 @@ public interface ITwoFactorEmailService
 
     /// <summary>
     /// Sends a new device verification email to the user with an OTP token that only the requesting device
-    /// can redeem.
+    /// can redeem. At most one such code is ever live per user - issuing a new one, for any device,
+    /// invalidates whichever code came before it.
     /// </summary>
     /// <param name="user">The user to whom the email should be sent</param>
     /// <param name="deviceIdentifier">Identifier of the device the code is being issued for</param>
