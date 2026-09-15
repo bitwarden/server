@@ -299,6 +299,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
         services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
         // Legacy mailer service
@@ -412,8 +413,6 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
-
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
