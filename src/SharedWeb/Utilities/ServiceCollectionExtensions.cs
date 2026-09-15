@@ -300,6 +300,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
+        services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
@@ -316,16 +317,6 @@ public static class ServiceCollectionExtensions
         services.AddTokenizers();
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
-
-        // TODO: PM-43465 - Delete this cache once every supported client version sends the Device-Identifier
-        // header on the new device verification resend request.
-        // The duration is how long the resend button keeps working for a client that does not identify its
-        // device. It deliberately outlives the code itself, because the usual reason to resend is that the
-        // previous code already expired.
-        services.AddExtendedCache(
-            NewDeviceVerificationCacheConstants.CacheName,
-            globalSettings,
-            new GlobalSettings.ExtendedCacheSettings { Duration = TimeSpan.FromMinutes(15) });
 
         var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
         if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
