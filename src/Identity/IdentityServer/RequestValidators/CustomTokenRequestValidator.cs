@@ -6,6 +6,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -25,6 +26,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 {
     private readonly UserManager<User> _userManager;
     private readonly IUpdateInstallationCommand _updateInstallationCommand;
+    private readonly IUpdateMasterPasswordSaltCommand _updateMasterPasswordSaltCommand;
     private readonly Version _denyLegacyUserMinimumVersion = new(Constants.DenyLegacyUserMinimumVersion);
 
     public CustomTokenRequestValidator(
@@ -47,7 +49,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IUpdateMasterPasswordSaltCommand updateMasterPasswordSaltCommand)
         : base(
             userManager,
             userService,
@@ -71,6 +74,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
+        _updateMasterPasswordSaltCommand = updateMasterPasswordSaltCommand;
     }
 
     // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
@@ -96,6 +100,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             }
 
             await TryUpdateDeviceLastActivityForRefreshAsync(context);
+            await TryUpdateMasterPasswordSaltForRefreshAsync(context);
         }
 
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
@@ -253,6 +258,42 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             // due to issues updating the device's last-activity state (LastActivityDate / ClientVersion).
             _logger.LogWarning(e, "Failed to update device last activity for device with identifier {DeviceIdentifier}.",
                 context.Result.ValidatedRequest.Subject?.FindFirstValue(Claims.Device));
+        }
+    }
+
+    private async Task TryUpdateMasterPasswordSaltForRefreshAsync(CustomTokenRequestValidationContext context)
+    {
+        Debug.Assert(context.Result is not null);
+        var userIdString = context.Result.ValidatedRequest.Subject?.FindFirstValue(JwtClaimTypes.Subject);
+        try
+        {
+            Guid.TryParse(userIdString, out var userId);
+
+            // Populate CurrentContext for the LD bucketing decision below, from the server-signed
+            // refresh-token Subject claim. Kept here rather than relying on the device bump above
+            // having run first.
+            if (userId != Guid.Empty)
+            {
+                CurrentContext.UserId ??= userId;
+            }
+
+            if (!_featureService.IsEnabled(FeatureFlagKeys.PM_POC_PrefillMasterPasswordSalt))
+            {
+                return;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                return;
+            }
+
+            await _updateMasterPasswordSaltCommand.UpdateAsync(userId);
+        }
+        catch (Exception e)
+        {
+            // Log and swallow exceptions from this non-critical backfill, as we don't want to fail
+            // refreshes due to issues writing the master password salt.
+            _logger.LogWarning(e, "Failed to update master password salt for user {UserId}.", userIdString);
         }
     }
 
