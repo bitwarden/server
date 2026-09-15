@@ -659,11 +659,26 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 .Where(cu => cu.CollectionId == id)
                 .ToListAsync();
 
-            foreach (var requestedUser in requestedUsers)
+            var requestedUserList = requestedUsers.ToList();
+            var requestedUserIds = requestedUserList.Select(u => u.Id).ToList();
+
+            var organizationUserIds = requestedUserIds.Count == 0
+                ? new HashSet<Guid>()
+                : (await dbContext.OrganizationUsers
+                    .Where(ou => ou.OrganizationId == organizationId && requestedUserIds.Contains(ou.Id))
+                    .Select(ou => ou.Id)
+                    .ToListAsync()).ToHashSet();
+
+            foreach (var requestedUser in requestedUserList)
             {
                 var existingCollectionUser = existingCollectionUsers.FirstOrDefault(cu => cu.OrganizationUserId == requestedUser.Id);
                 if (existingCollectionUser == null)
                 {
+                    if (!organizationUserIds.Contains(requestedUser.Id))
+                    {
+                        continue;
+                    }
+
                     // This is a brand new entry
                     dbContext.CollectionUsers.Add(new CollectionUser
                     {
@@ -684,7 +699,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             }
 
             // Remove all existing ones that are no longer requested
-            var requestedUserIds = requestedUsers.Select(u => u.Id);
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
             // Need to save the new collection users before running the bump revision code
             await dbContext.SaveChangesAsync();
@@ -733,10 +747,18 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     .ToDictionaryAsync(x => (x.CollectionId, x.OrganizationUserId));
 
                 var requestedUsers = users.ToList();
+                var requestedUserIds = requestedUsers.Select(u => u.Id).Distinct().ToList();
+
+                var organizationUserIds = requestedUserIds.Count == 0
+                    ? new HashSet<Guid>()
+                    : (await dbContext.OrganizationUsers
+                        .Where(ou => ou.OrganizationId == organizationId && requestedUserIds.Contains(ou.Id))
+                        .Select(ou => ou.Id)
+                        .ToListAsync()).ToHashSet();
 
                 foreach (var collectionId in collectionIdsList)
                 {
-                    foreach (var requestedUser in requestedUsers)
+                    foreach (var requestedUser in requestedUsers.Where(u => organizationUserIds.Contains(u.Id)))
                     {
                         if (!existingCollectionUsers.TryGetValue(
                                 (collectionId, requestedUser.Id),
@@ -771,10 +793,18 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     .ToDictionaryAsync(x => (x.CollectionId, x.GroupId));
 
                 var requestedGroups = groups.ToList();
+                var requestedGroupIds = requestedGroups.Select(g => g.Id).Distinct().ToList();
+
+                var organizationGroupIds = requestedGroupIds.Count == 0
+                    ? new HashSet<Guid>()
+                    : (await dbContext.Groups
+                        .Where(g => g.OrganizationId == organizationId && requestedGroupIds.Contains(g.Id))
+                        .Select(g => g.Id)
+                        .ToListAsync()).ToHashSet();
 
                 foreach (var collectionId in collectionIdsList)
                 {
-                    foreach (var requestedGroup in requestedGroups)
+                    foreach (var requestedGroup in requestedGroups.Where(g => organizationGroupIds.Contains(g.Id)))
                     {
                         if (!existingCollectionGroups.TryGetValue(
                                 (collectionId, requestedGroup.Id),
@@ -877,11 +907,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
+        var requestedGroups = groups.ToList();
+        var requestedGroupIds = requestedGroups.Select(g => g.Id).ToList();
+
         var existingCollectionGroups = await dbContext.CollectionGroups
             .Where(cg => cg.CollectionId == collection.Id)
             .ToDictionaryAsync(cg => cg.GroupId);
 
-        foreach (var group in groups)
+        var organizationGroupIds = requestedGroupIds.Count == 0
+            ? new HashSet<Guid>()
+            : (await dbContext.Groups
+                .Where(g => g.OrganizationId == collection.OrganizationId && requestedGroupIds.Contains(g.Id))
+                .Select(g => g.Id)
+                .ToListAsync()).ToHashSet();
+
+        foreach (var group in requestedGroups)
         {
             if (existingCollectionGroups.TryGetValue(group.Id, out var existingCollectionGroup))
             {
@@ -891,7 +931,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 existingCollectionGroup.Manage = group.Manage;
                 dbContext.CollectionGroups.Update(existingCollectionGroup);
             }
-            else
+            else if (organizationGroupIds.Contains(group.Id))
             {
                 // This is a brand new entry, add it
                 dbContext.CollectionGroups.Add(new CollectionGroup
@@ -905,7 +945,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             }
         }
 
-        var requestedGroupIds = groups.Select(g => g.Id).ToArray();
         var toDelete = existingCollectionGroups.Values.Where(cg => !requestedGroupIds.Contains(cg.GroupId));
         dbContext.CollectionGroups.RemoveRange(toDelete);
         // SaveChangesAsync is expected to be called outside this method
@@ -913,11 +952,21 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
 
     private static async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
     {
+        var requestedUsers = users.ToList();
+        var requestedUserIds = requestedUsers.Select(u => u.Id).ToList();
+
         var existingCollectionUsers = await dbContext.CollectionUsers
             .Where(cu => cu.CollectionId == collection.Id)
             .ToDictionaryAsync(cu => cu.OrganizationUserId);
 
-        foreach (var user in users)
+        var organizationUserIds = requestedUserIds.Count == 0
+            ? new HashSet<Guid>()
+            : (await dbContext.OrganizationUsers
+                .Where(ou => ou.OrganizationId == collection.OrganizationId && requestedUserIds.Contains(ou.Id))
+                .Select(ou => ou.Id)
+                .ToListAsync()).ToHashSet();
+
+        foreach (var user in requestedUsers)
         {
             if (existingCollectionUsers.TryGetValue(user.Id, out var existingCollectionUser))
             {
@@ -927,7 +976,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 existingCollectionUser.Manage = user.Manage;
                 dbContext.CollectionUsers.Update(existingCollectionUser);
             }
-            else
+            else if (organizationUserIds.Contains(user.Id))
             {
                 // This is a brand new entry, add it
                 dbContext.CollectionUsers.Add(new CollectionUser
@@ -941,7 +990,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             }
         }
 
-        var requestedUserIds = users.Select(u => u.Id).ToArray();
         var toDelete = existingCollectionUsers.Values.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId));
         dbContext.CollectionUsers.RemoveRange(toDelete);
         // SaveChangesAsync is expected to be called outside this method

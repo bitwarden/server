@@ -1,0 +1,203 @@
+name: Build Seeded Database Images
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: "Preset name to build (empty = curated default list, all = every preset)"
+        required: false
+        type: string
+      database:
+        description: "Database type to build (all = default matrix)"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - postgres
+          - mysql
+          - mariadb
+          - mssql
+
+env:
+  _AZ_REGISTRY: devimagesaedgdev.azurecr.io
+  _AZ_REGISTRY_NAME: devimagesaedgdev
+  _DEFAULT_PRESETS: >-
+    ["qa.dunder-mifflin-enterprise-full",
+    "scale.md-balanced-sterling-cooper",
+    "scale.lg-balanced-wayne-enterprises",
+    "scale.lg-highperm-tyrell-corp",
+    "scale.xl-broad-initech"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ inputs.preset }}-${{ inputs.database }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    name: Determine build matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      presets: ${{ steps.matrix.outputs.presets }}
+      databases: ${{ steps.matrix.outputs.databases }}
+    steps:
+      - name: Check out repo
+        if: inputs.preset == 'all'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        if: inputs.preset == 'all'
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Build SeederUtility
+        if: inputs.preset == 'all'
+        run: dotnet build util/SeederUtility/SeederUtility.csproj
+
+      - name: Determine matrix
+        id: matrix
+        env:
+          INPUT_PRESET: ${{ inputs.preset }}
+          INPUT_DATABASE: ${{ inputs.database }}
+        run: |
+          if [[ "${INPUT_PRESET}" == "all" ]]; then
+            presets=$(dotnet run --project util/SeederUtility --no-build -- preset --list --output json \
+              | jq -c '[.organization[], .individual[]]')
+          elif [[ -n "${INPUT_PRESET}" ]]; then
+            presets="[\"${INPUT_PRESET}\"]"
+          else
+            presets="${_DEFAULT_PRESETS}"
+          fi
+
+          if [[ -n "${INPUT_DATABASE}" && "${INPUT_DATABASE}" != "all" ]]; then
+            databases="[\"${INPUT_DATABASE}\"]"
+          else
+            databases='["postgres","mysql","mariadb","mssql"]'
+          fi
+
+          echo "presets=${presets}" >> "$GITHUB_OUTPUT"
+          echo "databases=${databases}" >> "$GITHUB_OUTPUT"
+          echo "Preset matrix:   ${presets}"
+          echo "Database matrix: ${databases}"
+
+  build:
+    name: ${{ matrix.database }} / ${{ matrix.preset }}
+    needs: setup
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        preset: ${{ fromJson(needs.setup.outputs.presets) }}
+        database: ${{ fromJson(needs.setup.outputs.databases) }}
+      fail-fast: false
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
+
+      - name: Restore .NET local tools
+        run: dotnet tool restore
+
+      - name: Log in to Azure
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+      - name: Retrieve data protection key
+        id: secrets
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: gh-org-bitwarden
+          secrets: "DP-KEY-XML"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Log in to Azure for ACR
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID_SEEDER }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID_SEEDER }}
+
+      - name: Log in to ACR
+        run: az acr login -n "${_AZ_REGISTRY_NAME}"
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
+
+      - name: Build seeded image
+        env:
+          PUSH: "true"
+          REGISTRY: ${{ env._AZ_REGISTRY }}
+          GIT_SHA: ${{ github.sha }}
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
+          DP_KEY_XML: ${{ steps.secrets.outputs.DP-KEY-XML }}
+        run: |
+          GIT_SHA="${GIT_SHA:0:7}" \
+          bash util/SeederUtility/scripts/build-seeded-image.sh \
+            "${MATRIX_PRESET}" \
+            "${MATRIX_DATABASE}"
+
+      - name: Stage attachment blobs
+        run: |
+          mkdir -p bundle-out
+          for f in util/SeederUtility/docker/bundles/seeded-core-*.tar.gz; do
+            tar -xzf "${f}" -C bundle-out
+          done
+
+      - name: Upload attachment blobs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: seeded-attachments-${{ matrix.database }}-${{ matrix.preset }}
+          path: bundle-out/core/attachments/**
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Summarize pushed image
+        env:
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          TAG="${MATRIX_PRESET//./-}"
+          IMAGE_REPO="${_AZ_REGISTRY}/seeded-${MATRIX_DATABASE}"
+          {
+            echo "### \`${MATRIX_PRESET}\` / \`${MATRIX_DATABASE}\`"
+            echo ""
+            echo "| Tag | Image |"
+            echo "| --- | --- |"
+            echo "| Versioned | \`${IMAGE_REPO}:${TAG}-${GIT_SHA:0:7}\` |"
+            echo "| Latest | \`${IMAGE_REPO}:${TAG}-latest\` |"
+            echo ""
+            echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` either tag."
+            echo "Attachment blobs, when the preset has any, are in this run's artifacts."
+          } >> "$GITHUB_STEP_SUMMARY"
