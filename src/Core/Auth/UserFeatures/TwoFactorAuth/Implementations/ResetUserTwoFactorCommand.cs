@@ -11,6 +11,7 @@ public class ResetUserTwoFactorCommand(
     {
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = null;
+        user.SecurityStamp = Guid.NewGuid().ToString();
         user.RevisionDate = user.AccountRevisionDate = timeProvider.GetUtcNow().UtcDateTime;
         await userRepository.ReplaceAsync(user);
     }
