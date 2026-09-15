@@ -174,7 +174,7 @@ public class OrganizationsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetAutoEnrollStatus_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
+    public async Task GetAutoEnrollStatusByQuery_ReturnsOrganizationAutoEnrollStatus_WithResetPasswordEnabledTrue(
         SutProvider<OrganizationsController> sutProvider,
         User user,
         Organization organization,
@@ -186,11 +186,64 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
         sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
 
-        var result = await sutProvider.Sut.GetAutoEnrollStatus(organization.Id.ToString());
+        var result = await sutProvider.Sut.GetAutoEnrollStatusByQuery(organization.Id.ToString());
 
         await sutProvider.GetDependency<IUserService>().Received(1).GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>());
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdentifierAsync(organization.Id.ToString());
         await sutProvider.GetDependency<IPolicyQuery>().Received(1).RunAsync(organization.Id, PolicyType.ResetPassword);
+
+        Assert.True(result.ResetPasswordEnabled);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAutoEnrollStatusByQuery_IdentifierContainsSlash_PassesIdentifierThroughUnchanged(
+        SutProvider<OrganizationsController> sutProvider,
+        User user,
+        Organization organization,
+        OrganizationUser organizationUser,
+        [Policy(PolicyType.ResetPassword, data: "{\"AutoEnrollEnabled\": true}")] PolicyStatus policy)
+    {
+        // An admin-chosen SSO identifier may contain reserved URL characters such as '/'.
+        // The query-parameter route must forward it verbatim to the repository (ticket #870106).
+        const string identifier = "DQS/bitwarden";
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(identifier).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
+
+        var result = await sutProvider.Sut.GetAutoEnrollStatusByQuery(identifier);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).GetByIdentifierAsync(identifier);
+        Assert.True(result.ResetPasswordEnabled);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAutoEnrollStatusByQuery_OrganizationNotFound_ThrowsNotFound(
+        SutProvider<OrganizationsController> sutProvider,
+        User user)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(Arg.Any<string>()).Returns((Organization)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAutoEnrollStatusByQuery("unknown"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAutoEnrollStatus_DeprecatedPathRoute_StillResolvesViaIdentifier(
+        SutProvider<OrganizationsController> sutProvider,
+        User user,
+        Organization organization,
+        OrganizationUser organizationUser,
+        [Policy(PolicyType.ResetPassword, data: "{\"AutoEnrollEnabled\": true}")] PolicyStatus policy)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(organization.Id, user.Id).Returns(organizationUser);
+        sutProvider.GetDependency<IPolicyQuery>().RunAsync(organization.Id, PolicyType.ResetPassword).Returns(policy);
+
+#pragma warning disable CS0618 // Type or member is obsolete - retained for backward compatibility, kept under test.
+        var result = await sutProvider.Sut.GetAutoEnrollStatus(organization.Id.ToString());
+#pragma warning restore CS0618
 
         Assert.True(result.ResetPasswordEnabled);
     }
