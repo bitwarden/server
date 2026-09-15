@@ -234,10 +234,8 @@ public class GetSubscriptionPreviewQueryTests
 
     private static InvoicePreview SampleInvoicePreview() => new()
     {
-        PasswordManager = new PasswordManagerInvoiceItems
-        {
-            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m }
-        },
+        PasswordManager = new PasswordManagerInvoiceItems(
+            seats: new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m }),
         Cadence = PlanCadenceType.Annually,
         PlanTier = PlanTierType.Teams,
         EstimatedTax = 0m,

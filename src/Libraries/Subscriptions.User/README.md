@@ -1,33 +1,56 @@
 # Subscriptions.User
 
 Feature-tier library exposing the account-scoped subscription HTTP surface — the endpoints an
-individual user hits to preview and manage their own subscription. Empty shell for now; endpoints
-arrive with the individual screen slices.
+individual user hits to preview and manage their own subscription.
 
 See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries/` follow.
 
 ## Public surface
 
-`AddUserSubscriptions()` registers the endpoint group's services and the `Bit.Invoicing` library
-they depend on. `MapUserSubscriptionEndpoints()` attaches the group's cross-cutting chain — tags,
-the `Application` authorization policy, exception handling, and the `PM36631_PreviewDrivenCart`
-feature gate — to an empty group; the host owns the route prefix and mounts it at
+`AddUserSubscriptions()` registers the group's services — the scoped
+`UserSubscriptionEndpointsHandler` and `IPreviewPremiumUpgradeCommand` — and the `Bit.Invoicing`
+library they depend on. `MapUserSubscriptionEndpoints()` creates the group, applies its
+cross-cutting chain (tags, the `internal` group name, the `Application` policy, exception handling,
+the `PM36631_PreviewDrivenCart` feature gate), and maps the endpoints below; the host mounts it at
 `/account/billing/subscription/premium`.
-No endpoints are mapped inside the group yet.
+
+Everything else is `internal`. The only type a consumer reads is `Bit.Invoicing`'s `InvoicePreview`.
+
+### Endpoints
+
+| Route | Handler | Returns |
+| --- | --- | --- |
+| `POST .../upgrade/invoice/preview` | `UserSubscriptionEndpointsHandler.PreviewPremiumUpgradeAsync` | `InvoicePreview` |
+
+The handler resolves the caller via `IUserService` (401 if none) and runs
+`IPreviewPremiumUpgradeCommand`. The command validates the request itself (the group runs no
+DataAnnotations filter): the target tier must be Families, Teams, or Enterprise and the billing
+address needs a two-letter country and a postal code. Caller-controllable problems — tier, address,
+a non-Premium user, a tax location Stripe rejects — are 400s. Subscription state the user cannot
+influence — no gateway subscription, a subscription Stripe no longer has, no Premium seat item on
+it — is logged with the user id (and subscription id when there is one) and surfaced as a 409.
+
+The preview drops the Premium storage add-on, swaps the seat item to the target annual plan at
+quantity 1, and asks Stripe for `always_invoice` prorations with automatic tax. Stripe returns only
+proration lines for that, so `InvoicePreview.PasswordManager.Seats` is null and the charge, credit,
+tax, and remaining months are on `PasswordManager.Prorations[0]`.
 
 ## Stripe boundary
 
-This library never calls Stripe. It makes no Stripe API calls and never touches `IStripeAdapter`;
-all Stripe interaction is delegated to `Bit.Invoicing`'s public surface. Referencing Stripe SDK
-types to pass data across that surface is fine — calling Stripe from here is not.
+This library reads the user's subscription through `IStripeAdapter` to decide which items to swap
+and delete, then hands the `InvoiceCreatePreviewOptions` to `Bit.Invoicing`. It never calls
+Stripe's invoice APIs directly.
 
 ## Core debt
 
-This library depends on `Core` as a documented deviation from the rule restricting Libraries from referencing Core, per ADR-0032:
+Documented deviation from the Libraries-do-not-reference-Core rule, per ADR-0032:
 
 | From Core | Used for |
 | --- | --- |
-| `Policies.Application` (`Bit.Core.Auth.Identity`) | Requiring the standard user authorization policy on the group |
-
-Depending on `Core` for these is fine for now; this table exists so they're known, not because
-they're queued up for extraction.
+| `Policies.Application` (`Bit.Core.Auth.Identity`) | Authorization policy on the group |
+| `IUserService`, `User` (`Bit.Core.Services`, `Bit.Core.Entities`) | Resolving the caller |
+| `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the user's subscription items |
+| `IPricingClient` (`Bit.Core.Billing.Pricing`) | Premium price ids and the target plan |
+| `ProductTierType`, `PlanType`, `PlanCadenceType` (`Bit.Core.Billing.Enums`) | Request contract and the `Bit.Invoicing` call |
+| `StripeConstants` (`Bit.Core.Billing.Constants`) | `always_invoice`, `customer_tax_location_invalid`, `resource_missing` |
+| `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | 400 and 409 responses via the group's exception handling |

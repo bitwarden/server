@@ -132,15 +132,10 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     private static PasswordManagerInvoiceItems BuildPasswordManagerItems(
         Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration? proration)
     {
-        // Password Manager seats are always present; a missing line is a Stripe misconfiguration, unlike Secrets Manager.
-        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat)
-            ?? throw new InvalidOperationException("The preview resolved no Password Manager seats line.");
-        return new PasswordManagerInvoiceItems
-        {
-            Seats = seats,
-            AdditionalStorage = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerStorage),
-            Prorations = proration is { } p ? [p] : null,
-        };
+        return new PasswordManagerInvoiceItems(
+            seats: lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerSeat),
+            additionalStorage: lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PasswordManagerStorage),
+            prorations: proration is { } p ? [p] : null);
     }
 
     private static SecretsManagerInvoiceItems? BuildSecretsManagerItems(
