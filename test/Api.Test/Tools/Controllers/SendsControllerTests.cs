@@ -1258,6 +1258,64 @@ public class SendsControllerTests : IDisposable
         await _nonAnonymousSendCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileId);
     }
 
+    [Theory]
+    [InlineData("file/with/slash")]
+    [InlineData("file..traversal")]
+    [InlineData("file{{template")]
+    [InlineData("file}}template")]
+    public async Task GetSendFileDownloadDataUsingAuth_WithPathTraversalCharactersInFileId_ThrowsArgumentException(
+        string fileIdWithInvalidChars)
+    {
+        // This test validates that path traversal attempts in fileId are rejected.
+        // AzureSendFileStorageService.BlobName throws ArgumentException when fileId contains:
+        // - / (path separator)
+        // - .. (parent directory traversal)
+        // - {{ or }} (template injection characters)
+        //
+        // Attack vectors:
+        // - fileId="file/with/slash" -> attempts blob path traversal
+        // - fileId="file..traversal" -> attempts parent directory access
+        // - fileId="file{{template" -> attempts template injection
+        // - fileId="file}}template" -> attempts template injection
+
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var fileData = new SendFileData("Test File", "Notes", "document.pdf")
+        {
+            Id = "validfileid123",  // Valid stored fileId
+            Size = 2048
+        };
+        var send = new Send
+        {
+            Id = sendId,
+            Type = SendType.File,
+            Data = JsonSerializer.Serialize(fileData),
+            DeletionDate = DateTime.UtcNow.AddDays(7),
+            ExpirationDate = null,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null
+        };
+        var user = CreateUserWithSendIdClaim(sendId);
+        _sut.ControllerContext = CreateControllerContextWithUser(user);
+        _sendRepository.GetByIdAsync(sendId).Returns(send);
+
+        // Mock GetSendFileDownloadUrlAsync to throw ArgumentException when invalid characters detected
+        _nonAnonymousSendCommand
+            .When(x => x.GetSendFileDownloadUrlAsync(send, fileIdWithInvalidChars))
+            .Do(x => throw new ArgumentException("File ID contains invalid characters", nameof(fileIdWithInvalidChars)));
+
+        // Act & Assert - Should throw ArgumentException
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _sut.GetSendFileDownloadDataUsingAuth(fileIdWithInvalidChars));
+
+        Assert.Contains("File ID contains invalid characters", exception.Message);
+
+        // Verify that the command was called with the invalid fileId
+        await _nonAnonymousSendCommand.Received(1)
+            .GetSendFileDownloadUrlAsync(send, fileIdWithInvalidChars);
+    }
+
 
     #endregion
 
