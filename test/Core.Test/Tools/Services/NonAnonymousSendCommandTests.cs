@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
+using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
@@ -1564,6 +1565,126 @@ public class NonAnonymousSendCommandTests
 
         await _sendRepository.Received(1).UpsertAsync(send);
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_NewSend_LogEventFalse_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = default,
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send, logEvent: false);
+
+        await _sendRepository.Received(1).CreateAsync(send);
+        await _eventService.DidNotReceive().LogSendEventAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<EventType>(),
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task SaveSendAsync_ExistingSend_LogEventFalse_DoesNotLogEvent()
+    {
+        var userId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.Text,
+            UserId = userId,
+        };
+
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        await _nonAnonymousSendCommand.SaveSendAsync(send, logEvent: false);
+
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.DidNotReceive().LogSendEventAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<EventType>(),
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task ConfirmFileSize_ValidFile_LogsEditedEvent()
+    {
+        var userId = Guid.NewGuid();
+        var fileData = new SendFileData("name", null, "file.txt") { Id = "fileId", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId,
+            Data = JsonSerializer.Serialize(fileData),
+        };
+
+        _sendFileStorageService.ValidateFileAsync(send, "fileId", Arg.Any<long>(), Arg.Any<long>())
+            .Returns((true, 100L));
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        var result = await _nonAnonymousSendCommand.ConfirmFileSize(send);
+
+        Assert.True(result);
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.Received(1).LogSendEventAsync(userId, send.Id, EventType.Send_Edited_File);
+    }
+
+    [Fact]
+    public async Task ConfirmFileSize_ValidFile_LogEventFalse_DoesNotLogEditedEvent()
+    {
+        // Mirrors the Azure Event Grid webhook and self-hosted upload-confirmation call sites, which
+        // both finalize an upload that already logged Send_Created_File and must not log a second,
+        // redundant Send_Edited_File.
+        var userId = Guid.NewGuid();
+        var fileData = new SendFileData("name", null, "file.txt") { Id = "fileId", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId,
+            Data = JsonSerializer.Serialize(fileData),
+        };
+
+        _sendFileStorageService.ValidateFileAsync(send, "fileId", Arg.Any<long>(), Arg.Any<long>())
+            .Returns((true, 100L));
+        _sendValidationService.ValidateUserCanSaveAsync(userId, send).Returns(Task.CompletedTask);
+
+        var result = await _nonAnonymousSendCommand.ConfirmFileSize(send, logEvent: false);
+
+        Assert.True(result);
+        await _sendRepository.Received(1).UpsertAsync(send);
+        await _eventService.DidNotReceive().LogSendEventAsync(
+            Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<EventType>(),
+            Arg.Any<IReadOnlyDictionary<Guid, SendAccessEventOrgContext>>());
+    }
+
+    [Fact]
+    public async Task ConfirmFileSize_InvalidFile_LogEventFalse_StillLogsDeletedEvent()
+    {
+        // The anti-hijacking deletion is a genuine anomaly worth an audit trail, unlike the routine
+        // confirmation event above, so it must log regardless of logEvent.
+        var userId = Guid.NewGuid();
+        var fileData = new SendFileData("name", null, "file.txt") { Id = "fileId", Size = 100 };
+        var send = new Send
+        {
+            Id = Guid.NewGuid(),
+            Type = SendType.File,
+            UserId = userId,
+            Data = JsonSerializer.Serialize(fileData),
+        };
+
+        _sendFileStorageService.ValidateFileAsync(send, "fileId", Arg.Any<long>(), Arg.Any<long>())
+            .Returns((false, -1L));
+
+        var result = await _nonAnonymousSendCommand.ConfirmFileSize(send, logEvent: false);
+
+        Assert.False(result);
+        await _sendRepository.Received(1).DeleteAsync(send);
+        await _eventService.Received(1).LogSendEventAsync(userId, send.Id, EventType.Send_Deleted_File);
     }
 
     [Theory]

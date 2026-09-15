@@ -1,20 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-
-/// <summary>
-/// Automatically Confirm User Command Request (single-user).
-/// </summary>
-public record AutomaticallyConfirmOrganizationUserRequest
-{
-    public required Guid OrganizationUserId { get; init; }
-    public required Guid OrganizationId { get; init; }
-    public required string Key { get; init; }
-    public required string DefaultUserCollectionName { get; init; }
-    public required IActingUser PerformedBy { get; init; }
-}
 
 /// <summary>
 /// Hydrated request passed to the validator. Carries the retrieved <see cref="OrganizationUser"/> and
@@ -28,7 +15,6 @@ public record AutomaticallyConfirmOrganizationUserValidationRequest
     public required string DefaultUserCollectionName { get; init; }
     public OrganizationUser? OrganizationUser { get; init; }
     public Organization? Organization { get; init; }
-    public IActingUser? PerformedBy { get; init; }
     public Guid OrganizationUserId { get; init; }
     public Guid OrganizationId { get; init; }
 }

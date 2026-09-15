@@ -600,6 +600,70 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndOpenRegistrationDisabled_Succeeds(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // The DisableUserRegistration self-hosted admin toggle targets open self-registration.
+        // Possession of a valid invite link is the authorization for this path, so both
+        // register-start and register-finish via an open org invite must proceed even when
+        // that toggle is on.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
+
+        var email = $"test+openinvitedisabled+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.NotNull(user);
+        Assert.Equal(email, user.Email);
+        Assert.Equal(name, user.Name);
+    }
+
+    [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithMatchingOpenOrgInvite_Succeeds([Required] string name, bool receiveMarketingEmails,
         [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
         [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
