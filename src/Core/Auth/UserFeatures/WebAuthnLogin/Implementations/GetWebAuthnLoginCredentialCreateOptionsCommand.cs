@@ -41,8 +41,14 @@ internal class GetWebAuthnLoginCredentialCreateOptionsCommand : IGetWebAuthnLogi
 
         var extensions = new AuthenticationExtensionsClientInputs { };
 
-        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
-            AttestationConveyancePreference.None, extensions);
+        var options = _fido2.RequestNewCredential(new RequestNewCredentialParams
+        {
+            User = fidoUser,
+            ExcludeCredentials = excludeCredentials,
+            AuthenticatorSelection = authenticatorSelection,
+            AttestationPreference = AttestationConveyancePreference.None,
+            Extensions = extensions
+        });
 
         return options;
     }
