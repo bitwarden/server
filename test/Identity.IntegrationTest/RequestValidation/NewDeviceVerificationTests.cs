@@ -10,7 +10,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
 
@@ -70,9 +69,8 @@ public class NewDeviceVerificationTests
         await PostPasswordTokenAsync(
             factory, user.Email, requestModel.MasterPasswordHash, ChallengedDeviceIdentifier);
 
-        var cache = factory.Services.GetRequiredKeyedService<IFusionCache>(
-            NewDeviceVerificationCacheConstants.CacheName);
-        var recorded = await cache.GetOrDefaultAsync<string>(user.Id.ToString());
+        var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
+        var recorded = await twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
 
         Assert.Equal(ChallengedDeviceIdentifier, recorded);
     }

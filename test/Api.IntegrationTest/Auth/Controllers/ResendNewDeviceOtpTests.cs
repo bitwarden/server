@@ -8,7 +8,6 @@ using Bit.Core.Services;
 using Core.Auth.Enums;
 using NSubstitute;
 using Xunit;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers;
 
@@ -41,6 +40,7 @@ public class ResendNewDeviceOtpTests
     {
         var (factory, mailService, user) = await ArrangeAsync();
         await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+        mailService.ClearReceivedCalls();
 
         var response = await PostResendAsync(factory, user.Email, deviceIdentifier: null);
 
@@ -56,6 +56,7 @@ public class ResendNewDeviceOtpTests
         // caller would submit the same over-long value when redeeming, so a code scoped to the pending
         // device could not be redeemed — and issuing one would overwrite that device's outstanding code.
         await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+        mailService.ClearReceivedCalls();
 
         var response = await PostResendAsync(
             factory, user.Email, new string('a', Device.MaxIdentifierLength + 1));
@@ -97,12 +98,15 @@ public class ResendNewDeviceOtpTests
         return (factory, factory.GetService<IMailService>(), user);
     }
 
+    /// <summary>
+    /// Issues a real new device verification code for the given device, so the pending-device record the
+    /// resend fallback reads is populated exactly as it would be by a genuine challenge.
+    /// </summary>
     private static async Task RecordPendingDeviceAsync(
         ApiApplicationFactory factory, User user, string deviceIdentifier)
     {
-        var cache = factory.Services.GetRequiredKeyedService<IFusionCache>(
-            NewDeviceVerificationCacheConstants.CacheName);
-        await cache.SetAsync(user.Id.ToString(), deviceIdentifier);
+        var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
+        await twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
     }
 
     private static async Task<HttpResponseMessage> PostResendAsync(
