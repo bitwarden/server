@@ -626,6 +626,32 @@ public class OtpTokenProviderTests
         Assert.Null(result);
     }
 
+    /// <summary>
+    /// Before <c>BoundValue</c> was added, <see cref="OtpTokenProvider{TOptions}"/> stored a bare UTF-8 token
+    /// string rather than a JSON <c>OtpCacheEntry</c>. During a rolling deploy, instances still running the
+    /// prior version keep writing that shape, so an upgraded instance must not throw when it reads one back.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_LegacyRawTokenCacheEntry_ReturnsFalse(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(System.Text.Encoding.UTF8.GetBytes(token));
+
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        Assert.False(result);
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .RemoveAsync(Arg.Any<string>());
+    }
+
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_WithBoundValue_StoresIt(
         SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,

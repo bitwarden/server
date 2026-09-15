@@ -99,7 +99,20 @@ public class OtpTokenProvider<TOptions>(
     private async Task<OtpCacheEntry?> GetEntryAsync(string cacheKey)
     {
         var cachedValue = await _distributedCache.GetAsync(cacheKey);
-        return cachedValue == null || cachedValue.Length == 0 ? null : JsonSerializer.Deserialize<OtpCacheEntry>(cachedValue);
+        if (cachedValue == null || cachedValue.Length == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<OtpCacheEntry>(cachedValue);
+        }
+        catch (JsonException)
+        {
+            // Fail closed on any cache entry that isn't this JSON shape, rather than crash validation.
+            return null;
+        }
     }
 
     private sealed class OtpCacheEntry
