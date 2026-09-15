@@ -115,13 +115,6 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
         => !string.IsNullOrWhiteSpace(resetPasswordKey);
 
     /// <summary>
-    /// Checks whether the given reset password key is a well-formed encrypted string. A blank key is well-formed,
-    /// because a blank key means the user is not enrolled.
-    /// </summary>
-    public static bool IsWellFormedResetPasswordKey(string? resetPasswordKey)
-        => !IsValidResetPasswordKey(resetPasswordKey) || EncryptedStringAttribute.IsValidCore(resetPasswordKey);
-
-    /// <summary>
     /// Whether this organization user is enrolled in account recovery.
     /// </summary>
     public bool IsEnrolledInAccountRecovery() => IsValidResetPasswordKey(ResetPasswordKey);
