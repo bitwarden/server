@@ -214,14 +214,6 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task<GroupResponseModel> PostPut([FromRoute] Guid orgId, Guid id, [FromBody] GroupRequestModel model)
-    {
-        return await Put(orgId, id, model);
-    }
-
     [HttpDelete("{id}")]
     [Authorize<ManageGroupsRequirement>]
     public async Task Delete([FromRoute] Guid orgId, Guid id)
@@ -233,14 +225,6 @@ public class GroupsController : Controller
         }
 
         await _deleteGroupCommand.DeleteAsync(group);
-    }
-
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostDelete([FromRoute] Guid orgId, Guid id)
-    {
-        await Delete(orgId, id);
     }
 
     [HttpDelete("")]
@@ -260,14 +244,6 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteManyAsync(groups);
     }
 
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostBulkDelete([FromRoute] Guid orgId, [FromBody] GroupBulkRequestModel model)
-    {
-        await BulkDelete(orgId, model);
-    }
-
     [HttpDelete("{id}/user/{orgUserId}")]
     [Authorize<ManageGroupsRequirement>]
     public async Task DeleteUser([FromRoute] Guid orgId, Guid id, Guid orgUserId)
@@ -279,13 +255,5 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, orgUserId);
-    }
-
-    [HttpPost("{id}/delete-user/{orgUserId}")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageGroupsRequirement>]
-    public async Task PostDeleteUser([FromRoute] Guid orgId, Guid id, Guid orgUserId)
-    {
-        await DeleteUser(orgId, id, orgUserId);
     }
 }
