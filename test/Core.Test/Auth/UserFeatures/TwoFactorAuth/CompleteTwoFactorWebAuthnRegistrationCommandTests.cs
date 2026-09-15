@@ -11,6 +11,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
@@ -92,25 +93,22 @@ public class CompleteTwoFactorWebAuthnRegistrationCommandTests
 
         var mockFido2 = sutProvider.GetDependency<IFido2>();
         mockFido2.MakeNewCredentialAsync(
-                Arg.Any<AuthenticatorAttestationRawResponse>(),
-                Arg.Any<CredentialCreateOptions>(),
-                Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>())
-            .Returns(new Fido2.CredentialMakeResult("ok", "",
-                new AttestationVerificationSuccess
+                Arg.Any<MakeNewCredentialParams>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new RegisteredPublicKeyCredential
+            {
+                AaGuid = Guid.NewGuid(),
+                SignCount = 0,
+                Id = [1, 2, 3],
+                AttestationFormat = "public-key",
+                PublicKey = [4, 5, 6],
+                User = new Fido2User
                 {
-                    Aaguid = Guid.NewGuid(),
-                    Counter = 0,
-                    CredentialId = [1, 2, 3],
-                    CredType = "public-key",
-                    PublicKey = [4, 5, 6],
-                    Status = "ok",
-                    User = new Fido2User
-                    {
-                        Id = user.Id.ToByteArray(),
-                        Name = user.Email ?? "test@example.com",
-                        DisplayName = user.Name ?? "Test User"
-                    }
-                }));
+                    Id = user.Id.ToByteArray(),
+                    Name = user.Email ?? "test@example.com",
+                    DisplayName = user.Name ?? "Test User"
+                }
+            });
 
         // Act
         var result =
@@ -153,5 +151,45 @@ public class CompleteTwoFactorWebAuthnRegistrationCommandTests
             sutProvider.Sut.CompleteTwoFactorWebAuthnRegistrationAsync(user, 11, "NewKey", deviceResponse));
 
         Assert.Equal("Maximum allowed WebAuthn credential count exceeded.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task CompleteWebAuthRegistrationAsync_Fido2VerificationFails_ThrowsBadRequestException(bool hasPremium,
+        SutProvider<CompleteTwoFactorWebAuthnRegistrationCommand> sutProvider, User user,
+        AuthenticatorAttestationRawResponse deviceResponse)
+    {
+        // Arrange - Fido2 rejects the attestation (e.g. bad signature); this used to be signalled via a null
+        // MakeNewCredentialAsync result, but v4 of the library throws instead.
+        var maximumAllowedCredentialsGlobalSetting = new Core.Settings.GlobalSettings.WebAuthnSettings
+        {
+            PremiumMaximumAllowedCredentials = 10,
+            NonPremiumMaximumAllowedCredentials = 5
+        };
+
+        sutProvider.GetDependency<IGlobalSettings>().WebAuthn = maximumAllowedCredentialsGlobalSetting;
+
+        user.Premium = hasPremium;
+        user.Id = Guid.NewGuid();
+        user.Email = "test@example.com";
+
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumAccessAsync(user.Id).Returns(hasPremium);
+
+        SetupWebAuthnProviderWithPending(user,
+            credentialCount: hasPremium
+                ? maximumAllowedCredentialsGlobalSetting.PremiumMaximumAllowedCredentials - 1
+                : maximumAllowedCredentialsGlobalSetting.NonPremiumMaximumAllowedCredentials - 1);
+
+        sutProvider.GetDependency<IFido2>().MakeNewCredentialAsync(
+                Arg.Any<MakeNewCredentialParams>(),
+                Arg.Any<CancellationToken>())
+            .ThrowsAsync<Fido2VerificationException>();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CompleteTwoFactorWebAuthnRegistrationAsync(user, 5, "NewKey", deviceResponse));
+
+        Assert.Equal("WebAuthn credential creation failed.", exception.Message);
     }
 }
