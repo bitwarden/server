@@ -2427,6 +2427,112 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessRuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CollectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DaemonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DaemonName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("text");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime?>("LeaseNotAfter")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LeaseNotBefore")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("OccurredDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte>("Phase")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("RequesterEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequesterName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("RotationConfigId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RotationJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte?>("RotationSource")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("RuleName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<byte?>("SyncState")
+                        .HasColumnType("smallint");
+
+                    b.Property<Guid?>("TargetSystemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetSystemName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("AccessAuditEvent", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3708,6 +3814,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Notification");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
