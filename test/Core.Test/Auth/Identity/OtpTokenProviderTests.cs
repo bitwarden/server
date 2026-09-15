@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -20,6 +20,15 @@ public class OtpTokenProviderTests
         TokenAlpha = false,
         TokenNumeric = true
     };
+
+    /// <summary>
+    /// Mirrors the private cache entry shape <see cref="OtpTokenProvider{TOptions}"/> stores internally, so
+    /// tests can stand up a cached value without depending on that type directly.
+    /// </summary>
+    private static byte[] SerializedEntry(string token, string? boundValue = null)
+    {
+        return JsonSerializer.SerializeToUtf8Bytes(new { Token = token, BoundValue = boundValue });
+    }
 
     [Theory, BitAutoData]
     public async Task GenerateTokenAsync_Success_ReturnsToken(
@@ -112,11 +121,10 @@ public class OtpTokenProviderTests
     {
         // Arrange
         var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
-        var tokenBytes = Encoding.UTF8.GetBytes(token);
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedCacheKey)
-            .Returns(tokenBytes);
+            .Returns(SerializedEntry(token));
 
         // Act
         var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
@@ -140,11 +148,10 @@ public class OtpTokenProviderTests
     {
         // Arrange
         var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
-        var tokenBytes = Encoding.UTF8.GetBytes(wrongToken); // Different token in cache
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedCacheKey)
-            .Returns(tokenBytes);
+            .Returns(SerializedEntry(wrongToken)); // Different token in cache
 
         // Act
         var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
@@ -405,11 +412,11 @@ public class OtpTokenProviderTests
         // Arrange
         var token = "ABC123";
         var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
-        var tokenBytes = Encoding.UTF8.GetBytes(token);
+        var entryBytes = SerializedEntry(token);
 
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedCacheKey)
-            .Returns(tokenBytes);
+            .Returns(entryBytes);
 
         // Act & Assert
         var validResult = await sutProvider.Sut.ValidateTokenAsync("ABC123", _defaultTokenProviderName, purpose, uniqueIdentifier);
@@ -418,7 +425,7 @@ public class OtpTokenProviderTests
         // Reset the cache mock to return the token again
         sutProvider.GetDependency<IDistributedCache>()
             .GetAsync(expectedCacheKey)
-            .Returns(tokenBytes);
+            .Returns(entryBytes);
 
         var invalidResult = await sutProvider.Sut.ValidateTokenAsync("abc123", _defaultTokenProviderName, purpose, uniqueIdentifier);
         Assert.False(invalidResult);
@@ -455,5 +462,191 @@ public class OtpTokenProviderTests
         Assert.True(isValid);
         Assert.NotNull(generatedToken);
         Assert.NotEmpty(generatedToken);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_MatchingBoundValue_ReturnsTrue(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token,
+        string boundValue)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(SerializedEntry(token, boundValue));
+
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier, boundValue);
+
+        Assert.True(result);
+        await sutProvider.GetDependency<IDistributedCache>()
+            .Received(1)
+            .RemoveAsync(expectedCacheKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_MismatchedBoundValue_ReturnsFalse(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token,
+        string boundValue,
+        string otherBoundValue)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(SerializedEntry(token, boundValue));
+
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier, otherBoundValue);
+
+        Assert.False(result);
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .RemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_NoBoundValuePassed_RequiresNoBoundValueStored(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token,
+        string boundValue)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(SerializedEntry(token, boundValue));
+
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        Assert.False(result);
+    }
+
+    /// <summary>
+    /// A token generated the unbound way - the only shape that existed before <c>boundValue</c> was added,
+    /// and still how <c>SendEmailOtpRequestValidator</c> generates its tokens today - must not accidentally
+    /// validate for a caller that happens to pass a bound value.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ValidateTokenAsync_UnboundStoredValue_BoundValuePassed_ReturnsFalse(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token,
+        string boundValue)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(SerializedEntry(token));
+
+        var result = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier, boundValue);
+
+        Assert.False(result);
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .RemoveAsync(Arg.Any<string>());
+    }
+
+    /// <summary>
+    /// Confirms the existing unbound call shape - <c>SendEmailOtpRequestValidator</c>'s only usage - is
+    /// unaffected by the addition of <c>boundValue</c>: neither side passes it, and validation still succeeds.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task GenerateAndValidate_NeitherSidePassesBoundValue_StillValidates(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier)
+    {
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+        byte[]? storedBytes = null;
+        sutProvider.GetDependency<IDistributedCache>()
+            .When(x => x.SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>()))
+            .Do(callInfo => storedBytes = callInfo.ArgAt<byte[]>(1));
+
+        var token = await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        sutProvider.GetDependency<IDistributedCache>().GetAsync(expectedCacheKey).Returns(storedBytes);
+        var isValid = await sutProvider.Sut.ValidateTokenAsync(token, _defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        Assert.True(isValid);
+    }
+
+    // TODO: PM-43465 - Delete this test along with PeekBoundValueAsync once every supported client version
+    // sends the Device-Identifier header on the new device verification resend request.
+    [Theory, BitAutoData]
+    public async Task PeekBoundValueAsync_Pending_ReturnsBoundValueWithoutConsuming(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string token,
+        string boundValue)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns(SerializedEntry(token, boundValue));
+
+        var result = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        Assert.Equal(boundValue, result);
+        await sutProvider.GetDependency<IDistributedCache>()
+            .DidNotReceive()
+            .RemoveAsync(Arg.Any<string>());
+    }
+
+    // TODO: PM-43465 - Delete this test along with PeekBoundValueAsync once every supported client version
+    // sends the Device-Identifier header on the new device verification resend request.
+    [Theory, BitAutoData]
+    public async Task PeekBoundValueAsync_NotPending_ReturnsNull(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier)
+    {
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(expectedCacheKey)
+            .Returns((byte[])null);
+
+        var result = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+
+        Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GenerateTokenAsync_WithBoundValue_StoresIt(
+        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
+        string purpose,
+        string uniqueIdentifier,
+        string boundValue)
+    {
+        sutProvider.GetDependency<IOptions<DefaultOtpTokenProviderOptions>>()
+            .Value.Returns(_defaultOtpTokenProviderOptions);
+        sutProvider.Create();
+
+        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
+        byte[]? storedBytes = null;
+        sutProvider.GetDependency<IDistributedCache>()
+            .When(x => x.SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>()))
+            .Do(callInfo => storedBytes = callInfo.ArgAt<byte[]>(1));
+
+        await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier, boundValue);
+
+        sutProvider.GetDependency<IDistributedCache>().GetAsync(expectedCacheKey).Returns(storedBytes);
+        var peeked = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
+        Assert.Equal(boundValue, peeked);
     }
 }
