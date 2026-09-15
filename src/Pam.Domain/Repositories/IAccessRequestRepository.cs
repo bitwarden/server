@@ -9,27 +9,26 @@ public interface IAccessRequestRepository
     Task<AccessRequest> CreateAsync(AccessRequest request);
 
     /// <summary>
-    /// Atomically creates an auto-approved <see cref="AccessRequest"/> (status <see cref="AccessRequestStatus.Approved"/>,
-    /// resolved now) and its automatic <see cref="AccessDecision"/> in a single transaction. No lease is minted: the
-    /// requester activates the approved request later via <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>,
-    /// just like the human path after approval. Both supplied entities must already have their ids assigned.
+    /// Atomically creates an auto-approved <see cref="AccessRequest"/> and its automatic <see cref="AccessDecision"/>
+    /// in a single transaction. No lease is minted: the requester activates later via
+    /// <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>, same as the human path.
     /// </summary>
     Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision);
 
     Task<AccessRequest?> GetByIdAsync(Guid id);
 
     /// <summary>
-    /// Returns a single request's full <see cref="AccessRequestDetails"/> projection (denormalized display fields,
-    /// produced lease, and the complete decision list) for the dedicated request page, or null if no request has the
-    /// id. Unlike <see cref="GetByIdAsync"/> this populates the display-name fields. Authorization (the caller is the
-    /// requester or can manage the request's collection) is enforced by the calling query, not this read.
+    /// Returns a single request's full <see cref="AccessRequestDetails"/> projection for the dedicated request
+    /// page, or null if none. Unlike <see cref="GetByIdAsync"/> this populates the display-name fields.
+    /// Authorization is enforced by the calling query, not this read.
     /// </summary>
-    Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id);
+    Task<AccessRequestDetails?> GetDetailsByIdAsync(Guid id, DateTime now);
 
     /// <summary>
-    /// Returns the caller's pending (unresolved) lease request for the cipher, or null if there is none.
+    /// Returns the caller's open lease request for the cipher whose window has not lapsed, or null. A lapsed
+    /// unanswered request is derived Expired and does not block a fresh submission.
     /// </summary>
-    Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId);
+    Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
     /// Returns the caller's approved-but-not-yet-activated request for the cipher whose window has not lapsed
@@ -39,49 +38,48 @@ public interface IAccessRequestRepository
     Task<AccessRequest?> GetActiveApprovedByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now);
 
     /// <summary>
-    /// Returns the caller's own lease requests across every organization they belong to, regardless of status, most
-    /// recent first and capped server-side. Display-name fields are not populated for this caller-scoped surface.
+    /// Returns the caller's own lease requests across every organization, most recent first and capped server-side.
+    /// <paramref name="since"/> bounds the history window, matching the approver-side reads; live rows (pending, or
+    /// approved and unlapsed) are returned regardless of age. <paramref name="now"/> also projects each produced
+    /// lease's status.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId);
+    Task<ICollection<AccessRequestDetails>> GetManyByRequesterIdAsync(Guid requesterId, DateTime? since, DateTime now);
 
     /// <summary>
     /// Returns the pending approver-inbox rows for the given collections, joined with their denormalized display
-    /// fields. An empty <paramref name="collectionIds"/> yields an empty result.
+    /// fields. Only actionable rows qualify: no action recorded and a window still open as of
+    /// <paramref name="now"/> — a lapsed row is derived Expired and belongs to the history read instead. An empty
+    /// <paramref name="collectionIds"/> yields an empty result.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds);
+    Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the resolved approver-inbox rows (anything no longer pending) created on or after
-    /// <paramref name="since"/> for the given collections. An empty <paramref name="collectionIds"/> yields an empty
-    /// result.
+    /// Returns the non-actionable approver-inbox rows (an action recorded, or a lapsed window — the derived-Expired
+    /// complement of the pending read) created on or after <paramref name="since"/>. <paramref name="now"/> also
+    /// projects each produced lease's status.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since);
+    Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now);
 
     /// <summary>
-    /// Atomically transitions a pending request to <paramref name="status"/> (setting its resolved date) and records
-    /// the approver's human <paramref name="decision"/>. No lease is created here: the requester activates an
-    /// approved request later via <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>. Both supplied
-    /// entities must already have their ids assigned.
+    /// Atomically records <paramref name="action"/> on a request that has none yet, plus the approver's human
+    /// <paramref name="decision"/>. The guarded UPDATE is the concurrency token: a losing approver's verdict never
+    /// enters the log. No lease is created here; the requester activates later via
+    /// <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>.
     /// </summary>
-    Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestStatus status, DateTime now);
+    Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now);
 
     /// <summary>
-    /// Withdraws a not-yet-activated request on the requester's behalf: transitions it to
-    /// <see cref="AccessRequestStatus.Cancelled"/> (from <see cref="AccessRequestStatus.Pending"/> or an
-    /// <see cref="AccessRequestStatus.Approved"/> request the requester has not activated) and stamps
-    /// <paramref name="now"/> as its resolved date. No <see cref="AccessDecision"/> is written — a cancellation is the
-    /// requester acting on their own request, not an approver verdict. The write is guarded so a request that has
-    /// already left the cancellable set or produced a lease is left untouched (race-safe / idempotent).
+    /// Withdraws a not-yet-activated request on the requester's behalf: records
+    /// <see cref="AccessRequestAction.Cancelled"/> and stamps <paramref name="now"/> as its action date. No
+    /// <see cref="AccessDecision"/> is written, since this isn't an approver verdict. Guarded to stay idempotent
+    /// under a race.
     /// </summary>
     Task CancelAsync(Guid id, DateTime now);
 
     /// <summary>
-    /// Retracts a not-yet-activated request on a managing approver's behalf: transitions it to
-    /// <see cref="AccessRequestStatus.Denied"/> (from <see cref="AccessRequestStatus.Pending"/> or an unactivated
-    /// <see cref="AccessRequestStatus.Approved"/> request), stamps the resolved date, and records the approver's human
-    /// Deny <paramref name="decision"/> so the audit trail names them. The write is guarded so a request that has
-    /// already left the cancellable set or produced a lease is left untouched (race-safe); the decision is recorded
-    /// only when the transition happens. Both supplied entities must already have their ids assigned.
+    /// Retracts a not-yet-activated request on a managing approver's behalf: records
+    /// <see cref="AccessRequestAction.Denied"/> and the approver's human Deny <paramref name="decision"/>. Guarded
+    /// so a request that has produced a lease or whose window has lapsed is left untouched.
     /// </summary>
     Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
 
@@ -92,14 +90,13 @@ public interface IAccessRequestRepository
     Task<int> CountExtensionsByLeaseIdAsync(Guid leaseId);
 
     /// <summary>
-    /// Atomically records an auto-approved extension request (with its automatic decision) and pushes the parent
-    /// lease's end out to the request's NotAfter, all under a per-lease lock. Returns
-    /// <see cref="AccessLeaseExtendOutcome.LeaseNotActive"/> when the lease is no longer active or its window has
-    /// ended, or <see cref="AccessLeaseExtendOutcome.AlreadyExtended"/> when the lease has already been extended (a
-    /// lease may be extended once); otherwise <see cref="AccessLeaseExtendOutcome.Extended"/>. Both supplied entities
-    /// must already have their ids assigned, and the request's <c>ExtensionOfLeaseId</c> identifies the lease being
-    /// extended.
+    /// Atomically records an auto-approved extension request and pushes the parent lease's end out to the
+    /// request's NotAfter, under a per-lease lock. Returns <see cref="AccessLeaseExtendOutcome.LeaseNotActive"/>,
+    /// <see cref="AccessLeaseExtendOutcome.AlreadyExtended"/>, or <see cref="AccessLeaseExtendOutcome.Extended"/>.
     /// </summary>
+    /// <param name="denialComment">
+    /// The comment recorded on the automatic Deny decision when the lease is no longer extendable.
+    /// </param>
     Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(AccessRequest request, AccessDecision decision,
-        DateTime now);
+        DateTime now, string? denialComment);
 }

@@ -1453,6 +1453,7 @@
           "OpenTelemetry.Instrumentation.Http": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.15.1, )",
           "OpenTelemetry.Instrumentation.SqlClient": "[1.15.2, )",
+          "Pam.Domain": "[2026.9.0, )",
           "SharedWeb": "[2026.9.0, )"
         }
       },
