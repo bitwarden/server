@@ -243,13 +243,6 @@ public class OrganizationsController : Controller
         return TypedResults.Ok(new OrganizationResponseModel(updatedOrganization, plan));
     }
 
-    [HttpPost("{id}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    public async Task<IResult> PostPut(Guid id, [FromBody] OrganizationUpdateRequestModel model)
-    {
-        return await Put(id, model);
-    }
-
     [HttpPost("{id}/storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
@@ -329,13 +322,6 @@ public class OrganizationsController : Controller
         }
 
         await _organizationDeleteCommand.DeleteAsync(organization);
-    }
-
-    [HttpPost("{id}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    public async Task PostDelete(string id, [FromBody] SecretVerificationRequestModel model)
-    {
-        await Delete(id, model);
     }
 
     [HttpPost("{id}/delete-recover-token")]

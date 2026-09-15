@@ -5,6 +5,7 @@ using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Bit.SharedWeb.Utilities;
@@ -38,7 +39,11 @@ public static class ServiceCollectionExtension
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
         services.TryAddSingleton<ISeedReader, SeedReader>();
 
-        services.AddDataProtection().SetApplicationName("Bitwarden");
+        var dpBuilder = services.AddDataProtection().SetApplicationName("Bitwarden");
+        if (CoreHelpers.SettingHasValue(globalSettings.DataProtection.Directory))
+        {
+            dpBuilder.PersistKeysToFileSystem(new DirectoryInfo(globalSettings.DataProtection.Directory));
+        }
 
         services.AddAttachmentStorageService(globalSettings);
 

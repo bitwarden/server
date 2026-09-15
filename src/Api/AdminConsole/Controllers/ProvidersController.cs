@@ -86,14 +86,6 @@ public class ProvidersController : Controller
         return new ProviderResponseModel(provider);
     }
 
-    [HttpPost("{providerId:guid}")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ProviderAdminRequirement>]
-    public async Task<ProviderResponseModel> PostPut([FromRoute] Guid providerId, [FromBody] ProviderUpdateRequestModel model)
-    {
-        return await Put(providerId, model);
-    }
-
     [HttpPost("{providerId:guid}/setup")]
     [Authorize<ProviderAdminRequirement>]
     public async Task<ProviderResponseModel> Setup([FromRoute] Guid providerId, [FromBody] ProviderSetupRequestModel model)
@@ -145,13 +137,5 @@ public class ProvidersController : Controller
         }
 
         await _providerService.DeleteAsync(provider);
-    }
-
-    [HttpPost("{providerId}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ProviderAdminRequirement>]
-    public async Task PostDelete([FromRoute] Guid providerId)
-    {
-        await Delete(providerId);
     }
 }
