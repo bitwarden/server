@@ -25,6 +25,7 @@ public class OrganizationRequirementFromRouteTests(ApiApplicationFactory factory
     ///   <see cref="IOrganizationRequirement"/>
     ///   OR <see cref="OrgUserLinkedToUserIdRequirement"/>
     ///   OR <see cref="OrganizationCollectionManagementAccessRequirement"/>
+    ///   OR <see cref="StandaloneOrganizationOwnerRequirement"/>
     /// AND has an orgId or organizationId parameter
     /// THEN that parameter must have [FromRoute].
     ///
