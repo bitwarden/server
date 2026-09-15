@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text.Json;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,7 +26,7 @@ public class OtpTokenProvider<TOptions>(
     /// </summary>
     private readonly string _cacheKeyFormat = "{0}_{1}_{2}";
 
-    public async Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
+    public async Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null)
     {
         if (string.IsNullOrEmpty(tokenProviderName)
             || string.IsNullOrEmpty(purpose)
@@ -34,7 +35,7 @@ public class OtpTokenProvider<TOptions>(
             return null;
         }
 
-        var cacheKey = string.Format(_cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
+        var cacheKey = BuildCacheKey(tokenProviderName, purpose, uniqueIdentifier);
         var token = CoreHelpers.SecureRandomString(
             _otpTokenProviderOptions.TokenLength,
             _otpTokenProviderOptions.TokenAlpha,
@@ -42,11 +43,12 @@ public class OtpTokenProvider<TOptions>(
             false,
             _otpTokenProviderOptions.TokenNumeric,
             false);
-        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(token), _otpTokenProviderOptions.DistributedCacheEntryOptions);
+        var entry = new OtpCacheEntry { Token = token, BoundValue = boundValue };
+        await _distributedCache.SetAsync(cacheKey, JsonSerializer.SerializeToUtf8Bytes(entry), _otpTokenProviderOptions.DistributedCacheEntryOptions);
         return token;
     }
 
-    public async Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier)
+    public async Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null)
     {
         if (string.IsNullOrEmpty(token)
             || string.IsNullOrEmpty(tokenProviderName)
@@ -56,20 +58,66 @@ public class OtpTokenProvider<TOptions>(
             return false;
         }
 
-        var cacheKey = string.Format(_cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
-        var cachedValue = await _distributedCache.GetAsync(cacheKey);
-        if (cachedValue == null)
+        var cacheKey = BuildCacheKey(tokenProviderName, purpose, uniqueIdentifier);
+        var entry = await GetEntryAsync(cacheKey);
+        if (entry == null)
         {
             return false;
         }
 
-        var code = Encoding.UTF8.GetString(cachedValue);
-        var valid = CoreHelpers.FixedTimeEquals(token, code);
+        var valid = entry.BoundValue == boundValue && CoreHelpers.FixedTimeEquals(token, entry.Token);
         if (valid)
         {
             await _distributedCache.RemoveAsync(cacheKey);
         }
 
         return valid;
+    }
+
+    // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
+    // header on the new device verification resend request. It exists only to let that resend fall back to
+    // the device a pending code was issued to.
+    public async Task<string?> PeekBoundValueAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
+    {
+        if (string.IsNullOrEmpty(tokenProviderName)
+            || string.IsNullOrEmpty(purpose)
+            || string.IsNullOrEmpty(uniqueIdentifier))
+        {
+            return null;
+        }
+
+        var cacheKey = BuildCacheKey(tokenProviderName, purpose, uniqueIdentifier);
+        var entry = await GetEntryAsync(cacheKey);
+        return entry?.BoundValue;
+    }
+
+    private string BuildCacheKey(string tokenProviderName, string purpose, string uniqueIdentifier)
+    {
+        return string.Format(CultureInfo.InvariantCulture, _cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);
+    }
+
+    private async Task<OtpCacheEntry?> GetEntryAsync(string cacheKey)
+    {
+        var cachedValue = await _distributedCache.GetAsync(cacheKey);
+        if (cachedValue == null || cachedValue.Length == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<OtpCacheEntry>(cachedValue);
+        }
+        catch (JsonException)
+        {
+            // Fail closed on any cache entry that isn't this JSON shape, rather than crash validation.
+            return null;
+        }
+    }
+
+    private sealed class OtpCacheEntry
+    {
+        public string Token { get; set; } = "";
+        public string? BoundValue { get; set; }
     }
 }
