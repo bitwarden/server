@@ -188,8 +188,11 @@ deleting every message enqueued longer ago than `GlobalSettings.EventLogging.Azu
 Zero or a negative value disables the sweep and the service exits at startup, which is the default.
 
 A sweep stops at the first message inside the retention window, because dead letters are received oldest first.
-Adding an integration means adding its subscription to the service's subscription list, or that dead letter queue is
-never swept.
+
+Adding an integration means adding its subscription to the service's subscription list. That list is covered by a
+test which reflects over every `*IntegrationSubscriptionName` setting and compares the result against the list the
+service actually sweeps, so a missing entry fails the build instead of leaving one dead letter queue to grow
+unnoticed.
 
 ### Message expiration
 
@@ -482,7 +485,8 @@ integration](#deploying-a-new-integration) below
 2. `ExampleIntegrationSubscriptionName`
 
 Add `ExampleIntegrationSubscriptionName` to the subscription list in
-`DeadLetterCleanupHostedService` as well, so the new integration's dead letter queue gets swept
+`DeadLetterCleanupHostedService` as well, so the new integration's dead letter queue gets swept. Skipping this step
+fails `DeadLetterCleanupHostedServiceTests`, which compares that list against the configured subscription settings
 (see [Dead letter retention](#dead-letter-retention)).
 
 #### Service Bus Emulator, local config
