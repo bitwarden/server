@@ -3,11 +3,14 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -456,6 +459,38 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task Post_WithSharedCollection_ReturnsSuccess()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var collection = await CreateCollectionAsync();
+
+        var request = new GroupRequestModel
+        {
+            Name = "New Group",
+            Collections = [new SelectionReadOnlyRequestModel { Id = collection.Id, Manage = true }]
+        };
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/groups", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_WithDefaultUserCollection_ReturnsBadRequest()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var defaultCollection = await CreateCollectionAsync(CollectionType.DefaultUserCollection);
+
+        var request = new GroupRequestModel
+        {
+            Name = "New Group",
+            Collections = [new SelectionReadOnlyRequestModel { Id = defaultCollection.Id, Manage = true }]
+        };
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/groups", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Delete_AsOwner_ReturnsSuccess()
     {
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -550,6 +585,14 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    private async Task<Collection> CreateCollectionAsync(CollectionType type = CollectionType.SharedCollection) =>
+        await _factory.GetService<ICollectionRepository>().CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Collection {Guid.NewGuid()}",
+            Type = type
+        });
 
     /// <summary>
     /// Creates a provider linked to the test organization and returns a provider user's credentials.

@@ -2,6 +2,10 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
+/// <remarks>
+/// Unlike newer validators, this one throws rather than returning a ValidationResult. It preserves the
+/// behaviour of the checks it was extracted from, which the calling commands relied on throwing.
+/// </remarks>
 public interface IGroupCollectionAccessValidator
 {
     /// <summary>
