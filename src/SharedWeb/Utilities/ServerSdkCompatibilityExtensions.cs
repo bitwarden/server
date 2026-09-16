@@ -92,11 +92,17 @@ public static class ServerSdkCompatibilityExtensions
         // the application cares about, add them here.
         services.AddKnownFeatureFlags(FeatureFlagKeys.GetKeys());
 
-        // pam/uat only - do not carry this to main. The branch stays on the v1 layout while the
-        // VFO refresh rolls out, so vfo1-foundation is pinned off rather than defaulted off: a
-        // LaunchDarkly-connected environment reports it on and a flag value would lose to that.
+        // pam/uat only - do not carry this to main. A pin beats a flag value and LaunchDarkly
+        // alike, which is what a LaunchDarkly-connected environment such as UAT needs: the
+        // FlagValues defaults above only feed the data source when no SdkKey is set, so on UAT
+        // they are inert and /config reported pm-37044-pam-v-0 as false.
+        //   - Pam: the branch ships PAM as a whole and UAT has to serve it. Note this is
+        //     stronger than the default above and gives up the flag-off A/B check - remove the
+        //     entry to get that back.
+        //   - VFO1Foundation: the branch stays on the v1 layout while the VFO refresh rolls out.
         services.PinFeatureFlags(new Dictionary<string, bool>
         {
+            [FeatureFlagKeys.Pam] = true,
             [FeatureFlagKeys.VFO1Foundation] = false,
         });
 
