@@ -76,6 +76,16 @@ public static class ServerSdkCompatibilityExtensions
                 {
                     options.FlagValues.TryAdd(key, value);
                 }
+
+                // pam/uat only - do not carry this to main. The branch ships the PAM feature as a
+                // whole, so default its flags on instead of making every dev, test run and
+                // self-hosted branch build carry a flagValues entry of its own. TryAdd leaves this
+                // last in line: Features:FlagValues, GlobalSettings:LaunchDarkly:FlagValues and a
+                // LaunchDarkly-connected instance all still win, so the flags can be turned back
+                // off for A/B checks. Flag values only feed the data source when no LaunchDarkly
+                // SdkKey is set, so this changes local dev and self-host, not a cloud instance.
+                options.FlagValues.TryAdd(FeatureFlagKeys.Pam, "true");
+                options.FlagValues.TryAdd(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, "true");
             });
 
         // Server has a class that contains all the feature flag keys
