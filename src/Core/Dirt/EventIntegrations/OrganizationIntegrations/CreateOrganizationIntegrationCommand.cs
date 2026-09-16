@@ -46,7 +46,7 @@ public class CreateOrganizationIntegrationCommand(
                 integrationType: integration.Type
             ));
 
-        await eventService.LogOrganizationIntegrationEventAsync(created, EventType.OrganizationIntegration_Added);
+        await eventService.LogOrganizationIntegrationEventAsync(created, EventType.OrganizationIntegration_Created);
 
         return created;
     }

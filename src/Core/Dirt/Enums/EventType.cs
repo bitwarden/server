@@ -172,5 +172,5 @@ public enum EventType : int
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
 
-    OrganizationIntegration_Added = 2600,
+    OrganizationIntegration_Created = 2600,
 }

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services.Implementations;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
@@ -42,6 +43,19 @@ public class HecIntegrationVerificationServiceTests
             .Create();
     }
 
+    private HecIntegrationVerificationService GetSutWithThrowingHandler<TException>(TException exception)
+        where TException : Exception
+    {
+        var clientFactory = Substitute.For<IHttpClientFactory>();
+        using var httpClient = new HttpClient(new ThrowingHttpMessageHandler<TException>(exception));
+        clientFactory.CreateClient(HecIntegrationVerificationService.HttpClientName)
+            .Returns(httpClient);
+
+        return new HecIntegrationVerificationService(
+            clientFactory,
+            Substitute.For<ILogger<HecIntegrationVerificationService>>());
+    }
+
     [Theory, BitAutoData]
     public async Task VerifyAsync_200_ReturnsSuccess(Guid organizationId)
     {
@@ -61,7 +75,7 @@ public class HecIntegrationVerificationServiceTests
 
         var body = await request.Content!.ReadAsStringAsync();
         var payload = JsonSerializer.Deserialize<JsonElement>(body);
-        Assert.Equal(organizationId.ToString(), payload.GetProperty("organizationId").GetString());
+        Assert.Equal(organizationId.ToString(), payload.GetProperty("event").GetProperty("organizationId").GetString());
     }
 
     [Theory, BitAutoData]
@@ -120,13 +134,8 @@ public class HecIntegrationVerificationServiceTests
     [Theory, BitAutoData]
     public async Task VerifyAsync_HttpRequestException_ReturnsUnreachable(Guid organizationId)
     {
-        var clientFactory = Substitute.For<IHttpClientFactory>();
-        clientFactory.CreateClient(HecIntegrationVerificationService.HttpClientName)
-            .Returns(new HttpClient(new ThrowingHttpMessageHandler("connection refused")));
+        var sut = GetSutWithThrowingHandler(new HttpRequestException("connection refused"));
 
-        var sut = new HecIntegrationVerificationService(
-            clientFactory,
-            Substitute.For<ILogger<HecIntegrationVerificationService>>());
         var result = await sut.VerifyAsync(_integration, organizationId);
 
         Assert.False(result.Success);
@@ -134,10 +143,36 @@ public class HecIntegrationVerificationServiceTests
         Assert.Contains("unreachable", result.FailureReason);
     }
 
-    private sealed class ThrowingHttpMessageHandler(string message) : HttpMessageHandler
+    [Theory, BitAutoData]
+    public async Task VerifyAsync_SsrfProtectionException_ReturnsUnreachable(Guid organizationId)
+    {
+        var sut = GetSutWithThrowingHandler(new SsrfProtectionException("Internal IP address detected"));
+
+        var result = await sut.VerifyAsync(_integration, organizationId);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.FailureReason);
+        Assert.Contains("unreachable", result.FailureReason);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyAsync_TaskCanceledException_ReturnsTimeout(Guid organizationId)
+    {
+        var sut = GetSutWithThrowingHandler(
+            new TaskCanceledException("Request timed out", new TimeoutException()));
+
+        var result = await sut.VerifyAsync(_integration, organizationId);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.FailureReason);
+        Assert.Contains("timed out", result.FailureReason);
+    }
+
+    private sealed class ThrowingHttpMessageHandler<TException>(TException exception) : HttpMessageHandler
+        where TException : Exception
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
-            => throw new HttpRequestException(message);
+            => throw exception;
     }
 }

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
+using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Dirt.Services.Implementations;
@@ -23,11 +24,10 @@ public class HecIntegrationVerificationService(
             var payload = JsonSerializer.Serialize(new
             {
                 source = "bitwarden",
-                organizationId,
-                date = DateTime.UtcNow,
+                @event = new { organizationId, date = DateTime.UtcNow, message = "Bitwarden integration verification" },
             });
 
-            var request = new HttpRequestMessage(HttpMethod.Post, integration.Uri);
+            using var request = new HttpRequestMessage(HttpMethod.Post, integration.Uri);
             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 integration.Scheme,
@@ -57,12 +57,33 @@ public class HecIntegrationVerificationService(
                 organizationId, errorReason);
             return new HecVerificationResult(false, errorReason);
         }
+        catch (SsrfProtectionException ex)
+        {
+            var ssrfReason = $"Endpoint is unreachable: {ex.Message}.";
+            logger.LogWarning(ex, "HEC integration verification failed for organization {OrganizationId}: {Reason}",
+                organizationId, ssrfReason);
+            return new HecVerificationResult(false, ssrfReason);
+        }
+        catch (TaskCanceledException ex)
+        {
+            var timeoutReason = "Endpoint timed out: the server did not respond in time.";
+            logger.LogWarning(ex, "HEC integration verification timed out for organization {OrganizationId}: {Reason}",
+                organizationId, timeoutReason);
+            return new HecVerificationResult(false, timeoutReason);
+        }
         catch (HttpRequestException ex)
         {
             var unreachableReason = $"Endpoint is unreachable: {ex.Message}.";
             logger.LogWarning(ex, "HEC integration verification failed for organization {OrganizationId}: {Reason}",
                 organizationId, unreachableReason);
             return new HecVerificationResult(false, unreachableReason);
+        }
+        catch (Exception ex)
+        {
+            var unexpectedReason = "Verification failed due to an unexpected error.";
+            logger.LogError(ex, "HEC integration verification encountered an unexpected error for organization {OrganizationId}",
+                organizationId);
+            return new HecVerificationResult(false, unexpectedReason);
         }
     }
 }
