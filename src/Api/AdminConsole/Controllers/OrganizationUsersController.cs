@@ -893,7 +893,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/accept")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> AcceptInviteLink([FromBody] AcceptOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -938,7 +937,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("/organizations/users/invite-link/invite")]
     [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
