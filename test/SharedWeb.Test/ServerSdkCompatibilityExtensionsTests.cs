@@ -1,4 +1,5 @@
-﻿using Bit.SharedWeb.Utilities;
+﻿using Bit.Core;
+using Bit.SharedWeb.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,6 +94,44 @@ public class ServerSdkCompatibilityExtensionsTests
         Assert.DoesNotContain(
             fakeProvider.Collector.GetSnapshot(),
             record => record.Level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public void PamFlags_NothingConfigured_DefaultToOn()
+    {
+        using var provider = CreateProvider([]);
+
+        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
+
+        Assert.Equal("true", Assert.Contains(FeatureFlagKeys.Pam, options.FlagValues));
+        Assert.Equal("true", Assert.Contains(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, options.FlagValues));
+    }
+
+    [Fact]
+    public void PamFlags_ConfiguredValueWinsOverTheBranchDefault()
+    {
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            { $"Features:FlagValues:{FeatureFlagKeys.Pam}", "false" },
+            { $"GlobalSettings:LaunchDarkly:FlagValues:{FeatureFlagKeys.PM28191_CipherAdminOpsToSdk}", "false" },
+        });
+
+        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
+
+        Assert.Equal("false", Assert.Contains(FeatureFlagKeys.Pam, options.FlagValues));
+        Assert.Equal("false", Assert.Contains(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, options.FlagValues));
+    }
+
+    [Fact]
+    public void PamFlags_NoSdkKey_ResolveEnabled()
+    {
+        using var provider = CreateProvider([]);
+        using var scope = provider.CreateScope();
+
+        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
+
+        Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
+        Assert.True(featureService.IsEnabled(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk));
     }
 
     private static ServiceProvider CreateProvider(
