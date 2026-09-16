@@ -1,9 +1,8 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Subscriptions.Organization.Requirements;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -19,31 +18,10 @@ public class StandaloneOrganizationOwnerRequirementTests
 {
     [Theory, BitAutoData]
     public async Task HandleAsync_OwnerOfStandaloneOrg_Succeeds(
-        Guid organizationId, Guid userId,
+        Guid organizationId,
         SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
     {
-        var context = Arrange(sutProvider, organizationId, userId, OrganizationUserType.Owner, managedByProvider: false);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    // The provider-organization lookup spans every org the user belongs to, so a membership in another,
-    // provider-managed organization must not deny this route's standalone organization.
-    [Theory, BitAutoData]
-    public async Task HandleAsync_OwnerOfStandaloneOrgMemberOfOtherManagedOrg_Succeeds(
-        Guid organizationId, Guid otherOrganizationId, Guid userId,
-        SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
-    {
-        var httpContext = HttpContextFor(organizationId, OrganizationUserType.Owner);
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
-        sutProvider.GetDependency<IProviderOrganizationRepository>()
-            .GetManyByUserAsync(userId)
-            .Returns([new ProviderOrganizationProviderDetails { OrganizationId = otherOrganizationId }]);
-        var context = Context(httpContext.User);
+        var context = Arrange(sutProvider, organizationId, OrganizationUserType.Owner, managedByProvider: false);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -52,10 +30,10 @@ public class StandaloneOrganizationOwnerRequirementTests
 
     [Theory, BitAutoData]
     public async Task HandleAsync_OwnerOfManagedOrg_DoesNotSucceed(
-        Guid organizationId, Guid userId,
+        Guid organizationId,
         SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
     {
-        var context = Arrange(sutProvider, organizationId, userId, OrganizationUserType.Owner, managedByProvider: true);
+        var context = Arrange(sutProvider, organizationId, OrganizationUserType.Owner, managedByProvider: true);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -67,10 +45,10 @@ public class StandaloneOrganizationOwnerRequirementTests
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
     public async Task HandleAsync_NonOwnerMember_DoesNotSucceed(
-        OrganizationUserType membership, Guid organizationId, Guid userId,
+        OrganizationUserType membership, Guid organizationId,
         SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
     {
-        var context = Arrange(sutProvider, organizationId, userId, membership, managedByProvider: false);
+        var context = Arrange(sutProvider, organizationId, membership, managedByProvider: false);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -79,10 +57,10 @@ public class StandaloneOrganizationOwnerRequirementTests
 
     [Theory, BitAutoData]
     public async Task HandleAsync_NoMembership_DoesNotSucceed(
-        Guid organizationId, Guid userId,
+        Guid organizationId,
         SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
     {
-        var context = Arrange(sutProvider, organizationId, userId, membership: null, managedByProvider: false);
+        var context = Arrange(sutProvider, organizationId, membership: null, managedByProvider: false);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -102,37 +80,16 @@ public class StandaloneOrganizationOwnerRequirementTests
         Assert.False(context.HasSucceeded);
     }
 
-    [Theory, BitAutoData]
-    public async Task HandleAsync_NoUserId_Throws(
-        Guid organizationId,
-        SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider)
-    {
-        var httpContext = HttpContextFor(organizationId, OrganizationUserType.Owner);
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns((Guid?)null);
-        var context = Context(httpContext.User);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(context));
-
-        Assert.Contains(StandaloneOrganizationOwnerRequirementHandler.NoUserIdError, exception.Message);
-        Assert.False(context.HasSucceeded);
-    }
-
     private static AuthorizationHandlerContext Arrange(
         SutProvider<StandaloneOrganizationOwnerRequirementHandler> sutProvider,
-        Guid organizationId, Guid userId, OrganizationUserType? membership, bool managedByProvider)
+        Guid organizationId, OrganizationUserType? membership, bool managedByProvider)
     {
         var httpContext = HttpContextFor(organizationId, membership);
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext = httpContext;
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        IEnumerable<ProviderOrganizationProviderDetails> providerOrganizations = managedByProvider
-            ? [new ProviderOrganizationProviderDetails { OrganizationId = organizationId }]
-            : [];
         sutProvider.GetDependency<IProviderOrganizationRepository>()
-            .GetManyByUserAsync(userId).Returns(providerOrganizations);
+            .GetByOrganizationId(organizationId)
+            .Returns(managedByProvider ? new ProviderOrganization { OrganizationId = organizationId } : null);
 
         return Context(httpContext.User);
     }

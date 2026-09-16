@@ -61,7 +61,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query |
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
-| `IUserService` (`Bit.Core.Services`) | Reading the authenticated user's ID out of their claims |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
