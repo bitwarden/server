@@ -41,7 +41,7 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var rowsAffected = await connection.ExecuteAsync(
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationIntegration_Disable]",
                 new
                 {
