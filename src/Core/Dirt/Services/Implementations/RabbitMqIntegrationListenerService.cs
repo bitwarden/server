@@ -16,6 +16,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
     private readonly string _routingKey;
     private readonly string _retryQueueName;
     private readonly IIntegrationHandler _handler;
+    private readonly IIntegrationCircuitBreaker _circuitBreaker;
     private readonly Lazy<Task<IChannel>> _lazyChannel;
     private readonly IRabbitMqService _rabbitMqService;
     private readonly ILogger _logger;
@@ -25,10 +26,12 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
         IIntegrationHandler handler,
         TConfiguration configuration,
         IRabbitMqService rabbitMqService,
+        IIntegrationCircuitBreaker circuitBreaker,
         ILoggerFactory loggerFactory,
         TimeProvider timeProvider)
     {
         _handler = handler;
+        _circuitBreaker = circuitBreaker;
         _maxRetries = configuration.MaxRetries;
         _routingKey = configuration.RoutingKey;
         _retryQueueName = configuration.IntegrationRetryQueueName;
@@ -88,6 +91,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
             if (result.Success)
             {
                 // Successful integration send. Acknowledge message delivery and return
+                await _circuitBreaker.RecordResultAsync(message, result);
                 await channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
                 return;
             }
@@ -117,6 +121,8 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
                         result.FailureReason,
                         message.RetryCount,
                         _maxRetries);
+
+                    await _circuitBreaker.RecordResultAsync(message, result);
                 }
             }
             else
@@ -132,6 +138,8 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
                     message.OrganizationId,
                     result.Category,
                     result.FailureReason);
+
+                await _circuitBreaker.RecordResultAsync(message, result);
             }
 
             // Message has been sent to retry or dead letter queues.

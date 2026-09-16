@@ -33,6 +33,11 @@ public class UpdateOrganizationIntegrationCommand(
         updatedIntegration.Id = integration.Id;
         updatedIntegration.OrganizationId = integration.OrganizationId;
         updatedIntegration.CreationDate = integration.CreationDate;
+
+        // An admin editing the integration is the manual intervention that clears a tripped circuit breaker
+        updatedIntegration.DisabledDate = null;
+        updatedIntegration.DisabledReason = null;
+
         await integrationRepository.ReplaceAsync(updatedIntegration);
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
