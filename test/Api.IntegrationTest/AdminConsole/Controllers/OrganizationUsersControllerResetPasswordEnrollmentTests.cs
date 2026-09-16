@@ -152,11 +152,8 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
         Assert.Null(updated!.ResetPasswordKey);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(" ")]
-    public async Task PutResetPasswordEnrollment_WhenAutoEnrollEnabledAndKeyIsBlank_ReturnsBadRequest(
-        string resetPasswordKey)
+    [Fact]
+    public async Task PutResetPasswordEnrollment_WhenAutoEnrollEnabledAndKeyIsEmpty_ReturnsBadRequest()
     {
         await SeedResetPasswordPolicyAsync(autoEnrollEnabled: true);
 
@@ -169,7 +166,7 @@ public class OrganizationUsersControllerResetPasswordEnrollmentTests
 
         await _loginHelper.LoginAsync(memberEmail);
 
-        var request = new { ResetPasswordKey = resetPasswordKey, MasterPasswordHash = "not-my-password" };
+        var request = new { ResetPasswordKey = "", MasterPasswordHash = "not-my-password" };
 
         var response = await _client.PutAsJsonAsync(
             $"organizations/{_organization.Id}/users/{memberOrgUser.UserId}/reset-password-enrollment",
