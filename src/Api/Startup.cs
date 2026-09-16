@@ -281,6 +281,7 @@ public class Startup
         app.UseCoreLocalization();
 
         // Add static files to the request pipeline.
+        app.UseDefaultFiles();
         app.UseStaticFiles();
 
         // Add routing

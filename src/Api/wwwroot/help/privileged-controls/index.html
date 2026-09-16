@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privileged Controls &mdash; Private Preview guide | Bitwarden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-sans:Inter,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-mono:Menlo,SFMono-Regular,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+
+  --brand-050:#eef6ff;--brand-100:#dbeafe;--brand-200:#bedbff;--brand-700:#175ddc;--brand-800:#0d43af;--brand-900:#0c3276;--brand-950:#162455;
+  --gray-050:#f7f9fa;--gray-100:#e6ecf2;--gray-200:#d5dde8;--gray-300:#b4c2d4;--gray-400:#8496b0;--gray-500:#62748e;--gray-600:#45556c;--gray-700:#314158;--gray-800:#1d293d;--gray-900:#0f172b;
+  --red-050:#fef2f2;--red-200:#ffc9c9;--red-400:#ff6467;--red-700:#c10007;--red-800:#9f0712;--red-950:#460809;
+  --orange-050:#fff8f1;--orange-200:#fcd9bd;--orange-400:#ff894a;--orange-600:#cc4400;--orange-700:#b23300;--orange-800:#8a2203;--orange-950:#441600;
+  --green-050:#f0fdf4;--green-200:#b9f8cf;--green-400:#18dc7a;--green-700:#008236;--green-800:#016630;--green-950:#032e15;
+  --pink-600:#e60076;
+
+  --fg-heading:var(--gray-900);
+  --fg-body:var(--gray-600);
+  --fg-body-subtle:var(--gray-500);
+  --fg-brand:var(--brand-700);
+  --fg-brand-strong:var(--brand-800);
+  --fg-danger:var(--red-700);
+  --fg-danger-strong:var(--red-800);
+  --fg-warning:var(--orange-600);
+  --fg-warning-strong:var(--orange-700);
+  --fg-success:var(--green-700);
+  --fg-success-strong:var(--green-800);
+  --fg-code:var(--pink-600);
+  --fg-on-brand:#fff;
+
+  --bg-primary:#fff;
+  --bg-secondary:var(--gray-050);
+  --bg-brand-softer:var(--brand-050);
+  --bg-danger-soft:var(--red-050);
+  --bg-warning-soft:var(--orange-050);
+  --bg-success-soft:var(--green-050);
+
+  --border-light:var(--gray-100);
+  --border-base:var(--gray-200);
+  --border-strong:var(--gray-400);
+  --border-brand-soft:var(--brand-200);
+  --border-danger-soft:var(--red-200);
+  --border-warning-soft:var(--orange-200);
+  --border-success-soft:var(--green-200);
+  --border-focus:#000;
+
+  --header-h:3.5rem;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --fg-heading:var(--gray-050);
+    --fg-body:var(--gray-200);
+    --fg-body-subtle:var(--gray-400);
+    --fg-brand:#6baefa;
+    --fg-brand-strong:var(--brand-200);
+    --fg-danger:var(--red-400);
+    --fg-danger-strong:#ffb3b3;
+    --fg-warning:var(--orange-400);
+    --fg-warning-strong:#ffbf94;
+    --fg-success:var(--green-400);
+    --fg-success-strong:#8dfab8;
+    --fg-code:#ff7fc0;
+    --fg-on-brand:#fff;
+
+    --bg-primary:var(--gray-900);
+    --bg-secondary:var(--gray-800);
+    --bg-brand-softer:var(--brand-950);
+    --bg-danger-soft:var(--red-950);
+    --bg-warning-soft:var(--orange-950);
+    --bg-success-soft:var(--green-950);
+
+    --border-light:var(--gray-800);
+    --border-base:var(--gray-700);
+    --border-strong:var(--gray-500);
+    --border-brand-soft:var(--brand-800);
+    --border-danger-soft:var(--red-800);
+    --border-warning-soft:var(--orange-800);
+    --border-success-soft:var(--green-800);
+    --border-focus:#fff;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:var(--font-sans);
+  font-size:1rem;
+  line-height:150%;
+  color:var(--fg-body);
+  background:var(--bg-primary);
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:var(--font-sans);
+  color:var(--fg-heading);
+  font-weight:500;
+  line-height:135%;
+}
+h1{font-size:1.875rem;margin:0 0 .5rem}
+h2{font-size:1.5rem;margin:0 0 1rem;padding-top:.25rem}
+h3{font-size:1.25rem;margin:2.25rem 0 .75rem}
+h4{font-size:1.125rem;font-weight:600;margin:1.5rem 0 .5rem}
+p{margin:0 0 1rem}
+strong{color:var(--fg-heading);font-weight:600}
+a{color:var(--fg-brand);text-decoration-color:var(--border-strong)}
+a:hover{color:var(--fg-brand-strong)}
+ul,ol{margin:0 0 1rem;padding-left:1.375rem}
+li{margin-bottom:.4rem}
+li>ul,li>ol{margin-top:.4rem}
+small,.helper{font-size:.75rem}
+code{
+  font-family:var(--font-mono);
+  font-size:.875em;
+  color:var(--fg-code);
+}
+:focus-visible{outline:2px solid var(--border-focus);outline-offset:1px;border-radius:2px}
+
+.skip-link{
+  position:absolute;left:-9999px;top:0;
+  background:var(--bg-primary);color:var(--fg-heading);
+  padding:.6rem 1rem;border:1px solid var(--border-base);border-radius:.375rem;
+  z-index:200;
+}
+.skip-link:focus{left:.75rem;top:.75rem}
+
+/* ---- header ---- */
+.site-header{
+  position:sticky;top:0;z-index:60;height:var(--header-h);
+  display:flex;align-items:center;
+  background:var(--bg-primary);
+  border-bottom:1px solid var(--border-base);
+}
+.site-header-inner{
+  width:100%;height:100%;
+  display:flex;align-items:center;gap:.875rem;
+  padding:0 1.25rem;
+}
+.nav-toggle{
+  display:none;
+  align-items:center;justify-content:center;
+  width:2.25rem;height:2.25rem;flex:none;
+  border:1px solid var(--border-base);border-radius:.5rem;
+  background:var(--bg-primary);color:var(--fg-heading);
+  cursor:pointer;
+}
+.nav-toggle svg{width:18px;height:18px}
+.brand{display:flex;align-items:center;gap:.625rem;min-width:0}
+.brand-logo{flex:none;color:var(--fg-heading)}
+.brand-title{
+  font-size:.9375rem;font-weight:600;color:var(--fg-heading);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.preview-tag{
+  flex:none;
+  font-size:.75rem;font-weight:500;
+  color:var(--fg-brand-strong);
+  background:var(--bg-brand-softer);
+  border:1px solid var(--border-brand-soft);
+  border-radius:.375rem;
+  padding:.15rem .5rem;
+  margin-left:.25rem;
+}
+
+/* ---- shell / grid ---- */
+.shell{
+  display:grid;
+  grid-template-columns:15.5rem minmax(0,1fr);
+  align-items:start;
+  max-width:88rem;
+  margin:0 auto;
+}
+@media (min-width:1220px){
+  .shell{grid-template-columns:15.5rem minmax(0,1fr) 14rem}
+}
+
+.sidebar{
+  position:sticky;
+  top:var(--header-h);
+  height:calc(100vh - var(--header-h));
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid var(--border-base);
+  background:var(--bg-primary);
+}
+.sidebar-inner{padding:1.5rem 1rem 1.25rem;overflow-y:auto;flex:1 1 auto}
+.sidebar-label{
+  font-size:.75rem;font-weight:600;color:var(--fg-body-subtle);
+  margin:0 0 .625rem .5rem;
+}
+.chapter-list{list-style:none;margin:0;padding:0}
+.chapter-list li{margin:0}
+.chapter-list a{
+  display:block;
+  padding:.4rem .5rem;
+  border-radius:.375rem;
+  color:var(--fg-body);
+  text-decoration:none;
+  font-size:.875rem;
+  line-height:135%;
+}
+.chapter-list a:hover{background:var(--bg-secondary);color:var(--fg-heading)}
+.chapter-list a.active{
+  background:var(--bg-brand-softer);
+  color:var(--fg-brand-strong);
+  font-weight:600;
+}
+
+.sidebar-backdrop{display:none}
+
+.content{
+  min-width:0;
+  padding:2.25rem 1.75rem 6rem;
+}
+.doc-intro{max-width:74ch}
+.preview-label{
+  font-size:.875rem;color:var(--fg-body-subtle);margin:0 0 1.25rem;
+}
+.lede{font-size:1.125rem;color:var(--fg-body)}
+
+.callout{
+  max-width:74ch;
+  border-radius:.5rem;
+  border:1px solid;
+  border-left-width:3px;
+  padding:.9rem 1.125rem;
+  margin:1.5rem 0;
+  font-size:.9375rem;
+}
+.callout>:last-child{margin-bottom:0}
+.callout-label{
+  display:block;font-weight:600;font-size:.75rem;
+  margin-bottom:.35rem;
+}
+.callout-note{background:var(--bg-secondary);border-color:var(--border-base);border-left-color:var(--border-strong)}
+.callout-note .callout-label{color:var(--fg-body)}
+.callout-tip{background:var(--bg-brand-softer);border-color:var(--border-brand-soft);border-left-color:var(--fg-brand)}
+.callout-tip .callout-label{color:var(--fg-brand-strong)}
+.callout-warn{background:var(--bg-warning-soft);border-color:var(--border-warning-soft);border-left-color:var(--fg-warning)}
+.callout-warn .callout-label{color:var(--fg-warning-strong)}
+.sidebar-help{
+  flex:0 0 auto;
+  padding:1rem;
+  border-top:1px solid var(--border-light);
+  background:var(--bg-secondary);
+}
+.sidebar-help-label{
+  font-size:.75rem;font-weight:600;color:var(--fg-body-subtle);
+  margin:0 0 .625rem;
+}
+.sidebar-help-actions{display:flex;flex-direction:column;gap:.5rem}
+
+.btn-primary,.btn-secondary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:.4rem;
+  font-family:var(--font-sans);
+  font-size:.875rem;font-weight:500;
+  border-radius:.75rem;
+  padding:.5rem 1rem;
+  text-decoration:none;
+  line-height:1.3;
+}
+.btn-primary{
+  color:var(--fg-on-brand)!important;
+  background:var(--fg-brand);
+  border:1px solid var(--fg-brand);
+}
+.btn-primary:hover{background:var(--fg-brand-strong);border-color:var(--fg-brand-strong);color:#fff!important}
+
+.btn-secondary{
+  color:var(--fg-brand);
+  background:var(--bg-primary);
+  border:1px solid var(--border-brand-soft);
+}
+.btn-secondary:hover{background:var(--bg-brand-softer);border-color:var(--fg-brand)}
+.btn-secondary .icon-mail{flex-shrink:0}
+
+.sidebar-help-actions .btn-primary,.sidebar-help-actions .btn-secondary{width:100%}
+
+section{max-width:74ch;scroll-margin-top:calc(var(--header-h) + .75rem)}
+section+section{margin-top:3.25rem;padding-top:2.5rem;border-top:1px solid var(--border-light)}
+h3,h4{scroll-margin-top:calc(var(--header-h) + .75rem)}
+
+.dfn{
+  font-style:italic;color:var(--fg-body-subtle);
+  margin:-.5rem 0 .875rem;font-size:.9375rem;
+}
+
+ol.steps{padding-left:1.5rem}
+ol.steps>li{padding-left:.25rem}
+ol.steps>li::marker{color:var(--fg-body-subtle);font-weight:600;font-size:.875em}
+
+ul.check{list-style:none;padding-left:0}
+ul.check li{position:relative;padding-left:1.625rem}
+ul.check li::before{
+  content:"";position:absolute;left:0;top:.2rem;
+  width:.9375rem;height:.9375rem;
+  border:1.5px solid var(--border-strong);border-radius:.25rem;
+}
+
+.table-wrap{max-width:74ch;overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:.875rem;margin:0}
+th{
+  text-align:left;font-weight:600;color:var(--fg-heading);
+  background:var(--bg-secondary);
+  padding:.55rem .75rem;border-bottom:1px solid var(--border-base);
+  white-space:nowrap;
+}
+td{padding:.6rem .75rem;border-bottom:1px solid var(--border-light);vertical-align:top}
+tr:last-child td{border-bottom:none}
+table.msg td:first-child{width:38%}
+table.msg code{white-space:normal}
+
+figure.shot{max-width:74ch;margin:1.75rem 0}
+figure.shot img{
+  width:100%;display:block;
+  border:1px solid var(--border-base);
+  border-radius:.5rem;
+}
+figure.shot figcaption{
+  font-size:.8125rem;color:var(--fg-body-subtle);
+  margin-top:.5rem;
+}
+
+.content-footer{max-width:74ch;margin-top:3.5rem;padding-top:2rem;border-top:1px solid var(--border-base)}
+.content-footer p{font-size:.875rem;color:var(--fg-body-subtle)}
+
+/* ---- right rail ---- */
+.rail{
+  display:none;
+  position:sticky;top:var(--header-h);
+  height:calc(100vh - var(--header-h));
+  overflow-y:auto;
+  padding:2.25rem 1.5rem 2rem 0;
+}
+@media (min-width:1220px){.rail{display:block}}
+.rail-label{font-size:.75rem;font-weight:600;color:var(--fg-body-subtle);margin:0 0 .75rem}
+.rail-list{list-style:none;margin:0;padding:0;border-left:1px solid var(--border-base)}
+.rail-list li{margin:0}
+.rail-list a{
+  display:block;font-size:.8125rem;color:var(--fg-body-subtle);
+  text-decoration:none;padding:.3rem 0 .3rem .75rem;
+  margin-left:-1px;border-left:1px solid transparent;
+  line-height:130%;
+}
+.rail-list a:hover{color:var(--fg-heading)}
+
+/* ---- footer ---- */
+.site-footer{
+  border-top:1px solid var(--border-base);
+  padding:2rem 1.75rem 3rem;
+}
+.site-footer-inner{max-width:88rem;margin:0 auto}
+.site-footer p{font-size:.875rem;color:var(--fg-body-subtle);margin:0}
+
+@media (max-width:1219.98px){
+  .shell{grid-template-columns:15.5rem minmax(0,1fr)}
+}
+@media (max-width:899.98px){
+  .nav-toggle{display:inline-flex}
+  .shell{grid-template-columns:minmax(0,1fr);display:block}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:80;
+    width:17rem;max-width:85vw;
+    height:100vh;
+    transform:translateX(-100%);
+    transition:transform .18s ease;
+    box-shadow:0 0 0 rgb(0 0 0 / 0);
+  }
+  .sidebar.open{transform:translateX(0);box-shadow:2px 0 24px rgb(15 23 43 / .18)}
+  .sidebar-inner{padding-top:calc(var(--header-h) + 1rem)}
+  .sidebar-backdrop{
+    display:none;position:fixed;inset:0;z-index:70;
+    background:rgb(15 23 43 / .4);
+  }
+  .sidebar-backdrop.open{display:block}
+  .content{padding:1.75rem 1.25rem 4rem}
+}
+@media print{
+  .site-header,.sidebar,.sidebar-backdrop,.rail,.nav-toggle,.site-footer{display:none}
+  .shell{display:block}
+  section+section{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      <span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Toggle chapter list</span>
+    </button>
+    <div class="brand">
+      <svg class="brand-logo" width="108" height="26" viewBox="0 0 200 49" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bitwarden">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M47.9476 7.44377C50.2318 7.44377 52.0084 8.311 53.3136 10.1177C54.6189 11.8884 55.2715 14.3094 55.2715 17.3808C55.2715 20.5607 54.6189 23.0179 53.2774 24.7523C51.9359 26.5229 50.123 27.354 47.8388 27.354C45.5546 27.354 43.8142 26.5591 42.509 24.8969H42.1464L41.4575 26.5952C41.3488 26.8482 41.095 26.9927 40.8412 26.9927H37.9406C37.578 26.9927 37.2879 26.7036 37.2879 26.3423V0.939505C37.2879 0.578157 37.578 0.289078 37.9406 0.289078H41.8564C42.2189 0.289078 42.509 0.578157 42.509 0.939505V6.50426C42.509 7.29923 42.4365 8.56395 42.2914 10.2984H42.509C43.7055 8.41941 45.5546 7.44377 47.9476 7.44377ZM46.2797 11.6715C45.0107 11.6715 44.0318 12.069 43.4154 12.864C42.8353 13.659 42.509 14.9959 42.509 16.8027V17.3808C42.509 19.4405 42.799 20.9221 43.4154 21.7893C44.0318 22.6565 45.0107 23.1263 46.3522 23.1263C47.4037 23.1263 48.3101 22.6204 48.9265 21.6086C49.5429 20.633 49.8692 19.1514 49.8692 17.3086C49.8692 15.4296 49.5429 14.0203 48.9265 13.0808C48.2739 12.1413 47.3674 11.6715 46.2797 11.6715ZM63.9007 27.0288H59.985C59.6224 27.0288 59.3323 26.7398 59.3323 26.3784V8.49168C59.3323 8.13033 59.6224 7.84125 59.985 7.84125H63.9007C64.2633 7.84125 64.5534 8.13033 64.5534 8.49168V26.3423C64.5896 26.6675 64.2633 27.0288 63.9007 27.0288ZM78.2223 23.1624C78.9837 23.1624 79.8902 23.0179 80.9779 22.7288C81.2679 22.6565 81.5217 22.8733 81.5217 23.1624V26.1616C81.5217 26.3423 81.413 26.4868 81.2679 26.5591C80.0352 27.065 78.4761 27.3179 76.7358 27.3179C74.6329 27.3179 73.1101 26.812 72.1674 25.728C71.2247 24.6801 70.7171 23.0901 70.7171 20.9943V11.7799H68.6504C68.3966 11.7799 68.2153 11.5993 68.2153 11.3463V9.64799C68.2153 9.61186 68.2516 9.57572 68.2516 9.53959L71.1159 7.84125L72.5299 4.08323C72.6025 3.90256 72.7475 3.79415 72.9288 3.79415H75.5393C75.7931 3.79415 75.9744 3.97483 75.9744 4.22777V7.87739H81.1592C81.2679 7.87739 81.3767 7.98579 81.3767 8.0942V11.3463C81.3767 11.5993 81.1954 11.7799 80.9416 11.7799H76.0106V20.9582C76.0106 21.6809 76.2282 22.259 76.627 22.5843C76.9896 22.9817 77.5697 23.1624 78.2223 23.1624ZM102.623 27.0288C102.116 27.0288 101.717 26.7036 101.499 26.2339L97.6562 14.5623C97.4024 13.7312 97.0761 12.4665 96.641 10.8404H96.5322L96.1696 12.1413L95.4082 14.5985L91.4562 26.27C91.3112 26.7398 90.8761 27.0288 90.3685 27.0288C89.8609 27.0288 89.4258 26.7036 89.2808 26.1977L84.4586 9.39505C84.3135 8.88916 84.7124 8.34714 85.2925 8.34714H85.4013C85.7638 8.34714 86.0901 8.60008 86.1989 8.96143L89.027 19.1876C89.7159 21.8616 90.1872 23.8128 90.4047 25.1137H90.5135C91.1661 22.4397 91.6737 20.6691 92.0001 19.7657L95.662 9.06984C95.8071 8.63622 96.2059 8.34714 96.7135 8.34714C97.1848 8.34714 97.5837 8.63622 97.7287 9.06984L101.137 19.6935C101.971 22.4036 102.478 24.1381 102.66 25.0414H102.768C102.877 24.3187 103.312 22.2952 104.146 19.043L106.866 8.96143C106.974 8.60008 107.301 8.34714 107.663 8.34714C108.207 8.34714 108.606 8.85303 108.461 9.39505L103.892 26.1977C103.747 26.7036 103.312 27.0288 102.768 27.0288H102.623ZM124.16 27.0288C123.834 27.0288 123.544 26.7759 123.508 26.4507L123.181 24.0658H123C122.057 25.2582 121.115 26.1255 120.099 26.6314C119.12 27.1372 117.924 27.354 116.582 27.354C114.733 27.354 113.319 26.8843 112.304 25.9448C111.398 25.1137 110.89 23.9935 110.818 22.5843C110.673 20.7052 111.47 18.8985 112.993 17.8506C114.552 16.8388 116.727 16.2245 119.664 16.2245L123.218 16.1161V14.8875C123.218 13.0808 122.855 11.7799 122.094 10.8766C121.332 9.97321 120.208 9.53959 118.613 9.53959C117.09 9.53959 115.567 9.90094 113.972 10.6598C113.573 10.8404 113.102 10.6598 112.92 10.2623C112.739 9.8648 112.92 9.39505 113.319 9.25051C115.132 8.52781 116.909 8.13033 118.722 8.13033C120.788 8.13033 122.311 8.67235 123.363 9.7564C124.378 10.8043 124.885 12.5026 124.885 14.7069V26.4507C124.849 26.6675 124.523 27.0288 124.16 27.0288ZM116.655 25.8003C118.685 25.8003 120.244 25.2221 121.368 24.1019C122.529 22.9817 123.109 21.3557 123.109 19.3683V17.5615L119.846 17.7061C117.199 17.8145 115.35 18.2481 114.189 18.9346C113.065 19.6212 112.485 20.7414 112.485 22.1868C112.485 23.3431 112.848 24.2826 113.537 24.933C114.334 25.475 115.35 25.8003 116.655 25.8003ZM138.119 7.98579C138.663 7.98579 139.207 8.02193 139.823 8.0942C140.295 8.16647 140.585 8.60008 140.512 9.0337C140.44 9.46732 140.005 9.72026 139.57 9.64799C139.026 9.57572 138.482 9.50345 137.938 9.50345C136.343 9.50345 135.037 10.19 134.022 11.527C133.007 12.864 132.499 14.5985 132.499 16.622V26.0893C132.499 26.5591 132.137 26.9204 131.665 26.9204C131.194 26.9204 130.832 26.5591 130.832 26.0893V9.10597C130.832 8.70849 131.158 8.38327 131.557 8.38327C131.955 8.38327 132.282 8.67235 132.282 9.06984L132.427 11.7438H132.536C133.297 10.3707 134.131 9.39505 135.001 8.85303C135.835 8.27487 136.886 7.98579 138.119 7.98579ZM150.882 7.98579C152.223 7.98579 153.42 8.23874 154.399 8.70849C155.414 9.17824 156.284 10.0455 157.045 11.2379H157.154C157.082 9.7564 157.045 8.38327 157.045 7.01015V1.12018C157.045 0.650426 157.408 0.289078 157.879 0.289078C158.351 0.289078 158.713 0.650426 158.713 1.12018V26.3784C158.713 26.7036 158.46 26.9566 158.133 26.9566C157.843 26.9566 157.589 26.7398 157.553 26.4145L157.19 24.0658H157.045C155.631 26.1977 153.565 27.2456 150.918 27.2456C148.307 27.2456 146.386 26.4507 144.972 24.8246C143.63 23.1985 142.905 20.8859 142.905 17.8145C142.905 14.5985 143.558 12.1413 144.936 10.4068C146.313 8.85303 148.271 7.98579 150.882 7.98579ZM150.882 9.53959C148.815 9.53959 147.292 10.2623 146.241 11.7077C145.226 13.1169 144.718 15.1766 144.718 17.9229C144.718 23.1985 146.785 25.8364 150.918 25.8364C153.057 25.8364 154.58 25.2221 155.559 23.9935C156.574 22.7649 157.045 20.7414 157.045 17.9229V17.6338C157.045 14.743 156.574 12.6833 155.559 11.4547C154.616 10.1539 153.057 9.53959 150.882 9.53959ZM172.6 27.354C169.881 27.354 167.778 26.5229 166.219 24.8246C164.696 23.1624 163.934 20.8136 163.934 17.8145C163.934 14.8153 164.659 12.4304 166.146 10.6598C167.633 8.85303 169.59 7.94966 172.092 7.94966C174.268 7.94966 176.044 8.70849 177.277 10.2261C178.582 11.7438 179.199 13.8396 179.199 16.4775V17.8506H165.711C165.747 20.4162 166.327 22.3674 167.524 23.7406C168.72 25.1137 170.388 25.728 172.6 25.728C173.651 25.728 174.63 25.6557 175.428 25.5112C176.008 25.4028 176.697 25.2221 177.531 24.933C178.002 24.7523 178.51 25.1137 178.51 25.6196C178.51 25.9087 178.328 26.1977 178.038 26.3061C177.168 26.6675 176.334 26.8843 175.573 27.0288C174.666 27.2818 173.688 27.354 172.6 27.354ZM172.092 9.50345C170.279 9.50345 168.829 10.0816 167.741 11.2741C166.654 12.4304 166.037 14.1648 165.82 16.3691H177.422C177.422 14.2371 176.951 12.5026 176.008 11.3102C175.065 10.1177 173.76 9.50345 172.092 9.50345ZM198.342 27.0288C197.871 27.0288 197.509 26.6675 197.509 26.1977V14.8875C197.509 13.0085 197.11 11.6354 196.348 10.8043C195.514 9.97321 194.318 9.50345 192.65 9.50345C190.402 9.50345 188.771 10.0455 187.755 11.2018C186.74 12.322 186.16 14.1648 186.16 16.6581V26.1255C186.16 26.5952 185.797 26.9566 185.326 26.9566C184.855 26.9566 184.492 26.5952 184.492 26.1255V9.10597C184.492 8.67235 184.818 8.34714 185.254 8.34714C185.652 8.34714 185.942 8.63622 186.015 8.99757L186.233 10.8766H186.341C187.574 8.9253 189.713 7.94966 192.831 7.94966C197.073 7.94966 199.213 10.2261 199.213 14.7791V26.1255C199.176 26.6314 198.778 27.0288 198.342 27.0288ZM61.9791 0C60.275 0 58.8972 1.30085 58.8972 2.92692V3.216C58.8972 4.80593 60.3113 6.14292 61.9791 6.14292C63.6469 6.14292 65.061 4.80593 65.061 3.216V2.96305C65.061 1.30085 63.6469 0 61.9791 0Z" fill="currentColor"/>
+<path d="M22.0102 17.0552V4.13466H12.9472V27.0888C14.5521 26.2409 15.9884 25.319 17.2562 24.323C20.4256 21.8466 22.0102 19.424 22.0102 17.0552ZM25.8944 1.55055V17.0552C25.8944 18.2127 25.6685 19.3601 25.2167 20.4973C24.7649 21.6346 24.2052 22.644 23.5376 23.5256C22.87 24.4071 22.0743 25.2652 21.1505 26.0996C20.2266 26.9341 19.3736 27.6272 18.5914 28.179C17.8091 28.7308 16.9932 29.2524 16.1435 29.7436C15.2939 30.2349 14.6903 30.568 14.333 30.7429C13.9756 30.9179 13.689 31.0525 13.4732 31.1467C13.3113 31.2274 13.136 31.2678 12.9472 31.2678C12.7584 31.2678 12.5831 31.2274 12.4212 31.1467C12.2054 31.0525 11.9188 30.9179 11.5614 30.7429C11.204 30.568 10.6005 30.2349 9.75086 29.7436C8.9012 29.2524 8.08525 28.7308 7.30303 28.179C6.5208 27.6272 5.66777 26.9341 4.74393 26.0996C3.8201 25.2652 3.02438 24.4071 2.35679 23.5256C1.6892 22.644 1.12951 21.6346 0.677705 20.4973C0.225902 19.3601 0 18.2127 0 17.0552V1.55055C0 1.20062 0.128123 0.897795 0.38437 0.642075C0.640616 0.386356 0.944066 0.258497 1.29472 0.258497H24.5997C24.9503 0.258497 25.2538 0.386356 25.51 0.642075C25.7663 0.897795 25.8944 1.20062 25.8944 1.55055Z" fill="currentColor"/>
+</svg>
+      <span class="brand-title">Privileged Controls guide</span>
+    </div>
+    <span class="preview-tag">Private Preview</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar" aria-label="Guide chapters">
+    <div class="sidebar-inner">
+      <p class="sidebar-label">Contents</p>
+      <ol class="chapter-list">
+        <li><a href="#what-privileged-controls-does">What Privileged Controls does</a></li>
+        <li><a href="#the-four-capabilities">The four capabilities</a></li>
+        <li><a href="#before-you-start">Before you start</a></li>
+        <li><a href="#protect-your-first-collection">Protect your first collection</a></li>
+        <li><a href="#request-access-to-a-credential">Request access to a credential</a></li>
+        <li><a href="#approve-someone-elses-request">Approve someone else&#8217;s request</a></li>
+        <li><a href="#hand-a-credential-back">Hand a credential back</a></li>
+        <li><a href="#set-up-automatic-password-rotation">Set up automatic password rotation</a></li>
+        <li><a href="#see-who-used-what">See who used what</a></li>
+        <li><a href="#change-or-remove-protection">Change or remove protection</a></li>
+        <li><a href="#what-wed-like-you-to-test">What we&#8217;d like you to test</a></li>
+        <li><a href="#whats-not-in-this-preview-yet">What&#8217;s not in this preview yet</a></li>
+        <li><a href="#limits-and-timings">Limits and timings</a></li>
+        <li><a href="#send-us-feedback">Send us feedback</a></li>
+      </ol>
+    </div>
+    <div class="sidebar-help">
+      <p class="sidebar-help-label">Private Preview feedback</p>
+      <div class="sidebar-help-actions">
+        <a class="btn-primary" href="https://app.reclaim.ai/m/privileged-controls/private-preview" target="_blank" rel="noopener noreferrer">Schedule a call</a>
+        <a class="btn-secondary" href="mailto:privileged-controls@bitwarden.com">
+          <svg class="icon-mail" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M2 4.5L8 9L14 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Email feedback
+        </a>
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <main class="content" id="main">
+    <div class="doc-intro">
+      <h1>Privileged Controls</h1>
+      <p class="preview-label">Private Preview guide</p>
+      <p class="lede">Privileged Controls is an add-on for Bitwarden Enterprise organizations that limits standing access to sensitive credentials. Protected credentials remain hidden until access is requested and granted, access is time-limited, and passwords can be rotated on a schedule or after use.</p>
+      <p>This guide explains how Privileged Controls works, how to configure it, how to request and approve access, and what to test during the Private Preview. Configuration sections are for organization administrators. Request and approval sections also apply to members and approvers.</p>
+    </div>
+
+    <div class="callout callout-note">
+      <span class="callout-label">Note</span>
+      <p>This guide covers the Private Preview and is not final documentation. Screens and labels may change, and some capabilities are incomplete. Before evaluating a specific feature, review <a href="#whats-not-in-this-preview-yet">What's not in this preview yet</a>.</p>
+    </div>
+
+    <section id="what-privileged-controls-does">
+      <h2>What Privileged Controls does</h2>
+      <p>Privileged credentials include production database passwords, domain administrator accounts, and root credentials for infrastructure. When stored as ordinary shared credentials, they can remain readable to every member with collection access and may stay valid indefinitely.</p>
+      <p>Privileged Controls reduces both forms of standing access:</p>
+      <p><strong>The credential remains hidden until access is granted.</strong> Members can see that the item exists, including its name and website, but the server never sends the password or other secret fields to the client, so a modified client cannot reveal them.</p>
+      <p><strong>Access is time-limited.</strong> When a request is granted, the member can use the credential only for the permitted window. When access ends, the secret fields are hidden again.</p>
+      <p><strong>Credentials can be rotated.</strong> Rotation changes the password on the target system and updates the vault item to match. Rotation can run on a schedule or when access ends.</p>
+      <p>Each request, approval, access period, and rotation is recorded, so you can see who requested, approved, and used a credential, and when.</p>
+
+      <h3 id="how-it-fits-together">How it fits together</h3>
+      <p>A typical access cycle works as follows:</p>
+      <ol class="steps">
+        <li>You create an <code>Access Rule</code> and apply it to a collection.</li>
+        <li>Items in that collection become <code>privileged</code>: visible, but with their secrets hidden.</li>
+        <li>A member <code>requests access</code> to one.</li>
+        <li>Depending on the Access Rule, the request is approved automatically or sent to an approver group.</li>
+        <li>Once the request is approved, the member <code>starts</code> their access, and the clock begins.</li>
+        <li>The member uses the credential, then hands it back or lets the time run out.</li>
+        <li>If the credential is under <code>rotation</code>, finishing can trigger a new password.</li>
+        <li>The audit log records every step.
+          <div class="callout callout-tip">
+            <span class="callout-label">Tip</span>
+            <p><strong>Approval does not reveal the credential.</strong> After a request is approved, the member must select <code>Start access</code> before the credential becomes available. See <a href="#when-your-access-actually-starts">When your access actually starts</a> for timing details.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="the-four-capabilities">
+      <h2>The four capabilities</h2>
+
+      <h3 id="decide-who-gets-access-and-for-how-long">Decide who gets access, and for how long</h3>
+      <p class="dfn">Access Rules</p>
+      <p>An Access Rule defines the policy for one or more collections. Every item in a protected collection is governed by that rule.</p>
+      <p>A rule has two groups of settings. <code>Access duration</code> sets the default and maximum access periods and whether a member can extend active access. <code>Optional conditions</code> can require approval, restrict requests by network, or limit the item to one active user at a time.</p>
+      <p>Requests are auto-approved unless <code>Require approval</code> is enabled. Three templates provide common starting configurations, and you can edit any setting before saving.</p>
+
+      <h3 id="get-a-credential-when-you-need-it">Get a credential when you need it</h3>
+      <p class="dfn">Credential leasing</p>
+      <p>Members request access from the protected item. Depending on the rule, the request is approved immediately or sent to an approver group with the member's reason. After approval, the member selects <code>Start access</code> to reveal the credential. If the rule allows extensions, the member can extend active access once, up to the rule's maximum duration.</p>
+
+      <h3 id="change-credentials-automatically">Change credentials automatically</h3>
+      <p class="dfn">Password rotation</p>
+      <p>Password rotation links a vault item to a target system through an access connector. Bitwarden can then rotate the password on a schedule, on demand, or when a member ends access.</p>
+      <p>A rotation is reported as successful only after the connector applies the new password and verifies that it authenticates. The verified value is then written to the vault.</p>
+      <p>For systems that cannot be rotated automatically, Privileged Controls can track the rotation schedule, flag overdue credentials, and record manual rotations.</p>
+
+      <h3 id="capability-audit-trail">See who used what</h3>
+      <p class="dfn">Audit trail</p>
+      <p>The server records requests, approval decisions, access starts and ends, and rotation activity. The audit trail shows who requested and used a credential, who approved or denied access, the recorded reasons, and relevant timestamps.</p>
+    </section>
+
+    <section id="before-you-start">
+      <h2>Before you start</h2>
+      <p>The preview environment is preconfigured, rotation included. You do not need to provide anything to work through this guide.</p>
+
+      <h3 id="what-we-provide">What we provide</h3>
+      <ul>
+        <li><strong>A mock organization</strong> on the Bitwarden preview instance with Privileged Controls enabled. It is separate from your production tenant.</li>
+        <li><strong>Two test accounts:</strong> an administrator account for configuration and an account with <code>Manage</code> permission for approvals. Because users cannot approve their own requests, use the second account yourself or assign it to a colleague when testing the approval flow.</li>
+        <li><strong>Seeded collections and credentials</strong> for testing request and approval workflows without creating test data first.</li>
+        <li><strong>A working rotation environment.</strong> An access connector is registered and running, with target systems configured against it and rotation jobs already in place. You can put credentials under rotation, trigger jobs, and read the results without installing or configuring anything.</li>
+      </ul>
+
+      <h3 id="what-you-need-to-bring">What you need to bring</h3>
+      <p>Nothing. The preview environment is complete, rotation included.</p>
+
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p><strong>Do not use production credentials in the preview environment.</strong> The Private Preview does not carry the guarantees of a production Bitwarden deployment. Use test credentials and test accounts only.</p>
+      </div>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>The access connector is not distributed in this preview, so running one yourself is not part of the exercise. If you want to evaluate that and give us early developer-experience feedback, email us at <a href="mailto:privileged-controls@bitwarden.com">privileged-controls@bitwarden.com</a> and we will provide the connector and its own guide.</p>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>Test the approval flow with a second person at least once, so you see the handoff between requester and approver rather than only your own two accounts.</p>
+      </div>
+    </section>
+
+    <section id="protect-your-first-collection">
+      <h2>Protect your first collection</h2>
+      <p>Complete the full request, approval, start, and end-access flow once before moving to the remaining sections.</p>
+
+      <h3 id="create-a-collection">Create a collection</h3>
+      <p>You can create a collection from either the Password Manager web app or the Admin Console.</p>
+      <ol class="steps">
+        <li>Select the <code>New</code> button and choose <code>Collection</code> from the dropdown.</li>
+        <li>Give the collection a <code>Name</code>, and choose the <code>Organization</code> it belongs to.</li>
+        <li>On the <code>Access</code> tab, assign any members or groups who should reach it.</li>
+        <li>Select <code>Save</code>.</li>
+      </ol>
+      <p>Name the collection for the resource it protects rather than the team that uses it. For example, prefer <code>Production database</code> to <code>Ops team</code>. Access Rules apply at the collection level.</p>
+      <p>Add a single login item to it.</p>
+      <p>For more on collections, see <a href="https://bitwarden.com/help/create-collections/">Create Collections</a> and <a href="https://bitwarden.com/help/collection-permissions/">Collection Permissions</a>.</p>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>The preview organization includes seeded collections and credentials. You can apply a rule to one of them instead of creating a new collection.</p>
+      </div>
+
+      <h3 id="create-an-access-rule">Create an Access Rule</h3>
+      <ol class="steps">
+        <li>Open the <code>Admin Console</code> and select <code>Privileged Controls</code> &rarr; <code>Access rules</code>.</li>
+        <li>Select <code>Create access rule</code>. You can build one from scratch with <code>Custom</code>, or start from a template:
+          <figure class="shot">
+            <img src="images/screenshot-01.jpg" alt="The Access rules list, with the Create access rule menu open" loading="lazy">
+            <figcaption>The Access rules list, with the Create access rule menu open</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Template</th><th>Gives you</th></tr></thead>
+          <tbody>
+            <tr><td><code>Just in time</code></td><td>Access granted on request, with no approver in the way</td></tr>
+            <tr><td><code>Approval required</code></td><td>Every request goes to a person before access is granted</td></tr>
+            <tr><td><code>IP-restricted</code></td><td>Requests only accepted from networks you nominate</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Templates pre-fill the settings. You can change any setting before saving.</p>
+      <ol class="steps" start="3">
+        <li>Under <code>General info</code>, enter a <code>Name</code> and, optionally, a <code>Description</code>. Name the rule for its conditions rather than its owner; for example, <code>VPN + business hours</code>.</li>
+        <li>In <code>Select collections</code>, choose the collections this rule applies to. You can pick several, and the rule governs every item in all of them.</li>
+        <li>Under <code>Status</code>, leave <code>Active</code> selected. An inactive rule does not restrict access, so you can prepare a configuration before enabling it.
+          <figure class="shot">
+            <img src="images/screenshot-02.jpg" alt="General info and Status. A rule applies to every collection you select" loading="lazy">
+            <figcaption>General info and Status. A rule applies to every collection you select</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <ol class="steps" start="6">
+        <li>Under <code>Access duration</code>, set:
+          <ul>
+            <li><code>Default duration</code>, which is pre-filled for members when they request access.</li>
+            <li><code>Maximum duration</code>, the longest a single stretch of access may run, counted from the moment someone starts it. <code>No cap</code> leaves it unbounded.</li>
+            <li><code>Allow lease extensions</code>, if you want members to extend an active lease once, up to the maximum duration, without asking anyone again.</li>
+          </ul>
+          <figure class="shot">
+            <img src="images/screenshot-03.jpg" alt="Access duration. Allow lease extensions lets a member add time once without asking again" loading="lazy">
+            <figcaption>Access duration. Allow lease extensions lets a member add time once without asking again</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <ol class="steps" start="7">
+        <li>Under <code>Optional conditions</code>, tick any that apply:
+          <ul>
+            <li><code>Require approval</code> sends each request to an approver group before access is granted. Leave it unticked and requests are auto-approved.</li>
+            <li><code>Restrict by IP address</code> limits which networks a request may come from.</li>
+            <li><code>Only 1 user can have active access at a time.</code> Others with approval can attempt to start once the current access ends or is revoked.</li>
+          </ul>
+          <figure class="shot">
+            <img src="images/screenshot-04.jpg" alt="Optional conditions. Leave Require approval unticked and requests are auto-approved" loading="lazy">
+            <figcaption>Optional conditions. Leave Require approval unticked and requests are auto-approved</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <ol class="steps" start="8">
+        <li>Save the rule.</li>
+      </ol>
+      <p>For the first test, enable <code>Require approval</code> and set a short maximum duration so the approval and countdown states are easy to verify.</p>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>A collection can only be protected by one rule at a time. If you select a collection that already has one, you will be asked to pick different collections.</p>
+      </div>
+      <p>Back on the <code>Access rules</code> list, each rule shows what it <code>Applies to</code>, its <code>Approval method</code> (<code>Auto-approved</code> or <code>Requires approval</code>), its <code>Maximum duration</code>, and its <code>Status</code>.</p>
+
+      <h3 id="check-that-every-route-to-the-item-is-protected">Check that every route to the item is protected</h3>
+      <p>Bitwarden access is the union of a member's collection permissions. If an item is in several collections, a member can reach it through any one they belong to, so an item that is also in an unprotected collection stays readable to that collection's members. A rule restricts a member only when every path they have to the item is protected.</p>
+      <p>The <code>Access rules</code> page identifies items in scope that are still reachable through an unprotected path. Resolve these warnings before relying on the rule to restrict access.</p>
+
+      <h3 id="see-what-a-member-sees">See what a member sees</h3>
+      <p>Go to your organization vault and find the item. In the <code>Controlled access</code> column it now carries a <code>Privileged</code> badge. Items with no rule on them read <code>No access rule</code> instead.</p>
+      <figure class="shot">
+        <img src="images/screenshot-05.jpg" alt="The Controlled access column. A protected item carries a Privileged badge; an unprotected one reads No access rule" loading="lazy">
+        <figcaption>The Controlled access column. A protected item carries a Privileged badge; an unprotected one reads No access rule</figcaption>
+      </figure>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>In the vault, use <code>Filters</code> &rarr; <code>Controlled access</code> &rarr; <code>Privileged</code> or <code>My requests</code> to find protected items and requests.</p>
+      </div>
+      <p>Open the item. Its name and website are still there, and you can still copy the website from <code>Autofill options</code>. The password, any TOTP verification code, and every other secret field are absent, not merely masked. A card at the top reads <code>You can request access</code>, with "Credentials are masked until access is granted." beneath it, and below that the longest access this item allows.</p>
+      <p>Organization administrator status does not by itself reveal the protected password.</p>
+      <figure class="shot">
+        <img src="images/screenshot-06.jpg" alt="A protected item before access is requested. The credential fields are absent, not masked" loading="lazy">
+        <figcaption>A protected item before access is requested. The credential fields are absent, not masked</figcaption>
+      </figure>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>The item card indicates the approval method. "Access up to 4 hours, instant approval if you meet the conditions" means automatic approval. "Access up to 4 hours" without the instant-approval text means approval is required.</p>
+      </div>
+
+      <h3 id="request-it-once-end-to-end">Request it once, end to end</h3>
+      <ol class="steps">
+        <li>Select <code>Request access</code>, fill in the form, and submit.</li>
+        <li>Ask your colleague to approve it from <code>Access requests</code> &rarr; <code>Approvals</code>. You cannot approve your own request.</li>
+        <li>After approval, confirm that the card reads <code>Access approved</code> and that the credential remains hidden until access starts.</li>
+        <li>Select <code>Start access</code>. The credential appears in place, and the card starts counting down.</li>
+        <li>Select <code>End access</code> and confirm that the credential is hidden again.</li>
+      </ol>
+      <p>If the cycle completes as described, continue with the detailed request, approval, rotation, and audit workflows below.</p>
+    </section>
+
+    <section id="request-access-to-a-credential">
+      <h2>Request access to a credential</h2>
+      <p>The request flow depends on whether the Access Rule requires approval.</p>
+
+      <h3 id="when-nobody-has-to-approve">When nobody has to approve</h3>
+      <ol class="steps">
+        <li>Find the item in your organization vault. Protected items show a <code>Privileged</code> badge in the <code>Controlled access</code> column.</li>
+        <li>Open the item and select <code>Request access</code>. The form opens in the item card and reads "Pick a duration. You'll get immediate access for that long."</li>
+        <li>Choose a value from <code>Duration</code>. The list contains only durations allowed by the rule.</li>
+        <li>Optionally, enter a reason in <code>Reason (optional)</code>.</li>
+        <li>Select <code>Request access</code>. You are granted it immediately, a message reads "Access approved &mdash; select Start access to begin.", and the item's badge changes to <code>Ready to use</code>.</li>
+        <li>Select <code>Start access</code>. You will see "Access started.", and the item card displays the remaining access time.</li>
+        <li>Copy or use the credential. The secret fields appear in the existing item view; you do not need to reopen the item.
+          <figure class="shot">
+            <img src="images/screenshot-07.jpg" alt="The request form on an auto-approved item, with the Duration dropdown and an optional Reason" loading="lazy">
+            <figcaption>The request form on an auto-approved item, with the Duration dropdown and an optional Reason</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <h3 id="when-someone-has-to-approve">When someone has to approve</h3>
+      <ol class="steps">
+        <li>Open the item and select <code>Request access</code>, as above.</li>
+        <li>Set the <code>Date</code> you need it on.</li>
+        <li>Set a <code>Start time</code> and <code>End time</code>. The form pre-fills a window starting now. If the end time is earlier than the start time, it is interpreted as the next day; the form displays the resulting end date and time.</li>
+        <li>Enter a <code>Reason</code>. A reason is required for requests that need approval.
+          <figure class="shot">
+            <img src="images/screenshot-08.jpg" alt="The request form when approval is required: Date, Start time, End time and a required Reason" loading="lazy">
+            <figcaption>The request form when approval is required: Date, Start time, End time and a required Reason</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <ol class="steps" start="5">
+        <li>Select <code>Request access</code>. The message "Request submitted &mdash; awaiting approval." appears, the item card changes to <code>Access request pending approval</code>, and the vault badge changes to <code>Pending approval</code>.</li>
+        <li>To review the request, open the item or go to <code>Access requests</code> &rarr; <code>My requests</code>. Pending requests show the requested window and submission time. The navigation displays a counter while requests are outstanding.</li>
+        <li>Once someone approves it, the card reads <code>Access approved</code> and the badge changes to <code>Ready to use</code>. The request moves from <code>Pending</code> to <code>Active access</code>, where the status shows how long you have left to start it, for example "Activate within 9m".</li>
+        <li>Select <code>Start access</code>. The message "Access started." appears, the request shows the remaining access time, and the credential becomes available.
+          <figure class="shot">
+            <img src="images/screenshot-09.jpg" alt="The item while the request waits on an approver, showing the amber Pending approval badge" loading="lazy">
+            <figcaption>The item while the request waits on an approver, showing the amber Pending approval badge</figcaption>
+          </figure>
+        </li>
+      </ol>
+
+      <h3 id="when-your-access-actually-starts">When your access actually starts</h3>
+      <p>Access begins when you select <code>Start access</code>. Approval alone does not start it. For an approved time window, the end time is fixed by the approved request; starting late does not move that end time. Start as early in the window as you can, because a late start shortens your usable access.</p>
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p>The card can display the requested duration even when less time remains in the approved window. Use the <code>Until</code> time as the effective end of access.</p>
+      </div>
+      <p>For immediate-access approvals, you have <code>24 hours</code> from approval to start access. For scheduled requests, you must start within the approved window. If the activation period expires, submit a new request.</p>
+
+      <h3 id="book-access-ahead-of-planned-work">Book access ahead of planned work</h3>
+      <p>To request access for planned work, submit the request in advance and set the <code>Date</code>, <code>Start time</code>, and <code>End time</code> to the required window.</p>
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p>Scheduled access does not start automatically. Select <code>Start access</code> during the approved window, or the approval expires unused. Set a reminder for the start of the window.</p>
+      </div>
+      <p>You cannot start access before the approved window. If you try, the message "The approved access window has not started yet." appears.</p>
+
+      <h3 id="if-something-goes-wrong-requesting">If something goes wrong</h3>
+      <div class="table-wrap">
+        <table class="msg">
+          <thead><tr><th>What you see</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td><code>&quot;Someone else has access to this item right now.&quot;</code></td><td>The item allows one active user at a time. You can submit the request and start access after the current access ends.</td></tr>
+            <tr><td><code>&quot;Another active lease exists for this item. Try again once it ends.&quot;</code></td><td>Another user has active access. Try again after that access ends. There is no queue.</td></tr>
+            <tr><td><code>&quot;You already have active access to this item.&quot;</code></td><td>Close the request form and use the active access shown on the item card.</td></tr>
+            <tr><td><code>&quot;You already have an approved request for this item.&quot;</code></td><td>An approved request already exists. Use the existing request.</td></tr>
+            <tr><td><code>&quot;End time can't be the same as the start time.&quot;</code></td><td>Choose different start and end times.</td></tr>
+            <tr><td><code>&quot;The requested window has already ended.&quot;</code></td><td>The entire requested window is in the past. A window that has already started can still be requested if its end time is in the future.</td></tr>
+            <tr><td><code>&quot;The window can't exceed&hellip;&quot;</code></td><td>The requested window exceeds the rule's maximum duration. Shorten the window.</td></tr>
+            <tr><td><code>&quot;Could not request access.&quot;</code></td><td>The request was not submitted. Retry the action.</td></tr>
+            <tr><td>Refused the instant you asked, with no approver involved</td><td>The request failed an automatic condition. In this preview, that indicates an IP restriction.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>An <code>End time</code> earlier than the <code>Start time</code> is treated as the next day. For example, 23:00 to 01:00 creates a two-hour window across midnight.</p>
+      </div>
+
+      <h3 id="extend-access-you-are-already-using">Extend access you are already using</h3>
+      <p>If the rule has <code>Allow lease extensions</code> enabled, an <code>Extend</code> button appears beside <code>End access</code>, and you can extend active access once instead of submitting a new request.</p>
+      <ol class="steps">
+        <li>Select <code>Extend</code>.</li>
+        <li>In the <code>Extend access</code> dialog, choose an <code>Extension length</code>.</li>
+        <li>Write a <code>Reason</code>. This one is required, and <code>Extend</code> stays unavailable until you do.</li>
+        <li>Select <code>Extend</code>. You will see "Access extended.", the <code>Until</code> time moves out, and the countdown on the card restarts from the new end.
+          <figure class="shot">
+            <img src="images/screenshot-10.jpg" alt="The Extend access dialog. Extend stays unavailable until a reason is written" loading="lazy">
+            <figcaption>The Extend access dialog. Extend stays unavailable until a reason is written</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <p>Extension behavior:</p>
+      <ul>
+        <li><strong>You extend once, without a new approval.</strong> Even on a rule that requires approval for the original request, the extension does not go back to an approver. Once you have used it, the <code>Extend</code> button disappears and only <code>End access</code> remains.</li>
+        <li><strong>It applies in place.</strong> The end time on the access you already hold moves out. You are not given a second, separate stretch, and you do not have to start anything again.</li>
+        <li><strong>It is still bound by the maximum duration</strong> on the rule.</li>
+      </ul>
+      <p>Extend before your access expires. After expiration, you must submit a new request and complete any required approval flow.</p>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>If extensions are disabled, additional time requires a new request. If the rule requires approval, the new request must also be approved.</p>
+      </div>
+    </section>
+
+    <section id="approve-someone-elses-request">
+      <h2>Approve someone else's request</h2>
+      <p>The <code>Approvals</code> tab appears on the <code>Access requests</code> page when requests are routed to you for review.</p>
+      <p>To approve a request, you need <code>Manage</code> permission on the item's collection or membership in an approver group for the item. Organization administrator status alone does not grant approval permission.</p>
+      <ol class="steps">
+        <li>Open <code>Access requests</code> and select the <code>Approvals</code> tab.</li>
+        <li>Under <code>Pending approval</code>, review requests assigned to you. Use <code>Collection</code> or <code>Requester</code> filters as needed.
+          <figure class="shot">
+            <img src="images/screenshot-11.jpg" alt="The Approvals tab, with a request waiting under Pending approval" loading="lazy">
+            <figcaption>The Approvals tab, with a request waiting under Pending approval</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <ol class="steps" start="3">
+        <li>Review the <code>Item</code>, <code>Requester</code>, <code>Requested window</code>, and <code>Reason</code>. If no reason was provided, the row displays "No reason provided".</li>
+        <li>Select <code>Approve</code> or <code>Deny</code> on that row.</li>
+        <li>Review the request summary in the dialog, including the item, requester, requested window, and reason.</li>
+        <li>Add a note if needed. For approvals, <code>Comment</code> is optional and is saved to the audit log. For denials, <code>Reason for denial</code> is required.</li>
+        <li>Confirm with <code>Approve request</code> or <code>Deny request</code>.
+          <figure class="shot">
+            <img src="images/screenshot-12.jpg" alt="The Deny access request dialog. A Reason for denial is required" loading="lazy">
+            <figcaption>The Deny access request dialog. A Reason for denial is required</figcaption>
+          </figure>
+        </li>
+      </ol>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>You can switch from approval to denial within the approval dialog by selecting <code>Deny request</code>. The audit record stores the decision you confirm.</p>
+      </div>
+      <p><strong>Example:</strong> A member requests 09:00 to 17:00 for an item with a two-hour maximum duration. If the request is approved at 08:30 and the member starts access at 14:00, access runs from 14:00 to 16:00.</p>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>Extensions do not require a second approval. If <code>Allow lease extensions</code> is enabled, a member can extend active access once, up to the maximum duration. To require approval for additional time, leave extensions disabled so the member must submit a new request.</p>
+      </div>
+
+      <h3 id="if-something-goes-wrong-approving">If something goes wrong</h3>
+      <div class="table-wrap">
+        <table class="msg">
+          <thead><tr><th>What you see</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td><code>&quot;You cannot approve your own request.&quot;</code></td><td>Someone else with Manage permission on that collection has to decide it.</td></tr>
+            <tr><td><code>&quot;Could not record decision&quot;</code></td><td>The decision was not saved. The request remains pending; retry the action.</td></tr>
+            <tr><td><code>&quot;No access requests match your filters.&quot;</code></td><td>The current search or filters exclude the request. Clear or adjust them.</td></tr>
+            <tr><td><code>&quot;Inbox zero&quot;</code> and <code>&quot;There are no requests waiting for your decision.&quot;</code></td><td>No requests are awaiting your decision.</td></tr>
+            <tr><td>The request has vanished from the list</td><td>The requester withdrew it, another approver got to it first, or it lapsed. Check the <code>History</code> tab.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="hand-a-credential-back">
+      <h2>Hand a credential back</h2>
+      <p>When you have finished with a credential and there is still time on the clock, you can end your access rather than letting it run down.</p>
+      <p>Access ends on its own when the permitted time expires. End it early if another user may be waiting for the item, or if the item is configured to rotate when access ends.</p>
+      <p>While access is active, the item card displays <code>You have active access to this item</code>, the remaining time, and an <code>Until</code> timestamp. Under <code>Login credentials</code>, the username, password, and <code>Verification code (TOTP)</code> are available as applicable. In the vault list, the item badge displays the remaining access time.</p>
+      <figure class="shot">
+        <img src="images/screenshot-13.jpg" alt="Active access on an item, with Extend and End access, and the credentials below" loading="lazy">
+        <figcaption>Active access on an item, with Extend and End access, and the credentials below</figcaption>
+      </figure>
+      <p>To end access early:</p>
+      <ol class="steps">
+        <li>Open the item, or go to <code>Access requests</code> &rarr; <code>My requests</code> and find it under <code>Active access</code>.</li>
+        <li>Select <code>End access</code>.</li>
+        <li>A dialog headed <code>End access?</code> warns you that this immediately revokes your access and cannot be undone. Select <code>End access</code> again to confirm.</li>
+      </ol>
+      <p>You will see "Access ended.", the credential fields disappear, and the card goes back to <code>You can request access</code>.</p>
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p>Ending access is final for the current request. To regain access, submit a new request and complete any required approval flow.</p>
+      </div>
+    </section>
+
+    <section id="set-up-automatic-password-rotation">
+      <h2>Set up automatic password rotation</h2>
+      <p>Configure rotation in the <code>Admin Console</code> under <code>Privileged Controls</code> &rarr; <code>Rotation</code>.</p>
+      <p>For the Private Preview, the parts of rotation that run in your own infrastructure are already set up for you. An access connector is registered and running, and target systems are configured against it. What is left for you to do is the part most organizations will spend their time on: deciding which credentials rotate, on what trigger, and on what schedule.</p>
+
+      <h3 id="what-you-are-building">What you are building</h3>
+      <p>Rotation uses three components: an <code>access connector</code>, a <code>target system</code>, and a <code>managed credential</code>.</p>
+      <p>The <code>access connector</code> runs in your environment and connects to systems whose credentials Bitwarden rotates. Connection details and service credentials remain local to the connector.</p>
+      <p>The <code>target system</code> defines the system name, integration type, and password requirements such as length and allowed characters. A target system can be reused across multiple managed credentials.</p>
+      <p>The <code>managed credential</code> links a vault item to a target system and stores the account identifier and rotation triggers.</p>
+      <p>The server schedules rotation work and the connector performs it. The server does not receive the target's plaintext password.</p>
+      <figure class="shot">
+        <img src="images/screenshot-14.jpg" alt="The rotation tabs: Access connectors, Target systems and Managed credentials" loading="lazy">
+        <figcaption>The rotation tabs: Access connectors, Target systems and Managed credentials</figcaption>
+      </figure>
+
+      <h3 id="choose-an-integration-type">Choose an integration type</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>Rotates</th></tr></thead>
+          <tbody>
+            <tr><td><code>Entra</code></td><td>Microsoft Entra ID accounts, identified by UPN or email</td></tr>
+            <tr><td><code>Custom script</code></td><td>Anything else you can automate with a Bash or PowerShell script on the connector host</td></tr>
+            <tr><td><code>Manual</code></td><td>Nothing automatically. Bitwarden tracks the obligation and a person does the work</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="the-access-connector">The access connector</h3>
+      <p>Select the <code>Access connectors</code> tab to see the connector serving this preview environment.</p>
+      <p>In a production deployment you register a connector here, receive a token, and deploy the connector somewhere it can reach the systems you want to rotate. It runs in your infrastructure, holds the connection details and service credentials locally, and the Bitwarden server never receives them.</p>
+      <p>In this preview the connector is already registered and running, so there is nothing to install. The tab shows whether a connector is connected and which target systems it serves.</p>
+
+      <h3 id="target-systems">Target systems</h3>
+      <p>Select the <code>Target systems</code> tab to see the systems credentials can be rotated on.</p>
+      <p>A target system records the system's name, its integration type, and the password requirements it enforces, such as length and allowed characters. One target system can be reused across many managed credentials, which is why the password rules live here rather than on each credential.</p>
+      <p>Connectors are assigned to target systems, and a connector can only claim work for the targets it has been assigned. That assignment is the security boundary. Several connectors can serve one target for redundancy, and one connector can serve many targets.</p>
+      <p>The preview environment has target systems already configured, so you can go straight to putting a credential under rotation.</p>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>A target system's type and rotation method are fixed when it is created. Changing either means deleting the target system and creating a new one.</p>
+      </div>
+
+      <h3 id="put-a-credential-under-rotation">Put a credential under rotation</h3>
+      <ol class="steps">
+        <li>Select the <code>Managed credentials</code> tab and create a new managed credential against one of the existing target systems.
+          <div class="callout callout-note">
+            <span class="callout-label">Note</span>
+            <p>A managed credential's target is also fixed at creation.</p>
+          </div>
+        </li>
+        <li>Enter the account's identifier on that system.</li>
+        <li>Set a schedule. You can pick an interval or write a cron expression for exact timing such as a maintenance window. Schedules run in UTC, and the shortest interval accepted is fifteen minutes.</li>
+        <li>Optionally, configure the credential to rotate when access ends. This invalidates the password that was available during the completed access period. The rotation runs after the access window closes, not during active access.</li>
+        <li>Select <code>Rotate now</code> and watch the job run. In a production deployment you would always do this before relying on a new configuration.</li>
+      </ol>
+
+      <h3 id="rotate-on-demand-or-record-one-you-did-by-hand">Rotate on demand, or record one you did by hand</h3>
+      <p>From the <code>Managed credentials</code> tab, each row offers:</p>
+      <ul>
+        <li><code>Rotate now</code>, which queues an immediate rotation job.</li>
+        <li><code>Mark as rotated</code>, for recording a change you made outside Bitwarden.</li>
+        <li><code>Remove from rotation</code>.</li>
+      </ul>
+      <p>Rotation history for a credential is on its <code>History</code> tab, one row per job, with the result, duration and number of attempts. Select a row to see why a job failed.</p>
+      <figure class="shot">
+        <img src="images/screenshot-15.jpg" alt="The Managed credentials tab, with the per-row rotation actions" loading="lazy">
+        <figcaption>The Managed credentials tab, with the per-row rotation actions</figcaption>
+      </figure>
+      <div class="callout callout-note">
+        <span class="callout-label">Note</span>
+        <p>For manual credentials, Bitwarden cannot read the target's password requirements. The password generator therefore uses a generic default. Verify that a generated value meets the target system's requirements, or enter a value you have already set on the target.</p>
+      </div>
+
+      <h3 id="custom-scripts-and-running-your-own-connector">Custom scripts and running your own connector</h3>
+      <p>Custom scripts are written in Bash or PowerShell, so the connector can run them on Linux and Windows on both ARM and x64, and on macOS on ARM.</p>
+      <p>The custom script path, and the access connector that runs it, are not part of the Private Preview. The connector is not distributed yet, so there is nothing to deploy and no script contract to write against.</p>
+      <p>If you want to evaluate that side of rotation and give us early developer-experience feedback, email us at <a href="mailto:privileged-controls@bitwarden.com">privileged-controls@bitwarden.com</a>. We will provide the connector and its own guide.</p>
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p>Rotating a credential can interrupt dependent services. This preview does not restart services, update scheduled tasks, or propagate the new value beyond the vault and target account. For service accounts, schedule rotation during a maintenance window and test with a non-production dependency first.</p>
+      </div>
+    </section>
+
+    <section id="see-who-used-what">
+      <h2>See who used what</h2>
+      <p>Use the request history, audit log, or managed credential history depending on the scope and retention period you need.</p>
+
+      <h3 id="your-own-recent-requests">Your own recent requests</h3>
+      <p>Open <code>Access requests</code> &rarr; <code>History</code> for resolved requests from the last <code>90 days</code>: what was asked for, what was decided, who decided it, and the reason they gave. Denials always carry a reason, because approvers cannot deny without writing one.</p>
+      <p>History is permission-scoped. Members see their own requests. Approvers and administrators see requests and access for collections they have permission to view, including requests they did not decide.</p>
+
+      <h3 id="the-full-audit-log">The full audit log</h3>
+      <p>For organization-wide events without the 90-day request-history limit, open the <code>Admin Console</code> and select <code>Privileged Controls</code> &rarr; <code>Audit log</code>.</p>
+      <p>Each row includes the <code>Timestamp</code>, <code>Event</code>, <code>Actor</code>, <code>Requester</code>, <code>Item</code>, and <code>Duration</code> where applicable.</p>
+      <p>Narrow it with the filters along the top:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Filter</th><th>Answers</th></tr></thead>
+          <tbody>
+            <tr><td><code>Event</code></td><td>"Which requests were denied?"</td></tr>
+            <tr><td><code>Actor</code></td><td>"What has this person done?"</td></tr>
+            <tr><td><code>Requester</code></td><td>"What has been asked for on this person's behalf?"</td></tr>
+            <tr><td><code>Item</code></td><td>"Who has touched this credential?"</td></tr>
+            <tr><td><code>Time period</code></td><td>Today, the past 7 days, the past 30 days, all time, or a range you choose</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Select <code>Export</code> to download the filtered results.</p>
+      <figure class="shot">
+        <img src="images/screenshot-16.jpg" alt="The Audit log, with its filter row and the Export control" loading="lazy">
+        <figcaption>The Audit log, with its filter row and the Export control</figcaption>
+      </figure>
+
+      <h3 id="what-gets-recorded">What gets recorded</h3>
+      <p>The audit log includes the following event types:</p>
+
+      <h4 id="events-requests-and-decisions">Requests and decisions</h4>
+      <ul>
+        <li><code>Access requested</code></li>
+        <li><code>Request approved</code></li>
+        <li><code>Request denied</code></li>
+        <li><code>Request canceled</code></li>
+        <li><code>Request expired without a decision</code></li>
+        <li><code>Approval expired unused</code></li>
+      </ul>
+
+      <h4 id="events-access-itself">Access itself</h4>
+      <ul>
+        <li><code>Lease activated</code></li>
+        <li><code>Lease extended</code></li>
+        <li><code>Lease expired</code></li>
+        <li><code>Lease revoked</code></li>
+        <li><code>Activation rejected</code></li>
+        <li><code>Credential accessed</code></li>
+        <li><code>Credential access denied</code></li>
+      </ul>
+
+      <h4 id="events-rules-and-organization-wide-actions">Rules and organization-wide actions</h4>
+      <ul>
+        <li><code>Access rule created</code></li>
+        <li><code>Access rule updated</code></li>
+        <li><code>Access rule deleted</code></li>
+        <li><code>Kill switch triggered</code></li>
+        <li><code>Leasing frozen</code></li>
+        <li><code>Leasing unfrozen</code></li>
+      </ul>
+
+      <p>Rotation activity is recorded here too, alongside the per-credential rotation history on the <code>History</code> tab of a managed credential.</p>
+      <div class="callout callout-tip">
+        <span class="callout-label">Tip</span>
+        <p>To review access to a specific credential, filter by <code>Item</code>, set <code>Time period</code>, and export the results. As part of the preview, confirm whether the exported record meets your audit requirements.</p>
+      </div>
+    </section>
+
+    <section id="change-or-remove-protection">
+      <h2>Change or remove protection</h2>
+      <p>Rule changes apply prospectively. Editing, deactivating, or deleting a rule does not revoke access that has already been granted.</p>
+      <ol class="steps">
+        <li>Open the <code>Admin Console</code> &rarr; <code>Privileged Controls</code> &rarr; <code>Access rules</code>.</li>
+        <li>Find the rule. Each row shows what it <code>Applies to</code>, its <code>Approval method</code>, its <code>Maximum duration</code>, and whether it is <code>Active</code> or <code>Inactive</code>.</li>
+        <li>Open the row's <code>Options</code> menu and choose what you want:
+          <ul>
+            <li><code>Edit</code> to change the rule's terms, then <code>Save</code>.</li>
+            <li><code>Deactivate rule</code> to stop it applying to new requests without losing the setup. The row turns <code>Inactive</code>, and <code>Activate rule</code> turns it back on.</li>
+            <li><code>Delete</code> to remove it permanently. The collections survive; they simply stop being protected.</li>
+          </ul>
+        </li>
+      </ol>
+      <p>To change several at once, tick the rows and use the actions in the bar that appears.</p>
+      <div class="callout callout-warn">
+        <span class="callout-label">Warning</span>
+        <p>Active access continues until its current end time, and an already approved request can still be started. The delete dialog states that collections "will have leasing disabled". This applies to new requests only.</p>
+      </div>
+      <p><strong>Example:</strong> If a rule's maximum duration is reduced from eight hours to one hour at 14:00, a request approved at 13:00 under the previous limit keeps its approved duration. Requests made after the change use the new one-hour maximum.</p>
+
+      <h3 id="if-something-goes-wrong-rules">If something goes wrong</h3>
+      <div class="table-wrap">
+        <table class="msg">
+          <thead><tr><th>What you see</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td><code>&quot;Another rule already uses this name.&quot;</code></td><td>Names are unique within an organization.</td></tr>
+            <tr><td><code>&quot;Another access rule already covers one of these collections.&quot;</code></td><td>A collection can only be protected by one rule. Take it off the other rule first.</td></tr>
+            <tr><td><code>&quot;This rule no longer exists. It may have been deleted by another admin.&quot;</code></td><td>The rule was deleted after the page loaded. Refresh the list.</td></tr>
+            <tr><td>Items are still protected after deleting the rule</td><td>Check whether another rule also covers that collection, and give the vault a moment to refresh.</td></tr>
+            <tr><td>Items became visible to people you did not expect</td><td>Removing protection exposes whatever the collection's permissions already allowed. Deleting a rule does not change who is in the collection.</td></tr>
+            <tr><td>A copied rule protects nothing</td><td>Copied rules do not include collections because each collection can be protected by only one rule.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="what-wed-like-you-to-test">
+      <h2>What we'd like you to test</h2>
+      <p>Test the workflows you would use. You do not need to complete every item. Report both what worked and what you could not complete or chose to skip.</p>
+
+      <h3 id="test-setting-things-up">Setting things up</h3>
+      <ul class="check">
+        <li>Create a rule from each of the three templates. Note whether the templates match policies you would use and whether another template would be useful.</li>
+        <li>Create one <code>Custom</code> rule from scratch and compare the effort.</li>
+        <li>Compare an auto-approved rule with one that has <code>Require approval</code> ticked.</li>
+        <li>Set <code>Maximum duration</code> to <code>No cap</code> and assess whether that option is appropriate for your policies.</li>
+        <li>Tick <code>Restrict by IP address</code> and try saving without entering any ranges.</li>
+        <li>Apply a rule to a collection that already has members and history, not just a fresh one.</li>
+        <li>Define a specific approver group rather than defaulting to everyone with Manage permission.</li>
+        <li>Leave a second, unprotected route to a credential and assess whether the warning clearly identifies the exposure.</li>
+        <li>Try to apply two rules to one collection.</li>
+        <li>Set a maximum duration that matches your operational needs. Note whether the available options are sufficient.</li>
+      </ul>
+
+      <h3 id="test-requesting-and-approving">Requesting and approving</h3>
+      <ul class="check">
+        <li>Request access on an automatic item, and on one needing approval.</li>
+        <li>Approve a request, deny one, and read both back in <code>History</code>.</li>
+        <li>Open the approve dialog and switch to deny without closing it.</li>
+        <li>Ask for a window that crosses midnight.</li>
+        <li>Cancel a request while it is pending, and cancel one after it has been approved.</li>
+        <li>Leave an approved request unstarted and confirm that it expires.</li>
+        <li>Have two people request the same one-at-a-time item and assess how clearly the contention state is presented.</li>
+        <li>Book a window for a future date and start it on the day.</li>
+      </ul>
+
+      <h3 id="test-time-limits">Time limits</h3>
+      <ul class="check">
+        <li>Approve a request, wait before starting it, and confirm that the resulting access period matches the documented behavior.</li>
+        <li>Let access expire on its own rather than ending it.</li>
+        <li>End access early and confirm the credential disappears.</li>
+        <li>Turn on <code>Allow lease extensions</code>, then extend an active stretch of access, and try to extend a second time.</li>
+        <li>Try to add time on a rule where extensions are disabled and assess whether the reason is clear.</li>
+      </ul>
+
+      <h3 id="test-rotation">Rotation</h3>
+      <ul class="check">
+        <li>Put one of the seeded credentials under rotation against an existing target system.</li>
+        <li>Set a schedule and assess whether the interval and cron options match the cadences your policies require.</li>
+        <li>Run a rotation on demand and review the resulting job status.</li>
+        <li>Set a credential to rotate on hand-back, then lease it and give it back.</li>
+        <li>Read a credential's rotation <code>History</code> and assess whether a job's result, duration and attempt count tell you what you would need to know.</li>
+        <li>Set up a manual target, let it go overdue, and record a rotation by hand.</li>
+        <li>Review the <code>Access connectors</code> and <code>Target systems</code> tabs and assess whether they show what you would want to monitor in your own environment.</li>
+        <li>Pause rotation on a credential, then resume it.</li>
+      </ul>
+
+      <h3 id="test-audit-and-evidence">Audit and evidence</h3>
+      <ul class="check">
+        <li>Answer this question using only the product: who accessed a given credential in the last month, when, and why?</li>
+        <li>Check whether the resulting record meets your audit requirements.</li>
+      </ul>
+
+      <h3 id="test-things-worth-trying-to-break">Things worth trying to break</h3>
+      <ul class="check">
+        <li>Approve your own request.</li>
+        <li>Request access from a network outside an IP allowlist, then move onto an allowed network between being approved and starting.</li>
+        <li>Delete a rule while someone holds active access under it.</li>
+        <li>Lower a maximum duration while someone is approved under the old one.</li>
+        <li>Remove someone from a collection while they hold access.</li>
+      </ul>
+
+      <h3 id="test-what-we-most-want-to-hear-about">What we most want to hear about</h3>
+      <ul>
+        <li>UI wording that did not match the resulting behavior.</li>
+        <li>Behavior that was unclear from the UI or documentation and required experimentation.</li>
+        <li>Actions the product allowed that you expected it to prevent.</li>
+        <li>Whether the audit evidence matches the records your auditors or insurers require.</li>
+        <li>Requirements that would need to be met before you would protect a production credential with Privileged Controls.</li>
+        <li><strong>Whether approved access should use a fixed window or a duration.</strong> Approval-based requests currently specify a start and end time, so starting late can reduce the usable period. Would you prefer to request a duration that begins when access starts, similar to the auto-approved flow?</li>
+      </ul>
+    </section>
+
+    <section id="whats-not-in-this-preview-yet">
+      <h2>What's not in this preview yet</h2>
+      <p><strong>Web app only.</strong> Privileged Controls is not yet in the browser extension, the desktop apps, the mobile apps, or the CLI. Requesting, approving and starting access all happen in the web app.</p>
+      <p><strong>No organization-wide controls.</strong> The preview does not include a kill switch to revoke all active leases, a freeze on new access, or a governance dashboard for organization-wide active access. Individual access can still be revoked.</p>
+      <p><strong>The access connector is not distributed yet.</strong> Rotation runs against a connector we host for the preview, so you cannot deploy one in your own environment or rotate credentials on your own systems. That includes the custom script path, which runs on the connector. To evaluate this side of rotation, email us at <a href="mailto:privileged-controls@bitwarden.com">privileged-controls@bitwarden.com</a>.</p>
+      <p><strong>Limited rotation integrations.</strong> Automatic rotation covers Microsoft Entra ID, plus the custom script path for anything you can automate yourself. Other systems can be tracked as manual rotation obligations. Your feedback on which systems you need will shape which integrations come next, so tell us what would matter most in your estate.</p>
+      <p><strong>Rotation settings are per credential.</strong> You cannot yet apply a rotation schedule across a whole collection, or to every credential of the same type, in one action.</p>
+      <p><strong>Rotation does not orchestrate dependencies.</strong> Restarting services that use a rotated credential, updating scheduled tasks, and post-rotation scripting are all out of scope for now.</p>
+      <p><strong>Vault export behavior is not final.</strong> Do not treat the current export behavior for protected items as the expected general-availability behavior.</p>
+      <p><strong>UI wording may change.</strong> Rotation screens are still being revised, so labels in this guide may not exactly match the preview UI. Report any mismatches or wording that is clearer in the product.</p>
+    </section>
+
+    <section id="limits-and-timings">
+      <h2>Limits and timings</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Limit</th><th>Default</th><th>What it bounds</th></tr></thead>
+          <tbody>
+            <tr><td>Time to decide a request</td><td>7 days</td><td>How long a request waits for a person before it lapses</td></tr>
+            <tr><td>Time to start approved access</td><td>24 hours</td><td>How long an approval for immediate access stays startable</td></tr>
+            <tr><td>Booked window</td><td>You choose</td><td>An approval for a specific window must be started inside it</td></tr>
+            <tr><td>Default duration</td><td>1 hour</td><td>Pre-filled for members when they request access. Set per rule</td></tr>
+            <tr><td>Maximum duration</td><td>Per rule</td><td>The longest a single stretch may run, counted from when you start it. Can be set to <code>No cap</code></td></tr>
+            <tr><td>Extensions</td><td>Off</td><td>When <code>Allow lease extensions</code> is on, a member can extend once per stretch of access, without a second approval</td></tr>
+            <tr><td>History</td><td>90 days</td><td>How far back resolved requests appear</td></tr>
+            <tr><td>Shortest rotation interval</td><td>15 minutes</td><td>The shortest schedule accepted</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="who-can-do-what">Who can do what</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Action</th><th>Requires</th></tr></thead>
+          <tbody>
+            <tr><td>See that a protected item exists, and request access to it</td><td>Membership of a collection holding it</td></tr>
+            <tr><td>Start your own approved access</td><td>Nothing further. Only you can do this</td></tr>
+            <tr><td>End your own access early</td><td>To be the person holding it</td></tr>
+            <tr><td>Approve or deny a request</td><td><code>Manage</code> permission on the collection, or membership of an approver group for it</td></tr>
+            <tr><td>Revoke someone else's active access</td><td>Membership of an approver group for that item, or organization administrator</td></tr>
+            <tr><td>Create, edit or delete Access Rules</td><td>Organization <code>owner</code> or <code>administrator</code></td></tr>
+            <tr><td>Configure rotation, connectors and target systems</td><td>Organization <code>owner</code> or <code>administrator</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Approving is not administering.</strong> A collection manager who is not an administrator can approve requests but cannot change rules. An administrator with no Manage permission on a collection cannot approve its requests.</p>
+      <p><strong>Users cannot approve their own requests.</strong> This restriction also applies to organization administrators and owners.</p>
+    </section>
+
+    <section id="send-us-feedback">
+      <h2>Send us feedback</h2>
+      <p>Email us at <a href="mailto:privileged-controls@bitwarden.com">privileged-controls@bitwarden.com</a>. Please include:</p>
+      <ul>
+        <li>What you were trying to do.</li>
+        <li>What you expected, and what happened instead.</li>
+        <li>The exact wording of anything on screen, if it is relevant.</li>
+        <li>Roughly when it happened, so we can find it.</li>
+      </ul>
+      <p>We will also hold a research interview with each preview participant. Keep notes during testing, especially on initial confusion, unexpected behavior, and missing information, so you can refer to them during the interview.</p>
+      <p>Thank you for taking part in the Private Preview.</p>
+    </section>
+
+    <div class="content-footer">
+      <p>Bitwarden Privileged Controls &mdash; Private Preview. Please do not redistribute outside your organization.</p>
+    </div>
+  </main>
+
+  <aside class="rail" id="rail" aria-label="On this page">
+    <p class="rail-label">On this page</p>
+    <ul class="rail-list" id="rail-list"></ul>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <p>Bitwarden Privileged Controls &mdash; Private Preview. Please do not redistribute outside your organization.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var toggle = document.getElementById('nav-toggle');
+  var sidebar = document.getElementById('sidebar');
+  var backdrop = document.getElementById('sidebar-backdrop');
+
+  function openDrawer() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeDrawer() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', function () {
+    if (sidebar.classList.contains('open')) { closeDrawer(); } else { openDrawer(); }
+  });
+  backdrop.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDrawer();
+  });
+  sidebar.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () {
+      if (window.matchMedia('(max-width: 899px)').matches) closeDrawer();
+    });
+  });
+
+  var sections = Array.prototype.slice.call(document.querySelectorAll('main > section[id]'));
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.chapter-list a'));
+  var railList = document.getElementById('rail-list');
+
+  var chapters = sections.map(function (sec) {
+    return {
+      id: sec.id,
+      el: sec,
+      navLink: navLinks.filter(function (a) { return a.getAttribute('href') === '#' + sec.id; })[0],
+      subheads: Array.prototype.slice.call(sec.querySelectorAll(':scope > h3[id]')).map(function (h) {
+        return { id: h.id, text: h.textContent };
+      })
+    };
+  });
+
+  var currentActiveId = null;
+
+  function renderRail(chapter) {
+    railList.innerHTML = '';
+    if (!chapter || !chapter.subheads.length) return;
+    chapter.subheads.forEach(function (h) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.text;
+      li.appendChild(a);
+      railList.appendChild(li);
+    });
+  }
+
+  function spy() {
+    var offset = 96;
+    var active = chapters[0];
+    for (var i = 0; i < chapters.length; i++) {
+      if (chapters[i].el.getBoundingClientRect().top <= offset) active = chapters[i];
+    }
+    if (active && active.id !== currentActiveId) {
+      currentActiveId = active.id;
+      navLinks.forEach(function (a) { a.classList.remove('active'); });
+      if (active.navLink) active.navLink.classList.add('active');
+      renderRail(active);
+    }
+  }
+
+  window.addEventListener('scroll', spy, { passive: true });
+  window.addEventListener('resize', spy);
+  spy();
+})();
+</script>
+</body>
+</html>
