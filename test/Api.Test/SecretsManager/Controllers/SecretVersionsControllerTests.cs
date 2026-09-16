@@ -866,6 +866,7 @@ public class SecretVersionsControllerTests
         Secret secret,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
