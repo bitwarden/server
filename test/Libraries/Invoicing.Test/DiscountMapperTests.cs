@@ -154,6 +154,44 @@ public class DiscountMapperTests
     }
 
     [Fact]
+    public void Partition_RepeatingCoupon_ExposesDurationInMonths()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 0,
+          "total_discount_amounts": [
+            { "amount": 12790, "discount": { "id": "di_sm", "source": { "coupon": { "id": "cp_sm", "name": "SM Standalone", "percent_off": 100, "duration": "repeating", "duration_in_months": 12 } } } }
+          ],
+          "lines": { "data": [] }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Equal(12L, Assert.Single(result.CartLevel).DurationInMonths);
+    }
+
+    [Fact]
+    public void Partition_NonRepeatingCoupon_HasNullDurationInMonths()
+    {
+        var invoice = Deserialize("""
+        {
+          "id": "in_test",
+          "total": 11982,
+          "total_discount_amounts": [
+            { "amount": 1279, "discount": { "id": "di_once", "source": { "coupon": { "id": "cp_once", "name": "WELCOME10", "percent_off": 10, "duration": "once" } } } }
+          ],
+          "lines": { "data": [] }
+        }
+        """);
+
+        var result = DiscountMapper.Partition(invoice, new RecordingLogger<DiscountMapperTests>());
+
+        Assert.Null(Assert.Single(result.CartLevel).DurationInMonths);
+    }
+
+    [Fact]
     public void Partition_CouponWithoutExpandedCoupon_LogsAndDrops()
     {
         // total_discount_amounts[].discount has no source.coupon -> can't resolve; must log and drop.

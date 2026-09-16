@@ -82,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
-    public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
@@ -742,13 +741,6 @@ public class GlobalSettings : IGlobalSettings
         public string AccessKeyId { get; set; }
         public string AccessKeySecret { get; set; }
         public string Region { get; set; }
-    }
-
-    public class ServiceBusSettings : ConnectionStringSettings
-    {
-        public string ApplicationCacheTopicName { get; set; }
-        public string ApplicationCacheSubscriptionName { get; set; }
-        public string WebSiteInstanceId { get; set; }
     }
 
     public class AppleIapSettings
