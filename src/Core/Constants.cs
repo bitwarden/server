@@ -288,6 +288,7 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string Sm2060MachineAccountAuditLogs = "sm-2060-machine-account-audit-logs";
 
     /* Innovation Team */
 

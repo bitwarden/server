@@ -64,7 +64,6 @@ public class RevokeAccessTokenCommandTests
             .GetManyByServiceAccountIdAsync(serviceAccount.Id)
             .Returns(new List<ApiKey> { apiKey });
 
-        // Ids that do not belong to this service account's tokens
         var result = await sutProvider.Sut.RevokeAsync(serviceAccount, new List<Guid> { Guid.NewGuid() });
 
         await sutProvider.GetDependency<IApiKeyRepository>().Received(1)
