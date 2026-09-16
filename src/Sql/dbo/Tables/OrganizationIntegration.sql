@@ -6,6 +6,8 @@ CREATE TABLE [dbo].[OrganizationIntegration]
     [Configuration] VARCHAR (MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
+    [DisabledDate] DATETIME2 (7) NULL,
+    [DisabledReason] INT NULL,
     CONSTRAINT [PK_OrganizationIntegration] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationIntegration_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );

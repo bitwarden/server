@@ -7,7 +7,8 @@ AS
         oic.[Configuration],
         oi.[Configuration] AS [IntegrationConfiguration],
         oic.[Template],
-        oic.[Filters]
+        oic.[Filters],
+        oi.[DisabledDate]
     FROM
         [dbo].[OrganizationIntegrationConfiguration] oic
         INNER JOIN

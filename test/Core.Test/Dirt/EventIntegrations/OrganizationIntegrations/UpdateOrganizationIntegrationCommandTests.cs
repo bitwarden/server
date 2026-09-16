@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
@@ -45,6 +46,38 @@ public class UpdateOrganizationIntegrationCommandTests
                 organizationId,
                 existingIntegration.Type));
         Assert.Equal(updatedIntegration, result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_DisabledIntegration_ClearsTheCircuitBreakerState(
+        SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        OrganizationIntegration existingIntegration,
+        OrganizationIntegration updatedIntegration)
+    {
+        existingIntegration.Id = integrationId;
+        existingIntegration.OrganizationId = organizationId;
+        existingIntegration.Type = IntegrationType.Webhook;
+        existingIntegration.DisabledDate = DateTime.UtcNow;
+        existingIntegration.DisabledReason = IntegrationFailureCategory.AuthenticationFailed;
+        updatedIntegration.Id = integrationId;
+        updatedIntegration.OrganizationId = organizationId;
+        updatedIntegration.Type = IntegrationType.Webhook;
+        updatedIntegration.DisabledDate = DateTime.UtcNow;
+        updatedIntegration.DisabledReason = IntegrationFailureCategory.AuthenticationFailed;
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integrationId)
+            .Returns(existingIntegration);
+
+        var result = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration);
+
+        Assert.Null(result.DisabledDate);
+        Assert.Null(result.DisabledReason);
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationIntegration>(integration =>
+                integration.DisabledDate == null && integration.DisabledReason == null));
     }
 
     [Theory, BitAutoData]

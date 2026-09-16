@@ -315,6 +315,7 @@ public class GlobalSettings : IGlobalSettings
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
         public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
         public int MaxRetries { get; set; } = 3;
+        public int IntegrationCircuitBreakerThreshold { get; set; } = 0;
 
         public class AzureServiceBusSettings
         {
