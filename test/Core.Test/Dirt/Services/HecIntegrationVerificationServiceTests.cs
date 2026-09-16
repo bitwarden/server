@@ -47,7 +47,7 @@ public class HecIntegrationVerificationServiceTests
         where TException : Exception
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
-        using var httpClient = new HttpClient(new ThrowingHttpMessageHandler<TException>(exception));
+        var httpClient = new HttpClient(new ThrowingHttpMessageHandler<TException>(exception));
         clientFactory.CreateClient(HecIntegrationVerificationService.HttpClientName)
             .Returns(httpClient);
 
