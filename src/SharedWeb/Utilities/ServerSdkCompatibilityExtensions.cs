@@ -96,13 +96,14 @@ public static class ServerSdkCompatibilityExtensions
         // alike, which is what a LaunchDarkly-connected environment such as UAT needs: the
         // FlagValues defaults above only feed the data source when no SdkKey is set, so on UAT
         // they are inert and /config reported pm-37044-pam-v-0 as false.
-        //   - Pam: the branch ships PAM as a whole and UAT has to serve it. Note this is
-        //     stronger than the default above and gives up the flag-off A/B check - remove the
-        //     entry to get that back.
+        //   - Pam and PM28191_CipherAdminOpsToSdk: the branch ships PAM as a whole and UAT has
+        //     to serve it. Note this is stronger than the defaults above and gives up the
+        //     flag-off A/B check - remove the entry to get that back.
         //   - VFO1Foundation: the branch stays on the v1 layout while the VFO refresh rolls out.
         services.PinFeatureFlags(new Dictionary<string, bool>
         {
             [FeatureFlagKeys.Pam] = true,
+            [FeatureFlagKeys.PM28191_CipherAdminOpsToSdk] = true,
             [FeatureFlagKeys.VFO1Foundation] = false,
         });
 
