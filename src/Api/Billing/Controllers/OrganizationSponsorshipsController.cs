@@ -126,7 +126,9 @@ public class OrganizationSponsorshipsController : Controller
             .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        var filteredSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        var filteredSponsorship = sponsorships.FirstOrDefault(s =>
+            (s.IsAdminInitiated || s.SponsoringOrganizationUserId == sponsoringOrgUser?.Id) &&
+            s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
         if (filteredSponsorship != null)
         {
             await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
@@ -261,7 +263,7 @@ public class OrganizationSponsorshipsController : Controller
     public async Task AdminInitiatedRevokeSponsorshipAsync([FromRoute(Name = "organizationId")] Guid sponsoringOrgId, string sponsoredFriendlyName)
     {
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
-        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
+        var existingOrgSponsorship = sponsorships.FirstOrDefault(s => s.IsAdminInitiated && s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
         if (existingOrgSponsorship == null)
         {
             throw new BadRequestException("The specified sponsored organization could not be found under the given sponsoring organization.");
