@@ -71,7 +71,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
             }),
             http =>
             {
-                http.Request.Headers.Append("Bitwarden-Client-Version", "2025.10.0");
+                http.Request.Headers.Append("Bitwarden-Client-Version", "2026.9.0");
             });
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
@@ -131,7 +131,7 @@ public class ClientVersionGateTests : IClassFixture<IdentityApplicationFactory>
             }),
             http =>
             {
-                http.Request.Headers.Append("Bitwarden-Client-Version", "2025.11.0");
+                http.Request.Headers.Append("Bitwarden-Client-Version", "2026.9.1");
             });
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
