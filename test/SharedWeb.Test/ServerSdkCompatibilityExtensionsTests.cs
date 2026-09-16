@@ -156,24 +156,26 @@ public class ServerSdkCompatibilityExtensionsTests
         Assert.Equal(JsonValueKind.False, pinnedValue!.GetValueKind());
     }
 
-    [Fact]
-    public void Pam_PinnedOn_EvenWhenConfiguredOff()
+    [Theory]
+    [InlineData(FeatureFlagKeys.Pam)]
+    [InlineData(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk)]
+    public void PamFlags_PinnedOn_EvenWhenConfiguredOff(string flag)
     {
-        // The FlagValues default only feeds the data source when no SdkKey is set, so it never
-        // reaches a LaunchDarkly-connected environment - UAT reported pm-37044-pam-v-0 as false
-        // with the default in place. Only the pin gets there, so it has to beat a value too.
+        // The FlagValues defaults only feed the data source when no SdkKey is set, so they never
+        // reach a LaunchDarkly-connected environment - UAT reported both flags as false with the
+        // defaults in place. Only the pin gets there, so it has to beat a value too.
         using var provider = CreateProvider(new Dictionary<string, string?>
         {
-            { $"Features:FlagValues:{FeatureFlagKeys.Pam}", "false" },
+            { $"Features:FlagValues:{flag}", "false" },
         });
         using var scope = provider.CreateScope();
 
         var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
 
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
+        Assert.True(featureService.IsEnabled(flag));
 
         var all = featureService.GetAll();
-        Assert.True(all.TryGetValue(FeatureFlagKeys.Pam, out var pinnedValue));
+        Assert.True(all.TryGetValue(flag, out var pinnedValue));
         Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
     }
 
