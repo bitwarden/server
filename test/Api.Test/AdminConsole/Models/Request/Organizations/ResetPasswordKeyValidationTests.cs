@@ -69,7 +69,6 @@ public class ResetPasswordKeyValidationTests
         Assert.Single(Validate(model));
     }
 
-    // The enrollment endpoint uses an empty string as its withdrawal signal, so it must stay well-formed input.
     [Theory]
     [InlineData(null)]
     [InlineData("")]
