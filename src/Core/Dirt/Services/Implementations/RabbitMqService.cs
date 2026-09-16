@@ -201,11 +201,12 @@ public class RabbitMqService : IRabbitMqService
     }
 
     /// <summary>
-    /// Declares and binds the dead letter queue on its own channel. RabbitMQ rejects a redeclaration whose arguments
-    /// differ from the live queue, which closes the channel, so retention is attempted in isolation and the queue is
-    /// then declared with its original arguments rather than failing connection setup.
+    /// Declares and binds the dead letter queue. An existing queue keeps the arguments it was declared with, and
+    /// RabbitMQ fails any redeclaration that disagrees with them in either direction, which closes the channel. Each
+    /// attempt therefore runs on its own channel, and a queue that cannot be redeclared is left as it is with only its
+    /// binding ensured, so no combination of settings and queue state can fail connection setup.
     /// </summary>
-    private async Task DeclareDeadLetterQueueAsync(IConnection connection)
+    internal async Task DeclareDeadLetterQueueAsync(IConnection connection)
     {
         var arguments = BuildDeadLetterQueueArguments(_deadLetterTimeToLive);
         if (arguments is null)
@@ -215,35 +216,53 @@ public class RabbitMqService : IRabbitMqService
                 "Set DeadLetterTimeToLive on a new queue, or apply a RabbitMQ message-ttl policy to an existing one.",
                 _deadLetterQueueName);
         }
+        else if (await TryDeclareAndBindDeadLetterQueueAsync(connection, arguments))
+        {
+            return;
+        }
         else
         {
-            try
-            {
-                await DeclareAndBindDeadLetterQueueAsync(connection, arguments);
-                return;
-            }
-            catch (OperationInterruptedException ex)
-            {
-                _logger.LogWarning(
-                    "Dead letter queue {QueueName} already exists with different arguments, so DeadLetterTimeToLive " +
-                    "was not applied. Apply a RabbitMQ message-ttl policy to the queue instead. Reason: {Reason}",
-                    _deadLetterQueueName,
-                    ex.ShutdownReason?.ReplyText);
-            }
+            _logger.LogWarning(
+                "Dead letter queue {QueueName} already exists, so DeadLetterTimeToLive was not applied. " +
+                "Apply a RabbitMQ message-ttl policy to the queue instead.",
+                _deadLetterQueueName);
         }
 
-        await DeclareAndBindDeadLetterQueueAsync(connection, arguments: null);
+        if (!await TryDeclareAndBindDeadLetterQueueAsync(connection, arguments: null))
+        {
+            await BindDeadLetterQueueAsync(connection);
+        }
     }
 
-    private async Task DeclareAndBindDeadLetterQueueAsync(IConnection connection, Dictionary<string, object?>? arguments)
+    private async Task<bool> TryDeclareAndBindDeadLetterQueueAsync(
+        IConnection connection,
+        Dictionary<string, object?>? arguments)
+    {
+        try
+        {
+            using var channel = await connection.CreateChannelAsync();
+
+            await channel.QueueDeclareAsync(queue: _deadLetterQueueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: arguments);
+            await channel.QueueBindAsync(queue: _deadLetterQueueName,
+                exchange: _integrationExchangeName,
+                routingKey: _deadLetterRoutingKey);
+
+            return true;
+        }
+        catch (OperationInterruptedException)
+        {
+            return false;
+        }
+    }
+
+    private async Task BindDeadLetterQueueAsync(IConnection connection)
     {
         using var channel = await connection.CreateChannelAsync();
 
-        await channel.QueueDeclareAsync(queue: _deadLetterQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: arguments);
         await channel.QueueBindAsync(queue: _deadLetterQueueName,
             exchange: _integrationExchangeName,
             routingKey: _deadLetterRoutingKey);

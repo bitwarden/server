@@ -169,10 +169,12 @@ RabbitMQ dead letters expire on the queue's own TTL.
 a negative value omits the argument and the queue retains messages indefinitely, which is the default;
 `RabbitMqService` logs a warning while setting up its connection whenever retention is unset.
 
-RabbitMQ rejects a redeclaration whose arguments differ from the live queue, so this setting only takes effect on a
-dead letter queue that has yet to be declared. `RabbitMqService` declares the queue on its own channel and treats that
-rejection as recoverable: it logs a warning naming the queue, redeclares with the original arguments, and leaves the
-connection usable. Retention is silently not applied in that case, which is why the warning exists.
+A queue keeps the arguments it was declared with, and RabbitMQ rejects any redeclaration that disagrees with them in
+either direction, so this setting only takes effect on a dead letter queue that has yet to be declared. Changing the
+value later, or setting it back to zero, is rejected the same way as setting it for the first time on an existing
+queue. `RabbitMqService` runs each declare on its own channel and treats every rejection as recoverable: it logs a
+warning naming the queue, leaves the queue exactly as it is, and ensures only the binding, so no combination of
+settings and queue state can fail connection setup.
 
 On an instance whose dead letter queue already exists, a broker policy is the route that works. It takes effect
 without redeclaring or deleting the queue and without a deploy:
