@@ -51,24 +51,17 @@ public class DeadLetterCleanupHostedServiceTests
     [Fact]
     public void IntegrationSubscriptionNames_CoversEveryConfiguredIntegrationSubscription()
     {
-        var settings = new GlobalSettings().EventLogging.AzureServiceBus;
+        var globalSettings = new GlobalSettings();
+        var settings = globalSettings.EventLogging.AzureServiceBus;
 
-        var expected = new[]
-        {
-            settings.SlackIntegrationSubscriptionName,
-            settings.WebhookIntegrationSubscriptionName,
-            settings.HecIntegrationSubscriptionName,
-            settings.DatadogIntegrationSubscriptionName,
-            settings.TeamsIntegrationSubscriptionName
-        };
-
-        var actual = typeof(GlobalSettings.EventLoggingSettings.AzureServiceBusSettings)
+        var configured = typeof(GlobalSettings.EventLoggingSettings.AzureServiceBusSettings)
             .GetProperties()
             .Where(property => property.Name.EndsWith("IntegrationSubscriptionName"))
-            .Select(property => (string)property.GetValue(settings)!)
-            .ToArray();
+            .Select(property => (string)property.GetValue(settings)!);
 
-        Assert.Equal(expected.OrderBy(name => name), actual.OrderBy(name => name));
+        Assert.Equal(
+            configured.OrderBy(name => name),
+            DeadLetterCleanupHostedService.IntegrationSubscriptionNames(globalSettings).OrderBy(name => name));
     }
 
     [Fact]
@@ -132,10 +125,12 @@ public class DeadLetterCleanupHostedServiceTests
         Assert.False(result.ContinueSweep);
     }
 
-    [Fact]
-    public async Task ProcessBatchAsync_FullBatchAllDeleted_ContinuesSweep()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(DeadLetterCleanupHostedService.BatchSize)]
+    public async Task ProcessBatchAsync_NonEmptyBatchAllDeleted_ContinuesSweep(int messageCount)
     {
-        var messages = Enumerable.Range(0, DeadLetterCleanupHostedService.BatchSize)
+        var messages = Enumerable.Range(0, messageCount)
             .Select(i => BuildMessage($"message-{i}", _cutoff.AddDays(-1)))
             .ToArray();
         var receiver = BuildReceiver(messages);
@@ -143,19 +138,7 @@ public class DeadLetterCleanupHostedServiceTests
         var result = await DeadLetterCleanupHostedService.ProcessBatchAsync(
             receiver, _cutoff, CancellationToken.None);
 
-        Assert.Equal(DeadLetterCleanupHostedService.BatchSize, result.Deleted);
+        Assert.Equal(messageCount, result.Deleted);
         Assert.True(result.ContinueSweep);
-    }
-
-    [Fact]
-    public async Task ProcessBatchAsync_PartialBatchAllDeleted_StopsSweep()
-    {
-        var receiver = BuildReceiver(BuildMessage("only", _cutoff.AddDays(-1)));
-
-        var result = await DeadLetterCleanupHostedService.ProcessBatchAsync(
-            receiver, _cutoff, CancellationToken.None);
-
-        Assert.Equal(1, result.Deleted);
-        Assert.False(result.ContinueSweep);
     }
 }

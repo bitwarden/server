@@ -127,10 +127,12 @@ public class DeadLetterCleanupHostedService : BackgroundService
             deleted++;
         }
 
-        return (deleted, messages.Count == BatchSize);
+        // A short read does not mean the sub-queue is drained, so keep sweeping until a batch comes back
+        // empty or a message falls inside the retention window
+        return (deleted, true);
     }
 
-    private static IEnumerable<string> IntegrationSubscriptionNames(GlobalSettings globalSettings)
+    internal static IEnumerable<string> IntegrationSubscriptionNames(GlobalSettings globalSettings)
     {
         var settings = globalSettings.EventLogging.AzureServiceBus;
 
