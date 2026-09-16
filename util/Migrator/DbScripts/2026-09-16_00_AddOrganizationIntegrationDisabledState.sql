@@ -124,6 +124,9 @@ BEGIN
         [OrganizationId] = @OrganizationId
         AND [Type] = @Type
         AND [DisabledDate] IS NULL
+
+    -- Returned explicitly because SET NOCOUNT ON suppresses the row count ExecuteNonQuery would report
+    SELECT @@ROWCOUNT
 END
 GO
 

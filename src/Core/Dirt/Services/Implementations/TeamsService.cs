@@ -176,6 +176,7 @@ public class TeamsService(
             ChannelId = conversationId,
             ServiceUrl = serviceUrl
         });
+        integration.ClearDisabled();
 
         await integrationRepository.UpsertAsync(integration);
     }

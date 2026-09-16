@@ -35,8 +35,7 @@ public class UpdateOrganizationIntegrationCommand(
         updatedIntegration.CreationDate = integration.CreationDate;
 
         // An admin editing the integration is the manual intervention that clears a tripped circuit breaker
-        updatedIntegration.DisabledDate = null;
-        updatedIntegration.DisabledReason = null;
+        updatedIntegration.ClearDisabled();
 
         await integrationRepository.ReplaceAsync(updatedIntegration);
         await cache.RemoveByTagAsync(

@@ -17,4 +17,14 @@ public class OrganizationIntegration : ITableObject<Guid>
     public IntegrationFailureCategory? DisabledReason { get; set; }
 
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
+
+    /// <summary>
+    /// Re-enables an integration the circuit breaker disabled. Every path where an admin reconfigures an
+    /// integration must call this, or the breaker's disable survives the fix.
+    /// </summary>
+    public void ClearDisabled()
+    {
+        DisabledDate = null;
+        DisabledReason = null;
+    }
 }

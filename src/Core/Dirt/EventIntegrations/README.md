@@ -169,8 +169,13 @@ Zero or less, which is the default, turns the breaker off.
 
 Only non-retryable failures count. A rate-limited or unavailable service recovers on its own and should not cost an
 organization its integration, while an authentication, configuration, or permanent failure will not recover without
-someone changing the configuration. Counting consecutively also keeps one broken configuration from disabling an
-integration whose other configurations still deliver, since their successes clear the count.
+someone changing the configuration.
+
+The count is kept per organization and integration type, which is the grain the listener can attribute a failure to:
+an integration message carries no configuration id. One broken configuration can therefore disable an integration
+whose other configurations still deliver, if enough of its failures arrive without a success in between. Successes
+from the healthy configurations reset the count and make that less likely, but nothing guarantees they interleave,
+and events tend to arrive in bursts of the same type.
 
 Counting is in-process rather than distributed. A shared counter would write on every failure, which
 [CACHING](../../Utilities/CACHING.md) routes away from the backplane, so each instance counts on its own. The
