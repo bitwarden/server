@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Bitwarden.Server.Sdk.Features;
 
 namespace Bit.Core.Services.Implementations;
