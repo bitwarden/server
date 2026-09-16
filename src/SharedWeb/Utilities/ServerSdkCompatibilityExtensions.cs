@@ -92,6 +92,14 @@ public static class ServerSdkCompatibilityExtensions
         // the application cares about, add them here.
         services.AddKnownFeatureFlags(FeatureFlagKeys.GetKeys());
 
+        // pam/uat only - do not carry this to main. The branch stays on the v1 layout while the
+        // VFO refresh rolls out, so vfo1-foundation is pinned off rather than defaulted off: a
+        // LaunchDarkly-connected environment reports it on and a flag value would lose to that.
+        services.PinFeatureFlags(new Dictionary<string, bool>
+        {
+            [FeatureFlagKeys.VFO1Foundation] = false,
+        });
+
         // ServerContextBuilder needs IHttpContextAccessor and resolves ICurrentContext per-request.
         // Every consuming Startup already registers ICurrentContext, but TryAdd lets this compat
         // layer stand on its own (e.g. in tests) without overriding any custom registrations.
@@ -103,6 +111,45 @@ public static class ServerSdkCompatibilityExtensions
         // the new IFeatureService under the hood. This should help ease migration but should
         // eventually go away
         services.TryAddScoped<Bit.Core.Services.IFeatureService, DelegatingFeatureService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// pam/uat only - do not carry this to main. Wraps the registered SDK
+    /// <see cref="IFeatureService"/> in a <see cref="PinnedFlagFeatureService"/>.
+    /// </summary>
+    /// <remarks>
+    /// Every entry point calls <c>UseBitwardenSdk()</c> on the host builder before
+    /// <c>UseStartup</c>, so the SDK registration is always in place by the time this runs;
+    /// a missing one means the wireup changed, and failing loudly beats silently unpinning.
+    /// </remarks>
+    private static IServiceCollection PinFeatureFlags(
+        this IServiceCollection services,
+        IReadOnlyDictionary<string, bool> pinned)
+    {
+        var descriptor = services.LastOrDefault(
+                service => !service.IsKeyedService && service.ServiceType == typeof(IFeatureService))
+            ?? throw new InvalidOperationException(
+                "No IFeatureService is registered - AddFeatureFlagServices() must run first.");
+
+        services.Remove(descriptor);
+
+        var inner = descriptor switch
+        {
+            { ImplementationFactory: not null } =>
+                provider => (IFeatureService)descriptor.ImplementationFactory(provider)!,
+            { ImplementationInstance: not null } =>
+                (Func<IServiceProvider, IFeatureService>)(_ => (IFeatureService)descriptor.ImplementationInstance),
+            { ImplementationType: not null } =>
+                provider => (IFeatureService)ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType),
+            _ => throw new InvalidOperationException("The registered IFeatureService cannot be decorated."),
+        };
+
+        services.Add(new ServiceDescriptor(
+            typeof(IFeatureService),
+            provider => new PinnedFlagFeatureService(inner(provider), pinned),
+            descriptor.Lifetime));
 
         return services;
     }
