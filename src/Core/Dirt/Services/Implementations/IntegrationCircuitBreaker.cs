@@ -24,6 +24,19 @@ public class IntegrationCircuitBreaker(
 
     public async Task RecordResultAsync(IIntegrationMessage message, IntegrationHandlerResult result)
     {
+        // The breaker must never change what the listener does with the message that triggered it
+        try
+        {
+            await RecordAsync(message, result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to record an integration result for the circuit breaker.");
+        }
+    }
+
+    private async Task RecordAsync(IIntegrationMessage message, IntegrationHandlerResult result)
+    {
         var threshold = globalSettings.EventLogging.IntegrationCircuitBreakerThreshold;
         if (threshold <= 0 || !Guid.TryParse(message.OrganizationId, out var organizationId))
         {
