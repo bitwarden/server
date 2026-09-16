@@ -1,5 +1,6 @@
 ﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -75,6 +76,7 @@ public class SecretVersionsControllerTests
         List<SecretVersion> versions,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
@@ -174,6 +176,7 @@ public class SecretVersionsControllerTests
         List<SecretVersion> versions,
         Guid serviceAccountId)
     {
+        SetVersioningEnabled(sutProvider, true);
         foreach (var version in versions)
         {
             version.SecretId = secret.Id;
@@ -216,6 +219,7 @@ public class SecretVersionsControllerTests
         Secret secret,
         Guid serviceAccountId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
 
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
@@ -288,6 +292,7 @@ public class SecretVersionsControllerTests
         Secret secret,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
         sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(version.Id).Returns(version);
         sutProvider.GetDependency<ISecretVersionRepository>().GetDetailsByIdAsync(version.Id)
@@ -387,6 +392,7 @@ public class SecretVersionsControllerTests
         RestoreSecretVersionRequestModel request,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
         request.VersionId = version.Id;
         var versionValue = version.Value;
@@ -421,6 +427,7 @@ public class SecretVersionsControllerTests
         RestoreSecretVersionRequestModel request,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
         request.VersionId = version.Id;
         var restoredValue = version.Value;
@@ -456,6 +463,7 @@ public class SecretVersionsControllerTests
         RestoreSecretVersionRequestModel request,
         Guid userId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
         request.VersionId = version.Id;
 
@@ -647,6 +655,7 @@ public class SecretVersionsControllerTests
         RestoreSecretVersionRequestModel request,
         Guid serviceAccountId)
     {
+        SetVersioningEnabled(sutProvider, true);
         version.SecretId = secret.Id;
         request.VersionId = version.Id;
         var restoredValue = version.Value;
@@ -908,6 +917,7 @@ public class SecretVersionsControllerTests
         Guid userId,
         Guid organizationId)
     {
+        SetVersioningEnabled(sutProvider, true);
         var firstSecretId = Guid.NewGuid();
         var secondSecretId = Guid.NewGuid();
         versions[0].SecretId = firstSecretId;
@@ -987,6 +997,72 @@ public class SecretVersionsControllerTests
             sutProvider.Sut.GetManyByIdsAsync(versionIds));
 
         await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetVersionsBySecretId_VersioningDisabled_LogsNothing(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        List<SecretVersion> versions,
+        Guid userId)
+    {
+        // [RequireFeature] normally rejects the request first; this covers the logging guard itself.
+        SetVersioningEnabled(sutProvider, false);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(false);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
+            .ReturnsForAnyArgs((true, false));
+        foreach (var version in versions)
+        {
+            version.SecretId = secret.Id;
+        }
+        sutProvider.GetDependency<ISecretVersionRepository>().GetManyDetailsBySecretIdAsync(secret.Id)
+            .Returns(versions.Select(v => new SecretVersionDetails { SecretVersion = v }).ToList());
+
+        var result = await sutProvider.Sut.GetVersionsBySecretIdAsync(secret.Id);
+
+        Assert.Equal(versions.Count, result.Data.Count());
+        await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreVersion_VersioningDisabled_LogsNothing(
+        SutProvider<SecretVersionsController> sutProvider,
+        Secret secret,
+        SecretVersion version,
+        RestoreSecretVersionRequestModel request,
+        Guid userId)
+    {
+        SetVersioningEnabled(sutProvider, false);
+        version.SecretId = secret.Id;
+        request.VersionId = version.Id;
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secret.Id).Returns(secret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(secret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default)
+            .ReturnsForAnyArgs((true, true));
+        sutProvider.GetDependency<ISecretVersionRepository>().GetByIdAsync(request.VersionId).Returns(version);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>())
+            .Returns(x => x.Arg<Secret>());
+
+        await sutProvider.Sut.RestoreVersionAsync(secret.Id, request);
+
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>());
+        await AssertNoSecretEventLoggedAsync(sutProvider);
+    }
+
+    private static void SetVersioningEnabled(SutProvider<SecretVersionsController> sutProvider, bool enabled)
+    {
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.SecretsVersioning)
+            .Returns(enabled);
     }
 
     private static async Task AssertNoSecretEventLoggedAsync(SutProvider<SecretVersionsController> sutProvider)

@@ -26,6 +26,7 @@ public class SecretVersionsController : Controller
     private readonly IUserService _userService;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IEventService _eventService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
@@ -33,7 +34,8 @@ public class SecretVersionsController : Controller
         ISecretRepository secretRepository,
         IUserService userService,
         IUpdateSecretCommand updateSecretCommand,
-        IEventService eventService)
+        IEventService eventService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
@@ -41,6 +43,7 @@ public class SecretVersionsController : Controller
         _userService = userService;
         _updateSecretCommand = updateSecretCommand;
         _eventService = eventService;
+        _featureService = featureService;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -257,6 +260,14 @@ public class SecretVersionsController : Controller
 
     private async Task LogSecretsEventAsync(IEnumerable<Secret> secrets, EventType eventType)
     {
+        // The controller is already gated by [RequireFeature], but the event log is gated again here
+        // so version audit events can never be written while secrets versioning is disabled, even if
+        // the attribute is removed or an action is reached another way.
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning))
+        {
+            return;
+        }
+
         var userId = _userService.GetProperUserId(User)!.Value;
 
         switch (_currentContext.IdentityClientType)
