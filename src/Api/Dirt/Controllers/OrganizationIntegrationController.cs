@@ -79,6 +79,11 @@ public class OrganizationIntegrationController(
     [HttpPut("{integrationId:guid}")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> UpdateAsync(Guid organizationId, Guid integrationId, [FromBody] OrganizationIntegrationRequestModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         if (!await HasPermission(organizationId))
         {
             return NotFound();
