@@ -1,7 +1,11 @@
-﻿using Bit.Api.Dirt.Models.Request;
+﻿using System.Text.Json;
+using Bit.Api.Dirt.Models.Request;
 using Bit.Api.Dirt.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
+using Bit.Core.Dirt.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +18,8 @@ public class OrganizationIntegrationController(
     ICreateOrganizationIntegrationCommand createCommand,
     IUpdateOrganizationIntegrationCommand updateCommand,
     IDeleteOrganizationIntegrationCommand deleteCommand,
-    IGetOrganizationIntegrationsQuery getQuery) : Controller
+    IGetOrganizationIntegrationsQuery getQuery,
+    IHecIntegrationVerificationService hecVerificationService) : Controller
 {
     [HttpGet("")]
     public async Task<ActionResult<List<OrganizationIntegrationResponseModel>>> GetAsync(Guid organizationId)
@@ -60,6 +65,12 @@ public class OrganizationIntegrationController(
             return Conflict();
         }
 
+        var verificationError = await VerifyHecAsync(model, organizationId);
+        if (verificationError is not null)
+        {
+            return verificationError;
+        }
+
         var created = await createCommand.CreateAsync(integration);
         return Ok(new OrganizationIntegrationResponseModel(created));
 
@@ -71,6 +82,12 @@ public class OrganizationIntegrationController(
         if (!await HasPermission(organizationId))
         {
             return NotFound();
+        }
+
+        var verificationError = await VerifyHecAsync(model, organizationId);
+        if (verificationError is not null)
+        {
+            return verificationError;
         }
 
         var integration = model.ToOrganizationIntegration(organizationId);
@@ -95,6 +112,23 @@ public class OrganizationIntegrationController(
     public async Task<IActionResult> PostDeleteAsync(Guid organizationId, Guid integrationId)
     {
         return await DeleteAsync(organizationId, integrationId);
+    }
+
+    private async Task<ActionResult?> VerifyHecAsync(OrganizationIntegrationRequestModel model, Guid organizationId)
+    {
+        if (model.Type != IntegrationType.Hec)
+        {
+            return null;
+        }
+
+        var hecIntegration = JsonSerializer.Deserialize<HecIntegration>(model.Configuration!);
+        if (hecIntegration is null)
+        {
+            return BadRequest("Invalid HEC integration configuration.");
+        }
+
+        var result = await hecVerificationService.VerifyAsync(hecIntegration, organizationId);
+        return result.Success ? null : BadRequest(result.FailureReason);
     }
 
     private async Task<bool> HasPermission(Guid organizationId)

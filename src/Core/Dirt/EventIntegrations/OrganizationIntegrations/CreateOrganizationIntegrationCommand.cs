@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Dirt.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
@@ -13,6 +15,7 @@ namespace Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
 /// </summary>
 public class CreateOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,
+    IEventService eventService,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
     IFusionCache cache)
     : ICreateOrganizationIntegrationCommand
@@ -42,6 +45,8 @@ public class CreateOrganizationIntegrationCommand(
                 organizationId: integration.OrganizationId,
                 integrationType: integration.Type
             ));
+
+        await eventService.LogOrganizationIntegrationEventAsync(created, EventType.OrganizationIntegration_Added);
 
         return created;
     }
