@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Text.Json;
+using Bit.Core;
 using Bit.SharedWeb.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Configuration;
@@ -132,6 +133,27 @@ public class ServerSdkCompatibilityExtensionsTests
 
         Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
         Assert.True(featureService.IsEnabled(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk));
+    }
+
+    [Fact]
+    public void Vfo1Foundation_PinnedOff_EvenWhenConfiguredOn()
+    {
+        using var provider = CreateProvider(new Dictionary<string, string?>
+        {
+            { $"Features:FlagValues:{FeatureFlagKeys.VFO1Foundation}", "true" },
+        });
+        using var scope = provider.CreateScope();
+
+        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
+
+        Assert.False(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
+        Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
+
+        // The clients fall back to their own default for an omitted flag, so /config has to
+        // state the pinned flag outright rather than leave it out.
+        var all = featureService.GetAll();
+        Assert.True(all.TryGetValue(FeatureFlagKeys.VFO1Foundation, out var pinnedValue));
+        Assert.Equal(JsonValueKind.False, pinnedValue!.GetValueKind());
     }
 
     private static ServiceProvider CreateProvider(
