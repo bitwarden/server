@@ -30,6 +30,12 @@ public class EventIntegrationHandler<T>(
     {
         foreach (var configuration in await GetConfigurationDetailsListAsync(eventMessage))
         {
+            if (configuration.DisabledDate is not null)
+            {
+                // The circuit breaker disabled this integration; it stays off until an admin edits it
+                continue;
+            }
+
             try
             {
                 if (configuration.Filters is string filterJson)

@@ -156,6 +156,38 @@ defaults to `false` which indicates we should use retry queues with a timing che
      isn't enabled. Since this solution is only intended for self-host, it should be a pretty minimal impact with short
      delays and a small number of retries.
 
+### Circuit breaker
+
+An organization whose credentials have been revoked fails every event it produces, forever, and each failure costs a
+delivery attempt and a dead letter; `IntegrationCircuitBreaker` bounds that by disabling the integration once the
+failures are clearly not going to resolve on their own.
+
+Both integration listeners report every final outcome to the breaker. A success clears the organization's failure
+count for that integration. A non-retryable failure adds to it, and reaching
+`GlobalSettings.EventLogging.IntegrationCircuitBreakerThreshold` consecutive failures disables the integration.
+Zero or less, which is the default, turns the breaker off.
+
+Only non-retryable failures count. A rate-limited or unavailable service recovers on its own and should not cost an
+organization its integration, while an authentication, configuration, or permanent failure will not recover without
+someone changing the configuration. Counting consecutively also keeps one broken configuration from disabling an
+integration whose other configurations still deliver, since their successes clear the count.
+
+Counting is in-process rather than distributed. A shared counter would write on every failure, which
+[CACHING](../../Utilities/CACHING.md) routes away from the backplane, so each instance counts on its own. The
+repository only transitions an integration that is still enabled, so several instances tripping at once still produce
+a single change.
+
+Disabling writes `DisabledDate` and `DisabledReason` to `OrganizationIntegration` and removes the organization's
+integration tag from the cache, which is the same invalidation path the admin commands use. `EventIntegrationHandler`
+reads `DisabledDate` through the configuration details it already caches, so enforcement costs nothing on the hot
+path: a disabled integration is skipped before a message is ever published.
+
+Nothing re-enables an integration on a timer. An admin editing it clears both columns through
+`UpdateOrganizationIntegrationCommand`, which is the manual intervention that closes the breaker.
+
+Two things this deliberately does not do: it does not notify the organization (so an admin still has to notice the
+integration stopped) and it does not pause an integration globally when a provider has an outage.
+
 ### Dead letter retention
 
 Every dead letter in this architecture is explicit. The listener calls the platform's dead letter path once retries

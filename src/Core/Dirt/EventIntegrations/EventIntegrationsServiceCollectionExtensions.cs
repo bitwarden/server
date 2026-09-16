@@ -307,6 +307,7 @@ public static class EventIntegrationsServiceCollectionExtensions
         // NOTE: AddDistributedCache must be called by the caller before this method
         services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
+        services.TryAddSingleton<IIntegrationCircuitBreaker, IntegrationCircuitBreaker>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
 
         // Add services in support of handlers
@@ -440,6 +441,7 @@ public static class EventIntegrationsServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    circuitBreaker: provider.GetRequiredService<IIntegrationCircuitBreaker>(),
                     serviceBusOptions: new ServiceBusProcessorOptions()
                     {
                         PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
@@ -508,6 +510,7 @@ public static class EventIntegrationsServiceCollectionExtensions
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     configuration: listenerConfiguration,
                     rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
+                    circuitBreaker: provider.GetRequiredService<IIntegrationCircuitBreaker>(),
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>(),
                     timeProvider: provider.GetRequiredService<TimeProvider>()
                 )
