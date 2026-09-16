@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
@@ -28,7 +28,8 @@ public class HecIntegrationVerificationServiceTests
     {
         _handler = new MockedHttpMessageHandler();
         _handler.Fallback
-            .WithStatusCode(HttpStatusCode.OK);
+            .WithStatusCode(HttpStatusCode.OK)
+            .WithContent(new StringContent(string.Empty));
         _httpClient = _handler.ToHttpClient();
     }
 
@@ -59,7 +60,6 @@ public class HecIntegrationVerificationServiceTests
     [Theory, BitAutoData]
     public async Task VerifyAsync_200_ReturnsSuccess(Guid organizationId)
     {
-        _handler.Fallback.WithStatusCode(HttpStatusCode.OK);
         var sutProvider = GetSutProvider();
 
         var result = await sutProvider.Sut.VerifyAsync(_integration, organizationId);
@@ -81,7 +81,9 @@ public class HecIntegrationVerificationServiceTests
     [Theory, BitAutoData]
     public async Task VerifyAsync_401_ReturnsAuthFailure(Guid organizationId)
     {
-        _handler.Fallback.WithStatusCode(HttpStatusCode.Unauthorized);
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.Unauthorized)
+            .WithContent(new StringContent(string.Empty));
         var sutProvider = GetSutProvider();
 
         var result = await sutProvider.Sut.VerifyAsync(_integration, organizationId);
@@ -94,7 +96,9 @@ public class HecIntegrationVerificationServiceTests
     [Theory, BitAutoData]
     public async Task VerifyAsync_403_ReturnsAuthFailure(Guid organizationId)
     {
-        _handler.Fallback.WithStatusCode(HttpStatusCode.Forbidden);
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.Forbidden)
+            .WithContent(new StringContent(string.Empty));
         var sutProvider = GetSutProvider();
 
         var result = await sutProvider.Sut.VerifyAsync(_integration, organizationId);
@@ -107,7 +111,9 @@ public class HecIntegrationVerificationServiceTests
     [Theory, BitAutoData]
     public async Task VerifyAsync_404_ReturnsConfigError(Guid organizationId)
     {
-        _handler.Fallback.WithStatusCode(HttpStatusCode.NotFound);
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.NotFound)
+            .WithContent(new StringContent(string.Empty));
         var sutProvider = GetSutProvider();
 
         var result = await sutProvider.Sut.VerifyAsync(_integration, organizationId);
@@ -121,7 +127,9 @@ public class HecIntegrationVerificationServiceTests
     public async Task VerifyAsync_400_ReturnsConfigError(Guid organizationId)
     {
         // Splunk returns 400 when the target index is not in the allowed-indexes policy
-        _handler.Fallback.WithStatusCode(HttpStatusCode.BadRequest);
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.BadRequest)
+            .WithContent(new StringContent(string.Empty));
         var sutProvider = GetSutProvider();
 
         var result = await sutProvider.Sut.VerifyAsync(_integration, organizationId);

@@ -27,7 +27,7 @@ public class HecIntegrationVerificationService(
                 @event = new { organizationId, date = DateTime.UtcNow, message = "Bitwarden integration verification" },
             });
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, integration.Uri);
+            var request = new HttpRequestMessage(HttpMethod.Post, integration.Uri);
             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
             request.Headers.Authorization = new AuthenticationHeaderValue(
                 integration.Scheme,
