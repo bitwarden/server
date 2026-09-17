@@ -29,7 +29,7 @@ public class UpdateTargetSystemPolicyCommand : IUpdateTargetSystemPolicyCommand
 
     public async Task UpdateAsync(
         Guid organizationId, Guid actingUserId, Guid targetSystemId, PamPasswordPolicy passwordPolicy,
-        bool supportsSessionTermination)
+        bool? supportsSessionTermination)
     {
         var target = await _targetSystemRepository.GetByIdAsync(targetSystemId);
         if (target is null || target.OrganizationId != organizationId)
@@ -37,12 +37,20 @@ public class UpdateTargetSystemPolicyCommand : IUpdateTargetSystemPolicyCommand
             throw new NotFoundException();
         }
 
-        if (target.Method != PamTargetSystemMethod.Automatic)
+        if (target.Method == PamTargetSystemMethod.Automatic)
         {
-            throw new BadRequestException("Only automatic target systems have a password policy.");
+            if (supportsSessionTermination is null)
+            {
+                throw new BadRequestException(
+                    "An automatic target system requires a session-termination capability.");
+            }
+        }
+        else if (supportsSessionTermination is not null)
+        {
+            throw new BadRequestException("A manual target system has no session-termination capability.");
         }
 
-        var isWithdrawingTermination = target.SupportsSessionTermination == true && !supportsSessionTermination;
+        var isWithdrawingTermination = target.SupportsSessionTermination == true && supportsSessionTermination == false;
         if (isWithdrawingTermination &&
             await _configRepository.AnyByTargetSystemWithTerminateSessionsAsync(targetSystemId))
         {

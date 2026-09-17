@@ -45,7 +45,7 @@ public class UpdateTargetSystemPolicyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_ManualTarget_ThrowsBadRequest(Guid actingUserId, PamTargetSystem target)
+    public async Task UpdateAsync_ManualTargetWithSessionTermination_ThrowsBadRequest(Guid actingUserId, PamTargetSystem target)
     {
         var sutProvider = Setup();
         target.Method = PamTargetSystemMethod.Manual;
@@ -90,6 +90,38 @@ public class UpdateTargetSystemPolicyCommandTests
 
         await sutProvider.GetDependency<IPamTargetSystemRepository>().Received(1).ReplaceAsync(Arg.Is<PamTargetSystem>(t =>
             t.Id == target.Id && t.SupportsSessionTermination == false));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_AutomaticTargetWithoutSessionTermination_ThrowsBadRequest(
+        Guid actingUserId, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(target.OrganizationId, actingUserId, target.Id, _policy, null));
+
+        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_ManualTarget_UpdatesPolicyAndLeavesTerminationUnset(
+        Guid actingUserId, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        target.Method = PamTargetSystemMethod.Manual;
+        target.SupportsSessionTermination = null;
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
+
+        await sutProvider.Sut.UpdateAsync(target.OrganizationId, actingUserId, target.Id, _policy, null);
+
+        await sutProvider.GetDependency<IPamTargetSystemRepository>().Received(1).ReplaceAsync(Arg.Is<PamTargetSystem>(t =>
+            t.Id == target.Id
+            && t.PasswordPolicy == PamPasswordPolicy.Serialize(_policy)
+            && t.SupportsSessionTermination == null
+            && t.RevisionDate == _now));
     }
 
     [Theory, BitAutoData]
