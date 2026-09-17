@@ -163,8 +163,8 @@ delivery attempt and a dead letter; `IntegrationCircuitBreaker` bounds that by d
 are clearly not going to resolve on their own.
 
 Detection is [Polly](https://www.pollydocs.org/strategies/circuit-breaker.html) rather than a hand-rolled counter.
-Both integration listeners report every final outcome to the breaker, which replays the non-retryable ones into a
-keyed `ResiliencePipelineRegistry` so Polly can measure them over a rolling window:
+Both integration listeners report every final outcome to the breaker, which replays all of them into a keyed
+`ResiliencePipelineRegistry`, where Polly measures the non-retryable failures over a rolling window:
 
 | Setting | Meaning |
 | --- | --- |
