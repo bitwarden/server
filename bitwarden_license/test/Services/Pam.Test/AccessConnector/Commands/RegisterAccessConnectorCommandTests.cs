@@ -80,11 +80,11 @@ public class RegisterAccessConnectorCommandTests
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonRegistered && e.Phase == AccessAuditEventPhase.Attempt
-            && e.OrganizationId == organizationId && e.ActorId == actingUserId && e.DaemonName == name));
+            e.Kind == AccessAuditEventKind.AccessConnectorRegistered && e.Phase == AccessAuditEventPhase.Attempt
+            && e.OrganizationId == organizationId && e.ActorId == actingUserId && e.AccessConnectorName == name));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonRegistered && e.Phase == AccessAuditEventPhase.Outcome
-            && e.DaemonId == daemonId));
+            e.Kind == AccessAuditEventKind.AccessConnectorRegistered && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessConnectorId == daemonId));
     }
 
     private static SutProvider<RegisterAccessConnectorCommand> Setup()
