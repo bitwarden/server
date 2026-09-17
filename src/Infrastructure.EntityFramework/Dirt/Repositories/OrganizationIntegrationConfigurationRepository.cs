@@ -83,20 +83,27 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         }
     }
 
-    public async Task ClearDisabledByIntegrationAsync(Guid organizationIntegrationId)
+    public async Task<int> ClearDisabledByIntegrationAsync(
+        Guid organizationId,
+        Guid organizationIntegrationId,
+        DateTime revisionDate)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
-            await dbContext.OrganizationIntegrationConfigurations
+            // Scoped through the integration so the write cannot cross tenants, matching the disable path
+            return await dbContext.OrganizationIntegrationConfigurations
                 .Where(configuration => configuration.OrganizationIntegrationId == organizationIntegrationId
-                    && configuration.DisabledDate != null)
+                    && configuration.DisabledDate != null
+                    && dbContext.OrganizationIntegrations.Any(integration =>
+                        integration.Id == configuration.OrganizationIntegrationId
+                        && integration.OrganizationId == organizationId))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(configuration => configuration.DisabledDate, (DateTime?)null)
-                    .SetProperty(configuration => configuration.DisabledReason, (IntegrationFailureCategory?)null));
+                    .SetProperty(configuration => configuration.DisabledReason, (IntegrationFailureCategory?)null)
+                    .SetProperty(configuration => configuration.RevisionDate, revisionDate));
         }
     }
-
 
 }

@@ -4,6 +4,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
@@ -15,7 +16,8 @@ public class UpdateOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository configurationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
-    IFusionCache cache)
+    IFusionCache cache,
+    ILogger<UpdateOrganizationIntegrationCommand> logger)
     : IUpdateOrganizationIntegrationCommand
 {
     public async Task<OrganizationIntegration> UpdateAsync(
@@ -39,7 +41,19 @@ public class UpdateOrganizationIntegrationCommand(
 
         // Credentials live on the integration, so fixing it is what recovers the configurations the breaker
         // disabled underneath it
-        await configurationRepository.ClearDisabledByIntegrationAsync(integration.Id);
+        var reEnabled = await configurationRepository.ClearDisabledByIntegrationAsync(
+            organizationId: organizationId,
+            organizationIntegrationId: integration.Id,
+            revisionDate: updatedIntegration.RevisionDate);
+        if (reEnabled > 0)
+        {
+            logger.LogInformation(
+                "Re-enabled {Count} integration configurations disabled by the circuit breaker. " +
+                "OrganizationId: {OrgId}, IntegrationType: {IntegrationType}",
+                reEnabled,
+                organizationId,
+                integration.Type);
+        }
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
                 organizationId: organizationId,

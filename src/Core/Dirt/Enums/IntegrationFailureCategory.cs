@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Dirt.Models.Data.EventIntegrations;
+﻿namespace Bit.Core.Dirt.Enums;
 
 /// <summary>
 /// Categories of event integration failures used for classification and retry logic.

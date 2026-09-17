@@ -2,6 +2,7 @@
 
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Dirt.Services.Implementations;
