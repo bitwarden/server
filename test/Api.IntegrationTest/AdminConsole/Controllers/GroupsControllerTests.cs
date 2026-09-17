@@ -215,11 +215,12 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     }
 
     [Theory]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, false)]
-    [InlineData(false, false, true)]
-    public async Task GetOrganizationGroups_AsCustomWithManageUsersOrGroupsOrAccessReports_ReturnsSuccess(
-        bool manageUsers, bool manageGroups, bool accessReports)
+    [InlineData(true, false, false, false)]
+    [InlineData(false, true, false, false)]
+    [InlineData(false, false, true, false)]
+    [InlineData(false, false, false, true)]
+    public async Task GetOrganizationGroups_AsCustomWithManageUsersOrGroupsOrResetPasswordOrAccessReports_ReturnsSuccess(
+        bool manageUsers, bool manageGroups, bool manageResetPassword, bool accessReports)
     {
         var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.Custom,
@@ -227,6 +228,7 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
             {
                 ManageUsers = manageUsers,
                 ManageGroups = manageGroups,
+                ManageResetPassword = manageResetPassword,
                 AccessReports = accessReports,
             });
 

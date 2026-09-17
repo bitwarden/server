@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -486,6 +487,25 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
+    public async Task LogOrganizationIntegrationEventAsync(OrganizationIntegration organizationIntegration,
+        EventType type, DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationIntegration.OrganizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationIntegration.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
     public async Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
     {
         var materializedSecrets = secrets.ToList();
@@ -713,6 +733,15 @@ public class EventService : IEventService
     public async Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null)
     {
+        // Create/edit/delete events have no org context and can come from a request with no
+        // Device-Type header at all, e.g. DeleteSendsJob's scheduled expiration cleanup, which runs
+        // with no HTTP request and thus no CurrentContext.DeviceType. Report Server instead of unknown.
+        var deviceType = _currentContext.DeviceType;
+        if (deviceType == null && organizationContext == null)
+        {
+            deviceType = DeviceType.Server;
+        }
+
         var events = new List<IEvent>
         {
             new EventMessage(_currentContext)
@@ -721,6 +750,7 @@ public class EventService : IEventService
                 ActingUserId = sendOwnerUserId,
                 Type = type,
                 SendId = sendId,
+                DeviceType = deviceType,
                 Date = DateTime.UtcNow
             }
         };
@@ -752,6 +782,7 @@ public class EventService : IEventService
                     DomainName = domainName,
                     Type = type,
                     SendId = sendId,
+                    DeviceType = deviceType,
                     Date = DateTime.UtcNow
                 };
             }));
@@ -770,6 +801,7 @@ public class EventService : IEventService
                 ActingUserId = organizationContext == null ? sendOwnerUserId : null,
                 Type = type,
                 SendId = sendId,
+                DeviceType = deviceType,
                 Date = DateTime.UtcNow
             }));
 

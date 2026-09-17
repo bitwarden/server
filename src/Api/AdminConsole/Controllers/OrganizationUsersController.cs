@@ -23,6 +23,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -81,7 +82,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IPricingClient _pricingClient;
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IBulkResendOrganizationInvitesCommand _bulkResendOrganizationInvitesCommand;
-    private readonly IAutomaticallyConfirmOrganizationUserCommand _automaticallyConfirmOrganizationUserCommand;
     private readonly IBulkAutomaticallyConfirmOrganizationUsersCommand _bulkAutomaticallyConfirmOrganizationUsersCommand;
     private readonly V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand _revokeOrganizationUserCommandVNext;
     private readonly IConfirmOrganizationUserCommand _confirmOrganizationUserCommand;
@@ -95,7 +95,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IConfirmOrganizationInviteLinkCommand _confirmOrganizationInviteLinkCommand;
     private readonly IGetOrganizationInviteCommand _getOrganizationInviteCommand;
     private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommandVNext;
+    private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IInviteStagedOrganizationUsersCommand _inviteStagedOrganizationUsersCommand;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -122,7 +124,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IBulkResendOrganizationInvitesCommand bulkResendOrganizationInvitesCommand,
         IAdminRecoverAccountCommand adminRecoverAccountCommand,
-        IAutomaticallyConfirmOrganizationUserCommand automaticallyConfirmOrganizationUserCommand,
         IBulkAutomaticallyConfirmOrganizationUsersCommand bulkAutomaticallyConfirmOrganizationUsersCommand,
         V2_RevokeOrganizationUserCommand.IRevokeOrganizationUserCommand revokeOrganizationUserCommandVNext,
         ISelfRevokeOrganizationUserCommand selfRevokeOrganizationUserCommand,
@@ -132,7 +133,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IConfirmOrganizationInviteLinkCommand confirmOrganizationInviteLinkCommand,
         IGetOrganizationInviteCommand getOrganizationInviteCommand,
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
-        IGlobalSettings globalSettings)
+        IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
+        IGlobalSettings globalSettings,
+        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -155,7 +158,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _pricingClient = pricingClient;
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _bulkResendOrganizationInvitesCommand = bulkResendOrganizationInvitesCommand;
-        _automaticallyConfirmOrganizationUserCommand = automaticallyConfirmOrganizationUserCommand;
         _bulkAutomaticallyConfirmOrganizationUsersCommand = bulkAutomaticallyConfirmOrganizationUsersCommand;
         _revokeOrganizationUserCommandVNext = revokeOrganizationUserCommandVNext;
         _confirmOrganizationUserCommand = confirmOrganizationUserCommand;
@@ -169,7 +171,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _confirmOrganizationInviteLinkCommand = confirmOrganizationInviteLinkCommand;
         _getOrganizationInviteCommand = getOrganizationInviteCommand;
         _updateOrganizationUserCommandVNext = updateOrganizationUserCommandVNext;
+        _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
+        _inviteStagedOrganizationUsersCommand = inviteStagedOrganizationUsersCommand;
     }
 
     [HttpGet("{id}")]
@@ -342,6 +346,36 @@ public class OrganizationUsersController : BaseAdminConsoleController
         await _resendOrganizationInviteCommand.ResendInviteAsync(orgId, userId.Value, id);
     }
 
+    /// <summary>
+    /// Invites members who are currently in Staged status, without changing their access.
+    /// </summary>
+    /// <remarks>
+    /// Backs the members-grid "Send invite" row action. Configuring role, collections, or groups while inviting
+    /// goes through <see cref="Invite"/> instead, which is email-keyed because a staged member cannot be told
+    /// apart from a new one by email alone.
+    /// </remarks>
+    [HttpPost("send-invite")]
+    [Authorize<ManageUsersRequirement>]
+    [ProducesResponseType(typeof(ListResponseModel<OrganizationUserBulkResponseModel>), (int)HttpStatusCode.OK)]
+    public async Task<IResult> SendInviteToStagedUsers([FromRoute] Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User);
+
+        var result = await _inviteStagedOrganizationUsersCommand.RunAsync(new InviteStagedOrganizationUsersRequest
+        {
+            OrganizationId = orgId,
+            OrganizationUserIds = model.Ids,
+            PerformedBy = userId!.Value
+        });
+
+        return Handle(result, results => TypedResults.Ok(
+            new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+                new OrganizationUserBulkResponseModel(r.Id, r.Result.Match(
+                    error => error.Message,
+                    _ => string.Empty))))));
+    }
+
     [HttpPost("{organizationUserId}/accept-init")]
     public async Task<IResult> AcceptInit([FromRoute] Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
     {
@@ -450,8 +484,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var collectionAccessToSave = await GetAuthorizedCollectionsToSaveAsync(model, currentAccess, editingSelf, organization);
 
-        var actingContext = _currentContext.GetOrganization(organization.Id);
-
         var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
             organizationUser,
             organization,
@@ -464,11 +496,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             model.Email,
             model.Name,
             model.DefaultUserCollectionName,
-            new StandardUser(
-                userId,
-                await _currentContext.OrganizationOwner(organization.Id),
-                actingContext?.Type,
-                actingContext?.Permissions));
+            await _getActingUserForOrganizationQuery.GetActingUserAsync(userId, organization.Id));
 
         var result = await _updateOrganizationUserCommandVNext.UpdateUserAsync(request);
         return Handle(result);
@@ -587,14 +615,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         await _removeOrganizationUserCommand.RemoveUserAsync(orgId, id, userId.Value);
     }
 
-    [HttpPost("{id}/remove")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PostRemove([FromRoute] Guid orgId, Guid id)
-    {
-        await Remove(orgId, id);
-    }
-
     [HttpDelete("")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -603,14 +623,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         var result = await _removeOrganizationUserCommand.RemoveUsersAsync(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
-    }
-
-    [HttpPost("remove")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkRemove([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRemove(orgId, model);
     }
 
     [HttpDelete("{id}/delete-account")]
@@ -633,14 +645,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         );
     }
 
-    [HttpPost("{id}/delete-account")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PostDeleteAccount([FromRoute] Guid orgId, Guid id)
-    {
-        await DeleteAccount(orgId, id);
-    }
-
     [HttpDelete("delete-account")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -659,14 +663,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         ));
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(responses);
-    }
-
-    [HttpPost("delete-account")]
-    [Obsolete("This endpoint is deprecated. Use DELETE method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PostBulkDeleteAccount([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkDeleteAccount(orgId, model);
     }
 
     [HttpPut("{id}/revoke")]
@@ -688,14 +684,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
         var result = await _selfRevokeOrganizationUserCommand.SelfRevokeUserAsync(orgId, userId.Value);
         return Handle(result);
-    }
-
-    [HttpPatch("{id}/revoke")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PatchRevokeAsync([FromRoute] Guid orgId, Guid id)
-    {
-        await RevokeAsync(orgId, id);
     }
 
     [HttpPut("revoke")]
@@ -723,14 +711,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
                 ))));
     }
 
-    [HttpPatch("revoke")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PatchBulkRevokeAsync([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRevokeAsync(orgId, model);
-    }
-
     [HttpPut("{id}/restore")]
     [Authorize<ManageUsersRequirement>]
     [Obsolete("This endpoint is deprecated. Use _vNext endpoint instead. This will be removed in a future release.")]
@@ -747,14 +727,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         await RestoreOrRevokeUserAsync(orgId, id, (orgUser, userId) => _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, userId, request.DefaultUserCollectionName));
     }
 
-    [HttpPatch("{id}/restore")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task PatchRestoreAsync([FromRoute] Guid orgId, Guid id)
-    {
-        await RestoreAsync(orgId, id);
-    }
-
     [HttpPut("restore")]
     [Authorize<ManageUsersRequirement>]
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
@@ -762,14 +734,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
         return await RestoreOrRevokeUsersAsync(orgId, model,
             (orgId, orgUserIds, restoringUserId) => _restoreOrganizationUserCommand.RestoreUsersAsync(orgId, orgUserIds,
                 restoringUserId, _userService, model.DefaultUserCollectionName));
-    }
-
-    [HttpPatch("restore")]
-    [Obsolete("This endpoint is deprecated. Use PUT method instead")]
-    [Authorize<ManageUsersRequirement>]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> PatchBulkRestoreAsync([FromRoute] Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRestoreAsync(orgId, model);
     }
 
     [HttpPut("enable-secrets-manager")]
@@ -842,25 +806,21 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("{id}/auto-confirm")]
     [Authorize<ManageUsersRequirement>]
-    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync([FromRoute] Guid orgId,
+    public async Task<IResult> AutomaticallyConfirmOrganizationUserAsync(
+        [BindOrganization] Organization organization,
         [FromRoute] Guid id,
         [FromBody] OrganizationUserConfirmRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User);
-
-        if (userId is null || userId.Value == Guid.Empty)
+        var request = new BulkAutomaticallyConfirmOrganizationUsersRequest
         {
-            return TypedResults.Unauthorized();
-        }
-        return Handle(await _automaticallyConfirmOrganizationUserCommand.AutomaticallyConfirmOrganizationUserAsync(
-            new AutomaticallyConfirmOrganizationUserRequest
-            {
-                OrganizationId = orgId,
-                OrganizationUserId = id,
-                Key = model.Key,
-                DefaultUserCollectionName = model.DefaultUserCollectionName,
-                PerformedBy = new StandardUser(userId.Value, await _currentContext.OrganizationOwner(orgId)),
-            }));
+            Organization = organization,
+            DefaultUserCollectionName = model.DefaultUserCollectionName,
+            UsersToConfirm = [new BulkAutoConfirmUserEntry { OrganizationUserId = id, Key = model.Key }],
+        };
+
+        var result = (await _bulkAutomaticallyConfirmOrganizationUsersCommand.RunAsync(request)).Single();
+
+        return Handle(result.Result);
     }
 
     [HttpGet("pending-auto-confirm")]
@@ -933,7 +893,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/accept")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> AcceptInviteLink([FromBody] AcceptOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -978,7 +937,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("/organizations/users/invite-link/invite")]
     [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
