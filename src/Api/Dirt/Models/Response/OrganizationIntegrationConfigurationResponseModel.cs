@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Models.Data.EventIntegrations;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 

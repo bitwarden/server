@@ -26,11 +26,13 @@ public class IntegrationCircuitBreakerTests
     private readonly IFusionCache _cache = Substitute.For<IFusionCache>();
     private readonly FakeTimeProvider _timeProvider = new();
 
+    private readonly GlobalSettings _globalSettings = new();
+    private GlobalSettings.EventLoggingSettings _settings => _globalSettings.EventLogging;
+
     private IntegrationCircuitBreaker BuildSut(int minimumThroughput = _minimumThroughput)
     {
-        var globalSettings = new GlobalSettings();
+        var globalSettings = _globalSettings;
         globalSettings.EventLogging.IntegrationCircuitBreakerMinimumThroughput = minimumThroughput;
-        globalSettings.EventLogging.IntegrationCircuitBreakerFailureRatio = 1.0;
 
         _configurationRepository
             .DisableAsync(
@@ -112,16 +114,22 @@ public class IntegrationCircuitBreakerTests
     }
 
     [Fact]
-    public async Task RecordResultAsync_SuccessBeforeMinimumThroughput_KeepsTheCircuitClosed()
+    public async Task RecordResultAsync_SuccessesBetweenFailures_DoNotResetTheCount()
     {
+        // The circuit counts non-retryable failures inside the window and nothing else, so the threshold has to be
+        // chosen for the volume it will see rather than relying on successes to dilute it
         var sut = BuildSut();
         var message = BuildMessage();
 
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
         await sut.RecordResultAsync(IntegrationHandlerResult.Succeed(message));
-        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
+        await sut.RecordResultAsync(NonRetryableFailure(message));
 
-        await AssertNotDisabledAsync();
+        await _configurationRepository.Received(1).DisableAsync(
+            Arg.Is(_organizationId),
+            Arg.Is(_configurationId),
+            Arg.Any<DateTime>(),
+            Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
     }
 
     [Fact]
@@ -134,7 +142,6 @@ public class IntegrationCircuitBreakerTests
 
         await AssertNotDisabledAsync();
     }
-
 
     [Fact]
     public async Task RecordResultAsync_MessageWithoutOrganization_NeverDisables()
@@ -168,8 +175,6 @@ public class IntegrationCircuitBreakerTests
             Arg.Any<FusionCacheEntryOptions>(),
             Arg.Any<CancellationToken>());
     }
-
-
 
     [Theory]
     [InlineData(0)]
@@ -221,6 +226,38 @@ public class IntegrationCircuitBreakerTests
             await sut.RecordResultAsync(NonRetryableFailure(message));
             _timeProvider.Advance(window + TimeSpan.FromMinutes(1));
         }
+
+        await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_AfterATripAndRecovery_DoesNotReDisableOnASingleFailure()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+
+        // Trip it, then stand in for an admin fixing the integration by letting the disable succeed again
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+        _configurationRepository.ClearReceivedCalls();
+
+        // The circuit is held open, so the next failure short-circuits instead of re-opening and re-writing
+        _timeProvider.Advance(new GlobalSettings().EventLogging.IntegrationCircuitBreakerSamplingDuration
+            + TimeSpan.FromMinutes(1));
+        await sut.RecordResultAsync(NonRetryableFailure(message));
+
+        await AssertNotDisabledAsync();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task RecordResultAsync_SamplingDurationOutsidePollyRange_NeverDisables(int samplingDays)
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+        _settings.IntegrationCircuitBreakerSamplingDuration = TimeSpan.FromDays(samplingDays);
+
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput * 2);
 
         await AssertNotDisabledAsync();
     }
