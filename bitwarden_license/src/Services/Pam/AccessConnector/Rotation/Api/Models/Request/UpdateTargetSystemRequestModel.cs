@@ -9,10 +9,10 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 /// method and kind are fixed at registration and cannot be updated here.
 /// </summary>
 /// <remarks>
-/// <see cref="PasswordPolicy"/> and <see cref="SupportsSessionTermination"/> belong to an automatic target and must
-/// be absent on a manual one, the same shape rule <see cref="RegisterTargetSystemRequestModel"/> enforces. It cannot
-/// be enforced here, because the body no longer carries the method that decides it -- the command checks the pair
-/// against the stored method instead.
+/// <see cref="SupportsSessionTermination"/> belongs to an automatic target and must be absent on a manual one, the
+/// same shape rule <see cref="RegisterTargetSystemRequestModel"/> enforces; <see cref="PasswordPolicy"/> applies to
+/// both. It cannot be enforced here, because the body no longer carries the method that decides it -- the handler
+/// checks them against the stored method instead.
 /// </remarks>
 public class UpdateTargetSystemRequestModel
 {

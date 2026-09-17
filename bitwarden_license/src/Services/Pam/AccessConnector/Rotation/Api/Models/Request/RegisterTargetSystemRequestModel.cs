@@ -7,8 +7,8 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 /// Registers a target system, automatic or manual (spec <c>RegisterAutomaticTargetSystem</c> /
 /// <c>RegisterManualTargetSystem</c>) -- method-discriminated on <see cref="Method"/>: an
 /// <see cref="PamTargetSystemMethod.Automatic"/> target carries <see cref="Kind"/>, <see cref="PasswordPolicy"/>,
-/// and <see cref="SupportsSessionTermination"/>; a <see cref="PamTargetSystemMethod.Manual"/> target carries none
-/// of the three.
+/// and <see cref="SupportsSessionTermination"/>; a <see cref="PamTargetSystemMethod.Manual"/> target carries an
+/// optional <see cref="PasswordPolicy"/> and neither of the other two.
 /// </summary>
 public class RegisterTargetSystemRequestModel : IValidatableObject
 {
@@ -33,6 +33,8 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
 
     /// <summary>
     /// The password-generation constraints the access connector must satisfy when rotating credentials on this target.
+    /// Required for an automatic target; on a manual one it is optional guidance for the operator rotating by hand,
+    /// and nothing enforces it.
     /// </summary>
     public PamPasswordPolicyRequestModel? PasswordPolicy { get; set; }
 
@@ -78,12 +80,6 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
             {
                 yield return new ValidationResult(
                     "Kind must not be set for a manual target system.", [nameof(Kind)]);
-            }
-
-            if (PasswordPolicy is not null)
-            {
-                yield return new ValidationResult(
-                    "PasswordPolicy must not be set for a manual target system.", [nameof(PasswordPolicy)]);
             }
 
             if (SupportsSessionTermination is not null)
