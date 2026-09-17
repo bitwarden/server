@@ -541,7 +541,7 @@ public class ServiceAccountsControllerTests
 
     private static void SetAuditLogFlagEnabled(SutProvider<ServiceAccountsController> sutProvider, bool enabled)
     {
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.Sm2060MachineAccountAuditLogs)
             .Returns(enabled);
     }

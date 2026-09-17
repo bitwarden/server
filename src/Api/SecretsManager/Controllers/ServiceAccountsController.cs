@@ -46,7 +46,7 @@ public class ServiceAccountsController : Controller
     private readonly IPricingClient _pricingClient;
     private readonly IEventService _eventService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -66,7 +66,7 @@ public class ServiceAccountsController : Controller
         IPricingClient pricingClient,
         IEventService eventService,
         IGlobalSettings globalSettings,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
         _userService = userService;
