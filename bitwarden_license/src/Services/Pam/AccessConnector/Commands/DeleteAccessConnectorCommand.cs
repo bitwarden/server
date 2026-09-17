@@ -37,12 +37,12 @@ public class DeleteAccessConnectorCommand : IDeleteAccessConnectorCommand
         // audit (before/after): record the attempt, then the outcome around the point of no return.
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.DaemonDeleted,
+            Kind = AccessAuditEventKind.AccessConnectorDeleted,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            DaemonId = daemon.Id,
-            DaemonName = daemon.Name,
+            AccessConnectorId = daemon.Id,
+            AccessConnectorName = daemon.Name,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
