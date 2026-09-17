@@ -91,6 +91,7 @@ public class RequestLeaseExtensionCommandTests
             .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
+    // The originating request carries no pin, so resolution falls back to the caller's collections.
     [Theory, BitAutoData]
     public async Task ExtendAsync_ItemNotGated_ThrowsBadRequest(AccessLease lease)
     {
@@ -100,8 +101,64 @@ public class RequestLeaseExtensionCommandTests
             .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
-        await Assert.ThrowsAsync<BadRequestException>(
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        Assert.Contains("does not require a lease", ex.Message);
+    }
+
+    // PM-43689: the cipher became reachable through a collection carrying no rule after the lease was minted, so
+    // live resolution now finds an escape. The lease's own rule still governs its extension.
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_UngovernedPathAddedSinceMint_StillExtendsUnderThePinnedRule(
+        AccessLease lease, Guid ruleId)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        PinOriginatingRule(sutProvider, lease, ruleId);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
+            .Returns((GoverningRule?)null);
+
+        var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        Assert.Equal(AccessRequestStatus.Approved, result.Status);
+        Assert.Equal(ruleId, result.RuleId);
+    }
+
+    // The other half: a rule created or re-pointed since the lease started must not take over the extension's
+    // provenance or its cap.
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_PinnedRuleWins_DoesNotReResolveFromTheCallersCollections(
+        AccessLease lease, Guid pinnedRuleId, Guid todaysRuleId)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease, ruleId: todaysRuleId);
+        PinOriginatingRule(sutProvider, lease, pinnedRuleId);
+
+        var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        Assert.Equal(pinnedRuleId, result.RuleId);
+        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
+            .ResolveAsync(default, default, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_PinnedRuleNoLongerActive_ThrowsBadRequestWithoutWriting(
+        AccessLease lease, Guid ruleId)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        PinOriginatingRule(sutProvider, lease, ruleId);
+        // Disabled or deleted since the lease was granted: nothing left to read a cap from.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(ruleId, lease.CollectionId)
+            .Returns((GoverningRule?)null);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        Assert.Contains("no longer active", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
     [Theory, BitAutoData]
@@ -333,6 +390,25 @@ public class RequestLeaseExtensionCommandTests
 
         sutProvider.GetDependency<IAccessRequestRepository>().CountExtensionsByLeaseIdAsync(lease.Id).Returns(0);
         SetupOutcome(sutProvider, AccessLeaseExtendOutcome.Extended);
+    }
+
+    // The rule the lease was granted under, reached through the request that birthed it.
+    private static void PinOriginatingRule(
+        SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, Guid ruleId)
+    {
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetByIdAsync(lease.AccessRequestId)
+            .Returns(new AccessRequest { Id = lease.AccessRequestId, RuleId = ruleId });
+
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(ruleId, lease.CollectionId)
+            .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
+                [new HumanApprovalCondition()])
+            {
+                RuleId = ruleId,
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
+            });
     }
 
     /// <summary>What the guarded write reports back — the authority on whether there was anything left to extend.</summary>

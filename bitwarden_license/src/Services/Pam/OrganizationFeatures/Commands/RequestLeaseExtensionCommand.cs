@@ -68,13 +68,20 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         // No pre-check that the lease is still live: that question is settled under the per-lease lock in
         // CreateApprovedExtensionAsync, which records a denied request rather than refusing the call.
 
-        // Extensions reuse the cipher's governing rule, but never its approval gate: they are always auto-approved,
-        // gated only by the rule opting in and the per-lease maximum.
+        // The rule the lease was granted under, not whichever governs the cipher today: re-deriving lets an
+        // ungoverned path refuse the extension outright, and a newer rule take over its cap. The approval gate
+        // never applies: extensions are auto-approved, gated only by the rule opting in and the per-lease maximum.
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
-        var governingRule = await _resolver.ResolveAsync(userId, lease.CipherId, signals);
+        var originatingRequest = await _accessRequestRepository.GetByIdAsync(lease.AccessRequestId);
+        var pinnedRuleId = originatingRequest?.RuleId;
+        var governingRule = pinnedRuleId is { } ruleId
+            ? await _resolver.ResolvePinnedAsync(ruleId, lease.CollectionId)
+            : await _resolver.ResolveAsync(userId, lease.CipherId, signals);
         if (governingRule is null)
         {
-            throw new BadRequestException("This item does not require a lease.");
+            throw new BadRequestException(pinnedRuleId is null
+                ? "This item does not require a lease."
+                : "The rule this lease was granted under is no longer active.");
         }
 
         if (!governingRule.AllowsExtensions)
