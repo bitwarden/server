@@ -51,11 +51,11 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         // Records the registration attempt before either row is written, then the outcome after both exist.
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.DaemonRegistered,
+            Kind = AccessAuditEventKind.AccessConnectorRegistered,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            DaemonName = name,
+            AccessConnectorName = name,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
@@ -86,7 +86,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         var createdDaemon = await _daemonRepository.CreateAsync(daemon);
 
         await _accessAuditEventEmitter.EmitAsync(
-            audit with { Phase = AccessAuditEventPhase.Outcome, DaemonId = createdDaemon.Id });
+            audit with { Phase = AccessAuditEventPhase.Outcome, AccessConnectorId = createdDaemon.Id });
 
         // The plaintext client secret is surfaced here only; the server never persists or logs it again.
         return new PamAccessConnectorRegistrationResult(createdDaemon, clientSecret);
