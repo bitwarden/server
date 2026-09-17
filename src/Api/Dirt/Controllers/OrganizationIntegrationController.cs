@@ -48,6 +48,11 @@ public class OrganizationIntegrationController(
     [HttpPost("")]
     public async Task<ActionResult<OrganizationIntegrationResponseModel>> CreateAsync(Guid organizationId, [FromBody] OrganizationIntegrationRequestModel model)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         if (!await HasPermission(organizationId))
         {
             return NotFound();
