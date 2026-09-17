@@ -59,7 +59,7 @@ public class HecIntegrationVerificationService(
         }
         catch (SsrfProtectionException ex)
         {
-            var ssrfReason = $"Endpoint is unreachable: {ex.Message}.";
+            const string ssrfReason = "Endpoint is unreachable.";
             logger.LogWarning(ex, "HEC integration verification failed for organization {OrganizationId}: {Reason}",
                 organizationId, ssrfReason);
             return new HecVerificationResult(false, ssrfReason);
@@ -73,7 +73,7 @@ public class HecIntegrationVerificationService(
         }
         catch (HttpRequestException ex)
         {
-            var unreachableReason = $"Endpoint is unreachable: {ex.Message}.";
+            const string unreachableReason = "Endpoint is unreachable.";
             logger.LogWarning(ex, "HEC integration verification failed for organization {OrganizationId}: {Reason}",
                 organizationId, unreachableReason);
             return new HecVerificationResult(false, unreachableReason);
