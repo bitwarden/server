@@ -54,8 +54,8 @@ public class ClaimRotationJobCommandTests
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationDispatched
                 && a.OrganizationId == daemon.OrganizationId
                 && a.ActorId == null
-                && a.DaemonId == daemonId
-                && a.DaemonName == daemon.Name
+                && a.AccessConnectorId == daemonId
+                && a.AccessConnectorName == daemon.Name
                 && a.RotationJobId == jobId
                 && a.RotationConfigId == job.RotationConfigId
                 && a.CipherId == result.CipherId

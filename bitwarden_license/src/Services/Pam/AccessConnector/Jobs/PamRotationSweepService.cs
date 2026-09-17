@@ -108,7 +108,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    DaemonId = job.ClaimedByDaemonId,
+                    AccessConnectorId = job.ClaimedByDaemonId,
                     Detail = job.AttemptCount == 0
                         ? "rotation job timed out (unroutable: no eligible daemon)"
                         : "rotation job timed out (stuck daemon)",
@@ -143,7 +143,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    DaemonId = job.ClaimedByDaemonId,
+                    AccessConnectorId = job.ClaimedByDaemonId,
                 };
                 await _accessAuditEventEmitter.EmitAsync(audit);
             }
