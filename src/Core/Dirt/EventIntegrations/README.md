@@ -227,7 +227,7 @@ Nothing re-enables on a timer, so recovery is always something a person asks for
   integration without changing it, and returns how many it re-enabled. **A client that surfaces the disabled state
   has to offer this.** For Slack and Teams it is the only way to clear the state at all, because their OAuth handlers
   reject an integration that already holds a configuration, so an admin cannot re-run auth in place. Clearing the
-  state only resumes delivery, so a credential that is still revoked will trip the breaker again.
+  state only resumes delivery, so a credential that is still revoked fails again.
 - Editing an integration cascades the same clear, because credentials live on the integration and fixing them is what
   recovers the configurations beneath it.
 - Editing a configuration clears its own state, which is the right granularity for a fault local to that
@@ -237,6 +237,12 @@ The first two enforce the organization in SQL, joining through the integration t
 both log how many configurations they re-enabled. The third goes through the ordinary configuration update, which is
 keyed on the configuration id alone, so its tenant scoping comes from the ownership checks the command runs before
 the write rather than from the statement itself.
+
+None of the three reaches Polly's circuit state, which lives in the listener processes. Re-enabling before the break
+has elapsed therefore resumes delivery without restoring protection: an open circuit short-circuits every outcome, so
+nothing is counted and nothing re-disables the configuration until the break expires and the next sampled failure
+reopens it. One sampling duration of failures per premature re-enable is the worst case, and it settles itself, so a
+client is better off telling an admin to fix the cause first than trying to work around the window.
 
 One gap is deliberate: nothing notifies the organization when a configuration is disabled, so an admin has to notice
 that delivery stopped.
