@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_CreateManyWithCollectionsAndGroups]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_CreateManyWithCollectionsAndGroups]
     @organizationUserData NVARCHAR(MAX),
     @collectionData NVARCHAR(MAX),
     @groupData NVARCHAR(MAX),
@@ -135,5 +135,4 @@ BEGIN
             #CollectionUserData CUD ON CUD.[CollectionId] = C.[Id]
     END
 END
-go
-
+GO
