@@ -60,39 +60,34 @@ public class TargetSystemEndpointsHandler(
     /// </remarks>
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {
-        var hasPolicy = model.PasswordPolicy is not null && model.SupportsSessionTermination is not null;
-        var hasNeither = model.PasswordPolicy is null && model.SupportsSessionTermination is null;
-        if (!hasPolicy && !hasNeither)
-        {
-            throw new BadRequestException(
-                "PasswordPolicy and SupportsSessionTermination must be sent together.");
-        }
-
         var targetSystem = await targetSystemRepository.GetByIdAsync(id);
         if (targetSystem is null || targetSystem.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        if (targetSystem.Method == PamTargetSystemMethod.Automatic && hasNeither)
+        var isAutomatic = targetSystem.Method == PamTargetSystemMethod.Automatic;
+        if (isAutomatic)
         {
-            throw new BadRequestException(
-                "An automatic target system requires PasswordPolicy and SupportsSessionTermination.");
+            if (model.PasswordPolicy is null || model.SupportsSessionTermination is null)
+            {
+                throw new BadRequestException(
+                    "An automatic target system requires PasswordPolicy and SupportsSessionTermination.");
+            }
+        }
+        else if (model.SupportsSessionTermination is true)
+        {
+            throw new BadRequestException("A manual target system cannot support session termination.");
         }
 
-        if (targetSystem.Method != PamTargetSystemMethod.Automatic && hasPolicy)
-        {
-            throw new BadRequestException("Only automatic target systems have a password policy.");
-        }
-
-        if (hasPolicy)
+        if (model.PasswordPolicy is not null)
         {
             await updateTargetSystemPolicyCommand.UpdateAsync(
                 orgId,
                 currentContext.UserId!.Value,
                 id,
-                model.PasswordPolicy!.ToPasswordPolicy(),
-                model.SupportsSessionTermination!.Value);
+                model.PasswordPolicy.ToPasswordPolicy(),
+                isAutomatic ? model.SupportsSessionTermination!.Value : null);
         }
 
         await renameTargetSystemCommand.RenameAsync(orgId, currentContext.UserId!.Value, id, model.Name);
