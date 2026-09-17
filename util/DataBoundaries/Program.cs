@@ -14,5 +14,8 @@ internal sealed class Program
     public ScanCommand Scan { get; set; } = null!;
 
     [Subcommand]
+    public CheckCommand Check { get; set; } = null!;
+
+    [Subcommand]
     public ViolationsCommand Violations { get; set; } = null!;
 }
