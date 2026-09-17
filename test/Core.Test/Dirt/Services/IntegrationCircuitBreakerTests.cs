@@ -6,6 +6,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
@@ -30,7 +31,9 @@ public class IntegrationCircuitBreakerTests
     private readonly GlobalSettings _globalSettings = new();
     private GlobalSettings.EventLoggingSettings _settings => _globalSettings.EventLogging;
 
-    private IntegrationCircuitBreaker BuildSut(int minimumThroughput = _minimumThroughput)
+    private IntegrationCircuitBreaker BuildSut(
+        int minimumThroughput = _minimumThroughput,
+        ILogger<IntegrationCircuitBreaker>? logger = null)
     {
         var globalSettings = _globalSettings;
         globalSettings.EventLogging.IntegrationCircuitBreakerMinimumThroughput = minimumThroughput;
@@ -50,7 +53,7 @@ public class IntegrationCircuitBreakerTests
             new ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>(),
             globalSettings,
             _timeProvider,
-            NullLogger<IntegrationCircuitBreaker>.Instance);
+            logger ?? NullLogger<IntegrationCircuitBreaker>.Instance);
     }
 
     private static IntegrationMessage BuildMessage(
@@ -279,6 +282,38 @@ public class IntegrationCircuitBreakerTests
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput * 2);
 
         await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_SettingsOutsidePollyRange_WarnsOnceAcrossMessages()
+    {
+        var logger = Substitute.For<ILogger<IntegrationCircuitBreaker>>();
+        var sut = BuildSut(minimumThroughput: 1, logger: logger);
+
+        await RecordAsync(sut, NonRetryableFailure(BuildMessage()), _minimumThroughput * 2);
+
+        logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => (o.ToString() ?? "").Contains("outside the supported ranges")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_BreakerNotConfigured_LogsNothing()
+    {
+        var logger = Substitute.For<ILogger<IntegrationCircuitBreaker>>();
+        var sut = BuildSut(minimumThroughput: 0, logger: logger);
+
+        await RecordAsync(sut, NonRetryableFailure(BuildMessage()), _minimumThroughput);
+
+        logger.DidNotReceiveWithAnyArgs().Log(
+            default,
+            default,
+            default(object)!,
+            default,
+            default!);
     }
 
     [Fact]

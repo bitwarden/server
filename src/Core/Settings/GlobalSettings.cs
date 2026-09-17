@@ -315,8 +315,8 @@ public class GlobalSettings : IGlobalSettings
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
         public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
         public int MaxRetries { get; set; } = 3;
-        // Failures are sampled over a window rather than counted consecutively. Zero or less minimum throughput
-        // disables the circuit breaker.
+        // Failures are sampled over a window rather than counted consecutively. A minimum throughput below two
+        // disables the circuit breaker, as does a ratio outside (0, 1] or a sampling duration outside 500ms to a day.
         public int IntegrationCircuitBreakerMinimumThroughput { get; set; } = 0;
         public double IntegrationCircuitBreakerFailureRatio { get; set; } = 0.5;
         public TimeSpan IntegrationCircuitBreakerSamplingDuration { get; set; } = TimeSpan.FromMinutes(30);
