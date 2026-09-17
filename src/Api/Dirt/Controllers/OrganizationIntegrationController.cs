@@ -6,6 +6,7 @@ using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services;
+using Bit.Core.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -129,11 +130,16 @@ public class OrganizationIntegrationController(
         var hecIntegration = JsonSerializer.Deserialize<HecIntegration>(model.Configuration!);
         if (hecIntegration is null)
         {
-            return BadRequest("Invalid HEC integration configuration.");
+            throw new BadRequestException("Invalid HEC integration configuration.");
         }
 
         var result = await hecVerificationService.VerifyAsync(hecIntegration, organizationId);
-        return result.Success ? null : BadRequest(result.FailureReason);
+        if (!result.Success)
+        {
+            throw new BadRequestException(result.FailureReason ?? "HEC integration verification failed.");
+        }
+
+        return null;
     }
 
     private async Task<bool> HasPermission(Guid organizationId)
