@@ -55,10 +55,11 @@ public class Base64UrlSchemaFilterTest
     }
 
     /// <summary>
-    /// Anchors the expected names to the Fido2 assembly. The filter names properties as string
+    /// Anchors the expected names to the Fido2 models. The filter names properties as string
     /// literals, so it cannot fail on a name the serialized model no longer has; reading the names
-    /// back off the type turns an upstream rename, a typo, or a newly converted property into a
-    /// test failure rather than a spec that describes the wrong encoding.
+    /// back off the type turns a rename or a typo into a test failure rather than a spec that
+    /// describes the wrong encoding. This covers the types in the table only — a converted
+    /// property on a type the table omits goes undetected.
     /// </summary>
     [Theory]
     [MemberData(nameof(MarkedProperties))]
