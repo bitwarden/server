@@ -1,0 +1,65 @@
+# Table files that predate the product-ownership rule and are exempt from it, because
+# CODEOWNERS resolves everything directly in src/Sql/dbo/Tables to the database platform
+# team rather than to a product team.
+#
+# This list may shrink and must never grow. To remove a line, move the table file to
+# src/Sql/dbo/<Domain>/Tables/ so the owning team resolves from CODEOWNERS, then delete
+# its entry here. Adding a line is a policy violation that "check --sql-ownership" fails.
+#
+# The list covers three groups. Only the first is unclassified; the other two are domain
+# folders whose ownership resolves to the database platform team for reasons that are
+# decisions rather than accidents, so they cannot be fixed by moving a file:
+#
+#   1. The unclassified root src/Sql/dbo/Tables/. This is the group the ratchet is aimed
+#      at, and moving a file into a domain folder is the whole ownership change.
+#   2. src/Sql/dbo/Pam/Tables/. The commented CODEOWNERS rule
+#      "src/Sql/dbo/Pam @bitwarden/dept-dbops" keeps PAM schema with DBOps deliberately,
+#      so removing these entries requires that decision to change first.
+#   3. src/Sql/dbo/SecretsManager/Tables/. No Secrets Manager CODEOWNERS rule exists and
+#      no team handle exists to point at, so these are blocked on a decision rather than
+#      on work. Do not invent a handle: a rule naming a team that does not exist matches
+#      nothing while looking correct.
+
+# Unclassified root src/Sql/dbo/Tables/ — remove a line by moving the file to a domain folder.
+src/Sql/dbo/Tables/Cache.sql
+src/Sql/dbo/Tables/CollectionCipher.sql
+src/Sql/dbo/Tables/Device.sql
+src/Sql/dbo/Tables/Group.sql
+src/Sql/dbo/Tables/GroupUser.sql
+src/Sql/dbo/Tables/Notification.sql
+src/Sql/dbo/Tables/NotificationStatus.sql
+src/Sql/dbo/Tables/Organization.sql
+src/Sql/dbo/Tables/OrganizationApiKey.sql
+src/Sql/dbo/Tables/OrganizationConnection.sql
+src/Sql/dbo/Tables/OrganizationDomain.sql
+src/Sql/dbo/Tables/OrganizationIntegration.sql
+src/Sql/dbo/Tables/OrganizationIntegrationConfiguration.sql
+src/Sql/dbo/Tables/OrganizationInviteLink.sql
+src/Sql/dbo/Tables/OrganizationSponsorship.sql
+src/Sql/dbo/Tables/OrganizationUser.sql
+src/Sql/dbo/Tables/PasswordHealthReportApplication.sql
+src/Sql/dbo/Tables/PlayItem.sql
+src/Sql/dbo/Tables/Policy.sql
+src/Sql/dbo/Tables/Provider.sql
+src/Sql/dbo/Tables/ProviderOrganization.sql
+src/Sql/dbo/Tables/ProviderUser.sql
+src/Sql/dbo/Tables/SubscriptionDiscount.sql
+src/Sql/dbo/Tables/TaxRate.sql
+src/Sql/dbo/Tables/Transaction.sql
+src/Sql/dbo/Tables/User.sql
+src/Sql/dbo/Tables/WebAuthnCredential.sql
+
+# PAM — kept with DBOps by the commented CODEOWNERS rule, not by omission.
+src/Sql/dbo/Pam/Tables/AccessDecision.sql
+src/Sql/dbo/Pam/Tables/AccessLease.sql
+src/Sql/dbo/Pam/Tables/AccessRequest.sql
+src/Sql/dbo/Pam/Tables/AccessRule.sql
+
+# Secrets Manager — no CODEOWNERS rule and no team handle to point at yet.
+src/Sql/dbo/SecretsManager/Tables/AccessPolicy.sql
+src/Sql/dbo/SecretsManager/Tables/ApiKey.sql
+src/Sql/dbo/SecretsManager/Tables/Project.sql
+src/Sql/dbo/SecretsManager/Tables/ProjectSecret.sql
+src/Sql/dbo/SecretsManager/Tables/Secret.sql
+src/Sql/dbo/SecretsManager/Tables/SecretVersion.sql
+src/Sql/dbo/SecretsManager/Tables/ServiceAccount.sql

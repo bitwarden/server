@@ -1,0 +1,44 @@
+{
+  "segmentPrefixes": [
+    "src/Core/",
+    "src/Api/",
+    "src/Admin/",
+    "bitwarden_license/src/Commercial.Core/"
+  ],
+  "canonicalDomains": [
+    "admin",
+    "admin-console",
+    "auth",
+    "billing",
+    "dirt",
+    "key-mgmt",
+    "pam",
+    "platform",
+    "secrets-manager",
+    "tools",
+    "vault"
+  ],
+  "projectDomains": {
+    "bitwarden_license/src/Scim": "admin-console",
+    "bitwarden_license/src/Services/Pam": "pam",
+    "bitwarden_license/src/Sso": "auth",
+    "src/Admin": "admin",
+    "src/Events": "dirt",
+    "src/EventsProcessor": "dirt",
+    "src/Identity": "auth",
+    "src/Libraries/Invoicing": "billing",
+    "src/Libraries/OrganizationAuthorization": "admin-console",
+    "src/Libraries/Subscriptions.*": "billing",
+    "src/Pam.Domain": "pam"
+  },
+  "aliases": {
+    "adminconsole": "admin-console",
+    "keymanagement": "key-mgmt",
+    "secretsmanager": "secrets-manager"
+  },
+  "universalSurfaces": [
+    "admin",
+    "admin-console",
+    "billing"
+  ]
+}

@@ -1,4 +1,6 @@
-﻿using Bit.DataBoundaries.Schema;
+﻿using Bit.DataBoundaries.Domains;
+using Bit.DataBoundaries.Ownership;
+using Bit.DataBoundaries.Schema;
 
 namespace Bit.DataBoundaries.Test;
 
@@ -9,6 +11,11 @@ namespace Bit.DataBoundaries.Test;
 internal static class Repo
 {
     public static string Root { get; } = RepoLocator.Resolve(null, AppContext.BaseDirectory);
+
+    public static CodeownersResolver Codeowners { get; } =
+        CodeownersResolver.FromFile(Path.Combine(Root, ".github", "CODEOWNERS"));
+
+    public static DomainResolver Domains { get; } = DomainResolver.FromRepo(Root);
 
     public static SchemaInventory Schema { get; } = SchemaReader.Read(Root);
 
