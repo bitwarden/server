@@ -116,6 +116,10 @@ src/Sql/dbo/Pam @bitwarden/dept-dbops
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
 
+# Architecture
+test/DataBoundaries.Test/** @bitwarden/dept-architecture
+util/DataBoundaries/** @bitwarden/dept-architecture # MSA data-ownership analyzer; its output routes schema work to owning teams
+
 ## Docker-related files
 **/Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot
 **/*.Dockerfile @bitwarden/team-appsec @bitwarden/dept-shot

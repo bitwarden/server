@@ -70,6 +70,7 @@
     <Project Path="test/Common/Common.csproj" />
     <Project Path="test/Core.IntegrationTest/Core.IntegrationTest.csproj" />
     <Project Path="test/Core.Test/Core.Test.csproj" />
+    <Project Path="test/DataBoundaries.Test/DataBoundaries.Test.csproj" />
     <Project Path="test/Libraries/Data.Test/Data.Test.csproj" />
     <Project Path="test/Libraries/ExceptionHandling.Test/ExceptionHandling.Test.csproj" />
     <Project Path="test/Libraries/Invoicing.Test/Invoicing.Test.csproj" />
@@ -98,6 +99,7 @@
     <Project Path="test/SharedWeb.Test/SharedWeb.Test.csproj" />
   </Folder>
   <Folder Name="/util/">
+    <Project Path="util/DataBoundaries/DataBoundaries.csproj" />
     <Project Path="util/Migrator/Migrator.csproj" />
     <Project Path="util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj" />
     <Project Path="util/MySqlMigrations/MySqlMigrations.csproj" />

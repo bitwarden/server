@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Bit.DataBoundaries</RootNamespace>
+    <AssemblyName>DataBoundaries</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandDotNet" Version="[7.0.5]" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="[180.102.0]" />
+    <!--
+        MSBuildLocator must run before any MSBuild type loads, so it is called first in Main.
+        Workspaces.MSBuild is what reads the solution; the CSharp package supplies the semantic
+        model and IOperation trees used to attribute column reads and writes.
+    -->
+    <PackageReference Include="Microsoft.Build.Locator" Version="[1.11.2]" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="[5.9.0]" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="[5.9.0]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+        MSBuildLocator requires MSBuild's own assemblies to be loaded from the installed SDK at
+        runtime rather than from NuGet, or assembly loading fails once a workspace opens.
+        Workspaces.MSBuild pulls these in transitively, so they are pinned here with runtime
+        assets excluded. Versions must match what the lock file resolves.
+    -->
+    <PackageReference Include="Microsoft.Build.Framework" Version="[17.11.48]" ExcludeAssets="runtime" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DataBoundaries.Test" />
+  </ItemGroup>
+
+</Project>
