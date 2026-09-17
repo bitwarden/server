@@ -69,8 +69,8 @@ public class ReportRotationSucceededCommandTests
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationSucceeded
                 && a.OrganizationId == config.OrganizationId
                 && a.ActorId == null
-                && a.DaemonId == daemonId
-                && a.DaemonName == daemon.Name
+                && a.AccessConnectorId == daemonId
+                && a.AccessConnectorName == daemon.Name
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.CipherId == config.CipherId
@@ -103,7 +103,7 @@ public class ReportRotationSucceededCommandTests
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationReportRejected
                 && a.OrganizationId == config.OrganizationId
-                && a.DaemonId == daemonId
+                && a.AccessConnectorId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.CipherId == config.CipherId));

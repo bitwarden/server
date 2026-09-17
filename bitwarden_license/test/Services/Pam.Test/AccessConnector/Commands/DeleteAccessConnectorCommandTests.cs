@@ -64,11 +64,11 @@ public class DeleteAccessConnectorCommandTests
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonDeleted && e.Phase == AccessAuditEventPhase.Attempt
-            && e.DaemonId == daemon.Id && e.DaemonName == daemon.Name && e.ActorId == actingUserId));
+            e.Kind == AccessAuditEventKind.AccessConnectorDeleted && e.Phase == AccessAuditEventPhase.Attempt
+            && e.AccessConnectorId == daemon.Id && e.AccessConnectorName == daemon.Name && e.ActorId == actingUserId));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonDeleted && e.Phase == AccessAuditEventPhase.Outcome
-            && e.DaemonId == daemon.Id));
+            e.Kind == AccessAuditEventKind.AccessConnectorDeleted && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessConnectorId == daemon.Id));
     }
 
     private static SutProvider<DeleteAccessConnectorCommand> Setup()
