@@ -2432,6 +2432,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccessConnectorId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AccessConnectorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("char(36)");
 
@@ -2466,13 +2473,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("char(36)");
-
-                    b.Property<Guid?>("DaemonId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("DaemonName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("Detail")
                         .HasColumnType("longtext");
