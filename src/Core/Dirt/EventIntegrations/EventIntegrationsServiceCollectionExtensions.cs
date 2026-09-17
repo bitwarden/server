@@ -511,6 +511,7 @@ public static class EventIntegrationsServiceCollectionExtensions
     internal static IServiceCollection AddOrganizationIntegrationCommandsQueries(this IServiceCollection services)
     {
         services.TryAddScoped<ICreateOrganizationIntegrationCommand, CreateOrganizationIntegrationCommand>();
+        services.TryAddScoped<IEnableOrganizationIntegrationCommand, EnableOrganizationIntegrationCommand>();
         services.TryAddScoped<IUpdateOrganizationIntegrationCommand, UpdateOrganizationIntegrationCommand>();
         services.TryAddScoped<IDeleteOrganizationIntegrationCommand, DeleteOrganizationIntegrationCommand>();
         services.TryAddScoped<IGetOrganizationIntegrationsQuery, GetOrganizationIntegrationsQuery>();
