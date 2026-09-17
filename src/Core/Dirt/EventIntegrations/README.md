@@ -205,6 +205,12 @@ in that process. Polly has no eviction API, so those live until the process rest
 set grows with active configurations rather than with failing ones, which is the cost of letting successes close a
 half-open circuit.
 
+What gets replayed is `IntegrationOutcome`, a projection of the four fields the pipeline reads, and every one of them
+is a value type. Polly retains the last handled outcome for as long as a circuit stays open, and an open circuit
+means the configuration is disabled and producing nothing further to replace it, so whatever the replayed value
+reaches stays reachable until the process restarts. An integration message reaches the decrypted credentials of a
+third-party service, and the breaker has no reason to extend how long those live.
+
 If the write that disables a configuration fails, the circuit is already open and Polly fires the open transition
 only once, so the attempt is logged with the organization and configuration and retried by the next transition after
 the break rather than lost silently.
