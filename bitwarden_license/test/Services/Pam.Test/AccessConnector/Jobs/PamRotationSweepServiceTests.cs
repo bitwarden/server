@@ -135,7 +135,7 @@ public class PamRotationSweepServiceTests
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut
-                && a.DaemonId == claimedByDaemonId
+                && a.AccessConnectorId == claimedByDaemonId
                 && a.Detail!.Contains("stuck")));
     }
 
@@ -174,11 +174,11 @@ public class PamRotationSweepServiceTests
                 && a.OrganizationId == released1.OrganizationId
                 && a.CipherId == released1.CipherId
                 && a.RotationSource == released1.Source
-                && a.DaemonId == released1.ClaimedByDaemonId));
+                && a.AccessConnectorId == released1.ClaimedByDaemonId));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobReleased
                 && a.RotationJobId == released2.JobId
-                && a.DaemonId == released2.ClaimedByDaemonId));
+                && a.AccessConnectorId == released2.ClaimedByDaemonId));
     }
 
     private static SutProvider<PamRotationSweepService> Setup()
