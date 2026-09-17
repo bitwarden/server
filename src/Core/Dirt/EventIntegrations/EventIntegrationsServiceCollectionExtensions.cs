@@ -19,6 +19,7 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Polly.Registry;
 using ZiggyCreatures.Caching.Fusion;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 
@@ -293,6 +294,7 @@ public static class EventIntegrationsServiceCollectionExtensions
         // NOTE: AddDistributedCache must be called by the caller before this method
         services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
+        services.TryAddSingleton<ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>>();
         services.TryAddSingleton<IIntegrationCircuitBreaker, IntegrationCircuitBreaker>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
 
