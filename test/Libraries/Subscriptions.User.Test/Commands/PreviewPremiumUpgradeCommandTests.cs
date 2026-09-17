@@ -55,20 +55,20 @@ public class PreviewPremiumUpgradeCommandTests
     }
 
     [Theory]
-    [InlineData(null, "12345", nameof(BillingAddressRequest.Country))]
-    [InlineData("", "12345", nameof(BillingAddressRequest.Country))]
-    [InlineData("  ", "12345", nameof(BillingAddressRequest.Country))]
-    [InlineData("USA", "12345", nameof(BillingAddressRequest.Country))]
-    [InlineData("US", null, nameof(BillingAddressRequest.PostalCode))]
-    [InlineData("US", "", nameof(BillingAddressRequest.PostalCode))]
-    [InlineData("US", "   ", nameof(BillingAddressRequest.PostalCode))]
+    [InlineData(null, "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
+    [InlineData("", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
+    [InlineData("  ", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
+    [InlineData("USA", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
+    [InlineData("US", null, nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
+    [InlineData("US", "", nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
+    [InlineData("US", "   ", nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
     public async Task Run_WhenBillingAddressIsMalformed_ThrowsBadRequestWithModelState(
         string? country, string? postalCode, string expectedKey)
     {
         var request = new PreviewPremiumUpgradeRequest
         {
             TargetProductTierType = ProductTierType.Teams,
-            BillingAddress = new BillingAddressRequest { Country = country!, PostalCode = postalCode! }
+            BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = country!, PostalCode = postalCode! }
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(PremiumUser(), request));
@@ -258,7 +258,7 @@ public class PreviewPremiumUpgradeCommandTests
     private static PreviewPremiumUpgradeRequest Request(ProductTierType targetProductTierType) => new()
     {
         TargetProductTierType = targetProductTierType,
-        BillingAddress = new BillingAddressRequest { Country = "US", PostalCode = "12345" }
+        BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = "US", PostalCode = "12345" }
     };
 
     private void ArrangeFamiliesUpgrade()

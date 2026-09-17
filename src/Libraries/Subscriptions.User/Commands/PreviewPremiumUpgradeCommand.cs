@@ -125,7 +125,7 @@ internal sealed class PreviewPremiumUpgradeCommand(
                 $"Cannot upgrade Premium subscription to {targetProductTierType} plan.")
         };
 
-    private static AddressOptions ResolveBillingAddress(BillingAddressRequest? billingAddress)
+    private static AddressOptions ResolveBillingAddress(PremiumUpgradeBillingAddressRequest? billingAddress)
     {
         if (billingAddress is null)
         {
@@ -136,13 +136,13 @@ internal sealed class PreviewPremiumUpgradeCommand(
         if (string.IsNullOrWhiteSpace(billingAddress.Country) || billingAddress.Country.Length != 2)
         {
             throw new BadRequestException(
-                nameof(BillingAddressRequest.Country), "Country code must be 2 characters long.");
+                nameof(PremiumUpgradeBillingAddressRequest.Country), "Country code must be 2 characters long.");
         }
 
         if (string.IsNullOrWhiteSpace(billingAddress.PostalCode))
         {
             throw new BadRequestException(
-                nameof(BillingAddressRequest.PostalCode), "The PostalCode field is required.");
+                nameof(PremiumUpgradeBillingAddressRequest.PostalCode), "The PostalCode field is required.");
         }
 
         return new AddressOptions { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode };

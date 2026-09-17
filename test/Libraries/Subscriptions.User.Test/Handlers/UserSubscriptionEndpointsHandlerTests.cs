@@ -46,7 +46,7 @@ public class UserSubscriptionEndpointsHandlerTests
     private static PreviewPremiumUpgradeRequest Request() => new()
     {
         TargetProductTierType = ProductTierType.Teams,
-        BillingAddress = new BillingAddressRequest { Country = "US", PostalCode = "12345" }
+        BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = "US", PostalCode = "12345" }
     };
 
     private static InvoicePreview SamplePreview() => new()

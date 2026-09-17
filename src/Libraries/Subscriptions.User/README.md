@@ -32,8 +32,12 @@ it — is logged with the user id (and subscription id when there is one) and su
 
 The preview drops the Premium storage add-on, swaps the seat item to the target annual plan at
 quantity 1, and asks Stripe for `always_invoice` prorations with automatic tax. Stripe returns only
-proration lines for that, so `InvoicePreview.PasswordManager.Seats` is null and the charge, credit,
-tax, and remaining months are on `PasswordManager.Prorations[0]`.
+proration lines for that, so `InvoicePreview.PasswordManager.Seats` is null.
+`PasswordManager.Prorations` carries one row per purchasable reference: the `pm-seat` row for the
+plan swap, plus a `pm-storage` row holding the credit for the dropped add-on when the user had one.
+Row order follows Stripe's invoice-line order, so consumers should select rows by `Reference` and
+sum charge, credit, and tax across them rather than reading index 0. `EstimatedTax`, `Total`, and
+`AmountDue` are invoice-level and already aggregate every row.
 
 ## Stripe boundary
 

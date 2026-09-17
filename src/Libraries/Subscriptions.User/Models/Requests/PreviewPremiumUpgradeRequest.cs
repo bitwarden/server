@@ -8,10 +8,10 @@ internal record PreviewPremiumUpgradeRequest
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public required ProductTierType TargetProductTierType { get; init; }
 
-    public required BillingAddressRequest BillingAddress { get; init; }
+    public required PremiumUpgradeBillingAddressRequest BillingAddress { get; init; }
 }
 
-internal record BillingAddressRequest
+internal record PremiumUpgradeBillingAddressRequest
 {
     public required string Country { get; init; }
 
