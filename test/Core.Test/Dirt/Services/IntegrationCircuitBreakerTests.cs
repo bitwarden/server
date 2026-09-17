@@ -22,6 +22,8 @@ public class IntegrationCircuitBreakerTests
 
     private readonly IOrganizationIntegrationRepository _integrationRepository =
         Substitute.For<IOrganizationIntegrationRepository>();
+    private readonly IOrganizationIntegrationConfigurationRepository _configurationRepository =
+        Substitute.For<IOrganizationIntegrationConfigurationRepository>();
     private readonly IFusionCache _cache = Substitute.For<IFusionCache>();
 
     private IntegrationCircuitBreaker BuildSut(int minimumThroughput = _minimumThroughput)
@@ -38,8 +40,13 @@ public class IntegrationCircuitBreakerTests
                 Arg.Any<IntegrationFailureCategory>())
             .Returns(true);
 
+        _configurationRepository
+            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<IntegrationFailureCategory>())
+            .Returns(true);
+
         return new IntegrationCircuitBreaker(
             _integrationRepository,
+            _configurationRepository,
             _cache,
             new ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>(),
             globalSettings,
@@ -47,13 +54,16 @@ public class IntegrationCircuitBreakerTests
             NullLogger<IntegrationCircuitBreaker>.Instance);
     }
 
-    private static IntegrationMessage BuildMessage(string? organizationId = null) => new()
-    {
-        IntegrationType = IntegrationType.Webhook,
-        MessageId = "message-id",
-        OrganizationId = organizationId ?? _organizationId.ToString(),
-        RenderedTemplate = "{}"
-    };
+    private static IntegrationMessage BuildMessage(
+        string? organizationId = null,
+        Guid? configurationId = null) => new()
+        {
+            IntegrationType = IntegrationType.Webhook,
+            MessageId = "message-id",
+            OrganizationId = organizationId ?? _organizationId.ToString(),
+            ConfigurationId = configurationId,
+            RenderedTemplate = "{}"
+        };
 
     private static IntegrationHandlerResult NonRetryableFailure(IntegrationMessage message) =>
         IntegrationHandlerResult.Fail(message, IntegrationFailureCategory.AuthenticationFailed, "401");
@@ -174,5 +184,37 @@ public class IntegrationCircuitBreakerTests
             Arg.Any<string>(),
             Arg.Any<FusionCacheEntryOptions>(),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_MessageWithConfigurationId_DisablesOnlyThatConfiguration()
+    {
+        var configurationId = Guid.Parse("3f1c9d2b-7e8a-4c5d-9a1b-6e2f4c8d0a37");
+        var sut = BuildSut();
+        var message = BuildMessage(configurationId: configurationId);
+
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+
+        await _configurationRepository.Received(1).DisableAsync(
+            Arg.Is(configurationId),
+            Arg.Any<DateTime>(),
+            Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
+        await _integrationRepository.DidNotReceiveWithAnyArgs()
+            .DisableAsync(default, default, default, default);
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_ConfigurationsFailIndependently_DoesNotTripEitherBreaker()
+    {
+        var sut = BuildSut();
+        var healthy = BuildMessage(configurationId: Guid.Parse("11111111-1111-1111-1111-111111111111"));
+        var broken = BuildMessage(configurationId: Guid.Parse("22222222-2222-2222-2222-222222222222"));
+
+        // Each configuration gets its own breaker, so the broken one cannot consume the healthy one's budget
+        await RecordAsync(sut, NonRetryableFailure(broken), _minimumThroughput - 1);
+        await RecordAsync(sut, IntegrationHandlerResult.Succeed(healthy), _minimumThroughput);
+
+        await _configurationRepository.DidNotReceiveWithAnyArgs().DisableAsync(default, default, default);
+        await AssertNotDisabledAsync();
     }
 }

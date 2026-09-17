@@ -162,36 +162,52 @@ An organization whose credentials have been revoked fails every event it produce
 delivery attempt and a dead letter; `IntegrationCircuitBreaker` bounds that by disabling the integration once the
 failures are clearly not going to resolve on their own.
 
-Both integration listeners report every final outcome to the breaker. A success clears the organization's failure
-count for that integration. A non-retryable failure adds to it, and reaching
-`GlobalSettings.EventLogging.IntegrationCircuitBreakerThreshold` consecutive failures disables the integration.
-Zero or less, which is the default, turns the breaker off.
+Detection is [Polly](https://www.pollydocs.org/strategies/circuit-breaker.html) rather than a hand-rolled counter.
+Both integration listeners report every final outcome into a keyed `ResiliencePipelineRegistry`, and Polly samples
+those outcomes over a window:
 
-Only non-retryable failures count. A rate-limited or unavailable service recovers on its own and should not cost an
-organization its integration, while an authentication, configuration, or permanent failure will not recover without
-someone changing the configuration.
+| Setting | Meaning |
+| --- | --- |
+| `IntegrationCircuitBreakerSamplingDuration` | The wall-clock window failures are measured over. Older failures age out on their own. |
+| `IntegrationCircuitBreakerMinimumThroughput` | Attempts required in the window before the ratio is considered. Zero or less turns the breaker off, which is the default. |
+| `IntegrationCircuitBreakerFailureRatio` | Proportion of those attempts that must fail. |
 
-The count is kept per organization and integration type, which is the grain the listener can attribute a failure to:
-an integration message carries no configuration id. One broken configuration can therefore disable an integration
-whose other configurations still deliver, if enough of its failures arrive without a success in between. Successes
-from the healthy configurations reset the count and make that less likely, but nothing guarantees they interleave,
-and events tend to arrive in bursts of the same type.
+A window rather than a consecutive count is what makes the failure history self-managing: an integration that fails
+once a month never accumulates toward a trip, and a fixed integration is not re-disabled by history from before the
+fix.
 
-Counting is in-process rather than distributed. A shared counter would write on every failure, which
-[CACHING](../../Utilities/CACHING.md) routes away from the backplane, so each instance counts on its own. The
-repository only transitions an integration that is still enabled, so several instances tripping at once still produce
-a single change.
+`ShouldHandle` counts only non-retryable failures. A rate-limited or unavailable service recovers on its own and
+should not cost an organization its integration, while an authentication, configuration, or permanent failure will
+not recover without someone changing the configuration.
 
-Disabling writes `DisabledDate` and `DisabledReason` to `OrganizationIntegration` and removes the organization's
-integration tag from the cache, which is the same invalidation path the admin commands use. `EventIntegrationHandler`
-reads `DisabledDate` through the configuration details it already caches, so enforcement costs nothing on the hot
-path: a disabled integration is skipped before a message is ever published.
+#### Scope
 
-Nothing re-enables an integration on a timer. An admin editing it clears both columns through
-`UpdateOrganizationIntegrationCommand`, which is the manual intervention that closes the breaker.
+A breaker is keyed per organization, integration type, and configuration. Messages carry `ConfigurationId`, so a
+failure is attributed to the configuration that produced it and one broken configuration cannot disable an
+integration whose other configurations still deliver. A message published before that field existed carries no
+configuration id and falls back to disabling the integration.
 
-Two things this deliberately does not do: it does not notify the organization (so an admin still has to notice the
-integration stopped) and it does not pause an integration globally when a provider has an outage.
+Both levels are enforced the same way. `EventIntegrationHandler` reads `DisabledDate` for the integration and for the
+configuration through the details it already caches, so a disabled integration or configuration is skipped before a
+message is ever published and the hot path costs nothing.
+
+#### Disabling and recovery
+
+Polly's own circuit state is per process and is allowed to recover on its own. The database row is what holds an
+integration off, and disabling is idempotent, so a circuit that re-trips changes nothing. That also means a shared
+counter is unnecessary, which suits the write-rate guidance in [CACHING](../../Utilities/CACHING.md).
+
+Disabling writes `DisabledDate` and `DisabledReason` to `OrganizationIntegration` or
+`OrganizationIntegrationConfiguration`, and removes the organization's integration tag from the cache, which is the
+same invalidation path the admin commands use. `OrganizationIntegrationStatus.Disabled` takes precedence over the
+status derived from configuration shape, so a disabled integration reports as disabled rather than completed.
+
+Nothing re-enables on a timer. Every path where an admin reconfigures an integration calls `ClearDisabled()`, which
+covers the update commands for both levels and the Slack and Teams reconnect flows. Missing one of those leaves an
+integration disabled after the admin has fixed it.
+
+The remaining gap is deliberate: nothing notifies the organization, so an admin still has to notice their integration
+stopped. Pausing an integration globally during a provider outage is a separate problem with a different shape.
 
 ### Dead letter retention
 

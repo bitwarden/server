@@ -68,4 +68,24 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return results.ToList();
         }
     }
+
+    public async Task<bool> DisableAsync(Guid id, DateTime disabledDate, IntegrationFailureCategory disabledReason)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var rowsAffected = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationIntegrationConfiguration_Disable]",
+                new
+                {
+                    Id = id,
+                    DisabledDate = disabledDate,
+                    DisabledReason = disabledReason,
+                    RevisionDate = disabledDate
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return rowsAffected > 0;
+        }
+    }
+
 }

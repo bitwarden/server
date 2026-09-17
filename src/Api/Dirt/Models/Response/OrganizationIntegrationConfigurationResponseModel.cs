@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Dirt.Entities;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -15,6 +16,8 @@ public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
         EventType = organizationIntegrationConfiguration.EventType;
         Filters = organizationIntegrationConfiguration.Filters;
         Template = organizationIntegrationConfiguration.Template;
+        DisabledDate = organizationIntegrationConfiguration.DisabledDate;
+        DisabledReason = organizationIntegrationConfiguration.DisabledReason;
     }
 
     public Guid Id { get; set; }
@@ -23,4 +26,6 @@ public class OrganizationIntegrationConfigurationResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public EventType? EventType { get; set; }
     public string? Template { get; set; }
+    public DateTime? DisabledDate { get; set; }
+    public IntegrationFailureCategory? DisabledReason { get; set; }
 }

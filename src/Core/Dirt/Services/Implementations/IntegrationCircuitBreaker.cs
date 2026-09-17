@@ -14,6 +14,7 @@ namespace Bit.Core.Dirt.Services.Implementations;
 
 public class IntegrationCircuitBreaker(
     IOrganizationIntegrationRepository integrationRepository,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
     IFusionCache cache,
     ResiliencePipelineRegistry<IntegrationCircuitBreakerKey> pipelineRegistry,
@@ -44,7 +45,12 @@ public class IntegrationCircuitBreaker(
             return;
         }
 
-        var key = new IntegrationCircuitBreakerKey(organizationId, message.IntegrationType);
+        // Prefer configuration scope, so one broken configuration cannot disable an integration whose other
+        // configurations still deliver. Messages published before this field existed fall back to the integration.
+        var key = new IntegrationCircuitBreakerKey(
+            organizationId,
+            message.IntegrationType,
+            message.ConfigurationId);
         var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
             key,
             (builder, context) => Build(builder, context.PipelineKey, settings));
@@ -93,11 +99,17 @@ public class IntegrationCircuitBreaker(
             return;
         }
 
-        var disabled = await integrationRepository.DisableAsync(
-            organizationId: key.OrganizationId,
-            integrationType: key.IntegrationType,
-            disabledDate: timeProvider.GetUtcNow().UtcDateTime,
-            disabledReason: failureCategory);
+        var disabledDate = timeProvider.GetUtcNow().UtcDateTime;
+        var disabled = key.ConfigurationId is Guid configurationId
+            ? await configurationRepository.DisableAsync(
+                id: configurationId,
+                disabledDate: disabledDate,
+                disabledReason: failureCategory)
+            : await integrationRepository.DisableAsync(
+                organizationId: key.OrganizationId,
+                integrationType: key.IntegrationType,
+                disabledDate: disabledDate,
+                disabledReason: failureCategory);
 
         if (!disabled)
         {
@@ -111,11 +123,15 @@ public class IntegrationCircuitBreaker(
 
         logger.LogWarning(
             "Integration disabled by the circuit breaker. OrganizationId: {OrgId}, " +
-            "IntegrationType: {IntegrationType}, FailureCategory: {Category}",
+            "IntegrationType: {IntegrationType}, ConfigurationId: {ConfigurationId}, FailureCategory: {Category}",
             key.OrganizationId,
             key.IntegrationType,
+            key.ConfigurationId,
             failureCategory);
     }
 }
 
-public readonly record struct IntegrationCircuitBreakerKey(Guid OrganizationId, IntegrationType IntegrationType);
+public readonly record struct IntegrationCircuitBreakerKey(
+    Guid OrganizationId,
+    IntegrationType IntegrationType,
+    Guid? ConfigurationId);
