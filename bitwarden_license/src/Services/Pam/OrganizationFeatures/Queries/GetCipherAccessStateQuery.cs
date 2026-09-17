@@ -47,13 +47,12 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
-        // Four independent reads, fetched concurrently. The resolver's result goes unused in the rare
-        // pending/approved states, but starting it eagerly saves its round trip on the two common paths.
+        // Three independent reads, fetched concurrently. Rule resolution follows them rather than joining them: a
+        // held lease resolves the rule it was granted under, which isn't known until the lease is in hand.
         var activeLeaseTask = _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pendingTask = _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, now);
         var approvedTask = _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
-        var ruleTask = _resolver.ResolveAsync(userId, cipherId, signals);
-        await Task.WhenAll(activeLeaseTask, pendingTask, approvedTask, ruleTask);
+        await Task.WhenAll(activeLeaseTask, pendingTask, approvedTask);
         var activeLease = await activeLeaseTask;
         var pending = await pendingTask;
         var approved = await approvedTask;
@@ -63,8 +62,12 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         if (activeLease is not null)
         {
             // Extension eligibility drives the banner's "Extend" control: extendable only while the rule opts in
-            // and no extension has been recorded yet.
-            var rule = await ruleTask;
+            // and no extension has been recorded yet. Read off the rule the lease was granted under, as
+            // RequestLeaseExtensionCommand does, so the control matches what the extend call will accept.
+            var originatingRequest = await _accessRequestRepository.GetByIdAsync(activeLease.AccessRequestId);
+            var rule = originatingRequest?.RuleId is { } ruleId
+                ? await _resolver.ResolvePinnedAsync(ruleId, activeLease.CollectionId)
+                : await _resolver.ResolveAsync(userId, cipherId, signals);
             if (rule?.AllowsExtensions == true)
             {
                 var used = await _accessRequestRepository.CountExtensionsByLeaseIdAsync(activeLease.Id);
@@ -72,7 +75,8 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
                 maxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds;
             }
         }
-        else if (pending is null && approved is null && await ruleTask is null)
+        else if (pending is null && approved is null
+                 && await _resolver.ResolveAsync(userId, cipherId, signals) is null)
         {
             // Nothing to report and the cipher isn't leasing-gated. A lease or request still returns a snapshot
             // even if the rule was since removed.
