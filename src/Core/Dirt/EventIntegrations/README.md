@@ -214,10 +214,19 @@ tenants, and removes the organization's integration tag from the cache, which is
 commands use. `EventIntegrationHandler` reads `DisabledDate` through the details it already caches, so a disabled
 configuration is skipped before a message is ever published and the hot path costs nothing.
 
-Nothing re-enables on a timer. Editing a configuration clears its own state, and because credentials live on the
-integration, editing the integration clears the state on every configuration underneath it. Both clears are scoped by
-organization the same way the disable is, stamp `RevisionDate`, and the cascade logs how many configurations it
-re-enabled.
+Nothing re-enables on a timer, so recovery is always something a person asks for. There are three ways to ask:
+
+- `POST organizations/{organizationId}/integrations/{integrationId}/enable` re-enables every configuration under an
+  integration without changing it, and returns how many it re-enabled. **A client that surfaces the disabled state
+  has to offer this.** It is the only recovery path for Slack and Teams, whose credentials an admin cannot resubmit
+  through the update endpoint because the token is obtained server-side during OAuth.
+- Editing an integration cascades the same clear, because credentials live on the integration and fixing them is what
+  recovers the configurations beneath it.
+- Editing a configuration clears its own state, which is the right granularity for a fault local to that
+  configuration, such as a channel that no longer exists.
+
+All three are scoped by organization the same way the disable is, stamp `RevisionDate`, and log how many
+configurations they re-enabled.
 
 Two gaps are known and deliberate. Slack and Teams cannot currently be recovered this way: their OAuth handlers
 reject an integration that already has a configuration, so there is no path to re-run auth on a live integration.
