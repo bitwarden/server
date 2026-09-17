@@ -9,6 +9,7 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Polly.Registry;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -17,16 +18,17 @@ namespace Bit.Core.Test.Dirt.Services;
 public class IntegrationCircuitBreakerTests
 {
     private static readonly Guid _organizationId = Guid.Parse("6a3b0e4e-3f2e-4a1b-9b6e-2f5a7c1d8e90");
-    private const int _threshold = 3;
+    private const int _minimumThroughput = 3;
 
     private readonly IOrganizationIntegrationRepository _integrationRepository =
         Substitute.For<IOrganizationIntegrationRepository>();
     private readonly IFusionCache _cache = Substitute.For<IFusionCache>();
 
-    private IntegrationCircuitBreaker BuildSut(int threshold = _threshold)
+    private IntegrationCircuitBreaker BuildSut(int minimumThroughput = _minimumThroughput)
     {
         var globalSettings = new GlobalSettings();
-        globalSettings.EventLogging.IntegrationCircuitBreakerThreshold = threshold;
+        globalSettings.EventLogging.IntegrationCircuitBreakerMinimumThroughput = minimumThroughput;
+        globalSettings.EventLogging.IntegrationCircuitBreakerFailureRatio = 1.0;
 
         _integrationRepository
             .DisableAsync(
@@ -39,6 +41,7 @@ public class IntegrationCircuitBreakerTests
         return new IntegrationCircuitBreaker(
             _integrationRepository,
             _cache,
+            new ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>(),
             globalSettings,
             new FakeTimeProvider(),
             NullLogger<IntegrationCircuitBreaker>.Instance);
@@ -72,23 +75,23 @@ public class IntegrationCircuitBreakerTests
     }
 
     [Fact]
-    public async Task RecordResultAsync_FailuresBelowThreshold_DoesNotDisable()
+    public async Task RecordResultAsync_FailuresBelowMinimumThroughput_DoesNotDisable()
     {
         var sut = BuildSut();
         var message = BuildMessage();
 
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold - 1);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
 
         await AssertNotDisabledAsync();
     }
 
     [Fact]
-    public async Task RecordResultAsync_FailuresReachThreshold_DisablesWithTheFailureCategory()
+    public async Task RecordResultAsync_FailuresReachMinimumThroughput_DisablesWithTheFailureCategory()
     {
         var sut = BuildSut();
         var message = BuildMessage();
 
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
 
         await _integrationRepository.Received(1).DisableAsync(
             Arg.Is(_organizationId),
@@ -104,14 +107,14 @@ public class IntegrationCircuitBreakerTests
     }
 
     [Fact]
-    public async Task RecordResultAsync_SuccessBeforeThreshold_ResetsTheCount()
+    public async Task RecordResultAsync_SuccessBeforeMinimumThroughput_KeepsTheCircuitClosed()
     {
         var sut = BuildSut();
         var message = BuildMessage();
 
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold - 1);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
         await sut.RecordResultAsync(message, IntegrationHandlerResult.Succeed(message));
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold - 1);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
 
         await AssertNotDisabledAsync();
     }
@@ -122,7 +125,7 @@ public class IntegrationCircuitBreakerTests
         var sut = BuildSut();
         var message = BuildMessage();
 
-        await RecordAsync(sut, RetryableFailure(message), _threshold * 2);
+        await RecordAsync(sut, RetryableFailure(message), _minimumThroughput * 2);
 
         await AssertNotDisabledAsync();
     }
@@ -130,9 +133,9 @@ public class IntegrationCircuitBreakerTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task RecordResultAsync_ThresholdNotPositive_NeverDisables(int threshold)
+    public async Task RecordResultAsync_MinimumThroughputNotPositive_NeverDisables(int minimumThroughput)
     {
-        var sut = BuildSut(threshold);
+        var sut = BuildSut(minimumThroughput);
         var message = BuildMessage();
 
         await RecordAsync(sut, NonRetryableFailure(message), 25);
@@ -147,7 +150,7 @@ public class IntegrationCircuitBreakerTests
         var message = BuildMessage(organizationId: null!);
         message.OrganizationId = null;
 
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
 
         await AssertNotDisabledAsync();
     }
@@ -165,7 +168,7 @@ public class IntegrationCircuitBreakerTests
                 Arg.Any<IntegrationFailureCategory>())
             .Returns(false);
 
-        await RecordAsync(sut, NonRetryableFailure(message), _threshold);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
 
         await _cache.DidNotReceive().RemoveByTagAsync(
             Arg.Any<string>(),

@@ -16,13 +16,21 @@ public class OrganizationIntegrationResponseModel : ResponseModel
         Id = organizationIntegration.Id;
         Type = organizationIntegration.Type;
         Configuration = organizationIntegration.Configuration;
+        DisabledDate = organizationIntegration.DisabledDate;
+        DisabledReason = organizationIntegration.DisabledReason;
     }
 
     public Guid Id { get; set; }
     public IntegrationType Type { get; set; }
     public string? Configuration { get; set; }
+    public DateTime? DisabledDate { get; set; }
+    public IntegrationFailureCategory? DisabledReason { get; set; }
 
-    public OrganizationIntegrationStatus Status => Type switch
+    public OrganizationIntegrationStatus Status => DisabledDate is not null
+        ? OrganizationIntegrationStatus.Disabled
+        : ConfiguredStatus;
+
+    private OrganizationIntegrationStatus ConfiguredStatus => Type switch
     {
         // Not yet implemented, shouldn't be present, NotApplicable
         IntegrationType.CloudBillingSync => OrganizationIntegrationStatus.NotApplicable,
