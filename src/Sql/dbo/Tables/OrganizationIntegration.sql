@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[OrganizationIntegration]
+CREATE TABLE [dbo].[OrganizationIntegration]
 (
     [Id] UNIQUEIDENTIFIER NOT NULL,
     [OrganizationId] UNIQUEIDENTIFIER NOT NULL,

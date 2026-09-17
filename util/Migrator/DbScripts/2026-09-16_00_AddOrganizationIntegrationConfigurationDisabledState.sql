@@ -148,19 +148,31 @@ END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationIntegrationConfiguration_ClearDisabledByIntegrationId]
-    @OrganizationIntegrationId UNIQUEIDENTIFIER
+    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationIntegrationId UNIQUEIDENTIFIER,
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
+    -- Scoped through the integration so the write cannot cross tenants, matching the disable path
     UPDATE
-        [dbo].[OrganizationIntegrationConfiguration]
+        oic
     SET
-        [DisabledDate] = NULL,
-        [DisabledReason] = NULL
+        oic.[DisabledDate] = NULL,
+        oic.[DisabledReason] = NULL,
+        oic.[RevisionDate] = @RevisionDate
+    FROM
+        [dbo].[OrganizationIntegrationConfiguration] oic
+        INNER JOIN
+        [dbo].[OrganizationIntegration] oi ON oi.[Id] = oic.[OrganizationIntegrationId]
     WHERE
-        [OrganizationIntegrationId] = @OrganizationIntegrationId
-        AND [DisabledDate] IS NOT NULL
+        oic.[OrganizationIntegrationId] = @OrganizationIntegrationId
+        AND oic.[DisabledDate] IS NOT NULL
+        AND oi.[OrganizationId] = @OrganizationId
+
+    -- Returned explicitly because SET NOCOUNT ON suppresses the row count ExecuteNonQuery would report
+    SELECT @@ROWCOUNT
 END
 GO
 

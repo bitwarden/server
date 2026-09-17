@@ -8,5 +8,4 @@ public interface IOrganizationIntegrationRepository : IRepository<OrganizationIn
     Task<List<OrganizationIntegration>> GetManyByOrganizationAsync(Guid organizationId);
 
     Task<OrganizationIntegration?> GetByTeamsConfigurationTenantIdTeamId(string tenantId, string teamId);
-
 }

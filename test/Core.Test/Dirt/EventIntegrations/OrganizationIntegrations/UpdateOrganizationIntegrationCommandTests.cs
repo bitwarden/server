@@ -69,7 +69,10 @@ public class UpdateOrganizationIntegrationCommandTests
         await sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration);
 
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
-            .ClearDisabledByIntegrationAsync(integrationId);
+            .ClearDisabledByIntegrationAsync(
+                Arg.Is(organizationId),
+                Arg.Is(integrationId),
+                Arg.Any<DateTime>());
     }
 
     [Theory, BitAutoData]

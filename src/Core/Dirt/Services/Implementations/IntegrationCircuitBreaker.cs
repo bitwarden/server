@@ -21,8 +21,12 @@ public class IntegrationCircuitBreaker(
     ILogger<IntegrationCircuitBreaker> logger)
     : IIntegrationCircuitBreaker
 {
-    // Polly requires at least two attempts in the window before it will evaluate the failure ratio
+    // Polly requires at least two sampled outcomes before it will evaluate a circuit
     internal const int MinimumSupportedThroughput = 2;
+
+    // Polly's accepted range for both SamplingDuration and BreakDuration
+    internal static readonly TimeSpan MinimumSupportedDuration = TimeSpan.FromMilliseconds(500);
+    internal static readonly TimeSpan MaximumSupportedDuration = TimeSpan.FromDays(1);
 
     public async Task RecordResultAsync(IntegrationHandlerResult result)
     {
@@ -40,7 +44,14 @@ public class IntegrationCircuitBreaker(
     private async Task RecordAsync(IntegrationHandlerResult result)
     {
         var settings = globalSettings.EventLogging;
-        if (settings.IntegrationCircuitBreakerMinimumThroughput < MinimumSupportedThroughput)
+        if (!IsConfigured(settings))
+        {
+            return;
+        }
+
+        // Only counted failures are ever sampled, so the circuit measures "this many non-retryable failures inside
+        // the window" and nothing else needs to reach the registry
+        if (!CountsTowardBreaking(result))
         {
             return;
         }
@@ -54,21 +65,9 @@ public class IntegrationCircuitBreaker(
         }
 
         var key = new IntegrationCircuitBreakerKey(organizationId, configurationId);
-
-        // A counted failure creates the breaker; a success only feeds one that already exists. Successes still
-        // dilute the failure ratio for a struggling configuration, while the registry stays proportional to the
-        // configurations that are actually failing rather than to every one that has ever delivered.
-        ResiliencePipeline<IntegrationHandlerResult> pipeline;
-        if (CountsTowardBreaking(result))
-        {
-            pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
-                key,
-                (builder, context) => Build(builder, context.PipelineKey, settings));
-        }
-        else if (!pipelineRegistry.TryGetPipeline(key, out pipeline!))
-        {
-            return;
-        }
+        var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
+            key,
+            (builder, context) => Build(builder, context.PipelineKey, settings));
 
         var context = ResilienceContextPool.Shared.Get();
         try
@@ -91,6 +90,13 @@ public class IntegrationCircuitBreaker(
     private static bool CountsTowardBreaking(IntegrationHandlerResult result) =>
         !result.Success && !result.Retryable;
 
+    // Every value Polly range-checks is validated here, so an out-of-range setting disables the breaker instead of
+    // throwing out of the pipeline factory on every message
+    private static bool IsConfigured(GlobalSettings.EventLoggingSettings settings) =>
+        settings.IntegrationCircuitBreakerMinimumThroughput >= MinimumSupportedThroughput &&
+        settings.IntegrationCircuitBreakerSamplingDuration >= MinimumSupportedDuration &&
+        settings.IntegrationCircuitBreakerSamplingDuration <= MaximumSupportedDuration;
+
     private ResiliencePipelineBuilder<IntegrationHandlerResult> Build(
         ResiliencePipelineBuilder<IntegrationHandlerResult> builder,
         IntegrationCircuitBreakerKey key,
@@ -102,13 +108,17 @@ public class IntegrationCircuitBreaker(
         return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationHandlerResult>
         {
             ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>().HandleResult(CountsTowardBreaking),
-            FailureRatio = settings.IntegrationCircuitBreakerFailureRatio,
+
+            // Every sampled outcome is a counted failure, so requiring all of them keeps the circuit a plain
+            // "this many non-retryable failures inside the window" trigger
+            FailureRatio = 1.0,
             MinimumThroughput = settings.IntegrationCircuitBreakerMinimumThroughput,
             SamplingDuration = settings.IntegrationCircuitBreakerSamplingDuration,
-            BreakDuration = settings.IntegrationCircuitBreakerSamplingDuration,
 
-            // The disabled row, not this circuit, is what holds the configuration off until an admin reconfigures
-            // it. Letting the circuit recover on its own costs nothing, because disabling is idempotent.
+            // Held at Polly's maximum rather than the sampling window. An open circuit short-circuits, so a
+            // configuration an admin has just re-enabled is not re-disabled by the next single failure the way a
+            // half-open circuit would re-disable it.
+            BreakDuration = MaximumSupportedDuration,
             OnOpened = args => DisableAsync(key, args.Outcome.Result)
         });
     }

@@ -93,16 +93,23 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         }
     }
 
-    public async Task ClearDisabledByIntegrationAsync(Guid organizationIntegrationId)
+    public async Task<int> ClearDisabledByIntegrationAsync(
+        Guid organizationId,
+        Guid organizationIntegrationId,
+        DateTime revisionDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync(
+            return await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationIntegrationConfiguration_ClearDisabledByIntegrationId]",
-                new { OrganizationIntegrationId = organizationIntegrationId },
+                new
+                {
+                    OrganizationId = organizationId,
+                    OrganizationIntegrationId = organizationIntegrationId,
+                    RevisionDate = revisionDate
+                },
                 commandType: CommandType.StoredProcedure);
         }
     }
-
 
 }

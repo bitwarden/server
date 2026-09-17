@@ -318,7 +318,6 @@ public class GlobalSettings : IGlobalSettings
         // Failures are sampled over a window rather than counted consecutively. Zero or less minimum throughput
         // disables the circuit breaker.
         public int IntegrationCircuitBreakerMinimumThroughput { get; set; } = 0;
-        public double IntegrationCircuitBreakerFailureRatio { get; set; } = 0.5;
         public TimeSpan IntegrationCircuitBreakerSamplingDuration { get; set; } = TimeSpan.FromMinutes(30);
 
         public class AzureServiceBusSettings

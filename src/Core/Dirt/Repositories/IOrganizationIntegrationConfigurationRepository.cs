@@ -41,7 +41,11 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
 
     /// <summary>
     /// Re-enables every configuration under an integration. Credentials live on the integration, so fixing it is
-    /// what recovers the configurations the breaker disabled.
+    /// what recovers the configurations the breaker disabled. Scoped by organization like <see cref="DisableAsync"/>.
     /// </summary>
-    Task ClearDisabledByIntegrationAsync(Guid organizationIntegrationId);
+    /// <returns>The number of configurations re-enabled.</returns>
+    Task<int> ClearDisabledByIntegrationAsync(
+        Guid organizationId,
+        Guid organizationIntegrationId,
+        DateTime revisionDate);
 }

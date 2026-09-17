@@ -374,7 +374,6 @@ public class EventIntegrationHandlerTests
         Assert.Equal(userDetails, context.User);
     }
 
-
     [Theory, BitAutoData]
     public async Task BuildContextAsync_UserIdNull_SkipsCache(EventMessage eventMessage)
     {
@@ -412,7 +411,6 @@ public class EventIntegrationHandlerTests
 
         Assert.Null(context.User);
     }
-
 
     [Theory, BitAutoData]
     public async Task BuildContextAsync_UserFactory_CallsOrganizationUserRepository(EventMessage eventMessage, OrganizationUserUserDetails userDetails)
@@ -498,7 +496,6 @@ public class EventIntegrationHandlerTests
 
         Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
     }
-
 
     [Theory, BitAutoData]
     public async Task HandleEventAsync_NoOrganizationId_DoesNothing(EventMessage eventMessage)
