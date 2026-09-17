@@ -88,7 +88,7 @@ public class SubmitCipherUpdateCommandTests
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationCipherWriteRejected
                 && a.OrganizationId == config.OrganizationId
-                && a.DaemonId == daemonId
+                && a.AccessConnectorId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.CipherId == config.CipherId));
