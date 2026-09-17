@@ -29,4 +29,9 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
     Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync();
 
     Task<List<OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(Guid organizationIntegrationId);
+
+    /// <summary>
+    /// Disables a configuration that is currently enabled, in a single write and without reading it first.
+    /// </summary>
+    Task<bool> DisableAsync(Guid id, DateTime disabledDate, IntegrationFailureCategory disabledReason);
 }

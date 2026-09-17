@@ -42,6 +42,9 @@ public class UpdateOrganizationIntegrationConfigurationCommand(
 
         updatedConfiguration.Id = configuration.Id;
         updatedConfiguration.CreationDate = configuration.CreationDate;
+        // An admin editing the configuration clears a tripped circuit breaker
+        updatedConfiguration.ClearDisabled();
+
         await configurationRepository.ReplaceAsync(updatedConfiguration);
 
         // If either old or new EventType is null (wildcard), invalidate all cached results

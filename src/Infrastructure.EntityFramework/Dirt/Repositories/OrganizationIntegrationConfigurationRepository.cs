@@ -55,4 +55,23 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return await query.Run(dbContext).ToListAsync();
         }
     }
+
+    public async Task<bool> DisableAsync(Guid id, DateTime disabledDate, IntegrationFailureCategory disabledReason)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            // Filtering on the enabled state keeps concurrent trips across instances to a single transition
+            var rowsAffected = await dbContext.OrganizationIntegrationConfigurations
+                .Where(configuration => configuration.Id == id && configuration.DisabledDate == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(configuration => configuration.DisabledDate, disabledDate)
+                    .SetProperty(configuration => configuration.DisabledReason, disabledReason)
+                    .SetProperty(configuration => configuration.RevisionDate, disabledDate));
+
+            return rowsAffected > 0;
+        }
+    }
+
 }
