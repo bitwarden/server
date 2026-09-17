@@ -218,19 +218,21 @@ Nothing re-enables on a timer, so recovery is always something a person asks for
 
 - `POST organizations/{organizationId}/integrations/{integrationId}/enable` re-enables every configuration under an
   integration without changing it, and returns how many it re-enabled. **A client that surfaces the disabled state
-  has to offer this.** It is the only recovery path for Slack and Teams, whose credentials an admin cannot resubmit
-  through the update endpoint because the token is obtained server-side during OAuth.
+  has to offer this.** For Slack and Teams it is the only way to clear the state at all, because their OAuth handlers
+  reject an integration that already holds a configuration, so an admin cannot re-run auth in place. Clearing the
+  state only resumes delivery, so a credential that is still revoked will trip the breaker again.
 - Editing an integration cascades the same clear, because credentials live on the integration and fixing them is what
   recovers the configurations beneath it.
 - Editing a configuration clears its own state, which is the right granularity for a fault local to that
   configuration, such as a channel that no longer exists.
 
-All three are scoped by organization the same way the disable is, stamp `RevisionDate`, and log how many
-configurations they re-enabled.
+The first two enforce the organization in SQL, joining through the integration the same way the disable does, and
+both log how many configurations they re-enabled. The third goes through the ordinary configuration update, which is
+keyed on the configuration id alone, so its tenant scoping comes from the ownership checks the command runs before
+the write rather than from the statement itself.
 
-Two gaps are known and deliberate. Slack and Teams cannot currently be recovered this way: their OAuth handlers
-reject an integration that already has a configuration, so there is no path to re-run auth on a live integration.
-And nothing notifies the organization, so an admin still has to notice delivery stopped.
+One gap is deliberate: nothing notifies the organization when a configuration is disabled, so an admin has to notice
+that delivery stopped.
 
 ### Dead letter retention
 
