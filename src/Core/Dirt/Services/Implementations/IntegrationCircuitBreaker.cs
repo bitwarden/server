@@ -1,11 +1,13 @@
-﻿using System.Collections.Concurrent;
-using Bit.Core.Dirt.Enums;
+﻿using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Registry;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Services.Implementations;
@@ -14,14 +16,12 @@ public class IntegrationCircuitBreaker(
     IOrganizationIntegrationRepository integrationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
     IFusionCache cache,
+    ResiliencePipelineRegistry<IntegrationCircuitBreakerKey> pipelineRegistry,
     GlobalSettings globalSettings,
     TimeProvider timeProvider,
     ILogger<IntegrationCircuitBreaker> logger)
     : IIntegrationCircuitBreaker
 {
-    private readonly ConcurrentDictionary<(Guid OrganizationId, IntegrationType IntegrationType), int> _failureCounts
-        = new();
-
     public async Task RecordResultAsync(IIntegrationMessage message, IntegrationHandlerResult result)
     {
         // The breaker must never change what the listener does with the message that triggered it
@@ -37,46 +37,65 @@ public class IntegrationCircuitBreaker(
 
     private async Task RecordAsync(IIntegrationMessage message, IntegrationHandlerResult result)
     {
-        var threshold = globalSettings.EventLogging.IntegrationCircuitBreakerThreshold;
-        if (threshold <= 0 || !Guid.TryParse(message.OrganizationId, out var organizationId))
+        var settings = globalSettings.EventLogging;
+        if (settings.IntegrationCircuitBreakerMinimumThroughput <= 0 ||
+            !Guid.TryParse(message.OrganizationId, out var organizationId))
         {
             return;
         }
 
-        var key = (organizationId, message.IntegrationType);
+        var key = new IntegrationCircuitBreakerKey(organizationId, message.IntegrationType);
+        var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
+            key,
+            (builder, context) => Build(builder, context.PipelineKey, settings));
 
-        if (result.Success)
+        var context = ResilienceContextPool.Shared.Get();
+        try
         {
-            _failureCounts.TryRemove(key, out _);
-            return;
+            // Outcomes are replayed into the pipeline rather than wrapping the send, because the key is only
+            // known once the message has been deserialized by the handler
+            await pipeline.ExecuteOutcomeAsync(
+                (_, _) => new ValueTask<Outcome<IntegrationHandlerResult>>(Outcome.FromResult(result)),
+                context,
+                state: 0);
         }
-
-        if (result.Retryable || result.Category is not IntegrationFailureCategory category)
+        finally
         {
-            return;
+            ResilienceContextPool.Shared.Return(context);
         }
-
-        var failures = _failureCounts.AddOrUpdate(key, 1, (_, count) => count + 1);
-        if (failures < threshold)
-        {
-            return;
-        }
-
-        // Nothing further to count for an integration that is about to stop receiving events
-        _failureCounts.TryRemove(key, out _);
-
-        await DisableAsync(organizationId, message.IntegrationType, category, threshold);
     }
 
-    private async Task DisableAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        IntegrationFailureCategory failureCategory,
-        int threshold)
+    private ResiliencePipelineBuilder<IntegrationHandlerResult> Build(
+        ResiliencePipelineBuilder<IntegrationHandlerResult> builder,
+        IntegrationCircuitBreakerKey key,
+        GlobalSettings.EventLoggingSettings settings)
     {
+        return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationHandlerResult>
+        {
+            // Only failures that will not resolve without someone changing the configuration count
+            ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>()
+                .HandleResult(result => !result.Success && !result.Retryable),
+            FailureRatio = settings.IntegrationCircuitBreakerFailureRatio,
+            MinimumThroughput = settings.IntegrationCircuitBreakerMinimumThroughput,
+            SamplingDuration = settings.IntegrationCircuitBreakerSamplingDuration,
+            BreakDuration = settings.IntegrationCircuitBreakerSamplingDuration,
+
+            // The disabled row, not this circuit, is what holds the integration off until an admin reconfigures
+            // it. Letting the circuit recover on its own costs nothing, because disabling is idempotent.
+            OnOpened = args => DisableAsync(key, args.Outcome.Result)
+        });
+    }
+
+    private async ValueTask DisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)
+    {
+        if (result?.Category is not IntegrationFailureCategory failureCategory)
+        {
+            return;
+        }
+
         var disabled = await integrationRepository.DisableAsync(
-            organizationId: organizationId,
-            integrationType: integrationType,
+            organizationId: key.OrganizationId,
+            integrationType: key.IntegrationType,
             disabledDate: timeProvider.GetUtcNow().UtcDateTime,
             disabledReason: failureCategory);
 
@@ -87,15 +106,16 @@ public class IntegrationCircuitBreaker(
 
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
-                organizationId: organizationId,
-                integrationType: integrationType));
+                organizationId: key.OrganizationId,
+                integrationType: key.IntegrationType));
 
         logger.LogWarning(
-            "Integration disabled after {Threshold} consecutive non-retryable failures. " +
-            "OrganizationId: {OrgId}, IntegrationType: {IntegrationType}, FailureCategory: {Category}",
-            threshold,
-            organizationId,
-            integrationType,
+            "Integration disabled by the circuit breaker. OrganizationId: {OrgId}, " +
+            "IntegrationType: {IntegrationType}, FailureCategory: {Category}",
+            key.OrganizationId,
+            key.IntegrationType,
             failureCategory);
     }
 }
+
+public readonly record struct IntegrationCircuitBreakerKey(Guid OrganizationId, IntegrationType IntegrationType);

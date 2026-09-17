@@ -315,7 +315,11 @@ public class GlobalSettings : IGlobalSettings
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
         public int IntegrationCacheRefreshIntervalMinutes { get; set; } = 10;
         public int MaxRetries { get; set; } = 3;
-        public int IntegrationCircuitBreakerThreshold { get; set; } = 0;
+        // Failures are sampled over a window rather than counted consecutively. Zero or less minimum throughput
+        // disables the circuit breaker.
+        public int IntegrationCircuitBreakerMinimumThroughput { get; set; } = 0;
+        public double IntegrationCircuitBreakerFailureRatio { get; set; } = 0.5;
+        public TimeSpan IntegrationCircuitBreakerSamplingDuration { get; set; } = TimeSpan.FromMinutes(30);
 
         public class AzureServiceBusSettings
         {
