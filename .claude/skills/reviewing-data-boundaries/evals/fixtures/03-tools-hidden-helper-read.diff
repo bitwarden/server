@@ -1,0 +1,18 @@
+diff --git a/src/Core/Tools/SendFeatures/Services/SendAuthorizationService.cs b/src/Core/Tools/SendFeatures/Services/SendAuthorizationService.cs
+--- a/src/Core/Tools/SendFeatures/Services/SendAuthorizationService.cs
++++ b/src/Core/Tools/SendFeatures/Services/SendAuthorizationService.cs
+@@ -78,4 +78,14 @@ public class SendAuthorizationService : ISendAuthorizationService
+     public async Task<bool> CanUploadFileAsync(Send send, Organization organization, long fileSize)
+     {
++        if (organization.StorageBytesRemaining() < fileSize)
++        {
++            return false;
++        }
++
++        if (organization is { UseTotp: true })
++        {
++            return send.MaxAccessCount is null;
++        }
++
+         return true;
+     }

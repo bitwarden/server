@@ -1,0 +1,56 @@
+{
+  "skill_name": "reviewing-data-boundaries",
+  "notes": "Fixture diffs are synthetic but reference real repo paths so CODEOWNERS resolution is genuine. Ownership facts asserted here were verified against .github/CODEOWNERS and src/Sql/dbo layout at commit 6798eb683.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "ranks-cross-team-write-above-read",
+      "prompt": "I reworked the attachment storage validation in CipherService before putting it up as a PR. The diff is at .claude/skills/reviewing-data-boundaries/evals/fixtures/01-vault-writes-organization.diff. Can you review it? I mainly want to know if I've created any coupling problems for the team.",
+      "files": [
+        ".claude/skills/reviewing-data-boundaries/evals/fixtures/01-vault-writes-organization.diff"
+      ],
+      "expected_output": "Reports three cross-boundary writes as the most severe findings: Organization.Storage, Organization.RevisionDate, and the full-row ReplaceAsync persistence call. Reports the Organization.MaxCollections read as a lower-severity contract candidate, and recommends a command or event rather than a read interface.",
+      "assertions": [
+        "Identifies Organization.Storage as a cross-boundary WRITE, not merely a read",
+        "Also identifies the Organization.RevisionDate assignment as a cross-boundary write",
+        "Identifies _organizationRepository.ReplaceAsync(org) as a full-row write covering every mapped Organization column, not just the two assigned",
+        "Ranks the write(s) as more severe than the read, and presents them first",
+        "Identifies the Organization.MaxCollections access as a cross-boundary read",
+        "Names the code owner as team-vault-dev (Vault) and the data owner as admin-console",
+        "Recommends a command or an event for the write, and states that a read interface cannot fix a write",
+        "Does NOT report the unchanged org.MaxStorageGb.HasValue context line as a new finding"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "no-false-positive-on-same-team-change",
+      "prompt": "Quick review before I push please. Diff is at .claude/skills/reviewing-data-boundaries/evals/fixtures/02-clean-same-team.diff, it is just the cipher restore path in CipherService.",
+      "files": [
+        ".claude/skills/reviewing-data-boundaries/evals/fixtures/02-clean-same-team.diff"
+      ],
+      "expected_output": "Reports no cross-team data boundary crossings. Explains that Cipher is Vault-owned so Vault code touching it is not a crossing, and that nameof(Organization.Seats) is a compile-time string rather than a data access.",
+      "assertions": [
+        "Reports ZERO cross-boundary crossings / no violations",
+        "States that Cipher is Vault-owned, so Vault code writing it is same-team and not a crossing",
+        "Explicitly states that nameof(Organization.Seats) is not a data access and does not count",
+        "Does not invent a finding about Organization"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "catches-helper-hidden-and-pattern-reads",
+      "prompt": "I added a storage guard to the Send file upload path. The diff is at .claude/skills/reviewing-data-boundaries/evals/fixtures/03-tools-hidden-helper-read.diff. Does this look OK from a data ownership standpoint?",
+      "files": [
+        ".claude/skills/reviewing-data-boundaries/evals/fixtures/03-tools-hidden-helper-read.diff"
+      ],
+      "expected_output": "Flags the StorageBytesRemaining() call as a hidden read of Organization.Storage and Organization.MaxStorageGb, flags the property-pattern read of UseTotp, identifies Tools as the code owner and admin-console as the data owner, and classifies both as reads (contract candidates) rather than writes.",
+      "assertions": [
+        "Flags organization.StorageBytesRemaining() as an indirect/hidden column read",
+        "Names BOTH Storage and MaxStorageGb as the columns that helper reads",
+        "Flags the property-pattern access organization is { UseTotp: true } as a read of UseTotp",
+        "Names the code owner as team-tools-dev (Tools) and the data owner as admin-console",
+        "Classifies these as reads / contract candidates, and does NOT call them writes"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+diff --git a/src/Core/Vault/Services/Implementations/CipherService.cs b/src/Core/Vault/Services/Implementations/CipherService.cs
+--- a/src/Core/Vault/Services/Implementations/CipherService.cs
++++ b/src/Core/Vault/Services/Implementations/CipherService.cs
+@@ -1005,7 +1005,17 @@ public class CipherService : ICipherService
+     private async Task ValidateOrganizationStorageAsync(Organization org, long requestedSize)
+     {
+         if (!org.MaxStorageGb.HasValue)
+         {
+             throw new BadRequestException("This organization has no storage limit.");
+         }
++
++        // Keep the organization storage counter in step with attachment usage.
++        org.Storage = (org.Storage ?? 0) + requestedSize;
++        org.RevisionDate = DateTime.UtcNow;
++        await _organizationRepository.ReplaceAsync(org);
++
++        if (org.MaxCollections.HasValue && org.MaxCollections.Value < 1)
++        {
++            throw new BadRequestException("This organization cannot store attachments.");
++        }
+     }

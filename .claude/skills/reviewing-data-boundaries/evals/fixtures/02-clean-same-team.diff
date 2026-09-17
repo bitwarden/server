@@ -1,0 +1,16 @@
+diff --git a/src/Core/Vault/Services/Implementations/CipherService.cs b/src/Core/Vault/Services/Implementations/CipherService.cs
+--- a/src/Core/Vault/Services/Implementations/CipherService.cs
++++ b/src/Core/Vault/Services/Implementations/CipherService.cs
+@@ -640,5 +640,12 @@ public class CipherService : ICipherService
+     public async Task RestoreAsync(Cipher cipher, Guid restoringUserId)
+     {
+         cipher.DeletedDate = null;
++        cipher.RevisionDate = DateTime.UtcNow;
++
++        if (cipher.Id == Guid.Empty)
++        {
++            throw new BadRequestException($"Cannot restore without {nameof(Organization.Seats)} context.");
++        }
++
+         await _cipherRepository.ReplaceAsync(cipher);
+     }
