@@ -100,4 +100,19 @@ public class SchemaReaderTests
             empty.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public void Read_RecordsAParseError_AndStillReadsEveryOtherFile()
+    {
+        using var repo = new TempRepo();
+        repo.Write("src/Sql/dbo/Tables/Broken.sql", "CREATE TABLE [dbo].[Broken] (\n    [Id] SELECT FROM\n);\n");
+
+        var inventory = SchemaReader.Read(repo.Root);
+
+        Assert.All(inventory.Errors, error => Assert.Equal("src/Sql/dbo/Tables/Broken.sql", error.SchemaFile));
+        Assert.All(inventory.Errors, error => Assert.True(error.Line > 0 && error.Column > 0));
+        Assert.NotEmpty(inventory.Errors);
+        Assert.DoesNotContain(inventory.Tables, t => t.Table == "Broken");
+        Assert.Contains(inventory.Tables, t => t.Table == "Organization");
+    }
 }

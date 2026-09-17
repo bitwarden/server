@@ -1,0 +1,1482 @@
+{
+  "csharpAnalysis": "not-performed-stage-1",
+  "tables": [
+    {
+      "schema": "dbo",
+      "table": "AccessDecision",
+      "schemaFile": "src/Sql/dbo/Pam/Tables/AccessDecision.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 114,
+      "schemaDomain": "pam",
+      "columnCount": 9,
+      "columns": [
+        "AccessRequestId",
+        "ApproverId",
+        "Comment",
+        "ConditionKind",
+        "CreationDate",
+        "DeciderKind",
+        "EvaluationContext",
+        "Id",
+        "Verdict"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "AccessLease",
+      "schemaFile": "src/Sql/dbo/Pam/Tables/AccessLease.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 114,
+      "schemaDomain": "pam",
+      "columnCount": 12,
+      "columns": [
+        "AccessRequestId",
+        "CipherId",
+        "CollectionId",
+        "CreationDate",
+        "Id",
+        "NotAfter",
+        "NotBefore",
+        "OrganizationId",
+        "RequesterId",
+        "RevokedBy",
+        "RevokedDate",
+        "Status"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "AccessPolicy",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/AccessPolicy.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 12,
+      "columns": [
+        "CreationDate",
+        "Discriminator",
+        "GrantedProjectId",
+        "GrantedSecretId",
+        "GrantedServiceAccountId",
+        "GroupId",
+        "Id",
+        "OrganizationUserId",
+        "Read",
+        "RevisionDate",
+        "ServiceAccountId",
+        "Write"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "AccessRequest",
+      "schemaFile": "src/Sql/dbo/Pam/Tables/AccessRequest.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 114,
+      "schemaDomain": "pam",
+      "columnCount": 13,
+      "columns": [
+        "CipherId",
+        "CollectionId",
+        "CreationDate",
+        "ExtensionOfLeaseId",
+        "Id",
+        "NotAfter",
+        "NotBefore",
+        "OrganizationId",
+        "Reason",
+        "RequesterId",
+        "ResolvedDate",
+        "RuleId",
+        "Status"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "AccessRule",
+      "schemaFile": "src/Sql/dbo/Pam/Tables/AccessRule.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 114,
+      "schemaDomain": "pam",
+      "columnCount": 14,
+      "columns": [
+        "AllowsExtensions",
+        "Conditions",
+        "CreationDate",
+        "DefaultLeaseDurationSeconds",
+        "Description",
+        "Enabled",
+        "Id",
+        "LastEditedBy",
+        "MaxExtensionDurationSeconds",
+        "MaxLeaseDurationSeconds",
+        "Name",
+        "OrganizationId",
+        "RevisionDate",
+        "SingleActiveLease"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ApiKey",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/ApiKey.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 10,
+      "columns": [
+        "ClientSecretHash",
+        "CreationDate",
+        "EncryptedPayload",
+        "ExpireAt",
+        "Id",
+        "Key",
+        "Name",
+        "RevisionDate",
+        "Scope",
+        "ServiceAccountId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "AuthRequest",
+      "schemaFile": "src/Sql/dbo/Auth/Tables/AuthRequest.sql",
+      "schemaOwners": [
+        "@bitwarden/team-auth-dev"
+      ],
+      "schemaOwnersLine": 35,
+      "schemaDomain": "auth",
+      "columnCount": 17,
+      "columns": [
+        "AccessCode",
+        "Approved",
+        "AuthenticationDate",
+        "CreationDate",
+        "Id",
+        "Key",
+        "MasterPasswordHash",
+        "OrganizationId",
+        "PublicKey",
+        "RequestCountryName",
+        "RequestDeviceIdentifier",
+        "RequestDeviceType",
+        "RequestIpAddress",
+        "ResponseDate",
+        "ResponseDeviceId",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Cache",
+      "schemaFile": "src/Sql/dbo/Tables/Cache.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 5,
+      "columns": [
+        "AbsoluteExpiration",
+        "ExpiresAtTime",
+        "Id",
+        "SlidingExpirationInSeconds",
+        "Value"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Cipher",
+      "schemaFile": "src/Sql/dbo/Vault/Tables/Cipher.sql",
+      "schemaOwners": [
+        "@bitwarden/team-vault-dev"
+      ],
+      "schemaOwnersLine": 63,
+      "schemaDomain": "vault",
+      "columnCount": 15,
+      "columns": [
+        "ArchivedDate",
+        "Archives",
+        "Attachments",
+        "CreationDate",
+        "Data",
+        "DeletedDate",
+        "Favorites",
+        "Folders",
+        "Id",
+        "Key",
+        "OrganizationId",
+        "Reprompt",
+        "RevisionDate",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ClientOrganizationMigrationRecord",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/ClientOrganizationMigrationRecord.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 11,
+      "columns": [
+        "ExpirationDate",
+        "GatewayCustomerId",
+        "GatewaySubscriptionId",
+        "Id",
+        "MaxAutoscaleSeats",
+        "MaxStorageGb",
+        "OrganizationId",
+        "PlanType",
+        "ProviderId",
+        "Seats",
+        "Status"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Collection",
+      "schemaFile": "src/Sql/dbo/AdminConsole/Tables/Collection.sql",
+      "schemaOwners": [
+        "@bitwarden/team-admin-console-dev"
+      ],
+      "schemaOwnersLine": 67,
+      "schemaDomain": "admin-console",
+      "columnCount": 9,
+      "columns": [
+        "AccessRuleId",
+        "CreationDate",
+        "DefaultUserCollectionEmail",
+        "ExternalId",
+        "Id",
+        "Name",
+        "OrganizationId",
+        "RevisionDate",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "CollectionCipher",
+      "schemaFile": "src/Sql/dbo/Tables/CollectionCipher.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 2,
+      "columns": [
+        "CipherId",
+        "CollectionId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "CollectionGroup",
+      "schemaFile": "src/Sql/dbo/AdminConsole/Tables/CollectionGroup.sql",
+      "schemaOwners": [
+        "@bitwarden/team-admin-console-dev"
+      ],
+      "schemaOwnersLine": 67,
+      "schemaDomain": "admin-console",
+      "columnCount": 5,
+      "columns": [
+        "CollectionId",
+        "GroupId",
+        "HidePasswords",
+        "Manage",
+        "ReadOnly"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "CollectionUser",
+      "schemaFile": "src/Sql/dbo/AdminConsole/Tables/CollectionUser.sql",
+      "schemaOwners": [
+        "@bitwarden/team-admin-console-dev"
+      ],
+      "schemaOwnersLine": 67,
+      "schemaDomain": "admin-console",
+      "columnCount": 5,
+      "columns": [
+        "CollectionId",
+        "HidePasswords",
+        "Manage",
+        "OrganizationUserId",
+        "ReadOnly"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Device",
+      "schemaFile": "src/Sql/dbo/Tables/Device.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 14,
+      "columns": [
+        "Active",
+        "ClientVersion",
+        "CreationDate",
+        "EncryptedPrivateKey",
+        "EncryptedPublicKey",
+        "EncryptedUserKey",
+        "Id",
+        "Identifier",
+        "LastActivityDate",
+        "Name",
+        "PushToken",
+        "RevisionDate",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "EmergencyAccess",
+      "schemaFile": "src/Sql/dbo/Auth/Tables/EmergencyAccess.sql",
+      "schemaOwners": [
+        "@bitwarden/team-auth-dev"
+      ],
+      "schemaOwnersLine": 35,
+      "schemaDomain": "auth",
+      "columnCount": 12,
+      "columns": [
+        "CreationDate",
+        "Email",
+        "GranteeId",
+        "GrantorId",
+        "Id",
+        "KeyEncrypted",
+        "LastNotificationDate",
+        "RecoveryInitiatedDate",
+        "RevisionDate",
+        "Status",
+        "Type",
+        "WaitTimeDays"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Event",
+      "schemaFile": "src/Sql/dbo/Dirt/Tables/Event.sql",
+      "schemaOwners": [
+        "@bitwarden/team-data-insights-and-reporting-dev"
+      ],
+      "schemaOwnersLine": 55,
+      "schemaDomain": "dirt",
+      "columnCount": 24,
+      "columns": [
+        "ActingUserId",
+        "CipherId",
+        "CollectionId",
+        "Date",
+        "DeviceType",
+        "DomainName",
+        "GrantedServiceAccountId",
+        "GroupId",
+        "Id",
+        "InstallationId",
+        "IpAddress",
+        "OrganizationId",
+        "OrganizationUserId",
+        "PolicyId",
+        "ProjectId",
+        "ProviderId",
+        "ProviderOrganizationId",
+        "ProviderUserId",
+        "SecretId",
+        "SendId",
+        "ServiceAccountId",
+        "SystemUser",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Folder",
+      "schemaFile": "src/Sql/dbo/Vault/Tables/Folder.sql",
+      "schemaOwners": [
+        "@bitwarden/team-vault-dev"
+      ],
+      "schemaOwnersLine": 63,
+      "schemaDomain": "vault",
+      "columnCount": 5,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "Name",
+        "RevisionDate",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Grant",
+      "schemaFile": "src/Sql/dbo/Auth/Tables/Grant.sql",
+      "schemaOwners": [
+        "@bitwarden/team-auth-dev"
+      ],
+      "schemaOwnersLine": 35,
+      "schemaDomain": "auth",
+      "columnCount": 11,
+      "columns": [
+        "ClientId",
+        "ConsumedDate",
+        "CreationDate",
+        "Data",
+        "Description",
+        "ExpirationDate",
+        "Id",
+        "Key",
+        "SessionId",
+        "SubjectId",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Group",
+      "schemaFile": "src/Sql/dbo/Tables/Group.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 6,
+      "columns": [
+        "CreationDate",
+        "ExternalId",
+        "Id",
+        "Name",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "GroupUser",
+      "schemaFile": "src/Sql/dbo/Tables/GroupUser.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 2,
+      "columns": [
+        "GroupId",
+        "OrganizationUserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Installation",
+      "schemaFile": "src/Sql/dbo/Platform/Tables/Installation.sql",
+      "schemaOwners": [
+        "@bitwarden/team-platform-dev"
+      ],
+      "schemaOwnersLine": 106,
+      "schemaDomain": "platform",
+      "columnCount": 6,
+      "columns": [
+        "CreationDate",
+        "Email",
+        "Enabled",
+        "Id",
+        "Key",
+        "LastActivityDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Notification",
+      "schemaFile": "src/Sql/dbo/Tables/Notification.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 11,
+      "columns": [
+        "Body",
+        "ClientType",
+        "CreationDate",
+        "Global",
+        "Id",
+        "OrganizationId",
+        "Priority",
+        "RevisionDate",
+        "TaskId",
+        "Title",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "NotificationStatus",
+      "schemaFile": "src/Sql/dbo/Tables/NotificationStatus.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 4,
+      "columns": [
+        "DeletedDate",
+        "NotificationId",
+        "ReadDate",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Organization",
+      "schemaFile": "src/Sql/dbo/Tables/Organization.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 68,
+      "columns": [
+        "AllowAdminAccessToAllCollectionItems",
+        "BillingEmail",
+        "BusinessAddress1",
+        "BusinessAddress2",
+        "BusinessAddress3",
+        "BusinessCountry",
+        "BusinessName",
+        "BusinessTaxNumber",
+        "CreationDate",
+        "Enabled",
+        "ExemptFromBillingAutomation",
+        "ExpirationDate",
+        "Gateway",
+        "GatewayCustomerId",
+        "GatewaySubscriptionId",
+        "Id",
+        "Identifier",
+        "LicenseKey",
+        "LimitCollectionCreation",
+        "LimitCollectionDeletion",
+        "LimitItemDeletion",
+        "MaxAutoscaleSeats",
+        "MaxAutoscaleSmSeats",
+        "MaxAutoscaleSmServiceAccounts",
+        "MaxCollections",
+        "MaxStorageGb",
+        "MaxStorageGbIncreased",
+        "Name",
+        "OwnersNotifiedOfAutoscaling",
+        "Plan",
+        "PlanType",
+        "PrivateKey",
+        "PublicKey",
+        "ReferenceData",
+        "RevisionDate",
+        "Seats",
+        "SecretsManagerBeta",
+        "SelfHost",
+        "SmSeats",
+        "SmServiceAccounts",
+        "Status",
+        "Storage",
+        "SyncSeats",
+        "TwoFactorProviders",
+        "Use2fa",
+        "UseAdminSponsoredFamilies",
+        "UseApi",
+        "UseAutomaticUserConfirmation",
+        "UseCustomPermissions",
+        "UseDirectory",
+        "UseDisableSmAdsForUsers",
+        "UseEvents",
+        "UseGroups",
+        "UseInviteLinks",
+        "UseKeyConnector",
+        "UseMyItems",
+        "UseOrganizationDomains",
+        "UsePam",
+        "UsePasswordManager",
+        "UsePhishingBlocker",
+        "UsePolicies",
+        "UseResetPassword",
+        "UseRiskInsights",
+        "UseScim",
+        "UseSecretsManager",
+        "UseSso",
+        "UseTotp",
+        "UsersGetPremium"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationApiKey",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationApiKey.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 5,
+      "columns": [
+        "ApiKey",
+        "Id",
+        "OrganizationId",
+        "RevisionDate",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationApplication",
+      "schemaFile": "src/Sql/dbo/Dirt/Tables/OrganizationApplication.sql",
+      "schemaOwners": [
+        "@bitwarden/team-data-insights-and-reporting-dev"
+      ],
+      "schemaOwnersLine": 55,
+      "schemaDomain": "dirt",
+      "columnCount": 6,
+      "columns": [
+        "Applications",
+        "ContentEncryptionKey",
+        "CreationDate",
+        "Id",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationConnection",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationConnection.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 5,
+      "columns": [
+        "Config",
+        "Enabled",
+        "Id",
+        "OrganizationId",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationDeleteTask",
+      "schemaFile": "src/Sql/dbo/Dirt/Tables/OrganizationDeleteTask.sql",
+      "schemaOwners": [
+        "@bitwarden/team-data-insights-and-reporting-dev"
+      ],
+      "schemaOwnersLine": 55,
+      "schemaDomain": "dirt",
+      "columnCount": 10,
+      "columns": [
+        "CompletedDate",
+        "CreationDate",
+        "FailureCount",
+        "Id",
+        "ItemsDeletedCount",
+        "LastError",
+        "OrganizationId",
+        "RevisionDate",
+        "StartDate",
+        "TaskType"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationDomain",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationDomain.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 9,
+      "columns": [
+        "CreationDate",
+        "DomainName",
+        "Id",
+        "JobRunCount",
+        "LastCheckedDate",
+        "NextRunDate",
+        "OrganizationId",
+        "Txt",
+        "VerifiedDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationInstallation",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/OrganizationInstallation.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 5,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "InstallationId",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationIntegration",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationIntegration.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 6,
+      "columns": [
+        "Configuration",
+        "CreationDate",
+        "Id",
+        "OrganizationId",
+        "RevisionDate",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationIntegrationConfiguration",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationIntegrationConfiguration.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 8,
+      "columns": [
+        "Configuration",
+        "CreationDate",
+        "EventType",
+        "Filters",
+        "Id",
+        "OrganizationIntegrationId",
+        "RevisionDate",
+        "Template"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationInviteLink",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationInviteLink.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 8,
+      "columns": [
+        "AllowedDomains",
+        "Code",
+        "CreationDate",
+        "Id",
+        "Invite",
+        "OrganizationId",
+        "RevisionDate",
+        "SupportsConfirmation"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationPlanMigrationCohort",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/OrganizationPlanMigrationCohort.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 8,
+      "columns": [
+        "ChurnDiscountCouponCode",
+        "CreationDate",
+        "Id",
+        "IsActive",
+        "MigrationPathId",
+        "Name",
+        "ProactiveDiscountCouponCode",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationPlanMigrationCohortAssignment",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/OrganizationPlanMigrationCohortAssignment.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 9,
+      "columns": [
+        "ChurnDiscountAppliedDate",
+        "CohortId",
+        "CreationDate",
+        "Id",
+        "MigratedDate",
+        "OrganizationId",
+        "RenewalNotificationSentDate",
+        "RevisionDate",
+        "ScheduledDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationReport",
+      "schemaFile": "src/Sql/dbo/Dirt/Tables/OrganizationReport.sql",
+      "schemaOwners": [
+        "@bitwarden/team-data-insights-and-reporting-dev"
+      ],
+      "schemaOwnersLine": 55,
+      "schemaDomain": "dirt",
+      "columnCount": 21,
+      "columns": [
+        "ApplicationAtRiskCount",
+        "ApplicationCount",
+        "ApplicationData",
+        "ContentEncryptionKey",
+        "CreationDate",
+        "CriticalApplicationAtRiskCount",
+        "CriticalApplicationCount",
+        "CriticalMemberAtRiskCount",
+        "CriticalMemberCount",
+        "CriticalPasswordAtRiskCount",
+        "CriticalPasswordCount",
+        "Id",
+        "MemberAtRiskCount",
+        "MemberCount",
+        "OrganizationId",
+        "PasswordAtRiskCount",
+        "PasswordCount",
+        "ReportData",
+        "ReportFile",
+        "RevisionDate",
+        "SummaryData"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationSponsorship",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationSponsorship.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 12,
+      "columns": [
+        "FriendlyName",
+        "Id",
+        "IsAdminInitiated",
+        "LastSyncDate",
+        "Notes",
+        "OfferedToEmail",
+        "PlanSponsorshipType",
+        "SponsoredOrganizationId",
+        "SponsoringOrganizationId",
+        "SponsoringOrganizationUserID",
+        "ToDelete",
+        "ValidUntil"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "OrganizationUser",
+      "schemaFile": "src/Sql/dbo/Tables/OrganizationUser.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 17,
+      "columns": [
+        "AccessPam",
+        "AccessSecretsManager",
+        "CreationDate",
+        "Email",
+        "ExternalId",
+        "Id",
+        "Key",
+        "OrganizationId",
+        "Permissions",
+        "ResetPasswordKey",
+        "RevisionDate",
+        "RevocationReason",
+        "Status",
+        "StatusNew",
+        "Type",
+        "UserId",
+        "V2UpgradeToken"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "PasswordHealthReportApplication",
+      "schemaFile": "src/Sql/dbo/Tables/PasswordHealthReportApplication.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 5,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "OrganizationId",
+        "RevisionDate",
+        "Uri"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "PlayItem",
+      "schemaFile": "src/Sql/dbo/Tables/PlayItem.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 6,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "OrganizationId",
+        "PlayId",
+        "ProviderId",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Policy",
+      "schemaFile": "src/Sql/dbo/Tables/Policy.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 7,
+      "columns": [
+        "CreationDate",
+        "Data",
+        "Enabled",
+        "Id",
+        "OrganizationId",
+        "RevisionDate",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Project",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/Project.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 6,
+      "columns": [
+        "CreationDate",
+        "DeletedDate",
+        "Id",
+        "Name",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ProjectSecret",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/ProjectSecret.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 2,
+      "columns": [
+        "ProjectsId",
+        "SecretsId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Provider",
+      "schemaFile": "src/Sql/dbo/Tables/Provider.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 20,
+      "columns": [
+        "BillingEmail",
+        "BillingPhone",
+        "BusinessAddress1",
+        "BusinessAddress2",
+        "BusinessAddress3",
+        "BusinessCountry",
+        "BusinessName",
+        "BusinessTaxNumber",
+        "CreationDate",
+        "DiscountId",
+        "Enabled",
+        "Gateway",
+        "GatewayCustomerId",
+        "GatewaySubscriptionId",
+        "Id",
+        "Name",
+        "RevisionDate",
+        "Status",
+        "Type",
+        "UseEvents"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ProviderInvoiceItem",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/ProviderInvoiceItem.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 11,
+      "columns": [
+        "AssignedSeats",
+        "ClientId",
+        "ClientName",
+        "Created",
+        "Id",
+        "InvoiceId",
+        "InvoiceNumber",
+        "PlanName",
+        "ProviderId",
+        "Total",
+        "UsedSeats"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ProviderOrganization",
+      "schemaFile": "src/Sql/dbo/Tables/ProviderOrganization.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 7,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "Key",
+        "OrganizationId",
+        "ProviderId",
+        "RevisionDate",
+        "Settings"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ProviderPlan",
+      "schemaFile": "src/Sql/dbo/Billing/Tables/ProviderPlan.sql",
+      "schemaOwners": [
+        "@bitwarden/team-billing-dev"
+      ],
+      "schemaOwnersLine": 92,
+      "schemaDomain": "billing",
+      "columnCount": 6,
+      "columns": [
+        "AllocatedSeats",
+        "Id",
+        "PlanType",
+        "ProviderId",
+        "PurchasedSeats",
+        "SeatMinimum"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ProviderUser",
+      "schemaFile": "src/Sql/dbo/Tables/ProviderUser.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 10,
+      "columns": [
+        "CreationDate",
+        "Email",
+        "Id",
+        "Key",
+        "Permissions",
+        "ProviderId",
+        "RevisionDate",
+        "Status",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Secret",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/Secret.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 8,
+      "columns": [
+        "CreationDate",
+        "DeletedDate",
+        "Id",
+        "Key",
+        "Note",
+        "OrganizationId",
+        "RevisionDate",
+        "Value"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "SecretVersion",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/SecretVersion.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 6,
+      "columns": [
+        "EditorOrganizationUserId",
+        "EditorServiceAccountId",
+        "Id",
+        "SecretId",
+        "Value",
+        "VersionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "SecurityTask",
+      "schemaFile": "src/Sql/dbo/Vault/Tables/SecurityTask.sql",
+      "schemaOwners": [
+        "@bitwarden/team-vault-dev"
+      ],
+      "schemaOwnersLine": 63,
+      "schemaDomain": "vault",
+      "columnCount": 7,
+      "columns": [
+        "CipherId",
+        "CreationDate",
+        "Id",
+        "OrganizationId",
+        "RevisionDate",
+        "Status",
+        "Type"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Send",
+      "schemaFile": "src/Sql/dbo/Tools/Tables/Send.sql",
+      "schemaOwners": [
+        "@bitwarden/team-tools-dev"
+      ],
+      "schemaOwnersLine": 52,
+      "schemaDomain": "tools",
+      "columnCount": 18,
+      "columns": [
+        "AccessCount",
+        "AuthType",
+        "CipherId",
+        "CreationDate",
+        "Data",
+        "DeletionDate",
+        "Disabled",
+        "Emails",
+        "ExpirationDate",
+        "HideEmail",
+        "Id",
+        "Key",
+        "MaxAccessCount",
+        "OrganizationId",
+        "Password",
+        "RevisionDate",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "ServiceAccount",
+      "schemaFile": "src/Sql/dbo/SecretsManager/Tables/ServiceAccount.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": "secrets-manager",
+      "columnCount": 5,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "Name",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "SsoConfig",
+      "schemaFile": "src/Sql/dbo/Auth/Tables/SsoConfig.sql",
+      "schemaOwners": [
+        "@bitwarden/team-auth-dev"
+      ],
+      "schemaOwnersLine": 35,
+      "schemaDomain": "auth",
+      "columnCount": 6,
+      "columns": [
+        "CreationDate",
+        "Data",
+        "Enabled",
+        "Id",
+        "OrganizationId",
+        "RevisionDate"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "SsoUser",
+      "schemaFile": "src/Sql/dbo/Auth/Tables/SsoUser.sql",
+      "schemaOwners": [
+        "@bitwarden/team-auth-dev"
+      ],
+      "schemaOwnersLine": 35,
+      "schemaDomain": "auth",
+      "columnCount": 5,
+      "columns": [
+        "CreationDate",
+        "ExternalId",
+        "Id",
+        "OrganizationId",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "SubscriptionDiscount",
+      "schemaFile": "src/Sql/dbo/Tables/SubscriptionDiscount.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 14,
+      "columns": [
+        "AmountOff",
+        "AudienceType",
+        "CreationDate",
+        "Currency",
+        "Duration",
+        "DurationInMonths",
+        "EndDate",
+        "Id",
+        "Name",
+        "PercentOff",
+        "RevisionDate",
+        "StartDate",
+        "StripeCouponId",
+        "StripeProductIds"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "TaxRate",
+      "schemaFile": "src/Sql/dbo/Tables/TaxRate.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 6,
+      "columns": [
+        "Active",
+        "Country",
+        "Id",
+        "PostalCode",
+        "Rate",
+        "State"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "Transaction",
+      "schemaFile": "src/Sql/dbo/Tables/Transaction.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 13,
+      "columns": [
+        "Amount",
+        "CreationDate",
+        "Details",
+        "Gateway",
+        "GatewayId",
+        "Id",
+        "OrganizationId",
+        "PaymentMethodType",
+        "ProviderId",
+        "Refunded",
+        "RefundedAmount",
+        "Type",
+        "UserId"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "User",
+      "schemaFile": "src/Sql/dbo/Tables/User.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 51,
+      "columns": [
+        "AccountRevisionDate",
+        "ApiKey",
+        "AvatarColor",
+        "CreationDate",
+        "Culture",
+        "Email",
+        "EmailVerified",
+        "EquivalentDomains",
+        "ExcludedGlobalEquivalentDomains",
+        "FailedLoginCount",
+        "ForcePasswordReset",
+        "Gateway",
+        "GatewayCustomerId",
+        "GatewaySubscriptionId",
+        "Id",
+        "Kdf",
+        "KdfIterations",
+        "KdfMemory",
+        "KdfParallelism",
+        "Key",
+        "LastApiKeyRotationDate",
+        "LastEmailChangeDate",
+        "LastFailedLoginDate",
+        "LastKdfChangeDate",
+        "LastKeyRotationDate",
+        "LastPasswordChangeDate",
+        "LicenseKey",
+        "MasterPassword",
+        "MasterPasswordHint",
+        "MasterPasswordSalt",
+        "MaxStorageGb",
+        "MaxStorageGbIncreased",
+        "Name",
+        "Premium",
+        "PremiumExpirationDate",
+        "PrivateKey",
+        "PublicKey",
+        "ReferenceData",
+        "RenewalReminderDate",
+        "RevisionDate",
+        "SecurityStamp",
+        "SecurityState",
+        "SecurityVersion",
+        "SignedPublicKey",
+        "Storage",
+        "TwoFactorProviders",
+        "TwoFactorRecoveryCode",
+        "UserKeyId",
+        "UsesKeyConnector",
+        "V2UpgradeToken",
+        "VerifyDevices"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "UserSignatureKeyPair",
+      "schemaFile": "src/Sql/dbo/KeyManagement/Tables/UserSignatureKeyPair.sql",
+      "schemaOwners": [
+        "@bitwarden/team-key-management-dev"
+      ],
+      "schemaOwnersLine": 49,
+      "schemaDomain": "key-mgmt",
+      "columnCount": 7,
+      "columns": [
+        "CreationDate",
+        "Id",
+        "RevisionDate",
+        "SignatureAlgorithm",
+        "SigningKey",
+        "UserId",
+        "VerifyingKey"
+      ]
+    },
+    {
+      "schema": "dbo",
+      "table": "WebAuthnCredential",
+      "schemaFile": "src/Sql/dbo/Tables/WebAuthnCredential.sql",
+      "schemaOwners": [
+        "@bitwarden/dept-dbops"
+      ],
+      "schemaOwnersLine": 14,
+      "schemaDomain": null,
+      "columnCount": 14,
+      "columns": [
+        "AaGuid",
+        "Counter",
+        "CreationDate",
+        "CredentialId",
+        "EncryptedPrivateKey",
+        "EncryptedPublicKey",
+        "EncryptedUserKey",
+        "Id",
+        "Name",
+        "PublicKey",
+        "RevisionDate",
+        "SupportsPrf",
+        "Type",
+        "UserId"
+      ]
+    }
+  ]
+}
