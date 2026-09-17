@@ -57,7 +57,7 @@ public class PamTargetSystemResponseModel : ResponseModel
 
     /// <summary>
     /// The password-generation constraints the access connector must satisfy when rotating credentials on this target.
-    /// Null on a manual target.
+    /// On a manual target it is advisory guidance for the operator, and null when none was set.
     /// </summary>
     public PamPasswordPolicyResponseModel? PasswordPolicy { get; set; }
 

@@ -74,7 +74,36 @@ public class RegisterTargetSystemCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task RegisterAsync_ManualHappyPath_CreatesTargetWithNoPolicy(
+    public async Task RegisterAsync_ManualWithSessionTerminationSet_ThrowsBadRequest(
+        Guid organizationId, Guid actingUserId, string name)
+    {
+        var sutProvider = Setup();
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterAsync(
+            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, _policy, false));
+
+        await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterAsync_ManualWithPolicy_CreatesTargetWithSerializedPolicy(
+        Guid organizationId, Guid actingUserId, string name)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IPamTargetSystemRepository>().CreateAsync(Arg.Any<PamTargetSystem>())
+            .Returns(call => Task.FromResult(call.Arg<PamTargetSystem>()));
+
+        var result = await sutProvider.Sut.RegisterAsync(
+            organizationId, actingUserId, name, PamTargetSystemMethod.Manual, null, _policy, null);
+
+        Assert.Equal(PamTargetSystemMethod.Manual, result.Method);
+        Assert.Null(result.Kind);
+        Assert.Null(result.SupportsSessionTermination);
+        Assert.Equal(PamPasswordPolicy.Serialize(_policy), result.PasswordPolicy);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RegisterAsync_ManualWithoutPolicy_CreatesTargetWithNoPolicy(
         Guid organizationId, Guid actingUserId, string name)
     {
         var sutProvider = Setup();
