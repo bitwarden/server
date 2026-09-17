@@ -52,14 +52,14 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
         }
         else
         {
-            if (kind is not null || passwordPolicy is not null || supportsSessionTermination is not null)
+            if (kind is not null || supportsSessionTermination is not null)
             {
                 throw new BadRequestException(
-                    "Kind, password policy, and session-termination capability must not be set for a manual target system.");
+                    "Kind and session-termination capability must not be set for a manual target system.");
             }
 
             kind = null;
-            passwordPolicyJson = null;
+            passwordPolicyJson = passwordPolicy is null ? null : PamPasswordPolicy.Serialize(passwordPolicy);
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
