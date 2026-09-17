@@ -32,7 +32,8 @@ public class EventIntegrationHandler<T>(
         {
             if (configuration.DisabledDate is not null)
             {
-                // The circuit breaker disabled this configuration; it stays off until an admin edits it
+                // The circuit breaker disabled this configuration; nothing re-enables it on a timer. The circuit
+                // breaker section of the EventIntegrations README covers the three recovery paths.
                 continue;
             }
 
