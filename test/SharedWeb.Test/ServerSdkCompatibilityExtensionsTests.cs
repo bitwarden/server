@@ -159,10 +159,11 @@ public class ServerSdkCompatibilityExtensionsTests
     [Theory]
     [InlineData(FeatureFlagKeys.Pam)]
     [InlineData(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk)]
+    [InlineData(FeatureFlagKeys.PamAccessConnector)]
     public void PamFlags_PinnedOn_EvenWhenConfiguredOff(string flag)
     {
         // The FlagValues defaults only feed the data source when no SdkKey is set, so they never
-        // reach a LaunchDarkly-connected environment - UAT reported both flags as false with the
+        // reach a LaunchDarkly-connected environment - UAT reported the flags as false with the
         // defaults in place. Only the pin gets there, so it has to beat a value too.
         using var provider = CreateProvider(new Dictionary<string, string?>
         {
@@ -176,6 +177,25 @@ public class ServerSdkCompatibilityExtensionsTests
 
         var all = featureService.GetAll();
         Assert.True(all.TryGetValue(flag, out var pinnedValue));
+        Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
+    }
+
+    [Fact]
+    public void PamAccessConnector_NothingConfigured_IsStatedOn()
+    {
+        // The connector flag carries no FlagValues default, and LaunchDarkly has no
+        // pm-42354-rotation-daemon flag either - GetAll() reports only the keys LaunchDarkly
+        // holds, so /config omitted it and the clients fell back to their own FALSE default.
+        // The pin has to both resolve on and be stated outright for the surface to open.
+        using var provider = CreateProvider([]);
+        using var scope = provider.CreateScope();
+
+        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
+
+        Assert.True(featureService.IsEnabled(FeatureFlagKeys.PamAccessConnector));
+
+        var all = featureService.GetAll();
+        Assert.True(all.TryGetValue(FeatureFlagKeys.PamAccessConnector, out var pinnedValue));
         Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
     }
 
