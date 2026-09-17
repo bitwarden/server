@@ -168,18 +168,21 @@ keyed `ResiliencePipelineRegistry` so Polly can measure them over a rolling wind
 
 | Setting | Meaning |
 | --- | --- |
-| `IntegrationCircuitBreakerMinimumThroughput` | Non-retryable failures inside the window that disable the configuration. Polly requires 2 or more; anything less turns the breaker off, which is the default. |
-| `IntegrationCircuitBreakerSamplingDuration` | The wall-clock window failures are measured over. Polly accepts 500ms through 1 day; a value outside that also turns the breaker off. |
+| `IntegrationCircuitBreakerMinimumThroughput` | Attempts required inside the window before the ratio is evaluated. Polly requires 2 or more; anything less turns the breaker off, which is the default. |
+| `IntegrationCircuitBreakerFailureRatio` | Proportion of those attempts that must be non-retryable failures. Must be above 0 and at most 1. |
+| `IntegrationCircuitBreakerSamplingDuration` | The wall-clock window outcomes are measured over, and how long the circuit stays open after a trip. Polly accepts 500ms through 1 day. |
+
+A value outside any of those ranges turns the breaker off rather than throwing, because Polly validates them when the
+pipeline is built and that happens on the message path.
 
 A window rather than a consecutive count is what makes the failure history self-managing: a configuration that fails
 once a month never accumulates toward a trip, and one that has been fixed is not disabled by history from before the
 fix.
 
-Only non-retryable failures are measured. A rate-limited or unavailable service recovers on its own and should not
-cost an organization its integration, while an authentication, configuration, or permanent failure will not recover
-without someone changing the configuration. Successes are not counted either way, so the threshold has to suit the
-volume the integration sees: a busy configuration wanting tolerance for short bursts needs a higher number, not a
-ratio.
+Only non-retryable failures count toward opening the circuit. A rate-limited or unavailable service recovers on its
+own and should not cost an organization its integration, while an authentication, configuration, or permanent failure
+will not recover without someone changing the configuration. Successes are still sampled, which is what dilutes the
+ratio for a busy configuration and what closes a half-open circuit after a break.
 
 #### Scope
 
@@ -194,12 +197,17 @@ response model carries `DisabledDate` and `DisabledReason` instead.
 
 #### Disabling and recovery
 
-Polly's circuit state is per process, and the database row is what holds delivery off. The break is held at Polly's
-maximum of one day rather than the sampling window: an open circuit short-circuits, so a configuration an admin has
-just re-enabled is not immediately re-disabled by the next single failure the way a half-open circuit would
-re-disable it. Only counted failures reach the registry, so it stays proportional to the configurations that are
-actually failing, and no shared counter is needed, which suits the write-rate guidance in
-[CACHING](../../Utilities/CACHING.md).
+Polly's circuit state is per process, and the database row is what holds delivery off, so no shared counter is
+needed. That suits the write-rate guidance in [CACHING](../../Utilities/CACHING.md).
+
+Every outcome is sampled, so the registry holds one pipeline per organization and configuration that delivers events
+in that process. Polly has no eviction API, so those live until the process restarts. Each entry is small, but the
+set grows with active configurations rather than with failing ones, which is the cost of letting successes close a
+half-open circuit.
+
+If the write that disables a configuration fails, the circuit is already open and Polly fires the open transition
+only once, so the attempt is logged with the organization and configuration and retried by the next transition after
+the break rather than lost silently.
 
 Disabling writes `DisabledDate` and `DisabledReason`, scoped through the integration so the write cannot cross
 tenants, and removes the organization's integration tag from the cache, which is the same invalidation path the admin
