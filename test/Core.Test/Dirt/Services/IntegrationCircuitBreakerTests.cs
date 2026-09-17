@@ -280,4 +280,17 @@ public class IntegrationCircuitBreakerTests
 
         await AssertNotDisabledAsync();
     }
+
+    [Fact]
+    public void IntegrationOutcome_HasNoReferenceTypedMembers()
+    {
+        // Polly holds the last handled outcome for the life of an open circuit, and a disabled configuration stops
+        // producing outcomes, so a reference here would pin integration credentials until the process restarts
+        var referenceTyped = typeof(IntegrationOutcome)
+            .GetProperties()
+            .Where(property => !property.PropertyType.IsValueType)
+            .Select(property => property.Name);
+
+        Assert.Empty(referenceTyped);
+    }
 }

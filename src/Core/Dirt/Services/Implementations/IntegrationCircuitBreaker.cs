@@ -1,4 +1,5 @@
-﻿using Bit.Core.Dirt.Models.Data.EventIntegrations;
+﻿using Bit.Core.Dirt.Enums;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -57,8 +58,17 @@ public class IntegrationCircuitBreaker(
             return;
         }
 
+        // Polly retains the last handled outcome for as long as the circuit stays open, so only the fields the
+        // pipeline reads are replayed. The message itself carries decrypted third-party credentials and must not
+        // outlive the handler that produced it
+        var outcome = new IntegrationOutcome(
+            Success: result.Success,
+            Retryable: result.Retryable,
+            Category: result.Category,
+            IntegrationType: message.IntegrationType);
+
         var key = new IntegrationCircuitBreakerKey(organizationId, configurationId);
-        var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
+        var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationOutcome>(
             key,
             (builder, context) => Build(builder, context.PipelineKey, settings));
 
@@ -68,7 +78,7 @@ public class IntegrationCircuitBreaker(
             // Outcomes are replayed into the pipeline rather than wrapping the send, because the key is only
             // known once the message has been deserialized by the handler
             await pipeline.ExecuteOutcomeAsync(
-                (_, _) => new ValueTask<Outcome<IntegrationHandlerResult>>(Outcome.FromResult(result)),
+                (_, _) => new ValueTask<Outcome<IntegrationOutcome>>(Outcome.FromResult(outcome)),
                 context,
                 state: 0);
         }
@@ -80,8 +90,8 @@ public class IntegrationCircuitBreaker(
 
     // A rate-limited or unavailable service recovers on its own and should not cost an organization its
     // integration, while an authentication, configuration, or permanent failure will not recover on its own
-    private static bool CountsTowardBreaking(IntegrationHandlerResult result) =>
-        !result.Success && !result.Retryable;
+    private static bool CountsTowardBreaking(IntegrationOutcome outcome) =>
+        !outcome.Success && !outcome.Retryable;
 
     // Every value Polly range-checks is validated here, so an out-of-range setting disables the breaker instead of
     // throwing out of the pipeline factory on every message
@@ -92,17 +102,17 @@ public class IntegrationCircuitBreaker(
         settings.IntegrationCircuitBreakerSamplingDuration >= MinimumSupportedDuration &&
         settings.IntegrationCircuitBreakerSamplingDuration <= MaximumSupportedDuration;
 
-    private ResiliencePipelineBuilder<IntegrationHandlerResult> Build(
-        ResiliencePipelineBuilder<IntegrationHandlerResult> builder,
+    private ResiliencePipelineBuilder<IntegrationOutcome> Build(
+        ResiliencePipelineBuilder<IntegrationOutcome> builder,
         IntegrationCircuitBreakerKey key,
         GlobalSettings.EventLoggingSettings settings)
     {
         // Wired so the sampling window advances on the injected clock and stays testable
         builder.TimeProvider = timeProvider;
 
-        return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationHandlerResult>
+        return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationOutcome>
         {
-            ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>().HandleResult(CountsTowardBreaking),
+            ShouldHandle = new PredicateBuilder<IntegrationOutcome>().HandleResult(CountsTowardBreaking),
             FailureRatio = settings.IntegrationCircuitBreakerFailureRatio,
             MinimumThroughput = settings.IntegrationCircuitBreakerMinimumThroughput,
             SamplingDuration = settings.IntegrationCircuitBreakerSamplingDuration,
@@ -115,11 +125,11 @@ public class IntegrationCircuitBreaker(
         });
     }
 
-    private async ValueTask TryDisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)
+    private async ValueTask TryDisableAsync(IntegrationCircuitBreakerKey key, IntegrationOutcome? outcome)
     {
         try
         {
-            await DisableAsync(key, result);
+            await DisableAsync(key, outcome);
         }
         catch (Exception ex)
         {
@@ -132,9 +142,9 @@ public class IntegrationCircuitBreaker(
         }
     }
 
-    private async ValueTask DisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)
+    private async ValueTask DisableAsync(IntegrationCircuitBreakerKey key, IntegrationOutcome? outcome)
     {
-        if (result?.Category is not { } failureCategory)
+        if (outcome is not { } failure || failure.Category is not { } failureCategory)
         {
             return;
         }
@@ -153,16 +163,27 @@ public class IntegrationCircuitBreaker(
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
                 organizationId: key.OrganizationId,
-                integrationType: result.Message.IntegrationType));
+                integrationType: failure.IntegrationType));
 
         logger.LogWarning(
             "Integration configuration disabled by the circuit breaker. OrganizationId: {OrgId}, " +
             "IntegrationType: {IntegrationType}, ConfigurationId: {ConfigurationId}, FailureCategory: {Category}",
             key.OrganizationId,
-            result.Message.IntegrationType,
+            failure.IntegrationType,
             key.ConfigurationId,
             failureCategory);
     }
 }
 
 public readonly record struct IntegrationCircuitBreakerKey(Guid OrganizationId, Guid ConfigurationId);
+
+/// <summary>
+/// The only fields the circuit breaker's pipeline reads from a handler result. Every member must stay a value type:
+/// Polly holds the last handled outcome for the life of an open circuit, and a disabled configuration stops
+/// producing outcomes, so anything reachable from here is pinned until the process restarts.
+/// </summary>
+internal readonly record struct IntegrationOutcome(
+    bool Success,
+    bool Retryable,
+    IntegrationFailureCategory? Category,
+    IntegrationType IntegrationType);
