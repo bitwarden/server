@@ -29,6 +29,8 @@ public class IntegrationCircuitBreaker(
     internal static readonly TimeSpan MinimumSupportedDuration = TimeSpan.FromMilliseconds(500);
     internal static readonly TimeSpan MaximumSupportedDuration = TimeSpan.FromDays(1);
 
+    private int _invalidSettingsLogged;
+
     public async Task RecordResultAsync(IntegrationHandlerResult result)
     {
         // The breaker must never change what the listener does with the message that triggered it
@@ -93,9 +95,35 @@ public class IntegrationCircuitBreaker(
     private static bool CountsTowardBreaking(IntegrationOutcome outcome) =>
         !outcome.Success && !outcome.Retryable;
 
-    // Every value Polly range-checks is validated here, so an out-of-range setting disables the breaker instead of
-    // throwing out of the pipeline factory on every message
-    private static bool IsConfigured(GlobalSettings.EventLoggingSettings settings) =>
+    // An out-of-range setting disables the breaker instead of throwing out of the pipeline factory on every
+    // message, so it is logged once to keep a misconfigured deployment distinguishable from an unconfigured one
+    private bool IsConfigured(GlobalSettings.EventLoggingSettings settings)
+    {
+        if (settings.IntegrationCircuitBreakerMinimumThroughput <= 0)
+        {
+            return false;
+        }
+
+        if (IsWithinSupportedRanges(settings))
+        {
+            return true;
+        }
+
+        if (Interlocked.Exchange(ref _invalidSettingsLogged, 1) == 0)
+        {
+            logger.LogWarning(
+                "Integration circuit breaker settings are outside the supported ranges, so it is disabled. " +
+                "MinimumThroughput: {Throughput}, FailureRatio: {Ratio}, SamplingDuration: {Duration}",
+                settings.IntegrationCircuitBreakerMinimumThroughput,
+                settings.IntegrationCircuitBreakerFailureRatio,
+                settings.IntegrationCircuitBreakerSamplingDuration);
+        }
+
+        return false;
+    }
+
+    // Polly's own ranges, except that a zero ratio is rejected here because it sets no threshold
+    private static bool IsWithinSupportedRanges(GlobalSettings.EventLoggingSettings settings) =>
         settings.IntegrationCircuitBreakerMinimumThroughput >= MinimumSupportedThroughput &&
         settings.IntegrationCircuitBreakerFailureRatio > 0 &&
         settings.IntegrationCircuitBreakerFailureRatio <= 1 &&

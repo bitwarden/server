@@ -173,7 +173,8 @@ Both integration listeners report every final outcome to the breaker, which repl
 | `IntegrationCircuitBreakerSamplingDuration` | The wall-clock window outcomes are measured over, and how long the circuit stays open after a trip. Polly accepts 500ms through 1 day. |
 
 A value outside any of those ranges turns the breaker off rather than throwing, because Polly validates them when the
-pipeline is built and that happens on the message path.
+pipeline is built and that happens on the message path. A deployment that set the throughput but got one of the
+values wrong is warned about once, so it stays distinguishable from a deployment that never turned the breaker on.
 
 A window rather than a consecutive count is what makes the failure history self-managing: a configuration that fails
 once a month never accumulates toward a trip, and one that has been fixed is not disabled by history from before the
