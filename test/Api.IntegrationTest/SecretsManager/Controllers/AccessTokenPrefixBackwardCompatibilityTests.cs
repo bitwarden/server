@@ -11,17 +11,12 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
 /// <summary>
-/// SM-2093 QA: proves, end-to-end, that a machine account (service account) access token issued
-/// BEFORE the <see cref="FeatureFlagKeys.Sm2093MachineAccountTokenPrefix"/> flag is enabled keeps
-/// authenticating exactly as before once the flag goes live for newly-created tokens. This is the
-/// single most important non-breaking-change requirement for the whole epic: customers have
-/// millions of these tokens already baked into CI/CD pipelines and must never need to rotate them.
-///
-/// Unlike the other ServiceAccountsControllerTests in this folder, this test drives a real OAuth
-/// client_credentials request against the Identity test host (via <see cref="ApiApplicationFactory.Identity"/>,
-/// which shares the same SQLite database as the Api host) rather than only exercising the SM Api
-/// surface, so it empirically proves hash-based secret validation is content-agnostic rather than
-/// just trusting that claim from static analysis.
+/// Covers service account access tokens issued before
+/// <see cref="FeatureFlagKeys.Sm2093MachineAccountTokenPrefix"/> is enabled: they continue to
+/// authenticate and revoke normally once the flag is enabled for newly-created tokens. Drives a
+/// real OAuth client_credentials request against the Identity test host (via
+/// <see cref="ApiApplicationFactory.Identity"/>, which shares the same SQLite database as the Api
+/// host) rather than exercising only the SM Api surface.
 /// </summary>
 public class AccessTokenPrefixBackwardCompatibilityTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -41,13 +36,7 @@ public class AccessTokenPrefixBackwardCompatibilityTests : IClassFixture<ApiAppl
     {
         _factory = factory;
 
-        // QA-environment workaround: this machine's real local dev `dotnet user-secrets` for the
-        // Api/Identity projects (used for its own SQL Server dev instance) sets
-        // globalSettings:selfHosted=true. WebApplicationFactoryBase unconditionally loads those
-        // same user secrets into every SQLite-backed test host, which otherwise makes
-        // organization sign-up fail with "Could not find plan for type Free" (PricingClient
-        // short-circuits to null when SelfHosted is true) -- unrelated to SM-2093. Force it back
-        // to cloud mode for this test host only.
+        // Force cloud mode; org sign-up requires a Free plan from PricingClient.
         _factory.UpdateConfiguration("globalSettings:selfHosted", "false");
         // The Identity host is a separate WebApplicationFactory instance with its own config
         // pipeline (it just happens to share the same SQLite database), so it needs the same
@@ -84,7 +73,6 @@ public class AccessTokenPrefixBackwardCompatibilityTests : IClassFixture<ApiAppl
     [Fact]
     public async Task OldUnprefixedAccessToken_StillAuthenticatesAndRevokes_AfterFlagEnabledForNewTokens()
     {
-        // --- Arrange: mint a token the OLD way (flag disabled == simulates a pre-SM-2093 token) ---
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
 
         var oldToken = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
@@ -92,19 +80,14 @@ public class AccessTokenPrefixBackwardCompatibilityTests : IClassFixture<ApiAppl
         Assert.NotNull(oldToken.ClientSecret);
         Assert.DoesNotContain("bw_", oldToken.ClientSecret, StringComparison.Ordinal);
 
-        // --- Act: flip the flag ON for the rest of the test. This simulates the flag being ---
-        // --- turned on in production sometime after the old token above was already issued.  ---
         _featureServiceMock.IsEnabled(FeatureFlagKeys.Sm2093MachineAccountTokenPrefix).Returns(true);
 
         // Sanity check the flip actually took effect for *new* tokens, without touching the old one.
         var newToken = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
         Assert.StartsWith("bw_", newToken.ClientSecret, StringComparison.Ordinal);
 
-        // --- Act: authenticate with the OLD, unprefixed client secret via a real OAuth ---
-        // --- client_credentials request against the Identity test host.                 ---
         var tokenContext = await _factory.Identity.ContextFromAccessTokenAsync(oldToken.ApiKey.Id, oldToken.ClientSecret);
 
-        // --- Assert: the old token still authenticates successfully (200 + a real access token). ---
         Assert.Equal((int)HttpStatusCode.OK, tokenContext.Response.StatusCode);
 
         using var tokenBody = await JsonSerializer.DeserializeAsync<JsonDocument>(tokenContext.Response.Body);
@@ -112,14 +95,10 @@ public class AccessTokenPrefixBackwardCompatibilityTests : IClassFixture<ApiAppl
         var bearerToken = accessTokenElement.GetString();
         Assert.False(string.IsNullOrWhiteSpace(bearerToken));
 
-        // --- Assert: the full round trip works -- use the resulting bearer token against a real, ---
-        // --- authenticated Secrets Manager endpoint gated to service accounts.                    ---
         await _loginHelper.LoginWithApiKeyAsync(oldToken);
         var syncResponse = await _client.GetAsync($"/organizations/{org.Id}/secrets/sync");
         Assert.Equal(HttpStatusCode.OK, syncResponse.StatusCode);
 
-        // --- Assert: revoking this old-format token still works normally -- prefixing does not ---
-        // --- change revocation behavior.                                                        ---
         await _loginHelper.LoginAsync(_email);
         var revokeResponse = await _client.PostAsJsonAsync(
             $"/service-accounts/{oldToken.ApiKey.ServiceAccountId!.Value}/access-tokens/revoke",

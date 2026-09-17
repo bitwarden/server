@@ -16,11 +16,9 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
 /// <summary>
-/// Empirically proves the claim behind SM-2093: when
-/// <see cref="FeatureFlagKeys.Sm2093MachineAccountTokenPrefix"/> is enabled, a newly minted
-/// service account access token's client secret is prefixed with "bw_", and that a "bw_"-prefixed
-/// secret still authenticates successfully via the real Duende IdentityServer client_credentials
-/// grant (HashedSharedSecretValidator makes no assumption about secret shape/length), end-to-end
+/// Covers service account access tokens issued while
+/// <see cref="FeatureFlagKeys.Sm2093MachineAccountTokenPrefix"/> is enabled: the minted client
+/// secret is "bw_"-prefixed, and it authenticates via the client_credentials grant end-to-end
 /// through to an authenticated Secrets Manager API call.
 /// </summary>
 public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
@@ -40,12 +38,7 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
     {
         _factory = factory;
 
-        // QA-environment workaround: this machine's real local dev `dotnet user-secrets` for the
-        // Api/Identity projects sets globalSettings:selfHosted=true. WebApplicationFactoryBase
-        // unconditionally loads those same user secrets into every SQLite-backed test host, which
-        // otherwise makes organization sign-up fail with "Could not find plan for type Free"
-        // (PricingClient short-circuits to null when SelfHosted is true) -- unrelated to SM-2093.
-        // Force it back to cloud mode for this test host only.
+        // Force cloud mode; org sign-up requires a Free plan from PricingClient.
         _factory.UpdateConfiguration("globalSettings:selfHosted", "false");
         // The Identity host is a separate WebApplicationFactory instance with its own config
         // pipeline (it just happens to share the same SQLite database), so it needs the same
@@ -83,7 +76,6 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
     [Fact]
     public async Task BwPrefixedAccessToken_AuthenticatesAndAuthorizes_EndToEnd()
     {
-        // --- Arrange: real org + service account, created through the actual HTTP endpoints ---
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
@@ -93,8 +85,6 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
             Name = _mockEncryptedString,
         });
 
-        // --- Step (a): mint a real access token through the actual controller endpoint, with the
-        // feature flag forced ON, and confirm the plaintext client secret is "bw_"-prefixed. ---
         var createTokenRequest = new AccessTokenCreateRequestModel
         {
             Name = _mockEncryptedString,
@@ -112,9 +102,6 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
         Assert.NotNull(accessToken.ClientSecret);
         Assert.StartsWith("bw_", accessToken.ClientSecret);
 
-        // --- Step (b)/(c): perform a REAL client_credentials grant against the Identity test host
-        // using the "bw_"-prefixed client secret as-is (no code-under-test shortcuts) and confirm
-        // it authenticates successfully. ---
         var tokenContext = await _factory.Identity.ContextFromAccessTokenAsync(accessToken.Id, accessToken.ClientSecret!);
 
         Assert.Equal((int)HttpStatusCode.OK, tokenContext.Response.StatusCode);
@@ -126,9 +113,6 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
         Assert.False(string.IsNullOrWhiteSpace(bearerToken));
         Assert.True(tokenRoot.TryGetProperty("token_type", out var tokenType));
 
-        // --- Step (d): use the resulting bearer token to call a real, authenticated Secrets
-        // Manager endpoint (the machine-account secrets sync endpoint) and confirm it is treated
-        // as a fully authenticated + authorized service account, not a 401/403. ---
         using var authedRequest = new HttpRequestMessage(HttpMethod.Get, $"/organizations/{org.Id}/secrets/sync");
         authedRequest.Headers.Authorization = new AuthenticationHeaderValue(tokenType.GetString()!, bearerToken);
 
@@ -148,13 +132,8 @@ public class Sm2093MachineAccountTokenPrefixTests : IClassFixture<ApiApplication
     [Fact]
     public async Task BwPrefixedAccessToken_ViaOrganizationHelperPath_AlsoAuthenticates()
     {
-        // Second, independent confirmation using the SecretsManagerOrganizationHelper +
-        // LoginHelper convenience path already established for service-account-authenticated
-        // tests elsewhere (e.g. SecretsControllerTests' GetSecretsSyncAsync_* tests). This still
-        // goes through the real ICreateAccessTokenCommand under test and a real client_credentials
-        // grant against the Identity test host (LoginWithApiKeyAsync -> LoginWithClientSecretAsync
-        // -> TokenFromAccessTokenAsync -> POST /connect/token), just via a different, already-
-        // reviewed helper path than the first test's direct-to-endpoint version.
+        // Authenticates via SecretsManagerOrganizationHelper + LoginHelper instead of a direct
+        // POST to the access-tokens endpoint.
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
 
