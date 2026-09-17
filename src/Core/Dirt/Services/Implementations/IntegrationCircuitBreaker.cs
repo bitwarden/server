@@ -49,13 +49,6 @@ public class IntegrationCircuitBreaker(
             return;
         }
 
-        // Only counted failures are ever sampled, so the circuit measures "this many non-retryable failures inside
-        // the window" and nothing else needs to reach the registry
-        if (!CountsTowardBreaking(result))
-        {
-            return;
-        }
-
         var message = result.Message;
         if (!Guid.TryParse(message.OrganizationId, out var organizationId) ||
             message.ConfigurationId is not Guid configurationId ||
@@ -94,6 +87,8 @@ public class IntegrationCircuitBreaker(
     // throwing out of the pipeline factory on every message
     private static bool IsConfigured(GlobalSettings.EventLoggingSettings settings) =>
         settings.IntegrationCircuitBreakerMinimumThroughput >= MinimumSupportedThroughput &&
+        settings.IntegrationCircuitBreakerFailureRatio > 0 &&
+        settings.IntegrationCircuitBreakerFailureRatio <= 1 &&
         settings.IntegrationCircuitBreakerSamplingDuration >= MinimumSupportedDuration &&
         settings.IntegrationCircuitBreakerSamplingDuration <= MaximumSupportedDuration;
 
@@ -108,19 +103,33 @@ public class IntegrationCircuitBreaker(
         return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationHandlerResult>
         {
             ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>().HandleResult(CountsTowardBreaking),
-
-            // Every sampled outcome is a counted failure, so requiring all of them keeps the circuit a plain
-            // "this many non-retryable failures inside the window" trigger
-            FailureRatio = 1.0,
+            FailureRatio = settings.IntegrationCircuitBreakerFailureRatio,
             MinimumThroughput = settings.IntegrationCircuitBreakerMinimumThroughput,
             SamplingDuration = settings.IntegrationCircuitBreakerSamplingDuration,
+            BreakDuration = settings.IntegrationCircuitBreakerSamplingDuration,
 
-            // Held at Polly's maximum rather than the sampling window. An open circuit short-circuits, so a
-            // configuration an admin has just re-enabled is not re-disabled by the next single failure the way a
-            // half-open circuit would re-disable it.
-            BreakDuration = MaximumSupportedDuration,
-            OnOpened = args => DisableAsync(key, args.Outcome.Result)
+            // A failure here leaves the configuration enabled and the circuit already open, and Polly fires this
+            // once per open transition, so the write is retried by the next transition after the break rather than
+            // lost silently
+            OnOpened = args => TryDisableAsync(key, args.Outcome.Result)
         });
+    }
+
+    private async ValueTask TryDisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)
+    {
+        try
+        {
+            await DisableAsync(key, result);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to disable a configuration the circuit breaker tripped on. OrganizationId: {OrgId}, " +
+                "ConfigurationId: {ConfigurationId}",
+                key.OrganizationId,
+                key.ConfigurationId);
+        }
     }
 
     private async ValueTask DisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)

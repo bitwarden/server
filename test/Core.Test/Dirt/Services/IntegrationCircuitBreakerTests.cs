@@ -9,6 +9,7 @@ using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Polly.Registry;
 using Xunit;
 using ZiggyCreatures.Caching.Fusion;
@@ -33,6 +34,7 @@ public class IntegrationCircuitBreakerTests
     {
         var globalSettings = _globalSettings;
         globalSettings.EventLogging.IntegrationCircuitBreakerMinimumThroughput = minimumThroughput;
+        globalSettings.EventLogging.IntegrationCircuitBreakerFailureRatio = 1.0;
 
         _configurationRepository
             .DisableAsync(
@@ -114,22 +116,18 @@ public class IntegrationCircuitBreakerTests
     }
 
     [Fact]
-    public async Task RecordResultAsync_SuccessesBetweenFailures_DoNotResetTheCount()
+    public async Task RecordResultAsync_SuccessesInTheWindow_DiluteTheFailureRatio()
     {
-        // The circuit counts non-retryable failures inside the window and nothing else, so the threshold has to be
-        // chosen for the volume it will see rather than relying on successes to dilute it
         var sut = BuildSut();
         var message = BuildMessage();
+        _settings.IntegrationCircuitBreakerFailureRatio = 1.0;
 
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
         await sut.RecordResultAsync(IntegrationHandlerResult.Succeed(message));
         await sut.RecordResultAsync(NonRetryableFailure(message));
 
-        await _configurationRepository.Received(1).DisableAsync(
-            Arg.Is(_organizationId),
-            Arg.Is(_configurationId),
-            Arg.Any<DateTime>(),
-            Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
+        // At a ratio of 1.0 a single success in the window is enough to keep the circuit closed
+        await AssertNotDisabledAsync();
     }
 
     [Fact]
@@ -231,21 +229,42 @@ public class IntegrationCircuitBreakerTests
     }
 
     [Fact]
-    public async Task RecordResultAsync_AfterATripAndRecovery_DoesNotReDisableOnASingleFailure()
+    public async Task RecordResultAsync_SuccessAfterTheBreak_ClosesTheCircuitSoOneFailureCannotReDisable()
     {
         var sut = BuildSut();
         var message = BuildMessage();
+        var window = _settings.IntegrationCircuitBreakerSamplingDuration;
 
-        // Trip it, then stand in for an admin fixing the integration by letting the disable succeed again
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
         _configurationRepository.ClearReceivedCalls();
 
-        // The circuit is held open, so the next failure short-circuits instead of re-opening and re-writing
-        _timeProvider.Advance(new GlobalSettings().EventLogging.IntegrationCircuitBreakerSamplingDuration
-            + TimeSpan.FromMinutes(1));
+        // Past the break the circuit is half-open. A success closes it, so the threshold applies again instead of
+        // a single later failure re-disabling a configuration an admin has fixed.
+        _timeProvider.Advance(window + TimeSpan.FromMinutes(1));
+        await sut.RecordResultAsync(IntegrationHandlerResult.Succeed(message));
         await sut.RecordResultAsync(NonRetryableFailure(message));
 
         await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_DisableWriteFails_LogsAndLeavesTheBreakerAbleToRetry()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+        _configurationRepository
+            .DisableAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Guid>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<IntegrationFailureCategory>())
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
+
+        // A throwing write must not escape into the listener, which decides the message's fate
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+
+        await _configurationRepository.ReceivedWithAnyArgs(1)
+            .DisableAsync(default, default, default, default);
     }
 
     [Theory]
