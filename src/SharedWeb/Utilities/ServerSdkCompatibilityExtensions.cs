@@ -99,11 +99,21 @@ public static class ServerSdkCompatibilityExtensions
         //   - Pam and PM28191_CipherAdminOpsToSdk: the branch ships PAM as a whole and UAT has
         //     to serve it. Note this is stronger than the defaults above and gives up the
         //     flag-off A/B check - remove the entry to get that back.
+        //   - PamAccessConnector: same reasoning, and it needs the pin for a second reason -
+        //     LaunchDarkly has no pm-42354-rotation-daemon flag at all, so /config left the key
+        //     out entirely rather than stating it false. GetAll() only reports the intersection
+        //     of the known keys and what LaunchDarkly holds, and an omitted key sends the
+        //     clients to their own default (FALSE for PamRotation), so the connector surface was
+        //     gated off on both sides.
         //   - VFO1Foundation: the branch stays on the v1 layout while the VFO refresh rolls out.
+        // Deliberately not pinned: PamDisableSqlAuditLogging. LaunchDarkly already states it
+        // false, which is the recording state, and pinning a kill switch would throw away the
+        // one thing it exists for - turning the audit writes off without a deploy.
         services.PinFeatureFlags(new Dictionary<string, bool>
         {
             [FeatureFlagKeys.Pam] = true,
             [FeatureFlagKeys.PM28191_CipherAdminOpsToSdk] = true,
+            [FeatureFlagKeys.PamAccessConnector] = true,
             [FeatureFlagKeys.VFO1Foundation] = false,
         });
 
