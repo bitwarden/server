@@ -77,7 +77,7 @@ public enum AccessAuditEventKind : byte
     /// <summary>A rotation job was created for a config (the single creation point, <c>OfferRotation</c>). Spec outcome <c>offered</c>.</summary>
     RotationOffered = 56,
 
-    /// <summary>A rotation job was claimed by a daemon. Spec outcome <c>dispatched</c>.</summary>
+    /// <summary>A rotation job was claimed by an access connector. Spec outcome <c>dispatched</c>.</summary>
     RotationDispatched = 57,
 
     /// <summary>A rotation job succeeded. Spec outcome <c>succeeded</c>.</summary>
@@ -89,13 +89,13 @@ public enum AccessAuditEventKind : byte
     /// <summary>A rotation job failed after exhausting its retry budget. Spec outcome <c>failed</c>.</summary>
     RotationFailed = 60,
 
-    /// <summary>A claimed rotation job was released back to Pending by the sweep (stale daemon heartbeat past the claim lease). Spec outcome <c>released</c>.</summary>
+    /// <summary>A claimed rotation job was released back to Pending by the sweep (stale access connector heartbeat past the claim lease). Spec outcome <c>released</c>.</summary>
     RotationJobReleased = 61,
 
     /// <summary>A rotation job timed out past its TTL with no successful attempt. Spec outcome <c>timed_out</c>.</summary>
     RotationJobTimedOut = 62,
 
-    /// <summary>A daemon's cipher write was rejected by the atomic write-capability check. Spec outcome <c>write_rejected</c>.</summary>
+    /// <summary>An access connector's cipher write was rejected by the atomic write-capability check. Spec outcome <c>write_rejected</c>.</summary>
     RotationCipherWriteRejected = 63,
 
     /// <summary>A stale success/failure report was rejected (attempt no longer executing, or claimant mismatch). Spec outcome <c>report_rejected</c>.</summary>
@@ -113,21 +113,21 @@ public enum AccessAuditEventKind : byte
     // Left unassigned rather than reserved.
 
     // Fleet / target administration
-    /// <summary>A rotation daemon was registered. Spec outcome <c>daemon_registered</c>.</summary>
-    DaemonRegistered = 70,
+    /// <summary>An access connector was registered. Spec outcome <c>daemon_registered</c>.</summary>
+    AccessConnectorRegistered = 70,
 
     /// <summary>
-    /// A rotation daemon was revoked. Legacy: the revoke action was replaced by the reversible disable/enable pair
-    /// plus a permanent delete (see <see cref="DaemonDisabled"/>, <see cref="DaemonEnabled"/>,
-    /// <see cref="DaemonDeleted"/>); no action emits this anymore, but it is retained so historical rows still read.
+    /// An access connector was revoked. Legacy: the revoke action was replaced by the reversible disable/enable pair
+    /// plus a permanent delete (see <see cref="AccessConnectorDisabled"/>, <see cref="AccessConnectorEnabled"/>,
+    /// <see cref="AccessConnectorDeleted"/>); no action emits this anymore, but it is retained so historical rows still read.
     /// </summary>
-    DaemonRevoked = 71,
+    AccessConnectorRevoked = 71,
 
-    /// <summary>A daemon was assigned to a target system. Spec outcome <c>daemon_assigned</c>.</summary>
-    DaemonAssignedToTarget = 72,
+    /// <summary>An access connector was assigned to a target system. Spec outcome <c>daemon_assigned</c>.</summary>
+    AccessConnectorAssignedToTarget = 72,
 
-    /// <summary>A daemon was unassigned from a target system. Spec outcome <c>daemon_unassigned</c>.</summary>
-    DaemonUnassignedFromTarget = 73,
+    /// <summary>An access connector was unassigned from a target system. Spec outcome <c>daemon_unassigned</c>.</summary>
+    AccessConnectorUnassignedFromTarget = 73,
 
     /// <summary>A target system was registered (automatic or manual). Spec outcome <c>target_registered</c>.</summary>
     TargetSystemRegistered = 74,
@@ -144,19 +144,19 @@ public enum AccessAuditEventKind : byte
     /// <summary>A target system's password policy or session-termination capability was updated. Spec outcome <c>target_policy_updated</c>.</summary>
     TargetSystemPolicyUpdated = 78,
 
-    // Daemon lifecycle (continued). The fleet range above (70-73) is full, so the disable/enable/delete kinds that
+    // Access connector lifecycle (continued). The fleet range above (70-73) is full, so the disable/enable/delete kinds that
     // replaced revoke continue here.
 
-    /// <summary>A rotation daemon was disabled (reversible pause; credential retained).</summary>
-    DaemonDisabled = 79,
+    /// <summary>An access connector was disabled (reversible pause; credential retained).</summary>
+    AccessConnectorDisabled = 79,
 
-    /// <summary>A disabled rotation daemon was re-enabled.</summary>
-    DaemonEnabled = 80,
+    /// <summary>A disabled access connector was re-enabled.</summary>
+    AccessConnectorEnabled = 80,
 
-    /// <summary>A rotation daemon was permanently deleted (row removed and its credential invalidated).</summary>
-    DaemonDeleted = 81,
+    /// <summary>An access connector was permanently deleted (row removed and its credential invalidated).</summary>
+    AccessConnectorDeleted = 81,
 
-    // Target administration (continued). The fleet/target range above (74-78) is followed by the daemon lifecycle
+    // Target administration (continued). The fleet/target range above (74-78) is followed by the access connector lifecycle
     // kinds, so the target delete kind continues from here.
 
     /// <summary>

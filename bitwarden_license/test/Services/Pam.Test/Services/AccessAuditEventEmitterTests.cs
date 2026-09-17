@@ -196,7 +196,7 @@ public class AccessAuditEventEmitterTests
     [BitAutoData(AccessAuditEventKind.RotationOffered)]
     [BitAutoData(AccessAuditEventKind.RotationSucceeded)]
     [BitAutoData(AccessAuditEventKind.ManualRotationDue)]
-    [BitAutoData(AccessAuditEventKind.DaemonRegistered)]
+    [BitAutoData(AccessAuditEventKind.AccessConnectorRegistered)]
     [BitAutoData(AccessAuditEventKind.TargetSystemRegistered)]
     public async Task EmitAsync_WithAnUnmappedKind_WritesOnlyToTheStore(
         AccessAuditEventKind kind, Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)

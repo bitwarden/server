@@ -87,7 +87,7 @@ public class ReportRotationFailedCommandTests
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationAttemptFailed
                 && a.OrganizationId == config.OrganizationId
-                && a.DaemonId == daemonId
+                && a.AccessConnectorId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.SyncState == syncState
@@ -118,7 +118,7 @@ public class ReportRotationFailedCommandTests
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationFailed
                 && a.OrganizationId == config.OrganizationId
-                && a.DaemonId == daemonId
+                && a.AccessConnectorId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.SyncState == syncState
@@ -150,7 +150,7 @@ public class ReportRotationFailedCommandTests
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationReportRejected
                 && a.OrganizationId == config.OrganizationId
-                && a.DaemonId == daemonId
+                && a.AccessConnectorId == daemonId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id));
     }

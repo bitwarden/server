@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessAuditEvent_ReadPageByOrganizationId]
+﻿CREATE PROCEDURE [dbo].[AccessAuditEvent_ReadPageByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER,
     @StartDate DATETIME2(7),
     @EndDate DATETIME2(7),
@@ -43,8 +43,8 @@ BEGIN
         [RuleName],
         [TargetSystemId],
         [TargetSystemName],
-        [DaemonId],
-        [DaemonName],
+        [AccessConnectorId],
+        [AccessConnectorName],
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],

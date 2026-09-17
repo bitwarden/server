@@ -27,7 +27,7 @@ public class AccessAuditEventResponseModel : ResponseModel
         LeaseId = auditEvent.AccessLeaseId;
         RuleId = auditEvent.AccessRuleId;
         TargetSystemId = auditEvent.TargetSystemId;
-        DaemonId = auditEvent.DaemonId;
+        AccessConnectorId = auditEvent.AccessConnectorId;
         RotationConfigId = auditEvent.RotationConfigId;
         RotationJobId = auditEvent.RotationJobId;
         RotationSource = auditEvent.RotationSource;
@@ -43,7 +43,7 @@ public class AccessAuditEventResponseModel : ResponseModel
         CollectionName = auditEvent.CollectionName;
         RuleName = auditEvent.RuleName;
         TargetSystemName = auditEvent.TargetSystemName;
-        DaemonName = auditEvent.DaemonName;
+        AccessConnectorName = auditEvent.AccessConnectorName;
         Automated = auditEvent.Automated;
         Incomplete = auditEvent.Phase == AccessAuditEventPhase.Attempt;
     }
@@ -66,7 +66,7 @@ public class AccessAuditEventResponseModel : ResponseModel
     public Guid? LeaseId { get; }
     public Guid? RuleId { get; }
     public Guid? TargetSystemId { get; }
-    public Guid? DaemonId { get; }
+    public Guid? AccessConnectorId { get; }
     public Guid? RotationConfigId { get; }
     public Guid? RotationJobId { get; }
 
@@ -100,8 +100,8 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>The target system's name — plaintext org configuration, snapshotted at write, for rotation/target events.</summary>
     public string? TargetSystemName { get; }
 
-    /// <summary>The daemon's name — plaintext org configuration, snapshotted at write, for rotation/daemon events.</summary>
-    public string? DaemonName { get; }
+    /// <summary>The access connector's name — plaintext org configuration, snapshotted at write, for rotation/connector events.</summary>
+    public string? AccessConnectorName { get; }
 
     /// <summary>True for a system/automatic event with no human actor.</summary>
     public bool Automated { get; }

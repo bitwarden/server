@@ -51,13 +51,13 @@ public record AccessAuditEventData
     /// </summary>
     public string? TargetSystemName { get; init; }
 
-    public Guid? DaemonId { get; init; }
+    public Guid? AccessConnectorId { get; init; }
 
     /// <summary>
-    /// The daemon's name, supplied by the rotation commands (which hold the entity) — same snapshot-at-write pattern
-    /// as <see cref="RuleName"/>, not a read-time JOIN. Null for non-daemon events.
+    /// The access connector's name, supplied by the rotation commands (which hold the entity) — same snapshot-at-write pattern
+    /// as <see cref="RuleName"/>, not a read-time JOIN. Null for non-connector events.
     /// </summary>
-    public string? DaemonName { get; init; }
+    public string? AccessConnectorName { get; init; }
 
     public Guid? RotationConfigId { get; init; }
     public Guid? RotationJobId { get; init; }

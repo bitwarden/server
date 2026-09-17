@@ -40,7 +40,7 @@ public class AccessAuditEvent
     public Guid? AccessLeaseId { get; set; }
     public Guid? AccessRuleId { get; set; }
     public Guid? TargetSystemId { get; set; }
-    public Guid? DaemonId { get; set; }
+    public Guid? AccessConnectorId { get; set; }
     public Guid? RotationConfigId { get; set; }
     public Guid? RotationJobId { get; set; }
 
@@ -74,9 +74,9 @@ public class AccessAuditEvent
     /// <see cref="RuleName"/>, not a read-time JOIN). Null for non-target events.</summary>
     public string? TargetSystemName { get; set; }
 
-    /// <summary>The daemon's name — snapshotted at write by the rotation commands (same pattern as
-    /// <see cref="RuleName"/>, not a read-time JOIN). Null for non-daemon events.</summary>
-    public string? DaemonName { get; set; }
+    /// <summary>The access connector's name — snapshotted at write by the rotation commands (same pattern as
+    /// <see cref="RuleName"/>, not a read-time JOIN). Null for non-connector events.</summary>
+    public string? AccessConnectorName { get; set; }
 
     /// <summary>True if there is no human actor. Drives the automated-vs-human filter.</summary>
     public bool Automated => ActorId is null;
