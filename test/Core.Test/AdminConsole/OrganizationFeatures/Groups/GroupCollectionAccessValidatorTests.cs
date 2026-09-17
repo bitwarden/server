@@ -50,7 +50,7 @@ public class GroupCollectionAccessValidatorTests
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
-        ArrangeCollections(sutProvider, CoreHelpers.GenerateComb());
+        ArrangeCollections(sutProvider, CombGuid.Generate());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.ValidateAsync(organizationId, collectionAccess));

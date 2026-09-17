@@ -116,7 +116,7 @@ public class UpdateGroupCommandTests
         ArrangeUsers(sutProvider, group);
 
         // Mismatching orgId
-        oldGroup.OrganizationId = CoreHelpers.GenerateComb();
+        oldGroup.OrganizationId = CombGuid.Generate();
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateGroupAsync(group, organization));
     }
@@ -166,7 +166,7 @@ public class UpdateGroupCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new OrganizationUser { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
+                .Select(guid => new OrganizationUser { Id = guid, OrganizationId = CombGuid.Generate() }).ToList());
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, null, userAccess));
