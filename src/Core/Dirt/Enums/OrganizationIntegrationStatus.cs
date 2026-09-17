@@ -6,6 +6,5 @@ public enum OrganizationIntegrationStatus : int
     Invalid,
     Initiated,
     InProgress,
-    Completed,
-    Disabled
+    Completed
 }

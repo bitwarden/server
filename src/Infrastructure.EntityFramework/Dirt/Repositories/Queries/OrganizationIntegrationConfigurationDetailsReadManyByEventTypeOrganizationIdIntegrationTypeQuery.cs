@@ -30,8 +30,7 @@ public class OrganizationIntegrationConfigurationDetailsReadManyByEventTypeOrgan
                         Filters = oic.Filters,
                         IntegrationConfiguration = oi.Configuration,
                         Template = oic.Template,
-                        DisabledDate = oi.DisabledDate,
-                        ConfigurationDisabledDate = oic.DisabledDate
+                        DisabledDate = oic.DisabledDate
                     };
         return query;
     }

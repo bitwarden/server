@@ -18,13 +18,13 @@ namespace Bit.Core.Test.Dirt.Services;
 public class IntegrationCircuitBreakerTests
 {
     private static readonly Guid _organizationId = Guid.Parse("6a3b0e4e-3f2e-4a1b-9b6e-2f5a7c1d8e90");
+    private static readonly Guid _configurationId = Guid.Parse("3f1c9d2b-7e8a-4c5d-9a1b-6e2f4c8d0a37");
     private const int _minimumThroughput = 3;
 
-    private readonly IOrganizationIntegrationRepository _integrationRepository =
-        Substitute.For<IOrganizationIntegrationRepository>();
     private readonly IOrganizationIntegrationConfigurationRepository _configurationRepository =
         Substitute.For<IOrganizationIntegrationConfigurationRepository>();
     private readonly IFusionCache _cache = Substitute.For<IFusionCache>();
+    private readonly FakeTimeProvider _timeProvider = new();
 
     private IntegrationCircuitBreaker BuildSut(int minimumThroughput = _minimumThroughput)
     {
@@ -32,25 +32,20 @@ public class IntegrationCircuitBreakerTests
         globalSettings.EventLogging.IntegrationCircuitBreakerMinimumThroughput = minimumThroughput;
         globalSettings.EventLogging.IntegrationCircuitBreakerFailureRatio = 1.0;
 
-        _integrationRepository
+        _configurationRepository
             .DisableAsync(
                 Arg.Any<Guid>(),
-                Arg.Any<IntegrationType>(),
+                Arg.Any<Guid>(),
                 Arg.Any<DateTime>(),
                 Arg.Any<IntegrationFailureCategory>())
             .Returns(true);
 
-        _configurationRepository
-            .DisableAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<IntegrationFailureCategory>())
-            .Returns(true);
-
         return new IntegrationCircuitBreaker(
-            _integrationRepository,
             _configurationRepository,
             _cache,
             new ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>(),
             globalSettings,
-            new FakeTimeProvider(),
+            _timeProvider,
             NullLogger<IntegrationCircuitBreaker>.Instance);
     }
 
@@ -61,7 +56,7 @@ public class IntegrationCircuitBreakerTests
             IntegrationType = IntegrationType.Webhook,
             MessageId = "message-id",
             OrganizationId = organizationId ?? _organizationId.ToString(),
-            ConfigurationId = configurationId,
+            ConfigurationId = configurationId ?? _configurationId,
             RenderedTemplate = "{}"
         };
 
@@ -75,12 +70,12 @@ public class IntegrationCircuitBreakerTests
     {
         return Enumerable.Range(0, times)
             .Aggregate(Task.CompletedTask, (previous, _) =>
-                previous.ContinueWith(_ => sut.RecordResultAsync(result.Message, result)).Unwrap());
+                previous.ContinueWith(_ => sut.RecordResultAsync(result)).Unwrap());
     }
 
     private async Task AssertNotDisabledAsync()
     {
-        await _integrationRepository.DidNotReceiveWithAnyArgs()
+        await _configurationRepository.DidNotReceiveWithAnyArgs()
             .DisableAsync(default, default, default, default);
     }
 
@@ -103,9 +98,9 @@ public class IntegrationCircuitBreakerTests
 
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
 
-        await _integrationRepository.Received(1).DisableAsync(
+        await _configurationRepository.Received(1).DisableAsync(
             Arg.Is(_organizationId),
-            Arg.Is(IntegrationType.Webhook),
+            Arg.Is(_configurationId),
             Arg.Any<DateTime>(),
             Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
         await _cache.Received(1).RemoveByTagAsync(
@@ -123,7 +118,7 @@ public class IntegrationCircuitBreakerTests
         var message = BuildMessage();
 
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
-        await sut.RecordResultAsync(message, IntegrationHandlerResult.Succeed(message));
+        await sut.RecordResultAsync(IntegrationHandlerResult.Succeed(message));
         await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
 
         await AssertNotDisabledAsync();
@@ -140,18 +135,6 @@ public class IntegrationCircuitBreakerTests
         await AssertNotDisabledAsync();
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task RecordResultAsync_MinimumThroughputNotPositive_NeverDisables(int minimumThroughput)
-    {
-        var sut = BuildSut(minimumThroughput);
-        var message = BuildMessage();
-
-        await RecordAsync(sut, NonRetryableFailure(message), 25);
-
-        await AssertNotDisabledAsync();
-    }
 
     [Fact]
     public async Task RecordResultAsync_MessageWithoutOrganization_NeverDisables()
@@ -170,10 +153,10 @@ public class IntegrationCircuitBreakerTests
     {
         var sut = BuildSut();
         var message = BuildMessage();
-        _integrationRepository
+        _configurationRepository
             .DisableAsync(
                 Arg.Any<Guid>(),
-                Arg.Any<IntegrationType>(),
+                Arg.Any<Guid>(),
                 Arg.Any<DateTime>(),
                 Arg.Any<IntegrationFailureCategory>())
             .Returns(false);
@@ -186,35 +169,59 @@ public class IntegrationCircuitBreakerTests
             Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task RecordResultAsync_MessageWithConfigurationId_DisablesOnlyThatConfiguration()
+
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public async Task RecordResultAsync_ThroughputBelowPollyMinimum_NeverDisables(int minimumThroughput)
     {
-        var configurationId = Guid.Parse("3f1c9d2b-7e8a-4c5d-9a1b-6e2f4c8d0a37");
-        var sut = BuildSut();
-        var message = BuildMessage(configurationId: configurationId);
+        // Polly rejects a minimum throughput under 2, so the guard has to stop short of handing it to the builder
+        var sut = BuildSut(minimumThroughput);
+        var message = BuildMessage();
 
-        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+        await RecordAsync(sut, NonRetryableFailure(message), 25);
 
-        await _configurationRepository.Received(1).DisableAsync(
-            Arg.Is(configurationId),
-            Arg.Any<DateTime>(),
-            Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
-        await _integrationRepository.DidNotReceiveWithAnyArgs()
-            .DisableAsync(default, default, default, default);
+        await AssertNotDisabledAsync();
     }
 
     [Fact]
-    public async Task RecordResultAsync_ConfigurationsFailIndependently_DoesNotTripEitherBreaker()
+    public async Task RecordResultAsync_MessageWithoutConfigurationId_NeverDisables()
     {
         var sut = BuildSut();
-        var healthy = BuildMessage(configurationId: Guid.Parse("11111111-1111-1111-1111-111111111111"));
-        var broken = BuildMessage(configurationId: Guid.Parse("22222222-2222-2222-2222-222222222222"));
+        var message = BuildMessage();
+        message.ConfigurationId = null;
 
-        // Each configuration gets its own breaker, so the broken one cannot consume the healthy one's budget
-        await RecordAsync(sut, NonRetryableFailure(broken), _minimumThroughput - 1);
-        await RecordAsync(sut, IntegrationHandlerResult.Succeed(healthy), _minimumThroughput);
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
 
-        await _configurationRepository.DidNotReceiveWithAnyArgs().DisableAsync(default, default, default);
+        await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_MessageWithEmptyConfigurationId_NeverDisables()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage(configurationId: Guid.Empty);
+
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+
+        await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_FailuresOutsideTheSamplingWindow_DoNotAccumulate()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+        var window = new GlobalSettings().EventLogging.IntegrationCircuitBreakerSamplingDuration;
+
+        for (var i = 0; i < _minimumThroughput * 2; i++)
+        {
+            await sut.RecordResultAsync(NonRetryableFailure(message));
+            _timeProvider.Advance(window + TimeSpan.FromMinutes(1));
+        }
+
         await AssertNotDisabledAsync();
     }
 }

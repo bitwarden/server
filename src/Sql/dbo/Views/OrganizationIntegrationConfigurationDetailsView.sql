@@ -1,4 +1,4 @@
-CREATE VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
+﻿CREATE VIEW [dbo].[OrganizationIntegrationConfigurationDetailsView]
 AS
     SELECT
         oic.[Id],
@@ -10,8 +10,7 @@ AS
         oi.[Configuration] AS [IntegrationConfiguration],
         oic.[Template],
         oic.[Filters],
-        oi.[DisabledDate],
-        oic.[DisabledDate] AS [ConfigurationDisabledDate]
+        oic.[DisabledDate]
     FROM
         [dbo].[OrganizationIntegrationConfiguration] oic
         INNER JOIN

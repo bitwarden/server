@@ -1300,12 +1300,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime?>("DisabledDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int?>("DisabledReason")
-                        .HasColumnType("int");
-
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("char(36)");
 

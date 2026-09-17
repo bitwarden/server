@@ -117,7 +117,6 @@ public class SlackIntegrationController(
         }
 
         integration.Configuration = JsonSerializer.Serialize(new SlackIntegration(token));
-        integration.ClearDisabled();
         await integrationRepository.UpsertAsync(integration);
 
         var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";

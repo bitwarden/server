@@ -1,7 +1,5 @@
 ﻿using System.Data;
 using Bit.Core.Dirt.Entities;
-using Bit.Core.Dirt.Enums;
-using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -30,30 +28,6 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
-        }
-    }
-
-    public async Task<bool> DisableAsync(
-        Guid organizationId,
-        IntegrationType integrationType,
-        DateTime disabledDate,
-        IntegrationFailureCategory disabledReason)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var rowsAffected = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationIntegration_Disable]",
-                new
-                {
-                    OrganizationId = organizationId,
-                    Type = integrationType,
-                    DisabledDate = disabledDate,
-                    DisabledReason = disabledReason,
-                    RevisionDate = disabledDate
-                },
-                commandType: CommandType.StoredProcedure);
-
-            return rowsAffected > 0;
         }
     }
 

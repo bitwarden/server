@@ -13,6 +13,7 @@ namespace Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
 /// </summary>
 public class UpdateOrganizationIntegrationCommand(
     IOrganizationIntegrationRepository integrationRepository,
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
     IFusionCache cache)
     : IUpdateOrganizationIntegrationCommand
@@ -34,10 +35,11 @@ public class UpdateOrganizationIntegrationCommand(
         updatedIntegration.OrganizationId = integration.OrganizationId;
         updatedIntegration.CreationDate = integration.CreationDate;
 
-        // An admin editing the integration is the manual intervention that clears a tripped circuit breaker
-        updatedIntegration.ClearDisabled();
-
         await integrationRepository.ReplaceAsync(updatedIntegration);
+
+        // Credentials live on the integration, so fixing it is what recovers the configurations the breaker
+        // disabled underneath it
+        await configurationRepository.ClearDisabledByIntegrationAsync(integration.Id);
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
                 organizationId: organizationId,

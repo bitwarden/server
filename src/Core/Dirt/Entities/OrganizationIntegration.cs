@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Dirt.Enums;
-using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -13,18 +12,5 @@ public class OrganizationIntegration : ITableObject<Guid>
     public string? Configuration { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
-    public DateTime? DisabledDate { get; set; }
-    public IntegrationFailureCategory? DisabledReason { get; set; }
-
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
-
-    /// <summary>
-    /// Re-enables an integration the circuit breaker disabled. Every path where an admin reconfigures an
-    /// integration must call this, or the breaker's disable survives the fix.
-    /// </summary>
-    public void ClearDisabled()
-    {
-        DisabledDate = null;
-        DisabledReason = null;
-    }
 }

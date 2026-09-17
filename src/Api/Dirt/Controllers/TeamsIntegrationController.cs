@@ -128,7 +128,6 @@ public class TeamsIntegrationController(
 
         var teamsIntegration = new TeamsIntegration(TenantId: teams[0].TenantId, Teams: teams);
         integration.Configuration = JsonSerializer.Serialize(teamsIntegration);
-        integration.ClearDisabled();
         await integrationRepository.UpsertAsync(integration);
 
         var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";
