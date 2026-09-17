@@ -91,7 +91,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
             if (result.Success)
             {
                 // Successful integration send. Acknowledge message delivery and return
-                await _circuitBreaker.RecordResultAsync(message, result);
+                await _circuitBreaker.RecordResultAsync(result);
                 await channel.BasicAckAsync(ea.DeliveryTag, false, cancellationToken);
                 return;
             }
@@ -122,7 +122,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
                         message.RetryCount,
                         _maxRetries);
 
-                    await _circuitBreaker.RecordResultAsync(message, result);
+                    await _circuitBreaker.RecordResultAsync(result);
                 }
             }
             else
@@ -139,7 +139,7 @@ public class RabbitMqIntegrationListenerService<TConfiguration> : BackgroundServ
                     result.Category,
                     result.FailureReason);
 
-                await _circuitBreaker.RecordResultAsync(message, result);
+                await _circuitBreaker.RecordResultAsync(result);
             }
 
             // Message has been sent to retry or dead letter queues.

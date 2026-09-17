@@ -56,15 +56,24 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         }
     }
 
-    public async Task<bool> DisableAsync(Guid id, DateTime disabledDate, IntegrationFailureCategory disabledReason)
+    public async Task<bool> DisableAsync(
+        Guid organizationId,
+        Guid id,
+        DateTime disabledDate,
+        IntegrationFailureCategory disabledReason)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
-            // Filtering on the enabled state keeps concurrent trips across instances to a single transition
+            // Scoped through the integration so the write cannot cross tenants, and filtered on the enabled state
+            // so concurrent trips across instances produce a single transition
             var rowsAffected = await dbContext.OrganizationIntegrationConfigurations
-                .Where(configuration => configuration.Id == id && configuration.DisabledDate == null)
+                .Where(configuration => configuration.Id == id
+                    && configuration.DisabledDate == null
+                    && dbContext.OrganizationIntegrations.Any(integration =>
+                        integration.Id == configuration.OrganizationIntegrationId
+                        && integration.OrganizationId == organizationId))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(configuration => configuration.DisabledDate, disabledDate)
                     .SetProperty(configuration => configuration.DisabledReason, disabledReason)
@@ -73,5 +82,21 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return rowsAffected > 0;
         }
     }
+
+    public async Task ClearDisabledByIntegrationAsync(Guid organizationIntegrationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            await dbContext.OrganizationIntegrationConfigurations
+                .Where(configuration => configuration.OrganizationIntegrationId == organizationIntegrationId
+                    && configuration.DisabledDate != null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(configuration => configuration.DisabledDate, (DateTime?)null)
+                    .SetProperty(configuration => configuration.DisabledReason, (IntegrationFailureCategory?)null));
+        }
+    }
+
 
 }

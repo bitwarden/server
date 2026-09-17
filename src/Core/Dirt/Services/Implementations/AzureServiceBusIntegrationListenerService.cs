@@ -72,7 +72,7 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
             if (result.Success)
             {
                 // Successful integration. Return true to indicate the message has been handled
-                await _circuitBreaker.RecordResultAsync(message, result);
+                await _circuitBreaker.RecordResultAsync(result);
                 return true;
             }
 
@@ -103,7 +103,7 @@ public class AzureServiceBusIntegrationListenerService<TConfiguration> : Backgro
                 message.RetryCount,
                 _maxRetries);
 
-            await _circuitBreaker.RecordResultAsync(message, result);
+            await _circuitBreaker.RecordResultAsync(result);
 
             return false;
         }

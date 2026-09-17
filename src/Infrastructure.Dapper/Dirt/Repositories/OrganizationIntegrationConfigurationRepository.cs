@@ -69,7 +69,11 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
         }
     }
 
-    public async Task<bool> DisableAsync(Guid id, DateTime disabledDate, IntegrationFailureCategory disabledReason)
+    public async Task<bool> DisableAsync(
+        Guid organizationId,
+        Guid id,
+        DateTime disabledDate,
+        IntegrationFailureCategory disabledReason)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -77,6 +81,7 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
                 "[dbo].[OrganizationIntegrationConfiguration_Disable]",
                 new
                 {
+                    OrganizationId = organizationId,
                     Id = id,
                     DisabledDate = disabledDate,
                     DisabledReason = disabledReason,
@@ -87,5 +92,17 @@ public class OrganizationIntegrationConfigurationRepository : Repository<Organiz
             return rowsAffected > 0;
         }
     }
+
+    public async Task ClearDisabledByIntegrationAsync(Guid organizationIntegrationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationIntegrationConfiguration_ClearDisabledByIntegrationId]",
+                new { OrganizationIntegrationId = organizationIntegrationId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
 
 }

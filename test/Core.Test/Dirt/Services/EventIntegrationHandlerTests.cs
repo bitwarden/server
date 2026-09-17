@@ -488,7 +488,7 @@ public class EventIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_DisabledIntegration_DoesNothing(EventMessage eventMessage)
+    public async Task HandleEventAsync_DisabledConfiguration_DoesNothing(EventMessage eventMessage)
     {
         var configurations = OneConfiguration(_templateBase);
         configurations[0].DisabledDate = DateTime.UtcNow;
@@ -499,17 +499,6 @@ public class EventIntegrationHandlerTests
         Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
     }
 
-    [Theory, BitAutoData]
-    public async Task HandleEventAsync_DisabledConfiguration_DoesNothing(EventMessage eventMessage)
-    {
-        var configurations = OneConfiguration(_templateBase);
-        configurations[0].ConfigurationDisabledDate = DateTime.UtcNow;
-        var sutProvider = GetSutProvider(configurations);
-
-        await sutProvider.Sut.HandleEventAsync(eventMessage);
-
-        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
-    }
 
     [Theory, BitAutoData]
     public async Task HandleEventAsync_NoOrganizationId_DoesNothing(EventMessage eventMessage)

@@ -1,12 +1,10 @@
-CREATE PROCEDURE [dbo].[OrganizationIntegration_Create]
+﻿CREATE PROCEDURE [dbo].[OrganizationIntegration_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Type SMALLINT,
     @Configuration VARCHAR(MAX),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7),
-    @DisabledDate DATETIME2(7) = NULL,
-    @DisabledReason INT = NULL
+    @RevisionDate DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -18,9 +16,7 @@ BEGIN
         [Type],
         [Configuration],
         [CreationDate],
-        [RevisionDate],
-        [DisabledDate],
-        [DisabledReason]
+        [RevisionDate]
         )
     VALUES
         (
@@ -29,8 +25,6 @@ BEGIN
             @Type,
             @Configuration,
             @CreationDate,
-            @RevisionDate,
-            @DisabledDate,
-            @DisabledReason
+            @RevisionDate
         )
 END

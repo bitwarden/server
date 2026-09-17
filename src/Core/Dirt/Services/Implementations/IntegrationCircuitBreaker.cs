@@ -1,5 +1,4 @@
-﻿using Bit.Core.Dirt.Enums;
-using Bit.Core.Dirt.Models.Data.EventIntegrations;
+﻿using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -13,7 +12,6 @@ using ZiggyCreatures.Caching.Fusion;
 namespace Bit.Core.Dirt.Services.Implementations;
 
 public class IntegrationCircuitBreaker(
-    IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository configurationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)]
     IFusionCache cache,
@@ -23,12 +21,15 @@ public class IntegrationCircuitBreaker(
     ILogger<IntegrationCircuitBreaker> logger)
     : IIntegrationCircuitBreaker
 {
-    public async Task RecordResultAsync(IIntegrationMessage message, IntegrationHandlerResult result)
+    // Polly requires at least two attempts in the window before it will evaluate the failure ratio
+    internal const int MinimumSupportedThroughput = 2;
+
+    public async Task RecordResultAsync(IntegrationHandlerResult result)
     {
         // The breaker must never change what the listener does with the message that triggered it
         try
         {
-            await RecordAsync(message, result);
+            await RecordAsync(result);
         }
         catch (Exception ex)
         {
@@ -36,24 +37,38 @@ public class IntegrationCircuitBreaker(
         }
     }
 
-    private async Task RecordAsync(IIntegrationMessage message, IntegrationHandlerResult result)
+    private async Task RecordAsync(IntegrationHandlerResult result)
     {
         var settings = globalSettings.EventLogging;
-        if (settings.IntegrationCircuitBreakerMinimumThroughput <= 0 ||
-            !Guid.TryParse(message.OrganizationId, out var organizationId))
+        if (settings.IntegrationCircuitBreakerMinimumThroughput < MinimumSupportedThroughput)
         {
             return;
         }
 
-        // Prefer configuration scope, so one broken configuration cannot disable an integration whose other
-        // configurations still deliver. Messages published before this field existed fall back to the integration.
-        var key = new IntegrationCircuitBreakerKey(
-            organizationId,
-            message.IntegrationType,
-            message.ConfigurationId);
-        var pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
-            key,
-            (builder, context) => Build(builder, context.PipelineKey, settings));
+        var message = result.Message;
+        if (!Guid.TryParse(message.OrganizationId, out var organizationId) ||
+            message.ConfigurationId is not Guid configurationId ||
+            configurationId == Guid.Empty)
+        {
+            return;
+        }
+
+        var key = new IntegrationCircuitBreakerKey(organizationId, configurationId);
+
+        // A counted failure creates the breaker; a success only feeds one that already exists. Successes still
+        // dilute the failure ratio for a struggling configuration, while the registry stays proportional to the
+        // configurations that are actually failing rather than to every one that has ever delivered.
+        ResiliencePipeline<IntegrationHandlerResult> pipeline;
+        if (CountsTowardBreaking(result))
+        {
+            pipeline = pipelineRegistry.GetOrAddPipeline<IntegrationHandlerResult>(
+                key,
+                (builder, context) => Build(builder, context.PipelineKey, settings));
+        }
+        else if (!pipelineRegistry.TryGetPipeline(key, out pipeline!))
+        {
+            return;
+        }
 
         var context = ResilienceContextPool.Shared.Get();
         try
@@ -71,22 +86,28 @@ public class IntegrationCircuitBreaker(
         }
     }
 
+    // A rate-limited or unavailable service recovers on its own and should not cost an organization its
+    // integration, while an authentication, configuration, or permanent failure will not recover on its own
+    private static bool CountsTowardBreaking(IntegrationHandlerResult result) =>
+        !result.Success && !result.Retryable;
+
     private ResiliencePipelineBuilder<IntegrationHandlerResult> Build(
         ResiliencePipelineBuilder<IntegrationHandlerResult> builder,
         IntegrationCircuitBreakerKey key,
         GlobalSettings.EventLoggingSettings settings)
     {
+        // Wired so the sampling window advances on the injected clock and stays testable
+        builder.TimeProvider = timeProvider;
+
         return builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<IntegrationHandlerResult>
         {
-            // Only failures that will not resolve without someone changing the configuration count
-            ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>()
-                .HandleResult(result => !result.Success && !result.Retryable),
+            ShouldHandle = new PredicateBuilder<IntegrationHandlerResult>().HandleResult(CountsTowardBreaking),
             FailureRatio = settings.IntegrationCircuitBreakerFailureRatio,
             MinimumThroughput = settings.IntegrationCircuitBreakerMinimumThroughput,
             SamplingDuration = settings.IntegrationCircuitBreakerSamplingDuration,
             BreakDuration = settings.IntegrationCircuitBreakerSamplingDuration,
 
-            // The disabled row, not this circuit, is what holds the integration off until an admin reconfigures
+            // The disabled row, not this circuit, is what holds the configuration off until an admin reconfigures
             // it. Letting the circuit recover on its own costs nothing, because disabling is idempotent.
             OnOpened = args => DisableAsync(key, args.Outcome.Result)
         });
@@ -94,22 +115,16 @@ public class IntegrationCircuitBreaker(
 
     private async ValueTask DisableAsync(IntegrationCircuitBreakerKey key, IntegrationHandlerResult? result)
     {
-        if (result?.Category is not IntegrationFailureCategory failureCategory)
+        if (result?.Category is not { } failureCategory)
         {
             return;
         }
 
-        var disabledDate = timeProvider.GetUtcNow().UtcDateTime;
-        var disabled = key.ConfigurationId is Guid configurationId
-            ? await configurationRepository.DisableAsync(
-                id: configurationId,
-                disabledDate: disabledDate,
-                disabledReason: failureCategory)
-            : await integrationRepository.DisableAsync(
-                organizationId: key.OrganizationId,
-                integrationType: key.IntegrationType,
-                disabledDate: disabledDate,
-                disabledReason: failureCategory);
+        var disabled = await configurationRepository.DisableAsync(
+            organizationId: key.OrganizationId,
+            id: key.ConfigurationId,
+            disabledDate: timeProvider.GetUtcNow().UtcDateTime,
+            disabledReason: failureCategory);
 
         if (!disabled)
         {
@@ -119,19 +134,16 @@ public class IntegrationCircuitBreaker(
         await cache.RemoveByTagAsync(
             EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
                 organizationId: key.OrganizationId,
-                integrationType: key.IntegrationType));
+                integrationType: result.Message.IntegrationType));
 
         logger.LogWarning(
-            "Integration disabled by the circuit breaker. OrganizationId: {OrgId}, " +
+            "Integration configuration disabled by the circuit breaker. OrganizationId: {OrgId}, " +
             "IntegrationType: {IntegrationType}, ConfigurationId: {ConfigurationId}, FailureCategory: {Category}",
             key.OrganizationId,
-            key.IntegrationType,
+            result.Message.IntegrationType,
             key.ConfigurationId,
             failureCategory);
     }
 }
 
-public readonly record struct IntegrationCircuitBreakerKey(
-    Guid OrganizationId,
-    IntegrationType IntegrationType,
-    Guid? ConfigurationId);
+public readonly record struct IntegrationCircuitBreakerKey(Guid OrganizationId, Guid ConfigurationId);
