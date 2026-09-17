@@ -9,4 +9,7 @@ public enum PamTargetSystemKind : byte
     Entra = 0,
     Mssql = 1,
     CustomScript = 2,
+
+    /// <summary>On-premises Active Directory, not Entra ID — see <see cref="Entra"/>.</summary>
+    ActiveDirectory = 3,
 }
