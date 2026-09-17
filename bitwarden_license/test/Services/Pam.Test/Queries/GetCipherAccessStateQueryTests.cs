@@ -264,6 +264,58 @@ public class GetCipherAccessStateQueryTests
             .CountExtensionsByLeaseIdAsync(default);
     }
 
+    // PM-43689: an ungoverned path added after the lease was minted makes live resolution return null, which used
+    // to hide the "Extend" control on a lease the extend call would still have accepted.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_UngovernedPathAddedSinceMint_StillReportsExtensionEligibility(
+        Guid userId, Guid cipherId, Guid ruleId, AccessLease activeLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(activeLease);
+        PinOriginatingRule(sutProvider, activeLease, ruleId, maxExtensionDurationSeconds: 3600);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns((GoverningRule?)null);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(0);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.ExtensionsAllowed);
+        Assert.Equal(3600, result.MaxExtensionDurationSeconds);
+    }
+
+    // The cap the extend call will enforce is the pinned rule's, so that is the one the control must publish.
+    [Theory, BitAutoData]
+    public async Task GetStateAsync_ActiveLease_PublishesThePinnedRulesCap(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId, Guid ruleId, AccessLease activeLease)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now)
+            .Returns(activeLease);
+        PinOriginatingRule(sutProvider, activeLease, ruleId, maxExtensionDurationSeconds: 3600);
+        // A rule created or re-pointed since, with a longer cap; it governs the cipher today but not this lease.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, [])
+            {
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = 8 * 60 * 60,
+            });
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CountExtensionsByLeaseIdAsync(activeLease.Id).Returns(0);
+
+        var result = await sutProvider.Sut.GetStateAsync(userId, cipherId);
+
+        Assert.True(result.ExtensionsAllowed);
+        Assert.Equal(3600, result.MaxExtensionDurationSeconds);
+    }
+
     private static SutProvider<GetCipherAccessStateQuery> Setup()
     {
         var sutProvider = new SutProvider<GetCipherAccessStateQuery>().WithFakeTimeProvider().Create();
@@ -276,5 +328,24 @@ public class GetCipherAccessStateQueryTests
         sutProvider.GetDependency<ICipherRepository>()
             .GetByIdAsync(cipherId, userId)
             .Returns(new CipherDetails { Id = cipherId });
+    }
+
+    // The rule the lease was granted under, reached through the request that birthed it.
+    private static void PinOriginatingRule(
+        SutProvider<GetCipherAccessStateQuery> sutProvider, AccessLease lease, Guid ruleId,
+        int maxExtensionDurationSeconds)
+    {
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetByIdAsync(lease.AccessRequestId)
+            .Returns(new AccessRequest { Id = lease.AccessRequestId, RuleId = ruleId });
+
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolvePinnedAsync(ruleId, lease.CollectionId)
+            .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: false, [])
+            {
+                RuleId = ruleId,
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = maxExtensionDurationSeconds,
+            });
     }
 }
