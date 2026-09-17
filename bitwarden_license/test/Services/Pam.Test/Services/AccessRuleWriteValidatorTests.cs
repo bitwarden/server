@@ -3,6 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Models;
 using Bit.Services.Pam.Models.Conditions;
 using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
@@ -112,6 +113,57 @@ public class AccessRuleWriteValidatorTests
         var sutProvider = SetupSutProvider(rule);
         rule.DefaultLeaseDurationSeconds = 7 * 24 * 60 * 60;
         rule.MaxLeaseDurationSeconds = null;
+
+        var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
+
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_MaxLeaseDurationAboveGlobalCeiling_ThrowsBadRequest(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider(rule);
+        rule.MaxLeaseDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds + 1;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains($"cannot exceed {LeaseDurationBounds.GlobalMaxSeconds} seconds", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DefaultLeaseDurationAboveGlobalCeiling_ThrowsBadRequest(AccessRule rule)
+    {
+        // Reachable with no cap stored, where the default is bounded by nothing but the ceiling.
+        var sutProvider = SetupSutProvider(rule);
+        rule.DefaultLeaseDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds + 1;
+        rule.MaxLeaseDurationSeconds = null;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains($"cannot exceed {LeaseDurationBounds.GlobalMaxSeconds} seconds", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_MaxExtensionDurationAboveGlobalCeiling_ThrowsBadRequest(AccessRule rule)
+    {
+        // The one rule-configurable duration the lease paths never measure against the ceiling.
+        var sutProvider = SetupSutProvider(rule);
+        rule.DefaultLeaseDurationSeconds = null;
+        rule.MaxLeaseDurationSeconds = null;
+        rule.AllowsExtensions = true;
+        rule.MaxExtensionDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds + 1;
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []));
+        Assert.Contains($"cannot exceed {LeaseDurationBounds.GlobalMaxSeconds} seconds", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_MaxLeaseDurationAtGlobalCeiling_Passes(AccessRule rule)
+    {
+        var sutProvider = SetupSutProvider(rule);
+        rule.DefaultLeaseDurationSeconds = null;
+        rule.MaxLeaseDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
         var result = await sutProvider.Sut.ValidateAsync(rule.OrganizationId, rule, []);
 

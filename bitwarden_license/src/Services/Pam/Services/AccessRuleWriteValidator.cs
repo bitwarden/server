@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Services;
 
@@ -54,6 +55,17 @@ public class AccessRuleWriteValidator : IAccessRuleWriteValidator
         if (rule.DefaultLeaseDurationSeconds > rule.MaxLeaseDurationSeconds)
         {
             throw new BadRequestException("The default lease duration cannot exceed the maximum lease duration.");
+        }
+
+        // Refused where it is written, not narrowed on every read: stored unchecked, an over-ceiling value is
+        // echoed back to the admin console verbatim while EffectiveMax quietly clamps it. Bounds each configured
+        // value, not the cumulative length of a repeatedly extended lease.
+        if (rule.DefaultLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
+            || rule.MaxLeaseDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds
+            || rule.MaxExtensionDurationSeconds is > LeaseDurationBounds.GlobalMaxSeconds)
+        {
+            throw new BadRequestException(
+                $"A lease duration cannot exceed {LeaseDurationBounds.GlobalMaxSeconds} seconds.");
         }
 
         var conditions = _conditionsValidator.Validate(rule.Conditions);

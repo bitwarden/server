@@ -8,10 +8,10 @@
 public static class LeaseDurationBounds
 {
     /// <summary>
-    /// The longest any single lease may run regardless of rule configuration (24h). A rule's own cap can only narrow
-    /// this, never widen it.
+    /// The longest any single lease may run regardless of rule configuration (one year). A backstop against absurd
+    /// values, not a policy limit: the governing rule's own cap is what narrows a lease.
     /// </summary>
-    public const int GlobalMaxSeconds = 24 * 60 * 60;
+    public const int GlobalMaxSeconds = 365 * 24 * 60 * 60;
 
     /// <summary>
     /// The default pre-fill duration if the rule stores none of its own (1h), clamped to the effective maximum.
