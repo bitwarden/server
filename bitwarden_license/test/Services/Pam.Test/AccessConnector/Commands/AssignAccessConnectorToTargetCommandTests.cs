@@ -162,11 +162,11 @@ public class AssignAccessConnectorToTargetCommandTests
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonAssignedToTarget && e.Phase == AccessAuditEventPhase.Attempt
-            && e.DaemonId == daemon.Id && e.TargetSystemId == target.Id));
+            e.Kind == AccessAuditEventKind.AccessConnectorAssignedToTarget && e.Phase == AccessAuditEventPhase.Attempt
+            && e.AccessConnectorId == daemon.Id && e.TargetSystemId == target.Id));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonAssignedToTarget && e.Phase == AccessAuditEventPhase.Outcome
-            && e.DaemonId == daemon.Id && e.TargetSystemId == target.Id));
+            e.Kind == AccessAuditEventKind.AccessConnectorAssignedToTarget && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessConnectorId == daemon.Id && e.TargetSystemId == target.Id));
     }
 
     private static SutProvider<AssignAccessConnectorToTargetCommand> Setup()

@@ -107,11 +107,11 @@ public class SetAccessConnectorStatusCommandTests
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonDisabled && e.Phase == AccessAuditEventPhase.Attempt
-            && e.DaemonId == daemon.Id && e.DaemonName == daemon.Name && e.ActorId == actingUserId));
+            e.Kind == AccessAuditEventKind.AccessConnectorDisabled && e.Phase == AccessAuditEventPhase.Attempt
+            && e.AccessConnectorId == daemon.Id && e.AccessConnectorName == daemon.Name && e.ActorId == actingUserId));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
-            e.Kind == AccessAuditEventKind.DaemonDisabled && e.Phase == AccessAuditEventPhase.Outcome
-            && e.DaemonId == daemon.Id));
+            e.Kind == AccessAuditEventKind.AccessConnectorDisabled && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessConnectorId == daemon.Id));
     }
 
     [Theory, BitAutoData]
@@ -125,8 +125,8 @@ public class SetAccessConnectorStatusCommandTests
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(e =>
-                e.Kind == AccessAuditEventKind.DaemonEnabled && e.Phase == AccessAuditEventPhase.Outcome
-                && e.DaemonId == daemon.Id));
+                e.Kind == AccessAuditEventKind.AccessConnectorEnabled && e.Phase == AccessAuditEventPhase.Outcome
+                && e.AccessConnectorId == daemon.Id));
     }
 
     private static SutProvider<SetAccessConnectorStatusCommand> Setup()

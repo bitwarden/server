@@ -45,12 +45,12 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
         // audit (before/after): record the attempt, then the outcome around the status write.
         var audit = new AccessAuditEventData
         {
-            Kind = enable ? AccessAuditEventKind.DaemonEnabled : AccessAuditEventKind.DaemonDisabled,
+            Kind = enable ? AccessAuditEventKind.AccessConnectorEnabled : AccessAuditEventKind.AccessConnectorDisabled,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            DaemonId = daemon.Id,
-            DaemonName = daemon.Name,
+            AccessConnectorId = daemon.Id,
+            AccessConnectorName = daemon.Name,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 

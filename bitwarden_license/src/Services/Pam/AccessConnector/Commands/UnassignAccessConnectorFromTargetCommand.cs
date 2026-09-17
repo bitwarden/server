@@ -49,12 +49,12 @@ public class UnassignAccessConnectorFromTargetCommand : IUnassignAccessConnector
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.DaemonUnassignedFromTarget,
+            Kind = AccessAuditEventKind.AccessConnectorUnassignedFromTarget,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            DaemonId = daemon.Id,
-            DaemonName = daemon.Name,
+            AccessConnectorId = daemon.Id,
+            AccessConnectorName = daemon.Name,
             TargetSystemId = target.Id,
             TargetSystemName = target.Name,
         };

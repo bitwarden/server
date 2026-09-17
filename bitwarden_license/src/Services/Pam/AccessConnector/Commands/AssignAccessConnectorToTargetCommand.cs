@@ -75,12 +75,12 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
         // on read.
         var audit = new AccessAuditEventData
         {
-            Kind = AccessAuditEventKind.DaemonAssignedToTarget,
+            Kind = AccessAuditEventKind.AccessConnectorAssignedToTarget,
             OccurredAt = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            DaemonId = daemon.Id,
-            DaemonName = daemon.Name,
+            AccessConnectorId = daemon.Id,
+            AccessConnectorName = daemon.Name,
             TargetSystemId = target.Id,
             TargetSystemName = target.Name,
         };
