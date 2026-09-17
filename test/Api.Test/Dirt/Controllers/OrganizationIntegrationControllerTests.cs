@@ -6,6 +6,7 @@ using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
 using Bit.Core.Dirt.Services;
+using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -271,9 +272,8 @@ public class OrganizationIntegrationControllerTests
             .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
             .Returns(new HecVerificationResult(false, "Authentication failed: invalid token or unauthorized."));
 
-        var response = await sutProvider.Sut.CreateAsync(organizationId, _hecRequestModel);
-
-        Assert.IsType<BadRequestObjectResult>(response.Result);
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAsync(organizationId, _hecRequestModel));
         await sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
             .DidNotReceive()
             .CreateAsync(Arg.Any<OrganizationIntegration>());
@@ -321,9 +321,8 @@ public class OrganizationIntegrationControllerTests
             .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
             .Returns(new HecVerificationResult(false, "Endpoint is unreachable: connection refused."));
 
-        var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _hecRequestModel);
-
-        Assert.IsType<BadRequestObjectResult>(response.Result);
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, _hecRequestModel));
         await sutProvider.GetDependency<IUpdateOrganizationIntegrationCommand>()
             .DidNotReceive()
             .UpdateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<OrganizationIntegration>());
