@@ -8,7 +8,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddOrganizationSubscriptions()` registers the group's services — the scoped
-`OrganizationSubscriptionEndpointsHandler` — and the `Bit.Invoicing` library they depend on.
+`OrganizationSubscriptionEndpointsHandler` and the `StandaloneOrganizationOwnerRequirementHandler`
+authorization handler — and the `Bit.Invoicing` library they depend on.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -24,6 +25,13 @@ The group authorizes **every** endpoint — the `Application` policy plus
 `OrganizationBillingRequirement` is an `IOrganizationRequirement` from the `OrganizationAuthorization`
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
+
+Individual endpoints may narrow this baseline further. The `preview` endpoint additionally requires
+`StandaloneOrganizationOwnerRequirement`, so it admits **only** an Owner of a standalone organization:
+an owner of a provider-managed (MSP, reseller, or business unit) organization, and a confirmed provider user, are both
+denied. This is deliberately stricter than legacy `ICurrentContext.EditSubscription`, which still admits
+a provider user for a provider-managed organization; provider-managed billing is administered through the
+provider surface, so none of the organization's users reach the preview here.
 
 ### Endpoints
 
@@ -52,6 +60,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IOrganizationRepository` (`Bit.Core.Repositories`) | Resolving the organization the preview is for |
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query |
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
+| `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.

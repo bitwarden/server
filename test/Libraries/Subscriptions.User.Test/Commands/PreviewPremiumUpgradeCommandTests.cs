@@ -290,8 +290,10 @@ public class PreviewPremiumUpgradeCommandTests
         {
             PlanTier = PlanTierType.Families,
             Cadence = PlanCadenceType.Annually,
-            PasswordManager = new PasswordManagerInvoiceItems(
-                prorations: [new PurchasableProration { Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }]),
+            PasswordManager = new PasswordManagerInvoiceItems
+            {
+                Prorations = [new PurchasableProration { Reference = "pm-seat", Charge = 26.67m, Credit = 6.67m, Tax = 2m, Total = 20m, Months = 8 }],
+            },
             EstimatedTax = 2m,
             Total = 22m,
             AmountDue = 22m

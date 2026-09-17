@@ -57,23 +57,6 @@ public class InvoicePreviewBuilderProrationOnlyTests
     }
 
     [Fact]
-    public void BuildFromInvoice_NoPmSeatsLineAndNoPmProration_Throws()
-    {
-        var invoice = Invoice.FromJson("""
-        {
-          "id": "in_preview_no_pm", "total": 500, "amount_due": 500,
-          "lines": { "data": [
-            { "amount": 500, "quantity": 1, "pricing": { "price_details": { "price": { "id": "price_unlabeled" } } } }
-          ] }
-        }
-        """);
-
-        var exception = Assert.Throws<ArgumentException>(
-            () => Builder().Build(invoice, PlanTierType.Families, PlanCadenceType.Annually));
-        Assert.Contains("seats line or at least one proration", exception.Message);
-    }
-
-    [Fact]
     public void BuildFromInvoice_SeatsLineAndProrations_KeepsBoth()
     {
         var invoice = Invoice.FromJson("""

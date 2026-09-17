@@ -12,8 +12,10 @@ public class InvoicePreviewSerializationTests
 
     private static InvoicePreview Sample() => new()
     {
-        PasswordManager = new PasswordManagerInvoiceItems(
-            seats: new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 35.82m }),
+        PasswordManager = new PasswordManagerInvoiceItems
+        {
+            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 35.82m },
+        },
         Cadence = PlanCadenceType.Annually,
         PlanTier = PlanTierType.Enterprise,
         EstimatedTax = 2.11m,

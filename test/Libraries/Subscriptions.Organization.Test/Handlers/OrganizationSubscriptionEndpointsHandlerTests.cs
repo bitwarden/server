@@ -58,8 +58,10 @@ public class OrganizationSubscriptionEndpointsHandlerTests
         Status = "active",
         InvoicePreview = new InvoicePreview
         {
-            PasswordManager = new PasswordManagerInvoiceItems(
-                seats: new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 10m }),
+            PasswordManager = new PasswordManagerInvoiceItems
+            {
+                Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 10m },
+            },
             Cadence = PlanCadenceType.Annually,
             PlanTier = PlanTierType.Teams,
             EstimatedTax = 0m,
