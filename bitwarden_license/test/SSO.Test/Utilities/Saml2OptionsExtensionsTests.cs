@@ -42,6 +42,19 @@ public class Saml2OptionsExtensionsTests
     }
 
     [Fact]
+    public async Task CouldHandleAsync_EncryptedAssertionAndWantAssertionsSigned_DoesNotThrow()
+    {
+        // <Assertion> and <EncryptedAssertion> are mutually exclusive per the OASIS spec.
+        // The pre-flight signature check must not throw for an <EncryptedAssertion>; the
+        // normal handler pipeline decrypts it and enforces WantAssertionsSigned itself.
+        var options = BuildOptions(wantAssertionsSigned: true);
+        using var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaOaep)));
+        var (context, collector) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    [Fact]
     public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
     {
         var options = BuildOptions(wantAssertionsSigned: false);

@@ -92,12 +92,13 @@ public static class Saml2OptionsExtensions
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        // This can throw if an IdP sends encrypted assertions in an
-        // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
-        // allowed per OASIS spec in an encrypted case. They are mutually exclusive
-        // on a per-assertion basis.
-        // PM-42982 exists to improve this site to handle all cases.
-        if (options.SPOptions.WantAssertionsSigned)
+        // <Assertion> and <EncryptedAssertion> are mutually exclusive per the OASIS
+        // spec: an encrypted assertion never appears as an <Assertion> node. Skip this
+        // pre-flight signature check for that case and let the normal handler pipeline
+        // (Sustainsys.Saml2's Saml2Response.CreateClaims) decrypt the assertion and
+        // enforce WantAssertionsSigned against the decrypted content.
+        var isAssertionEncrypted = envelope["EncryptedAssertion", Saml2Namespaces.Saml2Name] != null;
+        if (options.SPOptions.WantAssertionsSigned && !isAssertionEncrypted)
         {
             var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
             var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
