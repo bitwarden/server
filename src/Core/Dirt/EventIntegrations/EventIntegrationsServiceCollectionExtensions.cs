@@ -76,37 +76,55 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// <para>
     /// 5. Noop - If none of the above are configured, registers NoopEventWriteService (no-op implementation)
     /// </para>
+    /// <para>
+    /// Every implementation except the no-op is wrapped in a <see cref="NonThrowingEventWriteService"/> so that a
+    /// failed write is reported rather than returned to the caller. The keyed "persistent" registration used by the
+    /// listeners is deliberately left unwrapped, because a listener must see a failed write to retry the message.
+    /// </para>
     /// </remarks>
     public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
     {
         if (IsAzureServiceBusEnabled(globalSettings))
         {
             services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
+            return services.AddNonThrowingEventWriteService<EventIntegrationEventWriteService>();
         }
 
         if (IsRabbitMqEnabled(globalSettings))
         {
             services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
+            return services.AddNonThrowingEventWriteService<EventIntegrationEventWriteService>();
         }
 
         if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.Events.QueueName))
         {
-            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-            return services;
+            return services.AddNonThrowingEventWriteService<AzureQueueEventWriteService>();
         }
 
         if (globalSettings.SelfHosted)
         {
-            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
-            return services;
+            return services.AddNonThrowingEventWriteService<RepositoryEventWriteService>();
         }
 
         services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
+        return services;
+    }
+
+    private static IServiceCollection AddNonThrowingEventWriteService<T>(this IServiceCollection services)
+        where T : class, IEventWriteService
+    {
+        // Idempotent, and keeps IMeterFactory from depending on what the host happens to register
+        services.AddMetrics();
+        services.TryAddSingleton<EventWriteMetrics>();
+
+        // Registered as its own type so the container still owns its lifetime and disposal
+        services.TryAddSingleton<T>();
+        services.TryAddSingleton<IEventWriteService>(provider => new NonThrowingEventWriteService(
+            inner: provider.GetRequiredService<T>(),
+            metrics: provider.GetRequiredService<EventWriteMetrics>(),
+            logger: provider.GetRequiredService<ILogger<NonThrowingEventWriteService>>()));
+
         return services;
     }
 

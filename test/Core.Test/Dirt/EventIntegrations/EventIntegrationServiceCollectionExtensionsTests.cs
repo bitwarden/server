@@ -744,7 +744,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
         services.AddEventWriteServices(globalSettings);
 
         Assert.Contains(services, s => s.ServiceType == typeof(IEventIntegrationPublisher) && s.ImplementationType == typeof(AzureServiceBusService));
-        Assert.Contains(services, s => s.ServiceType == typeof(IEventWriteService) && s.ImplementationType == typeof(EventIntegrationEventWriteService));
+        Assert.Contains(services, s => s.ServiceType == typeof(EventIntegrationEventWriteService));
     }
 
     [Fact]
@@ -763,7 +763,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
         services.AddEventWriteServices(globalSettings);
 
         Assert.Contains(services, s => s.ServiceType == typeof(IEventIntegrationPublisher) && s.ImplementationType == typeof(RabbitMqService));
-        Assert.Contains(services, s => s.ServiceType == typeof(IEventWriteService) && s.ImplementationType == typeof(EventIntegrationEventWriteService));
+        Assert.Contains(services, s => s.ServiceType == typeof(EventIntegrationEventWriteService));
     }
 
     [Fact]
@@ -778,7 +778,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         services.AddEventWriteServices(globalSettings);
 
-        Assert.Contains(services, s => s.ServiceType == typeof(IEventWriteService) && s.ImplementationType == typeof(AzureQueueEventWriteService));
+        Assert.Contains(services, s => s.ServiceType == typeof(AzureQueueEventWriteService));
     }
 
     [Fact]
@@ -792,7 +792,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         services.AddEventWriteServices(globalSettings);
 
-        Assert.Contains(services, s => s.ServiceType == typeof(IEventWriteService) && s.ImplementationType == typeof(RepositoryEventWriteService));
+        Assert.Contains(services, s => s.ServiceType == typeof(RepositoryEventWriteService));
     }
 
     [Fact]
@@ -804,6 +804,23 @@ public class EventIntegrationServiceCollectionExtensionsTests
         services.AddEventWriteServices(globalSettings);
 
         Assert.Contains(services, s => s.ServiceType == typeof(IEventWriteService) && s.ImplementationType == typeof(NoopEventWriteService));
+    }
+
+    [Fact]
+    public void AddEventWriteServices_WriteServiceConfigured_ResolvesTheNonThrowingWrapper()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.TryAddSingleton(Substitute.For<IEventRepository>());
+        var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            ["GlobalSettings:SelfHosted"] = "true"
+        });
+
+        services.AddEventWriteServices(globalSettings);
+
+        var writeService = services.BuildServiceProvider().GetRequiredService<IEventWriteService>();
+        Assert.IsType<NonThrowingEventWriteService>(writeService);
     }
 
     [Fact]
