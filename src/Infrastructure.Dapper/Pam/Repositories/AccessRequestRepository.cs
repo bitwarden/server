@@ -230,7 +230,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
 
     /// <summary>
     /// A raw request-projection row: the <see cref="AccessRequestDetails"/> it becomes, plus the stored
-    /// action/date and produced lease's action/NotAfter the procedures additionally project.
+    /// action/date and the produced lease's action the procedures additionally project.
     /// Dapper maps inherited columns by name, so a new model column can't silently drop; <see cref="Derive"/> stamps
     /// derived statuses via the shared <see cref="AccessRequestDetails.StampDerivedStatuses"/>. Derived statuses
     /// never cross the wire from SQL.
@@ -240,7 +240,6 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         public AccessRequestAction Action { get; set; }
         public DateTime? ActionDate { get; set; }
         public AccessLeaseAction? ProducedLeaseAction { get; set; }
-        public DateTime? ProducedLeaseNotAfter { get; set; }
 
         public AccessRequestDetails Derive(DateTime now)
         {
