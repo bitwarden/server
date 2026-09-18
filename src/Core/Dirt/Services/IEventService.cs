@@ -5,7 +5,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Dirt.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -49,7 +48,6 @@ public interface IEventService
     Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events);
     Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type, DateTime? date = null);
     Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type, EventSystemUser systemUser, DateTime? date = null);
-    Task LogOrganizationIntegrationEventAsync(OrganizationIntegration organizationIntegration, EventType type, DateTime? date = null);
     Task LogUserSecretsEventAsync(Guid userId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null);
     Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null);
     Task LogUserProjectsEventAsync(Guid userId, IEnumerable<Project> projects, EventType type, DateTime? date = null);

@@ -41,14 +41,6 @@ public static class EventIntegrationsServiceCollectionExtensions
         // Add Validator
         services.TryAddSingleton<IOrganizationIntegrationConfigurationValidator, OrganizationIntegrationConfigurationValidator>();
 
-        // Add HEC verification service — registered here so it is available regardless of message broker configuration
-        services.AddHttpClient(HecIntegrationVerificationService.HttpClientName, client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-            })
-            .AddSsrfProtection();
-        services.TryAddScoped<IHecIntegrationVerificationService, HecIntegrationVerificationService>();
-
         // Add all commands/queries
         services.AddOrganizationIntegrationCommandsQueries();
         services.AddOrganizationIntegrationConfigurationCommandsQueries();

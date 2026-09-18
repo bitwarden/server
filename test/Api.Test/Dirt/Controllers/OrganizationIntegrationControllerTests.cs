@@ -5,8 +5,6 @@ using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations.Interfaces;
-using Bit.Core.Dirt.Services;
-using Bit.Core.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -23,12 +21,6 @@ public class OrganizationIntegrationControllerTests
     {
         Configuration = null,
         Type = IntegrationType.Webhook
-    };
-
-    private readonly OrganizationIntegrationRequestModel _hecRequestModel = new()
-    {
-        Configuration = """{"Uri":"https://splunk.example.com:8088/services/collector","Scheme":"Splunk","Token":"test-token"}""",
-        Type = IntegrationType.Hec
     };
 
     [Theory, BitAutoData]
@@ -254,127 +246,5 @@ public class OrganizationIntegrationControllerTests
         var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _webhookRequestModel);
 
         Assert.IsType<NotFoundResult>(response.Result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_HecVerificationFails_ReturnsBadRequest(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(true);
-        sutProvider.GetDependency<IHecIntegrationVerificationService>()
-            .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
-            .Returns(new HecVerificationResult(false, "Authentication failed: invalid token or unauthorized."));
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateAsync(organizationId, _hecRequestModel));
-        await sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .DidNotReceive()
-            .CreateAsync(Arg.Any<OrganizationIntegration>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_HecVerificationSucceeds_PersistsAndReturnsOk(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        OrganizationIntegration integration)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(true);
-        sutProvider.GetDependency<IHecIntegrationVerificationService>()
-            .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
-            .Returns(new HecVerificationResult(true, null));
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(integration);
-
-        var response = await sutProvider.Sut.CreateAsync(organizationId, _hecRequestModel);
-
-        Assert.IsType<OkObjectResult>(response.Result);
-        await sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .Received(1)
-            .CreateAsync(Arg.Any<OrganizationIntegration>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_HecVerificationFails_ReturnsBadRequest(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        Guid integrationId)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IHecIntegrationVerificationService>()
-            .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
-            .Returns(new HecVerificationResult(false, "Endpoint is unreachable: connection refused."));
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, _hecRequestModel));
-        await sutProvider.GetDependency<IUpdateOrganizationIntegrationCommand>()
-            .DidNotReceive()
-            .UpdateAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<OrganizationIntegration>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_HecVerificationSucceeds_PersistsAndReturnsOk(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        Guid integrationId,
-        OrganizationIntegration integration)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<IHecIntegrationVerificationService>()
-            .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), organizationId)
-            .Returns(new HecVerificationResult(true, null));
-        sutProvider.GetDependency<IUpdateOrganizationIntegrationCommand>()
-            .UpdateAsync(organizationId, integrationId, Arg.Any<OrganizationIntegration>())
-            .Returns(integration);
-
-        var response = await sutProvider.Sut.UpdateAsync(organizationId, integrationId, _hecRequestModel);
-
-        Assert.IsType<OkObjectResult>(response.Result);
-        await sutProvider.GetDependency<IUpdateOrganizationIntegrationCommand>()
-            .Received(1)
-            .UpdateAsync(organizationId, integrationId, Arg.Any<OrganizationIntegration>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_WebhookType_DoesNotCallVerificationService(
-        SutProvider<OrganizationIntegrationController> sutProvider,
-        Guid organizationId,
-        OrganizationIntegration integration)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(organizationId)
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CanCreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(true);
-        sutProvider.GetDependency<ICreateOrganizationIntegrationCommand>()
-            .CreateAsync(Arg.Any<OrganizationIntegration>())
-            .Returns(integration);
-
-        await sutProvider.Sut.CreateAsync(organizationId, _webhookRequestModel);
-
-        await sutProvider.GetDependency<IHecIntegrationVerificationService>()
-            .DidNotReceive()
-            .VerifyAsync(Arg.Any<Core.Dirt.Models.Data.EventIntegrations.HecIntegration>(), Arg.Any<Guid>());
     }
 }
