@@ -2,11 +2,13 @@
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
+using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -21,6 +23,14 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     public AccessLeaseRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, context => context.AccessLeases)
     { }
+
+    /// <summary>
+    /// The live-lease predicate as a shared, EF-translatable expression: no early end and the window open at
+    /// <paramref name="now"/>. Every EF read for current authorization composes this; the stored procedures carry
+    /// the same predicate and must not drift.
+    /// </summary>
+    private static System.Linq.Expressions.Expression<Func<EfModel, bool>> LiveAt(DateTime now)
+        => l => l.Action == AccessLeaseAction.None && l.NotBefore <= now && l.NotAfter > now;
 
     public async Task<CoreEntity?> GetByAccessRequestIdAsync(Guid accessRequestId)
     {
@@ -42,11 +52,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var lease = await dbContext.AccessLeases
-            .Where(l => l.RequesterId == requesterId
-                && l.CipherId == cipherId
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => l.RequesterId == requesterId && l.CipherId == cipherId)
+            .Where(LiveAt(now))
             .OrderByDescending(l => l.NotAfter)
             .AsNoTracking()
             .FirstOrDefaultAsync();
@@ -58,14 +65,28 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var leases = await dbContext.AccessLeases
-            .Where(l => l.RequesterId == requesterId
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => l.RequesterId == requesterId)
+            .Where(LiveAt(now))
             .OrderBy(l => l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
         return Mapper.Map<List<CoreEntity>>(leases);
+    }
+
+    public async Task<CoreEntity?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Latest-ending, across all members, since the singleton guard blocks until the last in-window lease frees the
+        // slot. Cipher-scoped, like that guard.
+        var lease = await dbContext.AccessLeases
+            .Where(l => l.CipherId == cipherId)
+            .Where(LiveAt(now))
+            .OrderByDescending(l => l.NotAfter)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+        return Mapper.Map<CoreEntity>(lease);
     }
 
     public async Task<ICollection<CoreEntity>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
@@ -82,17 +103,16 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // Governance view: every currently-active lease on the supplied (caller-manageable) collections, across all
         // members -- not just the caller's own.
         var leases = await dbContext.AccessLeases
-            .Where(l => ids.Contains(l.CollectionId)
-                && l.Status == AccessLeaseStatus.Active
-                && l.NotBefore <= now
-                && l.NotAfter > now)
+            .Where(l => ids.Contains(l.CollectionId))
+            .Where(LiveAt(now))
             .OrderBy(l => l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
-    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
+        DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -103,29 +123,26 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A revoked/cancelled lease's end is its RevokedDate; an expired lease's end is its NotAfter.
-        // `RevokedDate ?? NotAfter` is exactly that: RevokedDate is set only for Revoked/Cancelled leases.
+        // End is RevokedDate for an early end, NotAfter for a natural close; mirrors the matching stored procedure.
         var leases = await dbContext.AccessLeases
             .Where(l => ids.Contains(l.CollectionId)
-                && (l.Status == AccessLeaseStatus.Expired || l.Status == AccessLeaseStatus.Revoked || l.Status == AccessLeaseStatus.Cancelled)
                 && (
-                    ((l.Status == AccessLeaseStatus.Revoked || l.Status == AccessLeaseStatus.Cancelled) && l.RevokedDate >= since)
-                    || (l.Status == AccessLeaseStatus.Expired && l.NotAfter >= since)
+                    // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
+                    ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
+                    // Window closed on its own (end = NotAfter); byte 1 (retired stored Expired) is deliberately not
+                    // matched since ComputeLeaseStatus has no arm for it and would throw.
+                    || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
                 ))
             .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
             .AsNoTracking()
             .ToListAsync();
+
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
     /// <remarks>
-    /// A provider serialization failure is retried rather than surfaced. The per-cipher guard below reads a
-    /// predicate rather than a row, so under Serializable isolation this transaction is a candidate for abort
-    /// whenever any other transaction inserts a lease before it commits -- including one that grants access to an
-    /// unrelated cipher. A losing attempt therefore runs again on a fresh transaction and re-reads the state its
-    /// guard needs, arriving at the same deterministic outcome the stored procedure's UPDLOCK/HOLDLOCK blocks for.
-    /// Retries are bounded: a failure that outlives them propagates, because on a path that grants access to Vault
-    /// Data an unresolved persistence failure must not be reported as a benign mint outcome.
+    /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
+    /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
     /// </remarks>
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
@@ -149,60 +166,55 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A Serializable transaction is the closest cross-provider approximation of the stored procedure's
-        // UPDLOCK/HOLDLOCK range lock used for the per-cipher singleton guard: it keeps a concurrent same-cipher
-        // activation from reading a pre-mint state. Unlike the SQL Server proc (which blocks a concurrent caller
-        // until this transaction commits, then re-evaluates deterministically), a losing concurrent transaction here
-        // fails at commit time with a provider-level serialization error instead of cleanly returning
-        // SingleActiveLeaseConflict/PreconditionFailed -- which is why the caller of this method retries it.
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        // Serializable covers only the per-cipher guard, matching the procedure's range lock. Other writes are
+        // protected by the claim below; wider Serializable use aborted unrelated writers, so this restores parity
+        // with [AccessLease_CreateFromApprovedRequest].
+        var isolation = enforceSingleActiveLease
+            ? System.Data.IsolationLevel.Serializable
+            : System.Data.IsolationLevel.ReadCommitted;
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(isolation);
 
         try
         {
-            if (enforceSingleActiveLease)
-            {
-                // The cipher is resolved from the request rather than the caller's copy of the lease, matching the
-                // procedure's WHERE [CipherId] = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = ...).
-                // Otherwise a lease whose CipherId disagrees with its AccessRequestId would be checked for
-                // contention against the wrong cipher and could mint a second concurrent active lease.
-                //
-                // A request that does not exist yields no cipher and the guard is skipped, leaving the precondition
-                // check below to report the failure -- exactly what the procedure's NULL scalar subquery does.
-                var cipherId = await dbContext.AccessRequests
-                    .Where(r => r.Id == lease.AccessRequestId)
-                    .Select(r => (Guid?)r.CipherId)
-                    .FirstOrDefaultAsync();
-
-                if (cipherId is not null)
-                {
-                    var conflict = await dbContext.AccessLeases
-                        .AnyAsync(l => l.CipherId == cipherId.Value
-                            && l.Status == AccessLeaseStatus.Active
-                            && l.NotBefore <= now
-                            && l.NotAfter > now);
-                    if (conflict)
-                    {
-                        await transaction.RollbackAsync();
-                        return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
-                    }
-                }
-            }
-
-            // Every application-level precondition is re-checked here so a concurrent activation cannot double-mint;
-            // no matching request means a precondition no longer held and the caller decides how to surface that.
-            var request = await dbContext.AccessRequests
+            // Claims the request row first, closing a write-skew race with retraction (mirrors the procedure's
+            // claim); must stay ahead of the singleton guard, since reversing that lock order would deadlock.
+            // Serializable alone doesn't catch this, as SSI only detects cycles among Serializable transactions.
+            // Preconditions re-check in one CAS, so a concurrent retraction yields a clean zero-row outcome.
+            var claimed = await dbContext.AccessRequests
                 .Where(r => r.Id == lease.AccessRequestId
                     && r.RequesterId == lease.RequesterId
-                    && r.Status == AccessRequestStatus.Approved
+                    && r.Action == AccessRequestAction.Approved
+                    // An extension applies in place at approval and never mints its own lease; it stays Approved with no produced lease.
+                    && r.ExtensionOfLeaseId == null
                     && r.NotBefore <= now
                     && r.NotAfter > now
                     && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id))
-                .FirstOrDefaultAsync();
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.Action, AccessRequestAction.Approved));
 
-            if (request is null)
+            if (claimed == 0)
             {
                 await transaction.RollbackAsync();
                 return AccessLeaseMintOutcome.PreconditionFailed;
+            }
+
+            // The claim already holds the row for this transaction, so this read can't miss or go stale; it supplies
+            // the columns the lease is minted from.
+            var request = await dbContext.AccessRequests
+                .AsNoTracking()
+                .FirstAsync(r => r.Id == lease.AccessRequestId);
+
+            if (enforceSingleActiveLease)
+            {
+                // Cipher comes from the request, not the caller's copy, to prevent a second concurrent lease.
+                var conflict = await dbContext.AccessLeases
+                    .Where(l => l.CipherId == request.CipherId)
+                    .Where(LiveAt(now))
+                    .AnyAsync();
+                if (conflict)
+                {
+                    await transaction.RollbackAsync();
+                    return AccessLeaseMintOutcome.SingleActiveLeaseConflict;
+                }
             }
 
             var leaseEntity = Mapper.Map<EfModel>(lease);
@@ -210,8 +222,10 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             leaseEntity.CollectionId = request.CollectionId;
             leaseEntity.CipherId = request.CipherId;
             leaseEntity.RequesterId = request.RequesterId;
-            leaseEntity.Status = AccessLeaseStatus.Active;
-            leaseEntity.NotBefore = request.NotBefore;
+            leaseEntity.Action = AccessLeaseAction.None;
+            // Starts at this activation, never backdated to the request's window start (mirrors the procedure).
+            // End stays the request's, so late activation shortens the lease.
+            leaseEntity.NotBefore = now;
             leaseEntity.NotAfter = request.NotAfter;
             leaseEntity.RevokedDate = null;
             leaseEntity.RevokedBy = null;
@@ -234,7 +248,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
     }
 
-    public async Task RevokeAsync(CoreEntity lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now)
+    public async Task RevokeAsync(CoreEntity lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -252,9 +266,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // The decision is recorded only when the transition actually happened, so a repeat or losing revoke never
         // appends a Deny verdict for a lease it did not end.
         var rowsAffected = await dbContext.AccessLeases
-            .Where(l => l.Id == lease.Id && l.Status == AccessLeaseStatus.Active)
+            .Where(l => l.Id == lease.Id && l.Action == AccessLeaseAction.None)
             .ExecuteUpdateAsync(s => s
-                .SetProperty(l => l.Status, endStatus)
+                .SetProperty(l => l.Action, endAction)
                 .SetProperty(l => l.RevokedDate, now)
                 .SetProperty(l => l.RevokedBy, auditDecision.ApproverId));
 
@@ -273,6 +287,38 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
 
         await transaction.CommitAsync();
+    }
+
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Expiry is derived, not stored; PamLeaseExpirySweep's journal decides which run owns a lease.
+        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key.
+        var due = await dbContext.AccessLeases
+            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now &&
+                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
+            .Select(l => new PamExpiredLease
+            {
+                Id = l.Id,
+                OrganizationId = l.OrganizationId,
+                CollectionId = l.CollectionId,
+                CipherId = l.CipherId,
+                RequesterId = l.RequesterId,
+                NotBefore = l.NotBefore,
+                NotAfter = l.NotAfter,
+            })
+            .ToListAsync();
+
+        if (due.Count > 0)
+        {
+            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
+                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
+            await dbContext.SaveChangesAsync();
+        }
+
+        return due;
     }
 
     /// <summary>

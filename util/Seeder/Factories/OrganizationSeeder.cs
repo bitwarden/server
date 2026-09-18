@@ -65,7 +65,10 @@ internal static class OrganizationExtensions
             Email = shouldLinkUserId ? null : user.Email,
             Key = shouldIncludeKey ? encryptedOrgKey : null,
             Type = type,
-            Status = status
+            Status = status,
+            // Set here so every seeding path agrees; otherwise members of a UsePam organization seed unlicensed
+            // and PamLicenseGuard refuses them.
+            AccessPam = organization.UsePam
         };
     }
 }

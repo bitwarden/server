@@ -31,6 +31,8 @@ public interface ICurrentContext
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
+    Guid? PamDaemonId { get; set; }
+    Guid? PamDaemonOrganizationId { get; set; }
     string ClientId { get; set; }
     Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
@@ -88,5 +90,13 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+
+    /// <summary>
+    /// Whether the caller holds a Privileged Access Manager license in the given organization: the per-seat
+    /// entitlement (<c>OrganizationUser.AccessPam</c>) drawn against the subscription (<c>Organization.UsePam</c>).
+    /// A lapsed organization reads as unlicensed.
+    /// </summary>
+    bool AccessPam(Guid organizationId);
+
     CurrentContextOrganization? GetOrganization(Guid orgId);
 }

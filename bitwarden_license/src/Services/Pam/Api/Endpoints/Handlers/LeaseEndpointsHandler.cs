@@ -1,33 +1,64 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Services;
 using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>leases</c> resource. The Minimal API endpoints (see <c>LeaseEndpoints</c>) resolve this
-/// handler from DI.
+/// Handler for the <c>leases</c> resource. Holds the logic the <c>LeasesController</c> previously hosted; the
+/// Minimal API endpoints (see <c>LeaseEndpoints</c>) are thin lambdas that resolve this handler from DI.
 /// </summary>
-/// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the
-/// behavior lands with the rest of the PAM feature.
-/// </remarks>
-public class LeaseEndpointsHandler
+public class LeaseEndpointsHandler(
+    IUserService userService,
+    TimeProvider timeProvider,
+    IListActiveLeasesQuery listActiveLeasesQuery,
+    IListLeaseHistoryQuery listLeaseHistoryQuery,
+    IAccessLeaseRepository accessLeaseRepository,
+    IRevokeAccessLeaseCommand revokeAccessLeaseCommand,
+    IRequestLeaseExtensionCommand requestLeaseExtensionCommand)
 {
-    public Task<ListResponseModel<AccessLeaseResponseModel>> GetActive(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessLeaseResponseModel>> GetActive(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await listActiveLeasesQuery.GetActiveAsync(userId, now);
+        return new ListResponseModel<AccessLeaseResponseModel>(
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
+    }
 
-    public Task<ListResponseModel<AccessLeaseResponseModel>> GetHistory(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessLeaseResponseModel>> GetHistory(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await listLeaseHistoryQuery.GetHistoryAsync(userId, now);
+        return new ListResponseModel<AccessLeaseResponseModel>(
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
+    }
 
-    public Task<ListResponseModel<AccessLeaseResponseModel>> GetMine(ClaimsPrincipal user)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<AccessLeaseResponseModel>> GetMine(ClaimsPrincipal user)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var leases = await accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now);
+        return new ListResponseModel<AccessLeaseResponseModel>(
+            leases.Select(l => new AccessLeaseResponseModel(l, now)));
+    }
 
-    public Task Revoke(ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)
-        => throw new NotImplementedException();
+    public async Task Revoke(ClaimsPrincipal user, Guid id, AccessLeaseRevokeRequestModel model)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        await revokeAccessLeaseCommand.RevokeAsync(userId, id, model.Reason);
+    }
 
-    public Task<AccessRequestDetailsResponseModel> Extend(ClaimsPrincipal user, Guid id, AccessLeaseExtensionRequestModel model)
-        => throw new NotImplementedException();
+    public async Task<AccessRequestDetailsResponseModel> Extend(ClaimsPrincipal user, Guid id, AccessLeaseExtensionRequestModel model)
+    {
+        var userId = userService.GetProperUserId(user)!.Value;
+        var details = await requestLeaseExtensionCommand.ExtendAsync(userId, model.ToSubmission(id));
+        return new AccessRequestDetailsResponseModel(details);
+    }
 }

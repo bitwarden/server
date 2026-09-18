@@ -3,6 +3,7 @@ using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -54,6 +55,17 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
+    public async Task<AccessLease?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<AccessLease>(
+            $"[{Schema}].[AccessLease_ReadActiveByCipherId]",
+            new { CipherId = cipherId, Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.FirstOrDefault();
+    }
+
     public async Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
@@ -71,7 +83,8 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         return results.ToList();
     }
 
-    public async Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since)
+    public async Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
+        DateTime since, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -82,7 +95,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<AccessLease>(
             $"[{Schema}].[AccessLease_ReadManyEndedByCollectionIds]",
-            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since },
+            new { CollectionIds = ids.ToGuidIdArrayTVP(), Since = since, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
@@ -116,7 +129,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         }
     }
 
-    public async Task RevokeAsync(AccessLease lease, AccessLeaseStatus endStatus, AccessDecision auditDecision, DateTime now)
+    public async Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
@@ -124,12 +137,28 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
             new
             {
                 AccessLeaseId = lease.Id,
-                Status = (byte)endStatus,
+                Action = (byte)endAction,
                 RevokedBy = auditDecision.ApproverId,
                 AccessDecisionId = auditDecision.Id,
                 Reason = auditDecision.Comment,
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);
+    }
+
+    /// <summary>
+    /// Deviation: <see cref="IAccessLeaseRepository.ExpireDueAsync"/> was added to the interface alongside this
+    /// implementation — see the interface's doc comment for why it lives here rather than on
+    /// <c>IPamRotationJobRepository</c>.
+    /// </summary>
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PamExpiredLease>(
+            $"[{Schema}].[AccessLease_ExpireDue]",
+            new { Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
     }
 }
