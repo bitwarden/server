@@ -2,7 +2,13 @@
 
   <PropertyGroup>
     <IsPackable>false</IsPackable>
+    <!-- ASP0029: [ValidatableType] is still marked for evaluation; used here to prove the generator triggers on it. -->
+    <NoWarn>$(NoWarn);ASP0029</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
@@ -11,17 +17,17 @@
     </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="[10.0.10]" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
-    <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HttpExtensions\HttpExtensions.csproj" />
+    <ProjectReference Include="..\..\src\HttpExtensions.Generator\HttpExtensions.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
