@@ -1,5 +1,8 @@
 ﻿using System.Diagnostics.Metrics;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml;
 using Bit.Sso.Utilities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +13,13 @@ using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
 using Sustainsys.Saml2.Metadata;
 using Sustainsys.Saml2.WebSso;
+using CipherData = System.Security.Cryptography.Xml.CipherData;
+using EncryptedData = System.Security.Cryptography.Xml.EncryptedData;
+using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
+using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
+using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
+using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
+using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 
 namespace Bit.SSO.Test.Utilities;
 
@@ -39,6 +49,107 @@ public class Saml2OptionsExtensionsTests
             () => options.CouldHandleAsync(Scheme, context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
         Assert.Empty(collector.GetMeasurementSnapshot());
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_EncryptedAndSignedAssertionAndWantAssertionsSigned_DoesNotThrow()
+    {
+        // The identity provider signs the assertion, then encrypts the whole thing, exactly like a
+        // real round trip. The pre-flight check must decrypt before it can see the signature.
+        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedAssertion = BuildSignedAssertion(signingCertificate);
+        var encryptedAssertionXml = EncryptAssertion(signedAssertion, decryptionCertificate);
+
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_EncryptedButUnsignedAssertionAndWantAssertionsSigned_Throws()
+    {
+        // Decryption succeeding is not proof of a valid signature. An assertion that decrypts
+        // cleanly but was never signed must still be rejected.
+        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
+
+        var unsignedAssertion = BuildAssertionDocument().DocumentElement!;
+        var encryptedAssertionXml = EncryptAssertion(unsignedAssertion, decryptionCertificate);
+
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_MixedPlaintextAndEncryptedAssertionAndWantAssertionsSigned_ChecksPlaintextAssertion()
+    {
+        // A response can carry a plaintext assertion alongside a separate encrypted one (e.g. a
+        // federation proxy). The unsigned plaintext assertion must still be checked and rejected,
+        // regardless of its encrypted sibling.
+        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
+
+        const string unsignedPlaintextAssertion =
+            "<saml:Assertion ID=\"_plaintext\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>";
+        var encryptedAssertionXml = EncryptAssertion(BuildAssertionDocument().DocumentElement!, decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(unsignedPlaintextAssertion + encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedPlaintextAssertionWithUnsignedEncryptedSiblingAndWantAssertionsSigned_Throws()
+    {
+        // A response can carry more than one assertion (e.g. a federation proxy). A validly
+        // signed plaintext assertion must not let an unsigned encrypted sibling through unchecked.
+        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedPlaintextAssertion = BuildSignedAssertion(signingCertificate);
+        var unsignedEncryptedAssertionXml =
+            EncryptAssertion(BuildAssertionDocument().DocumentElement!, decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_TwoSignedAssertionsAndWantAssertionsSigned_DoesNotThrow()
+    {
+        // A federation proxy can aggregate a signed plaintext assertion and a signed, encrypted
+        // one. Both must pass the check independently for the response to be accepted.
+        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedPlaintextAssertion = BuildSignedAssertion(signingCertificate);
+        var signedEncryptedAssertionXml =
+            EncryptAssertion(BuildSignedAssertion(signingCertificate), decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(signedPlaintextAssertion.OuterXml + signedEncryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
     [Fact]
@@ -97,7 +208,8 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
-    private static Saml2Options BuildOptions(bool wantAssertionsSigned)
+    private static Saml2Options BuildOptions(bool wantAssertionsSigned,
+        X509Certificate2? decryptionCertificate = null, X509Certificate2? signingCertificate = null)
     {
         var spOptions = new SPOptions
         {
@@ -105,18 +217,81 @@ public class Saml2OptionsExtensionsTests
             ModulePath = ModulePath,
             WantAssertionsSigned = wantAssertionsSigned,
         };
-        // This test does not configure a signing certificate.
-        // No test case calls XmlHelpers.IsSignedByAny.
-        // If the test sets LoadMetadata to true, IdentityProvider.Validate() then requires a certificate.
+        if (decryptionCertificate != null)
+        {
+            spOptions.ServiceCertificates.Add(decryptionCertificate);
+        }
+        // If a test case does not pass a signing certificate, it must not call
+        // XmlHelpers.IsSignedByAny. If the test sets LoadMetadata to true,
+        // IdentityProvider.Validate() then requires a certificate.
         var idp = new IdentityProvider(new EntityId(IdpEntityId), spOptions)
         {
             Binding = Saml2BindingType.HttpPost,
             SingleSignOnServiceUrl = new Uri("https://idp.example.com/sso"),
         };
+        if (signingCertificate != null)
+        {
+            idp.SigningKeys.AddConfiguredKey(signingCertificate);
+        }
 
         var options = new Saml2Options { SPOptions = spOptions };
         options.IdentityProviders.Add(idp);
         return options;
+    }
+
+    private static X509Certificate2 CreateSelfSignedCertificate(string subjectName)
+    {
+        using var key = RSA.Create(2048);
+        var now = DateTimeOffset.UtcNow;
+        return new CertificateRequest(subjectName, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
+            .CreateSelfSigned(now, now.AddDays(365));
+    }
+
+    private static XmlDocument BuildAssertionDocument() =>
+        XmlHelpers.XmlDocumentFromString(
+            "<saml:Assertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" ID=\"_assertion\">" +
+            $"<saml:Issuer>{IdpEntityId}</saml:Issuer>" +
+            "</saml:Assertion>");
+
+    private static XmlElement BuildSignedAssertion(X509Certificate2 signingCertificate)
+    {
+        var document = BuildAssertionDocument();
+        document.DocumentElement!.Sign(signingCertificate, includeKeyInfo: false);
+        return document.DocumentElement!;
+    }
+
+    // Encrypts an assertion element the same way a real IdP does: an AES content key wraps the
+    // assertion, and the SP's certificate wraps that key. This is real XML encryption, not a fixed
+    // fixture, so it exercises the same decrypt path Sustainsys.Saml2 uses in production.
+    private static string EncryptAssertion(XmlElement assertion, X509Certificate2 encryptionCertificate)
+    {
+        var document = XmlHelpers.XmlDocumentFromString(
+            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
+        var importedAssertion = (XmlElement)document.ImportNode(assertion, deep: true);
+        document.DocumentElement!.AppendChild(importedAssertion);
+
+        using var contentKey = Aes.Create();
+        contentKey.KeySize = 256;
+        var cipherValue = new EncryptedXml().EncryptData(importedAssertion, contentKey, content: false);
+
+        var encryptedData = new EncryptedData
+        {
+            Type = EncryptedXml.XmlEncElementUrl,
+            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
+        };
+        encryptedData.CipherData.CipherValue = cipherValue;
+        encryptedData.KeyInfo = new KeyInfo();
+        var encryptedKey = new EncryptedKey
+        {
+            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
+            CipherData = new CipherData(
+                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
+        };
+        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
+
+        EncryptedXml.ReplaceElement(importedAssertion, encryptedData, content: false);
+
+        return document.DocumentElement!.OuterXml;
     }
 
     private static string BuildResponseXml(string assertionElement) =>

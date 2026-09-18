@@ -92,17 +92,32 @@ public static class Saml2OptionsExtensions
 
         Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
 
-        // This can throw if an IdP sends encrypted assertions in an
-        // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
-        // allowed per OASIS spec in an encrypted case. They are mutually exclusive
-        // on a per-assertion basis.
-        // PM-42982 exists to improve this site to handle all cases.
+        // A response can carry more than one assertion, e.g. a federation proxy aggregating
+        // identity providers.
+        // Every <Assertion> and <EncryptedAssertion> must be checked.
+        // <Assertion> and <EncryptedAssertion> are mutually exclusive per assertion per the OASIS spec:
+        // an encrypted assertion never appears as an <Assertion> node.
+        // Decrypt it first, so this check inspects the same content the identity provider actually signed,
+        // whether it arrived encrypted or not.
         if (options.SPOptions.WantAssertionsSigned)
         {
-            var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
-            var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
-                options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
-            if (!isAssertionSigned)
+            var assertionElements = envelope.ChildNodes
+                .OfType<XmlElement>()
+                .Where(e => e.NamespaceURI == Saml2Namespaces.Saml2Name &&
+                    (e.LocalName == "Assertion" || e.LocalName == "EncryptedAssertion"))
+                .ToArray();
+
+            var allAssertionsSigned = assertionElements.Length > 0 && assertionElements.All(element =>
+            {
+                var assertion = element.LocalName == "Assertion"
+                    ? element
+                    : Saml2EncryptedAssertionDecryptor.TryDecryptAssertion(
+                        element, options.SPOptions.DecryptionServiceCertificates);
+                return assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+            });
+
+            if (!allAssertionsSigned)
             {
                 throw new Exception("Cannot verify SAML assertion signature.");
             }
