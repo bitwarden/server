@@ -164,9 +164,7 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
-    /// <summary>
-    /// AutoFixture sets both Manage and ReadOnly, which the mutual-exclusivity rule rejects.
-    /// </summary>
+    // AutoFixture sets Manage and ReadOnly together, which the command rejects
     private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)
     {
         foreach (var cas in collections)

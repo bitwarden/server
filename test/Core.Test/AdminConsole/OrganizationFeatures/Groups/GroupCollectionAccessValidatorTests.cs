@@ -73,7 +73,7 @@ public class GroupCollectionAccessValidatorTests
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
-        // Only the last collection is a default collection, so the check cannot rely on the first one
+        // Only the last collection is a default collection
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo =>
