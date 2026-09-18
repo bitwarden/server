@@ -505,6 +505,7 @@ public class EventService : IEventService
                 Type = type,
                 SecretId = secret.Id,
                 UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -558,7 +559,7 @@ public class EventService : IEventService
                 OrganizationId = project.OrganizationId,
                 Type = type,
                 ProjectId = project.Id,
-                UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);

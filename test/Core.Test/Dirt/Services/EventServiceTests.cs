@@ -10,7 +10,10 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Services;
+using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
+using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -956,5 +959,161 @@ public class EventServiceTests
         var expectedIds = providers.Select(provider => provider.Id);
         await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
+    }
+
+    [Theory, BitAutoData, SecretCustomize]
+    public async Task LogUserSecretsEvent_LogsActingUser(Secret secret,
+        EventType eventType, DateTime date, Guid userId, string ipAddress, DeviceType deviceType,
+        SutProvider<EventService> sutProvider)
+    {
+        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, secret.OrganizationId);
+
+        await sutProvider.Sut.LogUserSecretsEventAsync(userId, new[] { secret }, eventType, date);
+
+        var expected = new List<IEvent>
+        {
+            new EventMessage
+            {
+                IpAddress = ipAddress,
+                DeviceType = deviceType,
+                OrganizationId = secret.OrganizationId,
+                SecretId = secret.Id,
+                Type = eventType,
+                UserId = userId,
+                ActingUserId = userId,
+                Date = date
+            }
+        };
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    [Theory, BitAutoData, ProjectCustomize]
+    public async Task LogUserProjectsEvent_LogsActingUser(Project project,
+        EventType eventType, DateTime date, Guid userId, string ipAddress, DeviceType deviceType,
+        SutProvider<EventService> sutProvider)
+    {
+        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, project.OrganizationId);
+
+        await sutProvider.Sut.LogUserProjectsEventAsync(userId, new[] { project }, eventType, date);
+
+        var expected = new List<IEvent>
+        {
+            new EventMessage
+            {
+                IpAddress = ipAddress,
+                DeviceType = deviceType,
+                OrganizationId = project.OrganizationId,
+                ProjectId = project.Id,
+                Type = eventType,
+                UserId = userId,
+                ActingUserId = userId,
+                Date = date
+            }
+        };
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    /// <summary>
+    /// A batch can span organizations and only those with events enabled may be logged. A
+    /// single-item test cannot tell the per-item filter apart from a no-op.
+    /// </summary>
+    [Theory, BitAutoData, SecretCustomize]
+    public async Task LogUserSecretsEvent_SkipsOrganizationsWithEventsDisabled(
+        Secret enabledOrgSecret, EventType eventType, DateTime date, Guid userId,
+        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    {
+        var disabledOrgSecret = new Secret { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
+
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { enabledOrgSecret.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
+            { disabledOrgSecret.OrganizationId, new OrganizationAbility { UseEvents = false, Enabled = true } }
+        };
+        var expectedOrgIds = new[] { enabledOrgSecret.OrganizationId, disabledOrgSecret.OrganizationId };
+
+        // Arg.Is rather than Arg.Any, so that passing the wrong selector or an empty list fails
+        // here instead of silently disabling all Secrets Manager audit logging.
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.OrderBy(id => id).SequenceEqual(expectedOrgIds.OrderBy(id => id))))
+            .Returns(orgAbilities);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+
+        await sutProvider.Sut.LogUserSecretsEventAsync(
+            userId, new[] { enabledOrgSecret, disabledOrgSecret }, eventType, date);
+
+        var expected = new List<IEvent>
+        {
+            new EventMessage
+            {
+                IpAddress = ipAddress,
+                DeviceType = deviceType,
+                OrganizationId = enabledOrgSecret.OrganizationId,
+                SecretId = enabledOrgSecret.Id,
+                Type = eventType,
+                UserId = userId,
+                ActingUserId = userId,
+                Date = date
+            }
+        };
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1)
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
+
+    /// <summary>
+    /// Pins the invariant the backfill migration depends on: machine-account secret and project
+    /// events carry a ServiceAccountId and leave both user columns NULL. The migration uses
+    /// "UserId IS NOT NULL" to exclude them, so setting UserId here would silently attribute
+    /// machine reads to a human.
+    /// </summary>
+    [Theory, BitAutoData, SecretCustomize]
+    public async Task LogServiceAccountSecretsEvent_LeavesUserColumnsNull(
+        Secret secret, EventType eventType, DateTime date, Guid serviceAccountId,
+        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    {
+        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, secret.OrganizationId);
+
+        await sutProvider.Sut.LogServiceAccountSecretsEventAsync(
+            serviceAccountId, new[] { secret }, eventType, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
+            Arg.Is<IEnumerable<IEvent>>(events => events.All(e =>
+                e.UserId == null && e.ActingUserId == null && e.ServiceAccountId == serviceAccountId)));
+    }
+
+    [Theory, BitAutoData, ProjectCustomize]
+    public async Task LogServiceAccountProjectsEvent_LeavesUserColumnsNull(
+        Project project, EventType eventType, DateTime date, Guid serviceAccountId,
+        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    {
+        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, project.OrganizationId);
+
+        await sutProvider.Sut.LogServiceAccountProjectsEventAsync(
+            serviceAccountId, new[] { project }, eventType, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
+            Arg.Is<IEnumerable<IEvent>>(events => events.All(e =>
+                e.UserId == null && e.ActingUserId == null && e.ServiceAccountId == serviceAccountId)));
+    }
+
+    private static void ArrangeOrganizationWithEvents(SutProvider<EventService> sutProvider,
+        string ipAddress, DeviceType deviceType, params Guid[] organizationIds)
+    {
+        var orgAbilities = organizationIds.ToDictionary(
+            organizationId => organizationId,
+            _ => new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.OrderBy(id => id).SequenceEqual(organizationIds.OrderBy(id => id))))
+            .Returns(orgAbilities);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
     }
 }
