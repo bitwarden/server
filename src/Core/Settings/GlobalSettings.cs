@@ -554,6 +554,14 @@ public class GlobalSettings : IGlobalSettings
         ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
+        /// <summary>
+        /// Access token lifetime override in seconds, applied to the interactive static
+        /// clients (web, mobile, browser, desktop, cli). The directory connector is
+        /// deliberately excluded because its headless-service model relies on a longer
+        /// lifetime. API-key providers and the Send client are unaffected. When null,
+        /// each client keeps its built-in default. Must be greater than 0 if set.
+        /// </summary>
+        public int? AccessTokenLifetimeSeconds { get; set; }
     }
 
 #nullable enable
