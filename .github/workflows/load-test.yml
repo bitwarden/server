@@ -24,6 +24,10 @@ on:
         type: string
         description: "URL of the Identity environment"
         default: "https://identity.qa.bitwarden.pw"
+      client-version:
+        type: string
+        description: "Bitwarden-Client-Version header sent to Identity"
+        default: "2026.9.0"
 
 permissions:
   contents: read
@@ -32,12 +36,13 @@ permissions:
 env:
   # Secret configuration
   AZURE_KEY_VAULT_NAME: gh-server
-  AZURE_KEY_VAULT_SECRETS: DD-API-KEY, K6-CLIENT-ID, K6-AUTH-USER-EMAIL, K6-AUTH-USER-PASSWORD-HASH
+  AZURE_KEY_VAULT_SECRETS: DD-API-KEY, K6-CLIENT-ID, K6-AUTH-USER-EMAIL, K6-AUTH-USER-PASSWORD-HASH, K6-AUTH-CLIENT-ID, K6-AUTH-CLIENT-SECRET
   # Specify defaults for scheduled runs
   TEST_ID: ${{ inputs.test-id || 'server-load-test' }}
   K6_TEST_PATH: ${{ inputs.k6-test-path || 'perf/load/*.js' }}
   API_ENV_URL: ${{ inputs.api-env-url || 'https://api.qa.bitwarden.pw' }}
   IDENTITY_ENV_URL: ${{ inputs.identity-env-url || 'https://identity.qa.bitwarden.pw' }}
+  CLIENT_VERSION: ${{ inputs.client-version || '2026.9.0' }}
 
 jobs:
   run-tests:
@@ -106,6 +111,9 @@ jobs:
           CLIENT_ID: ${{ steps.get-kv-secrets.outputs.K6-CLIENT-ID }}
           AUTH_USER_EMAIL: ${{ steps.get-kv-secrets.outputs.K6-AUTH-USER-EMAIL }}
           AUTH_USER_PASSWORD_HASH: ${{ steps.get-kv-secrets.outputs.K6-AUTH-USER-PASSWORD-HASH }}
+          AUTH_CLIENT_ID: ${{ steps.get-kv-secrets.outputs.K6-AUTH-CLIENT-ID }}
+          AUTH_CLIENT_SECRET: ${{ steps.get-kv-secrets.outputs.K6-AUTH-CLIENT-SECRET }}
+          CLIENT_VERSION: ${{ env.CLIENT_VERSION }}
         with:
           flags: >-
             --tag test-id=${{ env.TEST_ID }}

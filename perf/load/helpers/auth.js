@@ -3,7 +3,7 @@ import { check, fail } from "k6";
 
 // Identity rejects password grants that omit the "Bitwarden-Client-Version"
 // header (see ClientVersionValidator), so every request must supply one.
-const CLIENT_VERSION = __ENV.CLIENT_VERSION || "2026.8.0";
+const CLIENT_VERSION = __ENV.CLIENT_VERSION;
 
 /**
  * Authenticate using OAuth against Bitwarden
@@ -58,11 +58,16 @@ export function authenticate(
       "login status is 200": (r) => r.status === 200,
     })
   ) {
-    // Only logged on failure: an unsuccessful /connect/token response carries an
-    // OAuth error and message, never a token or other credential material.
-    console.error(
-      `login failed with status ${res.status}: ${String(res.body).slice(0, 500)}`
-    );
+    // A rejected grant can carry the user's email and a 2FA session token, so
+    // log only the OAuth error fields rather than the whole body.
+    let detail;
+    try {
+      const body = res.json();
+      detail = `${body?.error ?? ""} ${body?.error_description ?? ""}`.trim();
+    } catch {
+      detail = "<non-JSON body omitted>";
+    }
+    console.error(`login failed with status ${res.status}: ${detail}`);
     fail(`login status code was *not* 200, got ${res.status}`);
   }
 
