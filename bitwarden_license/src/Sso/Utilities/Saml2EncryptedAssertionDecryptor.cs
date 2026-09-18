@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Reflection;
+﻿using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
@@ -18,7 +15,8 @@ public static class Saml2EncryptedAssertionDecryptor
     // A future Sustainsys.Saml2 upgrade that removes or renames this member throws here,
     // codified in Saml2OptionsExtensions tests, instead of silently no-op'ing the signature check.
     private static readonly MethodInfo DecryptMethod =
-        typeof(XmlHelpers).Assembly.GetType("Sustainsys.Saml2.Internal.CryptographyExtensions", throwOnError: true)
+        // throwOnError raises a TypeLoadException for an absent type, so the result is never null here.
+        typeof(XmlHelpers).Assembly.GetType("Sustainsys.Saml2.Internal.CryptographyExtensions", throwOnError: true)!
             .GetMethod("Decrypt", BindingFlags.NonPublic | BindingFlags.Static, null,
                 new[] { typeof(XmlElement), typeof(AsymmetricAlgorithm) }, null)
         ?? throw new MissingMethodException("Sustainsys.Saml2.Internal.CryptographyExtensions",
@@ -26,7 +24,7 @@ public static class Saml2EncryptedAssertionDecryptor
 
     // Mirrors Saml2Response.RetrieveAssertionElements: try each configured decryption
     // certificate in turn, since a service provider can have more than one during rotation.
-    public static XmlElement TryDecryptAssertion(XmlElement encryptedAssertion,
+    public static XmlElement? TryDecryptAssertion(XmlElement encryptedAssertion,
         IEnumerable<X509Certificate2> decryptionCertificates)
     {
         foreach (var certificate in decryptionCertificates)
@@ -39,8 +37,9 @@ public static class Saml2EncryptedAssertionDecryptor
 
             try
             {
+                // Decrypt declares a non-nullable XmlElement return, so the invocation result is never null.
                 var decrypted = (XmlElement)DecryptMethod.Invoke(
-                    null, new object[] { encryptedAssertion, privateKey });
+                    null, new object[] { encryptedAssertion, privateKey })!;
                 return decrypted["Assertion", Saml2Namespaces.Saml2Name];
             }
             catch (TargetInvocationException ex) when (ex.InnerException is CryptographicException)
