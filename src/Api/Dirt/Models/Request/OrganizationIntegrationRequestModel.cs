@@ -36,10 +36,10 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
         switch (Type)
         {
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
-                yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", [nameof(Type)]);
+                yield return new ValidationResult($"{Type} integrations are not yet supported.", [nameof(Type)]);
                 break;
             case IntegrationType.Slack or IntegrationType.Teams:
-                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created or updated directly.", [nameof(Type)]);
+                yield return new ValidationResult($"{Type} integrations cannot be created or updated directly.", [nameof(Type)]);
                 break;
             case IntegrationType.Webhook:
                 foreach (var r in ValidateConfiguration<WebhookIntegration>(allowNullOrEmpty: true))
