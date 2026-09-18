@@ -171,6 +171,4 @@ public enum EventType : int
     Send_Deleted_File = 2509,
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
-
-    OrganizationIntegration_Created = 2600,
 }

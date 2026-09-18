@@ -41,14 +41,6 @@ public static class EventIntegrationsServiceCollectionExtensions
         // Add Validator
         services.TryAddSingleton<IOrganizationIntegrationConfigurationValidator, OrganizationIntegrationConfigurationValidator>();
 
-        // Add HEC verification service — registered here so it is available regardless of message broker configuration
-        services.AddHttpClient(HecIntegrationVerificationService.HttpClientName, client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-            })
-            .AddSsrfProtection();
-        services.TryAddScoped<IHecIntegrationVerificationService, HecIntegrationVerificationService>();
-
         // Add all commands/queries
         services.AddOrganizationIntegrationCommandsQueries();
         services.AddOrganizationIntegrationConfigurationCommandsQueries();
@@ -568,7 +560,7 @@ public static class EventIntegrationsServiceCollectionExtensions
     ///   <item><description>EventLogging.AzureServiceBus.IntegrationTopicName</description></item>
     /// </list>
     /// </remarks>
-    internal static bool IsAzureServiceBusEnabled(GlobalSettings settings)
+    public static bool IsAzureServiceBusEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.ConnectionString) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.EventTopicName) &&

@@ -35,6 +35,11 @@ public class Startup
         services.AddDistributedCache(globalSettings);
         services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
+
+        if (EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings))
+        {
+            services.AddHostedService<DeadLetterCleanupHostedService>();
+        }
     }
 
     public void Configure(IApplicationBuilder app)

@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.HttpExtensions;
@@ -24,19 +25,25 @@ public class SecretVersionsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IUserService _userService;
     private readonly IUpdateSecretCommand _updateSecretCommand;
+    private readonly IEventService _eventService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SecretVersionsController(
         ICurrentContext currentContext,
         ISecretVersionRepository secretVersionRepository,
         ISecretRepository secretRepository,
         IUserService userService,
-        IUpdateSecretCommand updateSecretCommand)
+        IUpdateSecretCommand updateSecretCommand,
+        IEventService eventService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _currentContext = currentContext;
         _secretVersionRepository = secretVersionRepository;
         _secretRepository = secretRepository;
         _userService = userService;
         _updateSecretCommand = updateSecretCommand;
+        _eventService = eventService;
+        _featureService = featureService;
     }
 
     [HttpGet("secrets/{secretId}/versions")]
@@ -56,16 +63,18 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
-        if (!CanReadEditorNames(accessClient))
+        var responses = CanReadEditorNames(accessClient)
+            ? (await _secretVersionRepository.GetManyDetailsBySecretIdAsync(secretId))
+                .Select(v => new SecretVersionResponseModel(v)).ToList()
+            : (await _secretVersionRepository.GetManyBySecretIdAsync(secretId))
+                .Select(v => new SecretVersionResponseModel(v)).ToList();
+
+        if (responses.Count > 0)
         {
-            var versionsWithoutEditors = await _secretVersionRepository.GetManyBySecretIdAsync(secretId);
-
-            return new ListResponseModel<SecretVersionResponseModel>(
-                versionsWithoutEditors.Select(v => new SecretVersionResponseModel(v)));
+            // Each version carries a value the secret once held, so reading history is a secret
+            // retrieval for audit purposes, the same as reading the current value.
+            await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
         }
-
-        var versions = await _secretVersionRepository.GetManyDetailsBySecretIdAsync(secretId);
-        var responses = versions.Select(v => new SecretVersionResponseModel(v));
 
         return new ListResponseModel<SecretVersionResponseModel>(responses);
     }
@@ -92,6 +101,8 @@ public class SecretVersionsController : Controller
         {
             throw new NotFoundException();
         }
+
+        await LogSecretEventAsync(secret, EventType.Secret_Retrieved);
 
         if (!CanReadEditorNames(accessClient))
         {
@@ -147,6 +158,8 @@ public class SecretVersionsController : Controller
             throw new NotFoundException();
         }
 
+        await LogSecretsEventAsync(secrets, EventType.Secret_Retrieved);
+
         if (!CanReadEditorNames(accessClient))
         {
             return new ListResponseModel<SecretVersionResponseModel>(
@@ -195,6 +208,9 @@ public class SecretVersionsController : Controller
 
         var updatedSecret = await _updateSecretCommand.UpdateAsync(secret, null, valueChanged);
 
+        // A restore changes the current value of the secret, so it is audited as an edit.
+        await LogSecretEventAsync(updatedSecret, EventType.Secret_Edited);
+
         return new SecretResponseModel(updatedSecret, true, true);
     }
 
@@ -241,6 +257,32 @@ public class SecretVersionsController : Controller
 
         return Ok();
     }
+
+    private async Task LogSecretsEventAsync(IEnumerable<Secret> secrets, EventType eventType)
+    {
+        // The controller is already gated by [RequireFeature], but the event log is gated again here
+        // so version audit events can never be written while secrets versioning is disabled, even if
+        // the attribute is removed or an action is reached another way.
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SecretsVersioning))
+        {
+            return;
+        }
+
+        var userId = _userService.GetProperUserId(User)!.Value;
+
+        switch (_currentContext.IdentityClientType)
+        {
+            case IdentityClientType.ServiceAccount:
+                await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, eventType);
+                break;
+            case IdentityClientType.User:
+                await _eventService.LogUserSecretsEventAsync(userId, secrets, eventType);
+                break;
+        }
+    }
+
+    private Task LogSecretEventAsync(Secret secret, EventType eventType) =>
+        LogSecretsEventAsync(new[] { secret }, eventType);
 
     private static bool CanReadEditorNames(AccessClientType accessClient) =>
         accessClient is AccessClientType.User or AccessClientType.NoAccessCheck;

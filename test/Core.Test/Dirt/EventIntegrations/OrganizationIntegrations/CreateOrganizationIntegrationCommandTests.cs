@@ -2,9 +2,7 @@
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrations;
 using Bit.Core.Dirt.Repositories;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -41,8 +39,6 @@ public class CreateOrganizationIntegrationCommandTests
             .RemoveByTagAsync(EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
                 integration.OrganizationId,
                 integration.Type));
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationIntegrationEventAsync(result, EventType.OrganizationIntegration_Created);
         Assert.Equal(integration, result);
     }
 
