@@ -5,6 +5,7 @@ mod cipher;
 mod crypto_util;
 mod provider;
 mod rsa_keys;
+mod sm_access_token;
 
 use std::{
     ffi::{c_char, CStr, CString},
