@@ -19,6 +19,7 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Polly.Registry;
 using ZiggyCreatures.Caching.Fusion;
 using TableStorageRepos = Bit.Core.Repositories.TableStorage;
 
@@ -293,6 +294,8 @@ public static class EventIntegrationsServiceCollectionExtensions
         // NOTE: AddDistributedCache must be called by the caller before this method
         services.AddExtendedCache(EventIntegrationsCacheConstants.CacheName, globalSettings);
         services.TryAddSingleton<IIntegrationFilterService, IntegrationFilterService>();
+        services.TryAddSingleton<ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>>();
+        services.TryAddSingleton<IIntegrationCircuitBreaker, IntegrationCircuitBreaker>();
         services.TryAddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
 
         // Add services in support of handlers
@@ -426,6 +429,7 @@ public static class EventIntegrationsServiceCollectionExtensions
                     configuration: listenerConfiguration,
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     serviceBusService: provider.GetRequiredService<IAzureServiceBusService>(),
+                    circuitBreaker: provider.GetRequiredService<IIntegrationCircuitBreaker>(),
                     serviceBusOptions: new ServiceBusProcessorOptions()
                     {
                         PrefetchCount = listenerConfiguration.IntegrationPrefetchCount,
@@ -494,6 +498,7 @@ public static class EventIntegrationsServiceCollectionExtensions
                     handler: provider.GetRequiredService<IIntegrationHandler<TConfig>>(),
                     configuration: listenerConfiguration,
                     rabbitMqService: provider.GetRequiredService<IRabbitMqService>(),
+                    circuitBreaker: provider.GetRequiredService<IIntegrationCircuitBreaker>(),
                     loggerFactory: provider.GetRequiredService<ILoggerFactory>(),
                     timeProvider: provider.GetRequiredService<TimeProvider>()
                 )
@@ -506,6 +511,7 @@ public static class EventIntegrationsServiceCollectionExtensions
     internal static IServiceCollection AddOrganizationIntegrationCommandsQueries(this IServiceCollection services)
     {
         services.TryAddScoped<ICreateOrganizationIntegrationCommand, CreateOrganizationIntegrationCommand>();
+        services.TryAddScoped<IEnableOrganizationIntegrationCommand, EnableOrganizationIntegrationCommand>();
         services.TryAddScoped<IUpdateOrganizationIntegrationCommand, UpdateOrganizationIntegrationCommand>();
         services.TryAddScoped<IDeleteOrganizationIntegrationCommand, DeleteOrganizationIntegrationCommand>();
         services.TryAddScoped<IGetOrganizationIntegrationsQuery, GetOrganizationIntegrationsQuery>();

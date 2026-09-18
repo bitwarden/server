@@ -1321,6 +1321,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DisabledDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DisabledReason")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("EventType")
                         .HasColumnType("INTEGER");
 

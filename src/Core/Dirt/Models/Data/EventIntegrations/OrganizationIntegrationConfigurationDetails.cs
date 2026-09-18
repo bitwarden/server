@@ -15,6 +15,7 @@ public class OrganizationIntegrationConfigurationDetails
     public string? Filters { get; set; }
     public string? IntegrationConfiguration { get; set; }
     public string? Template { get; set; }
+    public DateTime? DisabledDate { get; set; }
 
     public JsonObject MergedConfiguration
     {

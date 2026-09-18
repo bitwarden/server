@@ -48,6 +48,34 @@ public class UpdateOrganizationIntegrationCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateAsync_Success_ClearsTheBreakerOnEveryConfigurationUnderneath(
+        SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        OrganizationIntegration existingIntegration,
+        OrganizationIntegration updatedIntegration)
+    {
+        existingIntegration.Id = integrationId;
+        existingIntegration.OrganizationId = organizationId;
+        existingIntegration.Type = IntegrationType.Webhook;
+        updatedIntegration.Id = integrationId;
+        updatedIntegration.OrganizationId = organizationId;
+        updatedIntegration.Type = IntegrationType.Webhook;
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integrationId)
+            .Returns(existingIntegration);
+
+        await sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ClearDisabledByIntegrationAsync(
+                Arg.Is(organizationId),
+                Arg.Is(integrationId),
+                Arg.Any<DateTime>());
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAsync_IntegrationDoesNotExist_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
         Guid organizationId,
