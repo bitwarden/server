@@ -9,7 +9,9 @@ public class LeaseDurationBoundsTests
     [InlineData(null, LeaseDurationBounds.GlobalMaxSeconds)] // no per-rule cap
     [InlineData(900, 900)]
     [InlineData(LeaseDurationBounds.GlobalMaxSeconds, LeaseDurationBounds.GlobalMaxSeconds)]
-    [InlineData(7 * 24 * 60 * 60, LeaseDurationBounds.GlobalMaxSeconds)] // narrowed to the global ceiling
+    [InlineData(7 * 24 * 60 * 60, 7 * 24 * 60 * 60)] // a multi-day rule cap survives intact
+    // Narrowed only by the theoretical backstop, which no realistic rule reaches.
+    [InlineData(LeaseDurationBounds.GlobalMaxSeconds + 1, LeaseDurationBounds.GlobalMaxSeconds)]
     [InlineData(0, LeaseDurationBounds.GlobalMaxSeconds)] // unset, not "permits nothing"
     [InlineData(-1, LeaseDurationBounds.GlobalMaxSeconds)]
     public void EffectiveMax_ResolvesTheRuleCapAgainstTheGlobalCeiling(int? ruleMaxSeconds, int expected)
