@@ -4,6 +4,11 @@ import { check, fail } from "k6";
 // Identity rejects password grants that omit the "Bitwarden-Client-Version"
 // header (see ClientVersionValidator), so every request must supply one.
 const CLIENT_VERSION = __ENV.CLIENT_VERSION;
+if (!CLIENT_VERSION) {
+  // k6 sends an undefined header value as the string "undefined", which the
+  // server reports as a missing header rather than an unset variable.
+  throw new Error("CLIENT_VERSION env var is required");
+}
 
 /**
  * Authenticate using OAuth against Bitwarden
@@ -64,6 +69,9 @@ export function authenticate(
     try {
       const body = res.json();
       detail = `${body?.error ?? ""} ${body?.error_description ?? ""}`.trim();
+      if (!detail) {
+        detail = "<no OAuth error fields in body>";
+      }
     } catch {
       detail = "<non-JSON body omitted>";
     }
