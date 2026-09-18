@@ -46,6 +46,7 @@ public class EventIntegrationServiceCollectionExtensionsTests
         _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationRepository>());
         _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationConfigurationRepository>());
         _services.TryAddScoped(_ => Substitute.For<IOrganizationRepository>());
+        _services.TryAddScoped(_ => Substitute.For<IEventService>());
     }
 
     [Fact]

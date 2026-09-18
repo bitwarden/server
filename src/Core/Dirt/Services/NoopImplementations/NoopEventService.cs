@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -99,6 +100,12 @@ public class NoopEventService : IEventService
     public Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
         EventSystemUser systemUser,
         DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogOrganizationIntegrationEventAsync(OrganizationIntegration organizationIntegration,
+        EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);
     }

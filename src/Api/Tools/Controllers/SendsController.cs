@@ -206,7 +206,7 @@ public class SendsController : Controller
     [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
+    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth([FromRoute] string fileId)
     {
         var sendId = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(sendId);
@@ -307,7 +307,7 @@ public class SendsController : Controller
 
     [Authorize(Policies.Application)]
     [HttpGet("{id}/file/{fileId}")]
-    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
+    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var sendId = new Guid(id);
@@ -335,7 +335,7 @@ public class SendsController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
-    public async Task PostFileForExistingSend(string id, string fileId)
+    public async Task PostFileForExistingSend(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         if (!Request?.ContentType?.Contains("multipart/") ?? true)

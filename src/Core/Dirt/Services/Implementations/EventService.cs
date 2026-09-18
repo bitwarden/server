@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -482,6 +483,25 @@ public class EventService : IEventService
             SystemUser = systemUser,
             Date = date.GetValueOrDefault(DateTime.UtcNow),
             DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationIntegrationEventAsync(OrganizationIntegration organizationIntegration,
+        EventType type, DateTime? date = null)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationIntegration.OrganizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationIntegration.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
         };
         await _eventWriteService.CreateAsync(e);
     }
