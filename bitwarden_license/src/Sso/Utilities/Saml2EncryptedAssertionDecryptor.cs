@@ -29,6 +29,9 @@ public static class Saml2EncryptedAssertionDecryptor
     {
         foreach (var certificate in decryptionCertificates)
         {
+            // Generally, ACS operations must fail gracefully.
+            // But a failure here would indicate a certificate/configuration issue;
+            // similar to DecryptMethod, a failure here should be loud.
             using (var privateKey = certificate.GetRSAPrivateKey())
             {
                 if (privateKey == null)
@@ -43,7 +46,7 @@ public static class Saml2EncryptedAssertionDecryptor
                         null, new object[] { encryptedAssertion, privateKey })!;
                     return decrypted["Assertion", Saml2Namespaces.Saml2Name];
                 }
-                catch (TargetInvocationException ex) when (ex.InnerException is CryptographicException)
+                catch (TargetInvocationException)
                 {
                     // This certificate could not decrypt the assertion. Try the next one.
                 }
