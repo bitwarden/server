@@ -16,7 +16,7 @@ public class ChangePasswordUriController : Controller
     private readonly ILogger<ChangePasswordUriController> _logger;
 
     public ChangePasswordUriController(
-        IMemoryCache memoryCache,
+        [FromKeyedServices(IconsCacheConstants.ChangePasswordUriCacheName)] IMemoryCache memoryCache,
         IDomainMappingService domainMappingService,
         IChangePasswordUriService changePasswordService,
         ChangePasswordUriSettings changePasswordUriSettings,
