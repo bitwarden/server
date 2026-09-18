@@ -181,20 +181,23 @@ public class SubmitAccessRequestCommandTests
             .CreateAutoApprovedAsync(default!, default!);
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(900)]
+    // Submit refused anything past 24h before the ceiling was raised, whatever the rule stored.
+    [BitAutoData(7 * 24 * 60 * 60)]
     public async Task SubmitAsync_AutomaticDurationEqualToRuleMax_CreatesRequest(
-        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+        int capSeconds, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false,
-            maxLeaseDurationSeconds: 900);
+            maxLeaseDurationSeconds: capSeconds);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
-            new AccessRequestSubmission { DurationSeconds = 900 });
+            new AccessRequestSubmission { DurationSeconds = capSeconds });
 
-        Assert.Equal(_now.AddSeconds(900), result.Request.NotAfter);
+        Assert.Equal(_now.AddSeconds(capSeconds), result.Request.NotAfter);
     }
 
     [Theory, BitAutoData]
@@ -204,7 +207,7 @@ public class SubmitAccessRequestCommandTests
         var sutProvider = Setup();
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false,
-            maxLeaseDurationSeconds: 7 * 24 * 60 * 60);
+            maxLeaseDurationSeconds: SubmitAccessRequestCommand.MaxDurationSeconds + 1);
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(
