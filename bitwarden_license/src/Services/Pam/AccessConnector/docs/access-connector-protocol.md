@@ -29,7 +29,7 @@ sequenceDiagram
     D->>S: POST access-connectors/rotation/jobs/{jobId}/claim
     S-->>D: attemptId, work snapshot, executeBy
     D->>S: GET access-connectors/rotation/attempts/{attemptId}/cipher
-    S-->>D: cipher (standard cipher response, incl. revisionDate)
+    S-->>D: ciphertext + revisionDate
     D->>T: set the new password
     D->>S: PUT access-connectors/rotation/attempts/{attemptId}/cipher
     D->>S: POST access-connectors/rotation/attempts/{attemptId}/success
@@ -67,7 +67,7 @@ one.
 The access connector exchanges its credential for an access token at Identity's token endpoint using
 the client-credentials grant, with client id `access-connector.<apiKeyId>` and scope
 `api.pam.rotation`.
-[`PamAccessConnectorClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamAccessConnectorClientProvider.cs)
+[`PamDaemonClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamDaemonClientProvider.cs)
 resolves the client and refuses to issue a token unless the access connector is enabled and its
 organization is both enabled and licensed for PAM.
 
@@ -112,7 +112,7 @@ already older than `HeartbeatMinInterval`, so polling faster than that gains not
 The contract has two halves:
 
 - An access connector **must** call some connector-facing endpoint more often than
-  `AccessConnectorOfflineAfter` for as long as it holds a claim. If it stops, the release sweep may reclaim
+  `DaemonOfflineAfter` for as long as it holds a claim. If it stops, the release sweep may reclaim
   the job once the claim's lease has also expired.
 - An access connector **should not** poll more often than `HeartbeatMinInterval`.
 
@@ -123,14 +123,12 @@ are created in one transaction, so a claimed job always has exactly one in-fligh
 moment it is claimed.
 
 A successful claim returns the whole work snapshot, so the access connector needs no further round
-trip to start: the attempt id, the target system's name, the vault item id, two sealed blobs
-(`targetSystemSealedData` and `rotationConfigSealedData`), their `...WrappedKey` counterparts, and `executeBy`.
+trip to start: the attempt id, the target system's name and connector kind, the password policy to
+generate against, the vault item id, the account identity to rotate, whether to terminate existing
+sessions, and `executeBy`.
 
-Both sealed blobs are opaque to the server — stored and handed back verbatim, never parsed. The admin
-client seals them under the org key, so only the access connector can unseal them. Before trusting
-anything else in the blobs, the connector checks the sealed IDs against the claim's plaintext
-`targetSystemId` and `cipherId`, and refuses the job if either blob is missing, undecryptable, or
-disagrees.
+`accountIdentity` is opaque to the server. It is stored and handed back verbatim and never parsed —
+only the access connector interprets it.
 
 `executeBy` is the claim's lease deadline, `ReleaseDelay` after the claim. Passing it does not by
 itself lose the job: release also requires the access connector's heartbeat to have gone stale. See
@@ -152,32 +150,12 @@ vault-item read, which is bound to a member's identity —
 [`GetRotationCipherQuery`](../Queries/GetRotationCipherQuery.cs) re-verifies the attempt, its
 status, its claimant, and the job's claim before returning anything.
 
-The response is the standard cipher response every client reads (`CipherMiniResponseModel`, with the
-full encrypted `data` and the legacy typed `login` fields), so the SDK's vault crate decrypts it like
-any other item. The attempt's capability, not a lease, authorizes the full shape. Keep `revisionDate`;
-the write back needs it. The route is implemented in `Bit.Api`
-(`RotationAttemptCipherEndpoints`), which owns the cipher wire contract, and joins the same route group
-and machine-credential policy as the other attempt routes.
+`data` is the item's encrypted blob exactly as stored. Keep `revisionDate`; the write back needs it.
 
 ## Writing the rotated secret back
 
-`PUT access-connectors/rotation/attempts/{id}/cipher` takes the standard cipher request
-(`CipherRequestModel`), the same body every client sends, with `lastKnownRevisionDate` set to the
-revision date read above. The server builds the stored blob from the structured fields itself
-(`CipherRequestModel.ToCipher`); it is never sent. The request is rejected with a **400** unless:
-
-- the item and the request are both Login items;
-- `organizationId` is the item's organization;
-- `data` is absent (the structured fields are required instead);
-- `lastKnownRevisionDate` is present; and
-- the model passes the standard cipher validation (encrypted-string formats and lengths, `name`).
-
-The rotation never changes the item key, so the request's `key` must be identical to the stored one
-(compared exactly) and the server writes only the data. A cipher without an item key is refused with a **400**,
-as is a changed or missing `key`: the client would generate a new key, which would also orphan the
-attachment keys.
-
-The write goes through an atomic capability check that
+`PUT access-connectors/rotation/attempts/{id}/cipher` carries the new encrypted blob and the
+`lastKnownRevisionDate` read above. The write goes through an atomic capability check that
 re-verifies, under a single lock, that the job is still claimed by this access connector and the
 attempt is still executing — closing the window between "may this access connector write" and "write
 it".

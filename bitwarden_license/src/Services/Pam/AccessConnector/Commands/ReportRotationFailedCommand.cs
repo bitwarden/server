@@ -73,7 +73,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
-                Detail = "Stale failure report: the attempt is no longer executing under this daemon's claim.",
+                Detail = "Stale failure report: the attempt is no longer executing under this access connector's claim.",
             };
             await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
 
