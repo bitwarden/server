@@ -55,7 +55,7 @@ public class CollectController : Controller
             {
                 // User events
                 case EventType.User_ClientExportedVault:
-                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, eventModel.Type, eventModel.Date);
+                    await _eventService.LogUserEventAsync(_currentContext.UserId.Value, eventModel.Type);
                     break;
 
                 case EventType.Organization_ItemOrganization_Accepted:
@@ -73,7 +73,7 @@ public class CollectController : Controller
                         continue;
                     }
 
-                    await _eventService.LogOrganizationUserEventAsync(orgUser, eventModel.Type, eventModel.Date);
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, eventModel.Type);
 
                     continue;
 
@@ -142,7 +142,7 @@ public class CollectController : Controller
                     }
 
                     ciphersCache.TryAdd(eventModel.CipherId.Value, cipher);
-                    cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, eventModel.Date));
+                    cipherEvents.Add(new Tuple<Cipher, EventType, DateTime?>(cipher, eventModel.Type, null));
                     break;
 
                 case EventType.Organization_ClientExportedVault:
@@ -168,7 +168,7 @@ public class CollectController : Controller
                         continue;
                     }
 
-                    await _eventService.LogOrganizationEventAsync(organization, eventModel.Type, eventModel.Date);
+                    await _eventService.LogOrganizationEventAsync(organization, eventModel.Type);
                     break;
                 case EventType.PhishingBlocker_SiteAccessed:
                 case EventType.PhishingBlocker_SiteExited:
@@ -191,7 +191,7 @@ public class CollectController : Controller
                         continue;
                     }
 
-                    await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type, eventModel.Date);
+                    await _eventService.LogOrganizationUserEventAsync(orgUserContext, eventModel.Type);
                     break;
                 default:
                     continue;
