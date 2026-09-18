@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -212,6 +214,8 @@ public class ServiceAccountsControllerTests
             sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data));
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().DidNotReceiveWithAnyArgs()
             .CreateAsync(Arg.Any<ApiKey>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -227,10 +231,39 @@ public class ServiceAccountsControllerTests
 
         sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default)
             .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        SetAuditLogFlagEnabled(sutProvider, true);
 
         await sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
             .CreateAsync(Arg.Any<ApiKey>());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountEventAsync(Arg.Any<Guid>(),
+                Arg.Is<List<ServiceAccount>>(l => l.Contains(serviceAccount)),
+                EventType.AccessToken_Created, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAccessToken_FeatureFlagDisabled_DoesNotLogEvent(SutProvider<ServiceAccountsController> sutProvider,
+        AccessTokenCreateRequestModel data, ServiceAccount serviceAccount, string mockClientSecret)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        var resultAccessToken = data.ToApiKey(serviceAccount.Id);
+
+        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default)
+            .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        SetAuditLogFlagEnabled(sutProvider, false);
+
+        await sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data);
+        await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
+            .CreateAsync(Arg.Any<ApiKey>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -295,6 +328,8 @@ public class ServiceAccountsControllerTests
             sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data));
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().DidNotReceiveWithAnyArgs()
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -306,10 +341,80 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var revokedTokens = Enumerable.Range(0, 3).Select(_ => new ApiKey
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Name",
+            Scope = "Test Scope",
+            EncryptedPayload = "Test EncryptedPayload",
+            Key = "Test Key",
+        }).ToList();
+        sutProvider.GetDependency<IRevokeAccessTokensCommand>()
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
+            .Returns(revokedTokens);
+        SetAuditLogFlagEnabled(sutProvider, true);
 
         await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogServiceAccountEventAsync(Arg.Any<Guid>(),
+                Arg.Is<List<ServiceAccount>>(l => l.Count == revokedTokens.Count && l.All(sa => sa == serviceAccount)),
+                EventType.AccessToken_Revoked, Arg.Any<IdentityClientType>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RevokeAccessTokens_NothingRevoked_DoesNotLogEvent(SutProvider<ServiceAccountsController> sutProvider,
+        RevokeAccessTokensRequest data, ServiceAccount serviceAccount)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IRevokeAccessTokensCommand>()
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
+            .Returns(new List<ApiKey>());
+        SetAuditLogFlagEnabled(sutProvider, true);
+
+        await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
+        await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RevokeAccessTokens_FeatureFlagDisabled_DoesNotLogEvent(SutProvider<ServiceAccountsController> sutProvider,
+        RevokeAccessTokensRequest data, ServiceAccount serviceAccount)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), serviceAccount,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        sutProvider.GetDependency<IRevokeAccessTokensCommand>()
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>())
+            .Returns(new List<ApiKey>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Name",
+                    Scope = "Test Scope",
+                    EncryptedPayload = "Test EncryptedPayload",
+                    Key = "Test Key",
+                },
+            });
+        SetAuditLogFlagEnabled(sutProvider, false);
+
+        await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
+        await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
+            .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogServiceAccountEventAsync(default, default, default, default);
     }
 
     [Theory]
@@ -432,5 +537,12 @@ public class ServiceAccountsControllerTests
         var resultServiceAccount = data.ToServiceAccount(organization.Id);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
             .ReturnsForAnyArgs(resultServiceAccount);
+    }
+
+    private static void SetAuditLogFlagEnabled(SutProvider<ServiceAccountsController> sutProvider, bool enabled)
+    {
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.Sm2060MachineAccountAuditLogs)
+            .Returns(enabled);
     }
 }
