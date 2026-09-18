@@ -20,6 +20,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,6 +42,7 @@ public class SendsController : Controller
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ICipherRepository _cipherRepository;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -54,7 +56,8 @@ public class SendsController : Controller
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
         ISendEventClassifier sendEventClassifier,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        ICipherRepository cipherRepository
     )
     {
         _sendRepository = sendRepository;
@@ -69,6 +72,7 @@ public class SendsController : Controller
         _eventService = eventService;
         _sendEventClassifier = sendEventClassifier;
         _featureService = featureService;
+        _cipherRepository = cipherRepository;
     }
 
     #region Anonymous endpoints
@@ -258,6 +262,15 @@ public class SendsController : Controller
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
             throw new BadRequestException("Email verified Sends require a premium membership");
+        }
+
+        if (model.Type == SendType.Item && model.CipherId.HasValue)
+        {
+            var cipher = await _cipherRepository.GetByIdAsync(model.CipherId.Value, userId);
+            if (cipher == null)
+            {
+                throw new BadRequestException("Cipher not found.");
+            }
         }
 
         var send = model.ToSend(userId, _sendAuthorizationService);

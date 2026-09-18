@@ -11,6 +11,8 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
@@ -42,6 +44,8 @@ public class CipherService : ICipherService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPricingClient _pricingClient;
+    private readonly ISendRepository _sendRepository;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -60,7 +64,9 @@ public class CipherService : ICipherService
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        ISendRepository sendRepository,
+        INonAnonymousSendCommand nonAnonymousSendCommand)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -79,6 +85,8 @@ public class CipherService : ICipherService
         _policyRequirementQuery = policyRequirementQuery;
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _pricingClient = pricingClient;
+        _sendRepository = sendRepository;
+        _nonAnonymousSendCommand = nonAnonymousSendCommand;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -435,9 +443,18 @@ public class CipherService : ICipherService
 
         var collectionIds = await GetCollectionIdsForPushAsync(cipherDetails);
 
+        // Fetch linked Sends before cipher deletion so we can drive push/event side effects
+        var linkedSends = await _sendRepository.GetManyByCipherIdsAsync(new[] { cipherDetails.Id });
+
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
+
+        // Delete linked Sends and emit their side effects (push notification, event log)
+        foreach (var send in linkedSends)
+        {
+            await _nonAnonymousSendCommand.DeleteSendAsync(send);
+        }
 
         // push
         await _cipherSyncPushService.PushSyncCipherDeleteAsync(cipherDetails, collectionIds);
@@ -462,6 +479,9 @@ public class CipherService : ICipherService
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
+        // Fetch linked Sends before cipher deletion so we can drive push/event side effects
+        var linkedSends = await _sendRepository.GetManyByCipherIdsAsync(deletingCiphers.Select(c => c.Id));
+
         // Clean up attachment files from storage
         foreach (var cipher in deletingCiphers)
         {
@@ -473,6 +493,12 @@ public class CipherService : ICipherService
         foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
+        }
+
+        // Delete linked Sends and emit their side effects (push notification, event log)
+        foreach (var send in linkedSends)
+        {
+            await _nonAnonymousSendCommand.DeleteSendAsync(send);
         }
 
         // push

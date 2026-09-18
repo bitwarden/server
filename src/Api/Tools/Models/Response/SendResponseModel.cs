@@ -45,6 +45,7 @@ public class SendResponseModel : HttpExtensions.ResponseModel
         Emails = send.Emails;
         Disabled = send.Disabled;
         HideEmail = send.HideEmail.GetValueOrDefault();
+        CipherId = send.CipherId;
 
         switch (send.Type)
         {
@@ -197,4 +198,9 @@ public class SendResponseModel : HttpExtensions.ResponseModel
     /// and displays a confirmation message instead.
     /// </summary>
     public bool HideEmail { get; set; }
+
+    /// <summary>
+    /// The ID of the Cipher (vault item) this Send is linked to. Only populated for Item-type Sends.
+    /// </summary>
+    public Guid? CipherId { get; set; }
 }

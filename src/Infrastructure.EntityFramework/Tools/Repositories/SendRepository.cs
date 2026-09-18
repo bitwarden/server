@@ -212,6 +212,16 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
     }
 
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByCipherIdsAsync(IEnumerable<Guid> cipherIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Sends
+            .Where(s => s.CipherId != null && cipherIds.Contains(s.CipherId.Value))
+            .ToListAsync();
+        return Mapper.Map<List<Core.Tools.Entities.Send>>(results).Where(UnprotectData).ToList();
+    }
+
     private void ProtectData(Core.Tools.Entities.Send send)
     {
         if (string.IsNullOrWhiteSpace(send.Emails) ||

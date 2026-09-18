@@ -3,6 +3,7 @@
 
 using AutoMapper;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
@@ -10,6 +11,7 @@ public class Send : Core.Tools.Entities.Send
 {
     public virtual Organization Organization { get; set; }
     public virtual User User { get; set; }
+    public virtual Cipher Cipher { get; set; }
 }
 
 public class SendMapperProfile : Profile
