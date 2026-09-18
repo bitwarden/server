@@ -1243,6 +1243,9 @@
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
       },
+      "currentuser": {
+        "type": "Project"
+      },
       "data": {
         "type": "Project"
       },

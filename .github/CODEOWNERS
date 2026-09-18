@@ -133,3 +133,6 @@ dev/docker-compose.yml
 .claude/ @bitwarden/team-ai-sme
 .github/workflows/respond.yml @bitwarden/team-ai-sme
 .github/workflows/review-code.yml @bitwarden/team-ai-sme
+
+# Dissolving Core into Libraries
+src/Libraries/CurrentUser @bitwarden/team-platform-dev @bitwarden/dept-architecture # joint ownership

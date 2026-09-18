@@ -37,6 +37,7 @@ using Bit.Core.Enums;
 using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
+using Bit.CurrentUser;
 
 
 #if !OSS
@@ -94,6 +95,7 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+        services.AddCurrentUser();
 
         // Caching
         services.AddMemoryCache();
