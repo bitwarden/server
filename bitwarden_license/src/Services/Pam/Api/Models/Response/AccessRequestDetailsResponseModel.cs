@@ -49,6 +49,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
             .ToList();
         ProducedLeaseId = details.ProducedLeaseId;
         ProducedLeaseStatus = details.ProducedLeaseStatus;
+        ProducedLeaseNotAfter = details.ProducedLeaseNotAfter.AsUtc();
         ExtensionOfLeaseId = details.ExtensionOfLeaseId;
         RequesterName = details.RequesterName;
         RequesterEmail = details.RequesterEmail;
@@ -120,6 +121,12 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     /// the "active" group so it is not offered for revocation.
     /// </summary>
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
+
+    /// <summary>
+    /// The produced lease's own end (UTC), or null when no lease exists. The authority for "how long is left" —
+    /// <see cref="LeaseNotAfter"/> is the submit-time activation window, which an extension never restamps.
+    /// </summary>
+    public DateTime? ProducedLeaseNotAfter { get; set; }
 
     /// <summary>The parent lease if this is an extension request.</summary>
     public Guid? ExtensionOfLeaseId { get; set; }

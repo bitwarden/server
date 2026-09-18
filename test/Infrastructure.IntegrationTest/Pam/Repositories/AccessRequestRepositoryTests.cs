@@ -218,12 +218,15 @@ public class AccessRequestRepositoryTests
         // The original request's window closed an hour ago...
         Assert.True(request.NotAfter < now);
         // ...but the lease it produced now runs an hour into the future.
-        Assert.True((await accessLeaseRepository.GetByIdAsync(lease.Id))!.NotAfter > now);
+        var extended = await accessLeaseRepository.GetByIdAsync(lease.Id);
+        Assert.True(extended!.NotAfter > now);
 
-        // So the original request must still report a live lease.
+        // So the original request must still report a live lease, and carry the lease's own end rather
+        // than its own lapsed window -- what the client counts down from (PAM-151).
         var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
         Assert.Equal(lease.Id, details!.ProducedLeaseId);
         Assert.Equal(AccessLeaseStatus.Active, details.ProducedLeaseStatus);
+        Assert.Equal(extended.NotAfter, details.ProducedLeaseNotAfter!.Value, LaxDateTimeComparer.Default);
     }
 
     [DatabaseTheory, DatabaseData]
