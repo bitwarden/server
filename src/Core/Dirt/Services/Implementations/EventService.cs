@@ -504,7 +504,6 @@ public class EventService : IEventService
                 OrganizationId = secret.OrganizationId,
                 Type = type,
                 SecretId = secret.Id,
-                UserId = userId,
                 ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
