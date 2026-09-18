@@ -100,4 +100,24 @@ public class AccessAuditEventKindNamesTests
     {
         Assert.False(AccessAuditEventKindNames.TryParse(name, out _));
     }
+
+    /// <summary>
+    /// A web bundle loaded before the daemon → access connector rename still posts the old fleet names in the kind
+    /// filter, and an unknown name fails the whole read. They parse for one release; they are never reported.
+    /// </summary>
+    [Theory]
+    [InlineData("daemonRegistered", AccessAuditEventKind.AccessConnectorRegistered)]
+    [InlineData("daemonRevoked", AccessAuditEventKind.AccessConnectorRevoked)]
+    [InlineData("daemonDisabled", AccessAuditEventKind.AccessConnectorDisabled)]
+    [InlineData("daemonEnabled", AccessAuditEventKind.AccessConnectorEnabled)]
+    [InlineData("daemonDeleted", AccessAuditEventKind.AccessConnectorDeleted)]
+    [InlineData("daemonAssignedToTarget", AccessAuditEventKind.AccessConnectorAssignedToTarget)]
+    [InlineData("daemonUnassignedFromTarget", AccessAuditEventKind.AccessConnectorUnassignedFromTarget)]
+    public void TryParse_StillReadsThePreRenameFleetNames(string name, AccessAuditEventKind expected)
+    {
+        Assert.True(AccessAuditEventKindNames.TryParse(name, out var parsed));
+        Assert.Equal(expected, parsed);
+        Assert.DoesNotContain(name, _vocabulary);
+        Assert.NotEqual(name, AccessAuditEventKindNames.From(expected));
+    }
 }

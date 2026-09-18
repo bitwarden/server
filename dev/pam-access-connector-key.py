@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""Build a PAM rotation-daemon credential with a *valid* organization key for local dev.
+"""Build a PAM access connector credential with a *valid* organization key for local dev.
 
 LOCAL DEV ONLY. Operates on seeded synthetic data in `vault_dev`:
   * Seeded users draw their RSA keypair from the fixed pool in
     util/RustSdk/rust/src/rsa_keys.rs (selected by poolIndex). The private key is
     therefore a known constant in the repo, so we can RSA-OAEP-SHA1 decrypt the
     org key stored (RSA-wrapped) in OrganizationUser.Key -- exactly what a real
-    client does at daemon registration.
+    client does at access connector registration.
   * We mirror the Secrets Manager access-token layout (CONTRACT C1): a random
     16-byte seed is generated; the 64-byte symmetric key is *derived* from that seed
     via `bitwarden_crypto::derive_shareable_key(seed, "accesstoken",
     Some("sm-access-token"))`; the payload is encrypted under that derived key; and
-    the daemon token embeds the base64-encoded seed (not the key) after the ':'.
+    the connector token embeds the base64-encoded seed (not the key) after the ':'.
 
 This deliberately reconstructs an org key from test data. It is NOT a break of the
 zero-knowledge design: the RSA keys are test-only constants committed to the repo,
 the master password is the public seeder default, and there is no real vault data.
 
 Usage:
-  python3 dev/pam-daemon-key.py \
+  python3 dev/pam-access-connector-key.py \
       --email enterprise.owner@redwood.example \
       --org-id 34C5C52C-AC9A-4D53-878B-B46600CA936C \
-      --name local-dev-daemon [--register]
+      --name local-dev-connector [--register]
 """
 import argparse
 import base64
@@ -100,7 +100,7 @@ def encstring_type2(plaintext: bytes, key64: bytes) -> str:
     return f"2.{base64.b64encode(iv).decode()}|{base64.b64encode(ct).decode()}|{base64.b64encode(mac).decode()}"
 
 
-def derive_daemon_key(seed16: bytes) -> bytes:
+def derive_connector_key(seed16: bytes) -> bytes:
     """Derive a 64-byte symmetric key from a 16-byte seed.
 
     Mirrors `bitwarden_crypto::derive_shareable_key(seed, "accesstoken",
@@ -112,7 +112,7 @@ def derive_daemon_key(seed16: bytes) -> bytes:
         key64 = HKDFExpand(prk, info=b"sm-access-token", length=64)
 
     The returned 64 bytes are split enc_key=[:32] / mac_key=[32:] by encstring_type2,
-    matching the Aes256CbcHmacKey layout used by the daemon.
+    matching the Aes256CbcHmacKey layout used by the access connector.
     """
     prk = hmac.new(b"bitwarden-accesstoken", seed16, hashlib.sha256).digest()
     hkdf = HKDFExpand(algorithm=hashes.SHA256(), length=64, info=b"sm-access-token")
@@ -123,22 +123,22 @@ def main():
     # Known-answer check: CONTRACT C1 test vector from token.rs.
     _kac_seed = base64.b64decode("X8vbvA0bduihIDe/qrzIQQ==")
     _kac_expected = "H9/oIRLtL9nGCQOVDjSMoEbJsjWXSOCb3qeyDt6ckzS3FhyboEDWyTP/CQfbIszNmAVg2ExFganG1FVFGXO/Jg=="
-    _kac_actual = base64.b64encode(derive_daemon_key(_kac_seed)).decode()
+    _kac_actual = base64.b64encode(derive_connector_key(_kac_seed)).decode()
     if _kac_actual != _kac_expected:
         raise SystemExit(
-            f"FATAL: derive_daemon_key known-answer check failed!\n"
+            f"FATAL: derive_connector_key known-answer check failed!\n"
             f"  expected: {_kac_expected}\n"
             f"  got:      {_kac_actual}\n"
-            "The key-derivation implementation does not match the daemon's CONTRACT C1."
+            "The key-derivation implementation does not match the access connector's CONTRACT C1."
         )
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--email", required=True)
     ap.add_argument("--org-id", required=True)
-    ap.add_argument("--name", default="local-dev-daemon")
+    ap.add_argument("--name", default="local-dev-connector")
     ap.add_argument("--container", default="bitwardenserver-mssql-1")
     ap.add_argument("--register", action="store_true",
-                    help="POST the daemon registration to the local API and assemble the token")
+                    help="POST the access connector registration to the local API and assemble the token")
     ap.add_argument("--api-base", default="http://localhost:4000")
     ap.add_argument("--identity-base", default="http://localhost:33656")
     ap.add_argument("--client-version", default="2026.5.0")
@@ -168,7 +168,7 @@ def main():
     # seed (not the key) is stored, base64-encoded.
     seed = os.urandom(16)
     seed_b64 = base64.b64encode(seed).decode()
-    k = derive_daemon_key(seed)
+    k = derive_connector_key(seed)
     payload = json.dumps({"encryptionKey": org_key_b64}).encode()
     encrypted_payload = encstring_type2(payload, k)
     key_field = encstring_type2(seed_b64.encode(), org_key)
@@ -181,7 +181,7 @@ def main():
     print(json.dumps(body, indent=2))
 
     if not args.register:
-        print("\n(dry run -- pass --register to POST and assemble the daemon token)")
+        print("\n(dry run -- pass --register to POST and assemble the connector token)")
         return
 
     # Owner user's ApiKey drives a client_credentials login to satisfy the admin policy.
@@ -194,23 +194,23 @@ def main():
         data=urllib.parse.urlencode({
             "grant_type": "client_credentials", "scope": "api",
             "client_id": f"user.{uid}", "client_secret": ukey,
-            "deviceType": "21", "deviceIdentifier": "pam-daemon-key-script",
-            "deviceName": "pam-daemon-key-script"}).encode(),
+            "deviceType": "21", "deviceIdentifier": "pam-access-connector-key-script",
+            "deviceName": "pam-access-connector-key-script"}).encode(),
         headers={"Content-Type": "application/x-www-form-urlencoded",
                  "Bitwarden-Client-Version": args.client_version})).read()
     access_token = json.loads(tok)["access_token"]
 
     reg = urllib.request.urlopen(urllib.request.Request(
-        f"{args.api_base}/organizations/{args.org_id}/rotation/daemons",
+        f"{args.api_base}/organizations/{args.org_id}/access-connectors",
         data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json",
                  "Authorization": f"Bearer {access_token}"})).read()
     result = json.loads(reg)
     api_key_id = result["apiKeyId"]
 
-    print("\n=== registered daemon ===")
+    print("\n=== registered access connector ===")
     print(json.dumps(result, indent=2))
-    print("\n=== daemon access token (client_id : client_secret : encryption_key) ===")
+    print("\n=== access connector token (client_id : client_secret : encryption_key) ===")
     print(f"client_id     = access-connector.{api_key_id}")
     print(f"client_secret = {result['clientSecret']}")
     print(f"full token    = 0.access-connector.{api_key_id}.{result['clientSecret']}:{seed_b64}")
