@@ -210,7 +210,6 @@ public class UpdateGroupCommandTests
         sutProvider.GetDependency<IGroupRepository>().GetByIdAsync(group.Id).Returns(oldGroup);
     }
 
-    // AutoFixture sets Manage and ReadOnly together, which the command rejects
     private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)
     {
         foreach (var cas in collections)
