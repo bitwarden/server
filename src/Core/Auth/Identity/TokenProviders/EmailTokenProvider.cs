@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
+// TODO: PM-23828 - Migrate to use OtpTokenProvider 
 /// <summary>
 /// Generates and validates tokens for email OTPs.
 /// </summary>
