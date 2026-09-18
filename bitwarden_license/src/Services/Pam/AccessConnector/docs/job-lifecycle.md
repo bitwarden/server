@@ -7,14 +7,15 @@ the background sweeps do about the states nothing else can reach.
 
 The rule underneath all of it: a job's state is only ever changed by a guarded operation that
 re-checks its own preconditions at the moment of the write. Nothing here trusts a read from a
-previous statement, because every one of these transitions races either another daemon or a sweep.
+previous statement, because every one of these transitions races either another access connector or
+a sweep.
 
 ## Job states
 
 ```mermaid
 stateDiagram-v2
     [*] --> Pending: offered
-    Pending --> Claimed: claimed by a daemon
+    Pending --> Claimed: claimed by an access connector
     Claimed --> Pending: attempt failed, budget remains
     Claimed --> Pending: released by the sweep
     Claimed --> Succeeded: success reported
@@ -29,8 +30,8 @@ stateDiagram-v2
 Pending and claimed are the two active states. Everything else is terminal.
 
 Every transition out of claimed — retry, release, success, or timeout — clears the job's claim
-fields. The identity of the daemon that did the work is not lost, because it is recorded permanently
-on the attempt instead.
+fields. The identity of the access connector that did the work is not lost, because it is recorded
+permanently on the attempt instead.
 
 ## Attempt states
 
@@ -45,9 +46,9 @@ stateDiagram-v2
     Abandoned --> [*]
 ```
 
-Reaching rotated needs two independent facts: an accepted cipher write, and a success report from the
-daemon that holds the claim. A report alone is not enough. That backstop is enforced in the same
-statement that resolves the attempt, so it cannot be raced.
+Reaching rotated needs two independent facts: an accepted cipher write, and a success report from
+the access connector that holds the claim. A report alone is not enough. That backstop is enforced
+in the same statement that resolves the attempt, so it cannot be raced.
 
 ## Invariants
 
@@ -55,15 +56,15 @@ These are enforced at the data layer, not by a preceding read — by a unique in
 and by a guarded write under lock where it does not:
 
 - **One config per vault item.** A vault item has at most one rotation config. Unique index.
-- **One assignment per daemon and target.** A daemon cannot be assigned to the same target twice.
-  Unique index.
+- **One assignment per access connector and target.** An access connector cannot be assigned to the
+  same target twice. Unique index.
 - **At most one active job per config.** A config has at most one pending or claimed job.
   [`OfferRotationCommand`](../Commands/OfferRotationCommand.cs) is the single creation point for a
   job, and its insert re-checks the invariant under a range lock on the config.
 - **At most one in-flight attempt per job.** The executing attempt is inserted in the claim's own
   transaction, so a claimed job has exactly one from the moment it is claimed.
-- **A daemon and the config it works are in the same organization.** Re-checked inside the claim,
-  even though the caller already checked it from the token's claims.
+- **An access connector and the config it works are in the same organization.** Re-checked inside
+  the claim, even though the caller already checked it from the token's claims.
 
 ## Offering work
 
@@ -104,9 +105,9 @@ never stops the rest.
 ### Offering due configs
 
 Every enabled config whose next rotation time has arrived is offered a job. On a manual target there
-is no daemon to offer to, so the config instead reads as awaiting a manual rotation — an obligation an
-administrator discharges by recording that they did it, which stamps the last rotation and recomputes
-the next one.
+is no access connector to offer to, so the config instead reads as awaiting a manual rotation — an
+obligation an administrator discharges by recording that they did it, which stamps the last rotation
+and recomputes the next one.
 
 ### Timing out jobs
 
@@ -117,9 +118,9 @@ job that already moved on.
 **Success wins.** A job with a rotated attempt is excluded even if it is otherwise past its
 expiry, so a slow-but-successful report still beats the sweep.
 
-The audit event distinguishes two very different failures using the job's attempt count: zero attempts
-means nothing ever claimed it, which points at a missing assignment or an offline fleet; one or more
-means a daemon took it and went quiet.
+The audit event distinguishes two very different failures using the job's attempt count: zero
+attempts means nothing ever claimed it, which points at a missing assignment or an offline fleet;
+one or more means an access connector took it and went quiet.
 
 A timed-out job pushes the config's next rotation out by `FailureRetryDelay` — but only if the config
 has a cron expression. Writing a concrete next-rotation time onto a config with no schedule would
@@ -129,23 +130,24 @@ later offer would be recorded as scheduled on a config an administrator set up a
 ### Releasing abandoned claims
 
 A claimed job is returned to pending when **both** conditions hold: the claim's lease has expired
-(`ReleaseDelay` after the claim) **and** the claiming daemon's heartbeat is stale
+(`ReleaseDelay` after the claim) **and** the claiming access connector's heartbeat is stale
 (`DaemonOfflineAfter`). Its executing attempt is abandoned.
 
-Requiring both is deliberate. Releasing on a stale heartbeat alone would snatch a job from a daemon
-that is mid-rotation on a slow target; releasing on the lease alone would do the same to a daemon that
-is demonstrably still alive. Release is never based on the daemon's status either — a disabled or
-deleted daemon's jobs come back through this same path, once its heartbeats actually stop, because it
-can no longer authenticate.
+Requiring both is deliberate. Releasing on a stale heartbeat alone would snatch a job from an access
+connector that is mid-rotation on a slow target; releasing on the lease alone would do the same to
+an access connector that is demonstrably still alive. Release is never based on the access
+connector's status either — a disabled or deleted access connector's jobs come back through this
+same path, once its heartbeats actually stop, because it can no longer authenticate.
 
 The re-claim time is computed from the lease deadline rather than from the moment the sweep runs, so a
 job becomes claimable at exactly the same instant whether the sweep catches it promptly or a minute
 later.
 
-Deleting a daemon is the one case that does not wait for this sweep. Because the sweep finds stale
-claimants by joining the daemon row, a job still claimed by a daemon that has just been deleted would
-be invisible to it and would sit until its much later time-to-live, blocking any replacement job for
-that config. So the delete releases those jobs itself, while the claim is still visible.
+Deleting an access connector is the one case that does not wait for this sweep. Because the sweep
+finds stale claimants by joining the access connector row, a job still claimed by an access
+connector that has just been deleted would be invisible to it and would sit until its much later
+time-to-live, blocking any replacement job for that config. So the delete releases those jobs
+itself, while the claim is still visible.
 
 ## Lease expiry
 
@@ -164,9 +166,9 @@ access end is precisely the control that stops a credential a member just held f
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Pause a config        | No new jobs are offered, and its pending job stops being claimable. A claimed job runs to completion.                             |
 | Disable a target      | Same: nothing new is offered or claimable, and a claim in progress is not interrupted.                                            |
-| Disable a daemon      | It is dropped from the poll and the claim immediately, so it gets no new work. A claim it already holds comes back through the release sweep, once its current token expires and its heartbeats stop with it. Its credential is kept. |
-| Delete a daemon       | Its claimed jobs are released and their executing attempts abandoned in the delete's own transaction, then its assignments, its row, and its credential go. The daemon held the plaintext organization key, so rotating the organization key is the remediation for a suspected compromise. |
-| Delete a config       | Refused while it has an active job — re-checked under the same lock the offer takes, so a job claimed since the check blocks the delete rather than being torn out from under its daemon. Otherwise its jobs and attempts are hard-deleted with it. |
+| Disable an access connector      | It is dropped from the poll and the claim immediately, so it gets no new work. A claim it already holds comes back through the release sweep, once its current token expires and its heartbeats stop with it. Its credential is kept. |
+| Delete an access connector       | Its claimed jobs are released and their executing attempts abandoned in the delete's own transaction, then its assignments, its row, and its credential go. The access connector held the plaintext organization key, so rotating the organization key is the remediation for a suspected compromise. |
+| Delete a config       | Refused while it has an active job — re-checked under the same lock the offer takes, so a job claimed since the check blocks the delete rather than being torn out from under its access connector. Otherwise its jobs and attempts are hard-deleted with it. |
 
 Deleting a config discards its jobs and attempts because the audit trail, not those rows, is the
 durable history of what was rotated and when.

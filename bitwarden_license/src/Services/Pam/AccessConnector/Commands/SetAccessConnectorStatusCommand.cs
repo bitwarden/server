@@ -36,8 +36,8 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
         if (daemon.Status == desired)
         {
             throw new BadRequestException(enable
-                ? "This daemon is already enabled."
-                : "This daemon is already disabled.");
+                ? "This access connector is already active."
+                : "This access connector is already deactivated.");
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
