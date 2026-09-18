@@ -134,17 +134,21 @@ public class AccessPreCheckQueryTests
         Assert.Equal(900, result.MaxDurationSeconds);
     }
 
-    [Theory, BitAutoData]
-    public async Task PreCheckAsync_RuleMaxAboveGlobalCeiling_PublishesTheGlobalCeiling(
+    [Theory]
+    // The ceiling used to clamp every multi-day cap to 24h before the requester ever saw it.
+    [BitAutoData(7 * 24 * 60 * 60, 7 * 24 * 60 * 60)]
+    [BitAutoData(LeaseDurationBounds.GlobalMaxSeconds + 1, LeaseDurationBounds.GlobalMaxSeconds)]
+    public async Task PreCheckAsync_PublishesTheRuleMaxNarrowedByTheGlobalCeiling(
+        int ruleMaxSeconds, int expected,
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         SetupCipher(sutProvider, userId, cipherId);
         SetupRule(sutProvider, userId, cipherId, orgId, collectionId,
-            defaultLeaseDurationSeconds: null, maxLeaseDurationSeconds: 7 * 24 * 60 * 60);
+            defaultLeaseDurationSeconds: null, maxLeaseDurationSeconds: ruleMaxSeconds);
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
-        Assert.Equal(LeaseDurationBounds.GlobalMaxSeconds, result.MaxDurationSeconds);
+        Assert.Equal(expected, result.MaxDurationSeconds);
     }
 
     [Theory, BitAutoData]
