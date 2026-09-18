@@ -62,6 +62,13 @@ public class AccessRequestDetails
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>
+    /// The produced lease's own end (UTC), or null when the request has not produced a lease. Not the same as
+    /// <see cref="NotAfter"/>, the activation window pinned at submit: an extension pushes the lease's end out in
+    /// place and never restamps the originating request.
+    /// </summary>
+    public DateTime? ProducedLeaseNotAfter { get; set; }
+
+    /// <summary>
     /// Every decision recorded against this request, oldest first. Empty while pending, and for the terminal
     /// states that record no verdict: a requester cancellation and <see cref="AccessRequestStatus.Expired"/>.
     /// </summary>
@@ -112,6 +119,7 @@ public class AccessRequestDetails
             action, hasLease: producedLease is not null, isExtension: ExtensionOfLeaseId is not null,
             NotAfter, now);
         ProducedLeaseId = producedLease?.Id;
+        ProducedLeaseNotAfter = producedLease?.NotAfter;
         ProducedLeaseStatus = producedLease is { } lease
             ? AccessStatusDerivation.ComputeLeaseStatus(lease.Action, lease.NotAfter, now)
             : null;
