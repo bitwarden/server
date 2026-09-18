@@ -46,17 +46,17 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
         // construction.
         if (daemon.Status != PamAccessConnectorStatus.Enabled)
         {
-            throw new BadRequestException("This daemon is disabled.");
+            throw new BadRequestException("This access connector is deactivated.");
         }
 
         if (target.Method != PamTargetSystemMethod.Automatic)
         {
-            throw new BadRequestException("Only automatic target systems can be assigned a daemon.");
+            throw new BadRequestException("Only automatic target systems can be assigned an access connector.");
         }
 
         if (await _daemonRepository.AssignmentExistsAsync(daemonId, targetSystemId))
         {
-            throw new BadRequestException("This daemon is already assigned to this target system.");
+            throw new BadRequestException("This access connector is already assigned to this target system.");
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
