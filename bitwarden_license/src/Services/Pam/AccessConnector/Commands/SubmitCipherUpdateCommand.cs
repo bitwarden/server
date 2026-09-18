@@ -70,7 +70,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
                 CipherId = config.CipherId,
                 Detail = outcome == PamRotationCipherWriteOutcome.RevisionMismatch
                     ? "The cipher was modified since it was last read; the write capability held but the revision date no longer matched."
-                    : "The write capability no longer held: the job is not claimed by this daemon, or the attempt is not executing.",
+                    : "The write capability no longer held: the job is not claimed by this access connector, or the attempt is not executing.",
             };
             await _accessAuditEventEmitter.EmitAsync(audit);
 
