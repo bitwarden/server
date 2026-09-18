@@ -123,6 +123,10 @@ util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint owners
 **/docker-compose.yml @bitwarden/team-appsec @bitwarden/dept-shot
 **/entrypoint.sh @bitwarden/team-appsec @bitwarden/dept-shot
 
+# Dissolving Core into Libraries
+src/Libraries/CurrentUser @bitwarden/team-platform-dev @bitwarden/dept-architecture # joint ownership
+test/Libraries/CurrentUser.Test @bitwarden/team-platform-dev @bitwarden/dept-architecture # joint ownership
+
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
@@ -133,6 +137,3 @@ dev/docker-compose.yml
 .claude/ @bitwarden/team-ai-sme
 .github/workflows/respond.yml @bitwarden/team-ai-sme
 .github/workflows/review-code.yml @bitwarden/team-ai-sme
-
-# Dissolving Core into Libraries
-src/Libraries/CurrentUser @bitwarden/team-platform-dev @bitwarden/dept-architecture # joint ownership
