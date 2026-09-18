@@ -2,9 +2,6 @@
 #nullable disable
 
 using System.IO.Compression;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml;
 using Sustainsys.Saml2;
@@ -14,20 +11,6 @@ namespace Bit.Sso.Utilities;
 
 public static class Saml2OptionsExtensions
 {
-    // Sustainsys.Saml2 2.11.0 has no public API to decrypt a <saml:EncryptedAssertion> outside its
-    // own response-processing pipeline; SPOptions.WantAssertionsSigned is a metadata-only flag in
-    // this library version and is never consulted during validation.
-    // This reflects into the same internal helper the library itself uses
-    // (Saml2Response.RetrieveAssertionElements) for consistency.
-    // A future Sustainsys.Saml2 upgrade that removes or renames this
-    // member throws here, at first use, instead of silently no-op'ing the signature check.
-    private static readonly MethodInfo DecryptAssertionMethod =
-        typeof(XmlHelpers).Assembly.GetType("Sustainsys.Saml2.Internal.CryptographyExtensions", throwOnError: true)
-            .GetMethod("Decrypt", BindingFlags.NonPublic | BindingFlags.Static, null,
-                new[] { typeof(XmlElement), typeof(AsymmetricAlgorithm) }, null)
-        ?? throw new MissingMethodException("Sustainsys.Saml2.Internal.CryptographyExtensions",
-            "Decrypt(XmlElement, AsymmetricAlgorithm)");
-
     public static async Task<bool> CouldHandleAsync(this Saml2Options options, string scheme, HttpContext context)
     {
         // Determine this is a valid request for our handler
@@ -128,7 +111,8 @@ public static class Saml2OptionsExtensions
             {
                 var assertion = element.LocalName == "Assertion"
                     ? element
-                    : TryDecryptAssertion(element, options.SPOptions.DecryptionServiceCertificates);
+                    : Saml2EncryptedAssertionDecryptor.TryDecryptAssertion(
+                        element, options.SPOptions.DecryptionServiceCertificates);
                 return assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
                     options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
             });
@@ -140,33 +124,5 @@ public static class Saml2OptionsExtensions
         }
 
         return true;
-    }
-
-    // Mirrors Saml2Response.RetrieveAssertionElements: try each configured decryption
-    // certificate in turn, since a service provider can have more than one during rotation.
-    private static XmlElement TryDecryptAssertion(XmlElement encryptedAssertion,
-        IEnumerable<X509Certificate2> decryptionCertificates)
-    {
-        foreach (var certificate in decryptionCertificates)
-        {
-            var privateKey = certificate.GetRSAPrivateKey();
-            if (privateKey == null)
-            {
-                continue;
-            }
-
-            try
-            {
-                var decrypted = (XmlElement)DecryptAssertionMethod.Invoke(
-                    null, new object[] { encryptedAssertion, privateKey });
-                return decrypted["Assertion", Saml2Namespaces.Saml2Name];
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException is CryptographicException)
-            {
-                // This certificate could not decrypt the assertion. Try the next one.
-            }
-        }
-
-        return null;
     }
 }
