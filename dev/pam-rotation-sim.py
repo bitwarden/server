@@ -2,17 +2,17 @@
 """Set up and trigger a PAM credential-rotation job from the admin side, on the local dev stack.
 
 LOCAL DEV ONLY. Drives the admin HTTP surface exactly as the admin console would, then
-leaves a claimable job for a *real* rotation daemon to pick up, execute, and report on:
+leaves a claimable job for a *real* access connector to pick up, execute, and report on:
 
   ADMIN (owner bearer, client_credentials on the seeded user's ApiKey)
-    1. register an automatic target system   POST  organizations/{org}/rotation/target-systems
+    1. register an automatic target system   POST  organizations/{org}/access-connectors/rotation/target-systems
        (or reuse one via --target-id)
-    2. assign the daemon to that target        POST  organizations/{org}/rotation/daemons/{id}/assignments
-    3. create a rotation config for a cipher    POST  organizations/{org}/rotation/configs
-    4. trigger an on-demand rotation            POST  organizations/{org}/rotation/configs/{id}/rotate
+    2. assign the connector to that target     POST  organizations/{org}/access-connectors/{id}/assignments
+    3. create a rotation config for a cipher   POST  organizations/{org}/access-connectors/rotation/configs
+    4. trigger an on-demand rotation           POST  organizations/{org}/access-connectors/rotation/configs/{id}/rotate
 
-The daemon side (poll rotation/daemon/jobs -> claim -> read/write cipher -> report) is NOT
-done here -- an actual daemon handles that. By default this creates a fresh target + config
+The connector side (poll access-connectors/rotation/jobs -> claim -> read/write cipher -> report) is
+NOT done here -- an actual access connector handles that. By default this creates a fresh target + config
 on a fresh cipher, which sidesteps the on-demand cooldown and the "config already has an
 active job" guard so repeated runs don't 400.
 
@@ -22,7 +22,7 @@ Usage:
   python3 dev/pam-rotation-sim.py \
       --org-id 34C5C52C-AC9A-4D53-878B-B46600CA936C \
       --admin-email enterprise.owner@redwood.example \
-      --daemon-id <PamDaemon.Id> [--target-id <guid>] [--cipher-id <guid>] [--cleanup]
+      --connector-id <access connector id> [--target-id <guid>] [--cipher-id <guid>] [--cleanup]
 """
 import argparse
 import json
@@ -95,7 +95,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--org-id", required=True)
     ap.add_argument("--admin-email", required=True)
-    ap.add_argument("--daemon-id", required=True, help="PamDaemon.Id to assign to the target")
+    ap.add_argument("--connector-id", required=True, help="access connector id to assign to the target")
     ap.add_argument("--kind", default="entra", choices=["entra", "mssql", "customscript"],
                     help="automatic connector kind for a newly registered target (default: entra)")
     ap.add_argument("--target-id", help="reuse an existing target system instead of registering one")
@@ -134,7 +134,7 @@ def main():
     else:
         kind_val = {"entra": 0, "mssql": 1, "customscript": 2}[args.kind]
         step(1, f"register automatic target system (kind={args.kind})")
-        _, target = http("POST", f"{api}/organizations/{org}/rotation/target-systems", admin, {
+        _, target = http("POST", f"{api}/organizations/{org}/access-connectors/rotation/target-systems", admin, {
             "name": f"sim-{args.kind}-{cipher_id[:8]}",
             "method": 0,                # Automatic
             "kind": kind_val,
@@ -145,13 +145,13 @@ def main():
         target_id = target["id"]
         print(f"    targetSystemId = {target_id}")
 
-    step(2, "assign daemon to target")
-    status, _ = http("POST", f"{api}/organizations/{org}/rotation/daemons/{args.daemon_id}/assignments",
+    step(2, "assign access connector to target")
+    status, _ = http("POST", f"{api}/organizations/{org}/access-connectors/{args.connector_id}/assignments",
                      admin, {"targetSystemId": target_id}, allow=(409,))
     print("    already assigned (409)" if status == 409 else "    assigned (204)")
 
     step(3, "create rotation config")
-    _, config = http("POST", f"{api}/organizations/{org}/rotation/configs", admin, {
+    _, config = http("POST", f"{api}/organizations/{org}/access-connectors/rotation/configs", admin, {
         "cipherId": cipher_id, "targetSystemId": target_id,
         "accountIdentity": args.account_identity, "terminateSessions": False,
         "scheduleCron": None, "rotateOnAccessEnd": False})
@@ -159,18 +159,19 @@ def main():
     print(f"    configId = {config_id}")
 
     step(4, "trigger on-demand rotation (creates a claimable job)")
-    http("POST", f"{api}/organizations/{org}/rotation/configs/{config_id}/rotate", admin)
+    http("POST", f"{api}/organizations/{org}/access-connectors/rotation/configs/{config_id}/rotate", admin)
     print("    triggered (204)")
 
     job = query1(args.container, pw,
                  f"""SELECT TOP 1 CAST(Id AS varchar(64))+' status='+CAST(Status AS varchar)
                      FROM PamRotationJob WHERE RotationConfigId='{config_id}' ORDER BY CreationDate DESC;""")
-    print(f"\n=== ready for the daemon ===")
+    print(f"\n=== ready for the access connector ===")
     print(f"pending job: {job}   (PamRotationJobStatus 0=Pending)")
-    print(f"the assigned daemon ({args.daemon_id}) will now see this job on its next poll of rotation/daemon/jobs")
+    print(f"the assigned access connector ({args.connector_id}) will now see this job on its next poll of "
+          f"access-connectors/rotation/jobs")
 
     if args.cleanup:
-        http("DELETE", f"{api}/organizations/{org}/rotation/configs/{config_id}", admin)
+        http("DELETE", f"{api}/organizations/{org}/access-connectors/rotation/configs/{config_id}", admin)
         print(f"\ncleaned up: deleted config {config_id} (job cascaded)")
     else:
         print(f"\nartifacts kept: target={target_id} config={config_id}")
