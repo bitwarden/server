@@ -1711,6 +1711,7 @@
           "Commercial.Core": "[2026.10.1, )",
           "Commercial.Infrastructure.EntityFramework": "[2026.10.1, )",
           "Core": "[2026.10.1, )",
+          "CurrentUser": "[0.0.1, )",
           "HttpExtensions": "[2026.10.1, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.15.3, )",
           "OpenTelemetry.Extensions.Hosting": "[1.15.3, )",
@@ -1799,6 +1800,9 @@
           "ZiggyCreatures.FusionCache.Backplane.StackExchangeRedis": "[2.0.2, 2.0.2]",
           "ZiggyCreatures.FusionCache.Serialization.SystemTextJson": "[2.0.2, 2.0.2]"
         }
+      },
+      "currentuser": {
+        "type": "Project"
       },
       "data": {
         "type": "Project"
