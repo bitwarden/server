@@ -25,7 +25,7 @@ public class RotationDetailResponseModelTests
         {
             Id = Guid.NewGuid(),
             OrganizationId = Guid.NewGuid(),
-            Name = "rotation-daemon-1",
+            Name = "access-connector-1",
             Status = PamAccessConnectorStatus.Enabled,
             LastHeartbeatAt = _created,
             CreationDate = _created,
