@@ -18,11 +18,11 @@ public static class ValidationErrorTypedResultsExtensions
             ArgumentNullException.ThrowIfNull(validationError);
 
             return TypedResults.BitwardenValidationProblem(
-                errors: new Dictionary<string, BitwardenTypedResultsExtensions.ErrorCode[]>
+                errors: new Dictionary<string, ErrorCode[]>
                 {
                     {
                         validationError.PropertyName,
-                        [new BitwardenTypedResultsExtensions.ErrorCode(validationError.Type, validationError.Message)]
+                        [new ErrorCode(validationError.Type, validationError.Message)]
                     }
                 });
         }

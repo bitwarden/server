@@ -1,5 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <!--
+        Turns the trim and AOT analyzers on for this assembly so it stays publishable from a trimmed or
+        ahead-of-time minimal API. Reflective paths here are reachable only from MVC, which is unsupported under
+        both, and say so with [RequiresUnreferencedCode]; this keeps anything new from quietly joining them.
+    -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+  </PropertyGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
