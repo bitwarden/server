@@ -324,6 +324,28 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_RotatesSecurityStamp(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true }
+        });
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(user)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+
+        // Assert
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
+    }
+
+    [Theory, BitAutoData]
     public async Task DisableTwoFactorProviderAsync_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
         SutProvider<UserService> sutProvider, User user, Organization organization)
     {
@@ -477,6 +499,26 @@ public class UserServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_RotatesSecurityStamp(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+        var originalStamp = user.SecurityStamp;
+
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
+        // Act
+        await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.NotEqual(originalStamp, user.SecurityStamp);
     }
 
     [Theory, BitAutoData]
