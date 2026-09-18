@@ -1,4 +1,4 @@
-using Bit.Identity.IdentityServer.RequestValidators;
+﻿using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer;

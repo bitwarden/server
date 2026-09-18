@@ -2,7 +2,11 @@
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.Utilities;
 using Duende.IdentityServer.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.Test.IdentityServer;
@@ -28,6 +32,11 @@ public class StaticClientStoreTests
         return s;
     }
 
+    private static StaticClientStore Build(GlobalSettings globalSettings, ILogger<StaticClientStore>? logger = null)
+    {
+        return new StaticClientStore(globalSettings, logger ?? NullLogger<StaticClientStore>.Instance);
+    }
+
     [Theory]
     [InlineData(BitwardenClient.Mobile, 3600)]
     [InlineData(BitwardenClient.Web, 3600)]
@@ -37,7 +46,7 @@ public class StaticClientStoreTests
     [InlineData(BitwardenClient.DirectoryConnector, 24 * 3600)]
     public void AccessTokenLifetime_MatchesHardcodedDefault(string clientId, int expectedSeconds)
     {
-        var sut = new StaticClientStore(NewSettings());
+        var sut = Build(NewSettings());
 
         Assert.Equal(expectedSeconds, sut.Clients[clientId].AccessTokenLifetime);
     }
@@ -51,7 +60,7 @@ public class StaticClientStoreTests
     [InlineData(BitwardenClient.DirectoryConnector, 30 * 86400)]
     public void SlidingRefreshTokenLifetime_DerivedFromPerClientDays_WhenNoOverride(string clientId, int expectedSeconds)
     {
-        var sut = new StaticClientStore(NewSettings());
+        var sut = Build(NewSettings());
 
         Assert.Equal(expectedSeconds, sut.Clients[clientId].SlidingRefreshTokenLifetime);
     }
@@ -68,7 +77,7 @@ public class StaticClientStoreTests
         var settings = NewSettings();
         settings.IdentityServer.SlidingRefreshTokenLifetimeSeconds = 12345;
 
-        var sut = new StaticClientStore(settings);
+        var sut = Build(settings);
 
         Assert.Equal(12345, sut.Clients[clientId].SlidingRefreshTokenLifetime);
     }
@@ -82,7 +91,7 @@ public class StaticClientStoreTests
     [InlineData(BitwardenClient.DirectoryConnector)]
     public void AbsoluteRefreshTokenLifetime_DefaultsToZero(string clientId)
     {
-        var sut = new StaticClientStore(NewSettings());
+        var sut = Build(NewSettings());
 
         Assert.Equal(0, sut.Clients[clientId].AbsoluteRefreshTokenLifetime);
     }
@@ -99,7 +108,7 @@ public class StaticClientStoreTests
         var settings = NewSettings();
         settings.IdentityServer.AbsoluteRefreshTokenLifetimeSeconds = 99999;
 
-        var sut = new StaticClientStore(settings);
+        var sut = Build(settings);
 
         Assert.Equal(99999, sut.Clients[clientId].AbsoluteRefreshTokenLifetime);
     }
@@ -112,7 +121,7 @@ public class StaticClientStoreTests
         var settings = NewSettings();
         settings.IdentityServer.ApplyAbsoluteExpirationOnRefreshToken = absoluteFlag;
 
-        var sut = new StaticClientStore(settings);
+        var sut = Build(settings);
 
         foreach (var id in InteractiveClients)
         {
@@ -129,7 +138,7 @@ public class StaticClientStoreTests
     [InlineData(BitwardenClient.DirectoryConnector)]
     public void SharedClientDefaults_AreSetIdenticallyForAllInteractiveClients(string clientId)
     {
-        var client = new StaticClientStore(NewSettings()).Clients[clientId];
+        var client = Build(NewSettings()).Clients[clientId];
 
         Assert.Equal(clientId, client.ClientId);
         Assert.Equal(TokenUsage.ReUse, client.RefreshTokenUsage);
@@ -149,7 +158,7 @@ public class StaticClientStoreTests
     [InlineData(BitwardenClient.Browser)]
     public void WebAndBrowser_RedirectAndCorsUris_UseVaultUri(string clientId)
     {
-        var client = new StaticClientStore(NewSettings()).Clients[clientId];
+        var client = Build(NewSettings()).Clients[clientId];
 
         Assert.Equal(new[] { $"{TestVaultUri}/sso-connector.html" }, client.RedirectUris);
         Assert.Equal(new[] { TestVaultUri }, client.PostLogoutRedirectUris);
@@ -159,7 +168,7 @@ public class StaticClientStoreTests
     [Fact]
     public void Desktop_RedirectUris_IncludeSchemeCallbackAndLocalhostPorts()
     {
-        var client = new StaticClientStore(NewSettings()).Clients[BitwardenClient.Desktop];
+        var client = Build(NewSettings()).Clients[BitwardenClient.Desktop];
 
         Assert.Contains("bitwarden://sso-callback", client.RedirectUris);
         foreach (var port in Enumerable.Range(8065, 6))
@@ -173,7 +182,7 @@ public class StaticClientStoreTests
     [Fact]
     public void DirectoryConnector_RedirectUris_IncludeLocalhostPortsAndBwdcCallback()
     {
-        var client = new StaticClientStore(NewSettings()).Clients[BitwardenClient.DirectoryConnector];
+        var client = Build(NewSettings()).Clients[BitwardenClient.DirectoryConnector];
 
         foreach (var port in Enumerable.Range(8065, 6))
         {
@@ -188,7 +197,7 @@ public class StaticClientStoreTests
     [Fact]
     public void Cli_RedirectAndPostLogoutUris_AreLocalhostPortsOnly()
     {
-        var client = new StaticClientStore(NewSettings()).Clients[BitwardenClient.Cli];
+        var client = Build(NewSettings()).Clients[BitwardenClient.Cli];
 
         var expected = Enumerable.Range(8065, 6).Select(p => $"http://localhost:{p}").ToArray();
         Assert.Equal(expected, client.RedirectUris);
@@ -199,7 +208,7 @@ public class StaticClientStoreTests
     [Fact]
     public void Mobile_RedirectUris_UseMobileSsoConstants()
     {
-        var client = new StaticClientStore(NewSettings()).Clients[BitwardenClient.Mobile];
+        var client = Build(NewSettings()).Clients[BitwardenClient.Mobile];
 
         Assert.Equal(Constants.BitwardenMobileSsoCallbackUris, client.RedirectUris);
         Assert.Equal(new[] { "bitwarden://logged-out" }, client.PostLogoutRedirectUris);
@@ -209,8 +218,108 @@ public class StaticClientStoreTests
     [Fact]
     public void Clients_IncludesSendClient()
     {
-        var sut = new StaticClientStore(NewSettings());
+        var sut = Build(NewSettings());
 
         Assert.True(sut.Clients.ContainsKey(BitwardenClient.Send));
+    }
+
+    [Theory]
+    [InlineData(BitwardenClient.Mobile)]
+    [InlineData(BitwardenClient.Web)]
+    [InlineData(BitwardenClient.Browser)]
+    [InlineData(BitwardenClient.Desktop)]
+    [InlineData(BitwardenClient.Cli)]
+    public void Override_AppliesToInteractiveClients(string clientId)
+    {
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = 900;
+
+        var sut = Build(settings);
+
+        Assert.Equal(900, sut.Clients[clientId].AccessTokenLifetime);
+    }
+
+    [Fact]
+    public void Override_DoesNotAffectDirectoryConnector()
+    {
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = 900;
+
+        var sut = Build(settings);
+
+        Assert.Equal(24 * 3600, sut.Clients[BitwardenClient.DirectoryConnector].AccessTokenLifetime);
+    }
+
+    [Theory]
+    [InlineData(60)]
+    [InlineData(300)]
+    [InlineData(599)]
+    public void Override_BelowRecommendedMinimum_LogsWarning(int seconds)
+    {
+        var logger = Substitute.For<ILogger<StaticClientStore>>();
+        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = seconds;
+
+        Build(settings, logger);
+
+        logger.Received().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(o => o.ToString()!.Contains("refresh threshold")),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>()!);
+    }
+
+    [Theory]
+    [InlineData(600)]
+    [InlineData(900)]
+    [InlineData(3600)]
+    public void Override_AtOrAboveRecommendedMinimum_DoesNotWarn(int seconds)
+    {
+        var logger = Substitute.For<ILogger<StaticClientStore>>();
+        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = seconds;
+
+        Build(settings, logger);
+
+        logger.DidNotReceive().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>()!);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void StartupValidation_RejectsNonPositiveOverride(int badValue)
+    {
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = badValue;
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => ServiceCollectionExtensions.ValidateAccessTokenLifetimeOverride(settings));
+
+        Assert.Contains("accessTokenLifetimeSeconds", ex.Message);
+    }
+
+    [Fact]
+    public void StartupValidation_AllowsPositiveOverride()
+    {
+        var settings = NewSettings();
+        settings.IdentityServer.AccessTokenLifetimeSeconds = 60;
+
+        ServiceCollectionExtensions.ValidateAccessTokenLifetimeOverride(settings);
+    }
+
+    [Fact]
+    public void StartupValidation_AllowsNull()
+    {
+        ServiceCollectionExtensions.ValidateAccessTokenLifetimeOverride(NewSettings());
     }
 }
