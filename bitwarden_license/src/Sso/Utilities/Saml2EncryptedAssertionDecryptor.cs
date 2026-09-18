@@ -29,22 +29,24 @@ public static class Saml2EncryptedAssertionDecryptor
     {
         foreach (var certificate in decryptionCertificates)
         {
-            var privateKey = certificate.GetRSAPrivateKey();
-            if (privateKey == null)
+            using (var privateKey = certificate.GetRSAPrivateKey())
             {
-                continue;
-            }
+                if (privateKey == null)
+                {
+                    continue;
+                }
 
-            try
-            {
-                // Decrypt declares a non-nullable XmlElement return, so the invocation result is never null.
-                var decrypted = (XmlElement)DecryptMethod.Invoke(
-                    null, new object[] { encryptedAssertion, privateKey })!;
-                return decrypted["Assertion", Saml2Namespaces.Saml2Name];
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException is CryptographicException)
-            {
-                // This certificate could not decrypt the assertion. Try the next one.
+                try
+                {
+                    // Decrypt declares a non-nullable XmlElement return, so the invocation result is never null.
+                    var decrypted = (XmlElement)DecryptMethod.Invoke(
+                        null, new object[] { encryptedAssertion, privateKey })!;
+                    return decrypted["Assertion", Saml2Namespaces.Saml2Name];
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException is CryptographicException)
+                {
+                    // This certificate could not decrypt the assertion. Try the next one.
+                }
             }
         }
 
