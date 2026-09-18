@@ -124,8 +124,27 @@ public static class AccessAuditEventKindNames
         Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
 
     /// <summary>
-    /// Reads a governance vocabulary name back into its kind, for the trail's event-kind filter. False for anything
-    /// this does not emit — an unknown name is a caller error, not an empty filter.
+    /// The seven fleet names this projection emitted before the daemon → access connector rename. Parse-only: a web
+    /// bundle loaded before the rename still posts them in the trail's kind filter, and an unknown name fails the
+    /// whole read with a 400, so they are read back for one release. Nothing emits them — <see cref="From"/> is the
+    /// only writer of the vocabulary. Drop them once no pre-rename bundle can still be open.
     /// </summary>
-    public static bool TryParse(string name, out AccessAuditEventKind kind) => _byName.TryGetValue(name, out kind);
+    private static readonly Dictionary<string, AccessAuditEventKind> _preRenameFleetNames = new(StringComparer.Ordinal)
+    {
+        ["daemonRegistered"] = AccessAuditEventKind.AccessConnectorRegistered,
+        ["daemonRevoked"] = AccessAuditEventKind.AccessConnectorRevoked,
+        ["daemonDisabled"] = AccessAuditEventKind.AccessConnectorDisabled,
+        ["daemonEnabled"] = AccessAuditEventKind.AccessConnectorEnabled,
+        ["daemonDeleted"] = AccessAuditEventKind.AccessConnectorDeleted,
+        ["daemonAssignedToTarget"] = AccessAuditEventKind.AccessConnectorAssignedToTarget,
+        ["daemonUnassignedFromTarget"] = AccessAuditEventKind.AccessConnectorUnassignedFromTarget,
+    };
+
+    /// <summary>
+    /// Reads a governance vocabulary name back into its kind, for the trail's event-kind filter. False for anything
+    /// this does not emit — an unknown name is a caller error, not an empty filter — except the pre-rename fleet
+    /// names in <see cref="_preRenameFleetNames"/>, which resolve to the kind they used to name.
+    /// </summary>
+    public static bool TryParse(string name, out AccessAuditEventKind kind) =>
+        _byName.TryGetValue(name, out kind) || _preRenameFleetNames.TryGetValue(name, out kind);
 }

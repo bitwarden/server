@@ -7,7 +7,7 @@ standing access to. It has two halves:
   needs human approval, and an approved request mints a time-bound lease. Outside a lease, the item
   is not readable.
 - **Credential rotation** — the credential is rewritten at the system it belongs to, on a schedule,
-  on demand, or as soon as a lease ends. An on-premises rotation daemon does the rewriting; the
+  on demand, or as soon as a lease ends. An on-premises access connector does the rewriting; the
   server only dispatches and records it.
 
 **Audience:** server engineers working on PAM, and AI agents editing this subtree.
@@ -19,10 +19,10 @@ the map.
 ## The invariant that shapes everything
 
 Vault Data stays encrypted end to end. The server stores and moves the credential's ciphertext and
-never decrypts it, including on the rotation path: the rotation daemon is handed the organization key
-as ciphertext it unwraps locally, reads the cipher's opaque `Data` blob, and writes back a blob the
-server also cannot read. No PAM code path — in this project or any of the projects listed below —
-decrypts a cipher, and no PAM log line or audit event carries credential material.
+never decrypts it, including on the rotation path: the access connector is handed the organization
+key as ciphertext it unwraps locally, reads the cipher's opaque `Data` blob, and writes back a blob
+the server also cannot read. No PAM code path — in this project or any of the projects listed below
+— decrypts a cipher, and no PAM log line or audit event carries credential material.
 
 ## Where the code lives
 
