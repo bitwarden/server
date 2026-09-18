@@ -17,18 +17,21 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGroupCollectionAccessValidator _groupCollectionAccessValidator;
     private readonly TimeProvider _timeProvider;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IGroupCollectionAccessValidator groupCollectionAccessValidator,
         TimeProvider timeProvider
         )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
+        _groupCollectionAccessValidator = groupCollectionAccessValidator;
         _timeProvider = timeProvider;
     }
 
@@ -36,7 +39,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group, collections);
+        await ValidateAsync(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -51,7 +54,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group, collections);
+        await ValidateAsync(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -99,7 +102,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
     }
 
-    private static void Validate(Organization organization, Group group, IEnumerable<CollectionAccessSelection> collections)
+    private async Task ValidateAsync(Organization organization, Group group, ICollection<CollectionAccessSelection> collections)
     {
         if (organization == null)
         {
@@ -109,6 +112,11 @@ public class CreateGroupCommand : ICreateGroupCommand
         if (!organization.UseGroups)
         {
             throw new BadRequestException("This organization cannot use groups.");
+        }
+
+        if (collections?.Any() == true)
+        {
+            await _groupCollectionAccessValidator.ValidateAsync(group.OrganizationId, collections);
         }
 
         var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
