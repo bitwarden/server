@@ -1,14 +1,10 @@
 import http from "k6/http";
 import { check, fail } from "k6";
+import exec from "k6/execution";
 
 // Identity rejects password grants that omit the "Bitwarden-Client-Version"
 // header (see ClientVersionValidator), so every request must supply one.
 const CLIENT_VERSION = __ENV.CLIENT_VERSION;
-if (!CLIENT_VERSION) {
-  // k6 sends an undefined header value as the string "undefined", which the
-  // server reports as a missing header rather than an unset variable.
-  throw new Error("CLIENT_VERSION env var is required");
-}
 
 /**
  * Authenticate using OAuth against Bitwarden
@@ -28,6 +24,13 @@ export function authenticate(
   clientId,
   clientSecret
 ) {
+  if (!CLIENT_VERSION) {
+    // Aborts the whole test: a throw here only kills the iteration, which would
+    // exit 0 on zero samples. Cannot run at init, where the k6 action validates
+    // scripts without env.
+    exec.test.abort("CLIENT_VERSION env var is required");
+  }
+
   const url = `${identityUrl}/connect/token`;
   const params = {
     headers: {
