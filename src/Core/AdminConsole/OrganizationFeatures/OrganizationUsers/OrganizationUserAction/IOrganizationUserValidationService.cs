@@ -13,41 +13,30 @@ public interface IOrganizationUserValidationService
     /// <summary>
     /// Checks whether the acting user can manage the target user without escalating privileges:
     /// <list type="bullet">
+    /// <item>System users act outside the organization hierarchy and are always allowed.</item>
+    /// <item>Providers act with Owner authority and can manage anyone.</item>
     /// <item>Owners can manage anyone.</item>
     /// <item>Admins can manage anyone except Owners.</item>
     /// <item>Custom users with ManageUsers can manage Users and other Custom users.</item>
     /// <item>Everyone else has no authority.</item>
     /// </list>
-    /// Pair with an <c>AuthorizeAttribute</c> for the standard RBAC check on the endpoint. Provider users hold
-    /// authority above the organization role hierarchy and are not evaluated here.
+    /// Pair with an <c>AuthorizeAttribute</c> for the standard RBAC check on the endpoint.
     /// </summary>
-    /// <param name="actingUser">The acting user's role, or <c>null</c> if not a confirmed member.</param>
+    /// <param name="actingUser">The caller acting on the member.</param>
     /// <param name="targetUser">The member being managed.</param>
     /// <returns><c>null</c> when allowed, otherwise the error explaining why.</returns>
-    Error? CanManage(IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser);
+    Error? ValidateAuthorityOver(IActingUser actingUser, IOrganizationUserRole targetUser);
 
     /// <summary>
     /// Checks whether the acting user can change the target member's role without escalating privileges. The acting
     /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
     /// custom permissions they hold themselves.
     /// </summary>
-    /// <param name="actingUser">The acting user.</param>
+    /// <param name="actingUser">The caller acting on the member.</param>
     /// <param name="targetUser">The member being managed, with their current role.</param>
     /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
     /// <returns><c>null</c> when allowed, otherwise the error describing why.</returns>
-    Error? CanManageRoleChange(IOrganizationUserRole actingUser, IOrganizationUserRole targetUser,
-        IOrganizationUserRole newTargetUser);
-
-    /// <summary>
-    /// Checks whether the acting user can change the target member's role without escalating privileges. The acting
-    /// user must be able to manage both the target's current and requested role, and a Custom user may only grant
-    /// custom permissions they hold themselves.
-    /// </summary>
-    /// <param name="performedBy">The caller acting on the member.</param>
-    /// <param name="targetUser">The member being managed, with their current role.</param>
-    /// <param name="newTargetUser">The updated member being managed (desired role and permissions).</param>
-    /// <returns><c>null</c> when allowed, otherwise the error describing why.</returns>
-    Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser,
+    Error? ValidateAuthorityForRoleChange(IActingUser actingUser, IOrganizationUserRole targetUser,
         IOrganizationUserRole newTargetUser);
 
     /// <summary>

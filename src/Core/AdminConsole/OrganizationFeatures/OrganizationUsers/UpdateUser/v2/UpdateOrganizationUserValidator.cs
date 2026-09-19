@@ -69,12 +69,11 @@ public class UpdateOrganizationUserValidator(
             }
         }
 
-        var roleChangeError = organizationUserValidationService.CanManageRoleChange(
+        var roleChangeError = organizationUserValidationService.ValidateAuthorityForRoleChange(
             request.PerformedBy,
             request.OrganizationUserToUpdate,
             new OrganizationUserRole(
                 request.NewType,
-                request.Organization.Id,
                 request.NewPermissions));
 
         if (roleChangeError is not null)

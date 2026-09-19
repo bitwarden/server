@@ -8,7 +8,6 @@ namespace Bit.Core.AdminConsole.Models.Data;
 /// </summary>
 public sealed record OrganizationUserRole(
     OrganizationUserType Type,
-    Guid OrganizationId,
     Permissions? Permissions = null) : IOrganizationUserRole
 {
     public Permissions? GetPermissions() => Permissions;
