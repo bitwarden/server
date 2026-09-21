@@ -206,7 +206,8 @@ public class ConfirmOrganizationInviteLinkValidator(
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, occupiedSeats, newUsersToAdd: 1);
 
-        return InviteUsersPasswordManagerValidator.ValidatePasswordManager(subscriptionUpdate)
+        // canManageBilling only selects the wording of the seat limit error, which is replaced below.
+        return InviteUsersPasswordManagerValidator.ValidatePasswordManager(subscriptionUpdate, canManageBilling: false)
             is PasswordManagerValidation.Invalid<PasswordManagerSubscriptionUpdate>
             ? new ConfirmOrganizationHasNoAvailableSeats(organization.DisplayName())
             : null;
