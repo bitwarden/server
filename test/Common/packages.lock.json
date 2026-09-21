@@ -1399,7 +1399,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.0, )"
+          "HttpExtensions": "[2026.9.1, )"
         }
       },
       "httpextensions": {
