@@ -2,7 +2,7 @@
 
 ## SAML2.0: Verify Sustainsys.Saml2 Behavior From the Package
 
-`Sso.csproj` pins `Sustainsys.Saml2.AspNetCore2` to one exact version. GitHub source and web documentation may describe a different version. Inspect the exact pinned package before it states a claim about the library's real behavior.
+`Sso.csproj` pins `Sustainsys.Saml2.AspNetCore2` to one exact version. GitHub source and web documentation may describe a different version. Inspect the exact pinned package before stating a claim about the library's real behavior.
 
 ## Certificate Rotation
 
