@@ -9,8 +9,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public record PasswordManagerSeatLimitHasBeenReachedError(PasswordManagerSubscriptionUpdate InvalidRequest)
     : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
+    // Reported against the autoscale cap, not Seats: this error only comes from the MaxSeatsExceeded branch, and
+    // the limit that was breached there is MaxAutoScaleSeats.
     private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
-        string.Format(Code, invalidRequest.Seats);
+        string.Format(Code, invalidRequest.MaxAutoScaleSeats);
 
     public const string Code = "Seat limit of {0} has been reached. Increase your seat limit to invite more members.";
 }
@@ -22,8 +24,10 @@ public record PasswordManagerSeatLimitHasBeenReachedError(PasswordManagerSubscri
 public record PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError(PasswordManagerSubscriptionUpdate InvalidRequest)
     : Error<PasswordManagerSubscriptionUpdate>(GetErrorMessage(InvalidRequest), InvalidRequest)
 {
+    // Reported against the autoscale cap, not Seats: this error only comes from the MaxSeatsExceeded branch, and
+    // the limit that was breached there is MaxAutoScaleSeats.
     private static string GetErrorMessage(PasswordManagerSubscriptionUpdate invalidRequest) =>
-        string.Format(Code, invalidRequest.Seats);
+        string.Format(Code, invalidRequest.MaxAutoScaleSeats);
 
     public const string Code = "Seat limit of {0} has been reached. Contact your organization owner to increase the seat limit.";
 }
