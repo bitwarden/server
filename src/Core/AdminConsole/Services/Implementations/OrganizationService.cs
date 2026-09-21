@@ -531,7 +531,7 @@ public class OrganizationService : IOrganizationService
             var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
             if (!canScale)
             {
-                throw new BadRequestException(failureReason);
+                throw new BadRequestException(await ToInviteSeatLimitMessageAsync(organization, failureReason));
             }
         }
 
@@ -855,15 +855,35 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            // Shares the message with the InviteUsers validation pipeline so the two invite paths stay in step.
-            var seatLimitMessage = await CanManageBillingAsync(organization.Id)
-                ? PasswordManagerSeatLimitHasBeenReachedError.Code
-                : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
-
-            return (false, string.Format(seatLimitMessage, organization.MaxAutoscaleSeats.Value));
+            return (false, SeatLimitHasBeenReachedMessage);
         }
 
         return (true, failureReason);
+    }
+
+    /// <summary>
+    /// The flow-neutral seat limit message. <see cref="CanScaleAsync"/> also backs member restore, Families
+    /// sponsorship and SSO just-in-time provisioning, so it stays neutral for them. Only the invite flow swaps in
+    /// the seat-count wording, via <see cref="ToInviteSeatLimitMessageAsync"/>.
+    /// </summary>
+    public const string SeatLimitHasBeenReachedMessage = "Seat limit has been reached.";
+
+    /// <summary>
+    /// Design approved the seat-count wording for the invite flow only, so the substitution happens here rather
+    /// than inside <see cref="CanScaleAsync"/>. Any other failure reason is passed through untouched.
+    /// </summary>
+    private async Task<string> ToInviteSeatLimitMessageAsync(Organization organization, string failureReason)
+    {
+        if (failureReason != SeatLimitHasBeenReachedMessage)
+        {
+            return failureReason;
+        }
+
+        var seatLimitMessage = await CanManageBillingAsync(organization.Id)
+            ? PasswordManagerSeatLimitHasBeenReachedError.Code
+            : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
+
+        return string.Format(seatLimitMessage, organization.MaxAutoscaleSeats!.Value);
     }
 
     /// <summary>
