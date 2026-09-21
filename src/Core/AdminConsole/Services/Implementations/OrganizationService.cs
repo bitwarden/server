@@ -1214,6 +1214,11 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
+        if (permissions.ManageRotation && !org.Permissions.ManageRotation)
+        {
+            return false;
+        }
+
         return true;
     }
 }
