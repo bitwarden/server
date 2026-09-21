@@ -46,7 +46,6 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
-    private Action<SsoApplicationFactory>? _featureFlagConfig;
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -109,12 +108,6 @@ public class SsoTestDataBuilder
     {
         _includeSsoUser = true;
         _ssoUserConfig = configure;
-        return this;
-    }
-
-    public SsoTestDataBuilder WithFeatureFlags(Action<SsoApplicationFactory> configure)
-    {
-        _featureFlagConfig = configure;
         return this;
     }
 
@@ -261,10 +254,7 @@ public class SsoTestDataBuilder
             globalSettings.SelfHosted.Returns(_isSelfHosted);
         });
 
-        // 1.b configure setting feature flags
-        _featureFlagConfig?.Invoke(factory);
-
-        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
         {
             var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
