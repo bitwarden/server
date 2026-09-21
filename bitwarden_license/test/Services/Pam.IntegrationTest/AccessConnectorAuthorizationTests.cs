@@ -92,6 +92,21 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     [InlineData("")]
     [InlineData("/rotation/target-systems")]
     [InlineData("/rotation/configs")]
+    public async Task Read_AsCustomUserWithManageRotation_IsNotForbidden(string resource)
+    {
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
+            Organization.Id, OrganizationUserType.Custom, new Permissions { ManageRotation = true });
+        await LoginHelper.LoginAsync(customEmail);
+
+        var response = await Client.GetAsync(ConnectorUrl(resource));
+
+        AssertReachedTheHandler(response);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("/rotation/target-systems")]
+    [InlineData("/rotation/configs")]
     public async Task Read_AsProviderUserForTheOrganization_ReturnsForbidden(string resource)
     {
         // A registered access connector is handed the organization key, which is not a provider's to hold.
@@ -147,6 +162,18 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     public async Task Write_AsOwner_IsNotForbidden()
     {
         await LoginHelper.LoginAsync(OwnerEmail);
+
+        var response = await Client.PostAsJsonAsync(ConnectorUrl(""), new { });
+
+        AssertReachedTheHandler(response);
+    }
+
+    [Fact]
+    public async Task Write_AsCustomUserWithManageRotation_IsNotForbidden()
+    {
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
+            Organization.Id, OrganizationUserType.Custom, new Permissions { ManageRotation = true });
+        await LoginHelper.LoginAsync(customEmail);
 
         var response = await Client.PostAsJsonAsync(ConnectorUrl(""), new { });
 

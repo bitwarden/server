@@ -8,9 +8,10 @@ namespace Bit.Services.Pam.Test.AccessConnector.Api.Authorization;
 
 /// <summary>
 /// An access connector holds the organization key and rewrites credentials at the target system, so authority over the
-/// fleet is narrower than the usual custom-permission requirement: Owners and Admins, and nobody else. In particular
-/// neither a Custom user holding ManageAccessRules nor a provider managing the organization is authorized, which is
-/// why this requirement implements <c>IOrganizationRequirement</c> directly instead of deriving from
+/// fleet is narrower than the usual custom-permission requirement: Owners, Admins, and Custom users holding
+/// ManageRotation, and nobody else. In particular ManageAccessRules is not a substitute — it is authority over rule
+/// authorship, not the connectors that rotate credentials — and neither is a provider managing the organization,
+/// which is why this requirement implements <c>IOrganizationRequirement</c> directly instead of deriving from
 /// <c>BasePermissionRequirement</c>.
 /// </summary>
 public class ManageAccessConnectorRequirementTests
@@ -51,8 +52,17 @@ public class ManageAccessConnectorRequirementTests
     }
 
     [Fact]
+    public async Task AuthorizeAsync_AuthorizesCustomUserWithManageRotation()
+    {
+        var claims = Member(OrganizationUserType.Custom, new Permissions { ManageRotation = true });
+
+        Assert.True(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg()));
+    }
+
+    [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizeCustomUserWithEveryOtherPermission()
     {
+        // ManageRotation is deliberately excluded: it's the one permission that would authorize.
         var claims = Member(OrganizationUserType.Custom, new Permissions
         {
             AccessEventLogs = true,
@@ -67,7 +77,8 @@ public class ManageAccessConnectorRequirementTests
             ManageScim = true,
             ManageSso = true,
             ManageUsers = true,
-            ManageAccessRules = true
+            ManageAccessRules = true,
+            ManageRotation = false
         });
 
         Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg()));
@@ -97,7 +108,8 @@ public class ManageAccessConnectorRequirementTests
                      Member(OrganizationUserType.Admin),
                      Member(OrganizationUserType.User),
                      Member(OrganizationUserType.Custom),
-                     Member(OrganizationUserType.Custom, new Permissions { ManageAccessRules = true })
+                     Member(OrganizationUserType.Custom, new Permissions { ManageAccessRules = true }),
+                     Member(OrganizationUserType.Custom, new Permissions { ManageRotation = true })
                  })
         {
             await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg());
