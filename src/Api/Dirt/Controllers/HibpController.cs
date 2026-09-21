@@ -43,11 +43,11 @@ public class HibpController : Controller
         var httpClient = _httpClientFactory.CreateClient();
 
         var url = $"https://api.pwnedpasswords.com/range/{hash}";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("User-Agent", _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
         request.Headers.Add("Add-Padding", "true"); // enables padding in response to further protect privacy
 
-        var response = await httpClient.SendAsync(request);
+        using var response = await httpClient.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             var data = await response.Content.ReadAsStringAsync();
@@ -78,12 +78,12 @@ public class HibpController : Controller
         var httpClient = _httpClientFactory.CreateClient();
 
         var url = $"https://haveibeenpwned.com/api/v3/breachedaccount/{username}?truncateResponse=false&includeUnverified=false";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
         request.Headers.Add("hibp-client-id", GetClientId());
         request.Headers.Add("User-Agent", _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
 
-        var response = await httpClient.SendAsync(request);
+        using var response = await httpClient.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             var data = await response.Content.ReadAsStringAsync();
