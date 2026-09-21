@@ -8,7 +8,9 @@
 
 ### Signing-key rotation and encryption-key rotation carry different risk windows
 
-- A signature verifier, the IdP, must trust a new signing key before the signer switches to it.
+Both keys below are Bitwarden's own SP certificates (`SamlEnvironment.SpSigningCertificate` and `SPOptions.DecryptionServiceCertificates`), not the IdP's.
+
+- A signature verifier, here the IdP, must trust Bitwarden's new signing key before Bitwarden switches to it.
 - Only one signing key is active at a time.
 - A decryptor, Bitwarden, can hold more than one valid decryption key at the same time.
 - Decryption misalignment risk arrives only when Bitwarden removes the final old key, not when Bitwarden adds a new key.
