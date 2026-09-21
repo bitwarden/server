@@ -2,8 +2,10 @@
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace Bit.Core.Dirt.Services.Implementations;
 
@@ -18,9 +20,12 @@ public class RabbitMqService : IRabbitMqService
     private readonly string _integrationExchangeName;
     private readonly int _retryTiming;
     private readonly bool _useDelayPlugin;
+    private readonly TimeSpan _deadLetterTimeToLive;
+    private readonly ILogger<RabbitMqService> _logger;
 
-    public RabbitMqService(GlobalSettings globalSettings)
+    public RabbitMqService(GlobalSettings globalSettings, ILogger<RabbitMqService> logger)
     {
+        _logger = logger;
         _factory = new ConnectionFactory
         {
             HostName = globalSettings.EventLogging.RabbitMq.HostName,
@@ -32,6 +37,7 @@ public class RabbitMqService : IRabbitMqService
         _integrationExchangeName = globalSettings.EventLogging.RabbitMq.IntegrationExchangeName;
         _retryTiming = globalSettings.EventLogging.RabbitMq.RetryTiming;
         _useDelayPlugin = globalSettings.EventLogging.RabbitMq.UseDelayPlugin;
+        _deadLetterTimeToLive = globalSettings.EventLogging.RabbitMq.DeadLetterTimeToLive;
 
         _lazyConnection = new Lazy<Task<IConnection>>(CreateConnectionAsync);
     }
@@ -194,6 +200,88 @@ public class RabbitMqService : IRabbitMqService
             body: eventArgs.Body);
     }
 
+    /// <summary>
+    /// Declares and binds the dead letter queue. An existing queue keeps the arguments it was declared with, and
+    /// RabbitMQ fails any redeclaration that disagrees with them in either direction, which closes the channel. Each
+    /// attempt therefore runs on its own channel, and a queue that cannot be redeclared is left as it is with only its
+    /// binding ensured, so no combination of settings and queue state can fail connection setup.
+    /// </summary>
+    internal async Task DeclareDeadLetterQueueAsync(IConnection connection)
+    {
+        var arguments = BuildDeadLetterQueueArguments(_deadLetterTimeToLive);
+        if (arguments is null)
+        {
+            _logger.LogWarning(
+                "Dead letter queue {QueueName} has no retention configured and will grow without bound. " +
+                "Set DeadLetterTimeToLive on a new queue, or apply a RabbitMQ message-ttl policy to an existing one.",
+                _deadLetterQueueName);
+        }
+        else if (await TryDeclareAndBindDeadLetterQueueAsync(connection, arguments))
+        {
+            return;
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Dead letter queue {QueueName} already exists, so DeadLetterTimeToLive was not applied. " +
+                "Apply a RabbitMQ message-ttl policy to the queue instead.",
+                _deadLetterQueueName);
+        }
+
+        if (!await TryDeclareAndBindDeadLetterQueueAsync(connection, arguments: null))
+        {
+            await BindDeadLetterQueueAsync(connection);
+        }
+    }
+
+    private async Task<bool> TryDeclareAndBindDeadLetterQueueAsync(
+        IConnection connection,
+        Dictionary<string, object?>? arguments)
+    {
+        try
+        {
+            using var channel = await connection.CreateChannelAsync();
+
+            await channel.QueueDeclareAsync(queue: _deadLetterQueueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: arguments);
+            await channel.QueueBindAsync(queue: _deadLetterQueueName,
+                exchange: _integrationExchangeName,
+                routingKey: _deadLetterRoutingKey);
+
+            return true;
+        }
+        catch (OperationInterruptedException)
+        {
+            return false;
+        }
+    }
+
+    private async Task BindDeadLetterQueueAsync(IConnection connection)
+    {
+        using var channel = await connection.CreateChannelAsync();
+
+        await channel.QueueBindAsync(queue: _deadLetterQueueName,
+            exchange: _integrationExchangeName,
+            routingKey: _deadLetterRoutingKey);
+    }
+
+    internal static Dictionary<string, object?>? BuildDeadLetterQueueArguments(TimeSpan timeToLive)
+    {
+        if (timeToLive <= TimeSpan.Zero)
+        {
+            return null;
+        }
+
+        // x-message-ttl is milliseconds as a 32-bit integer, capping retention at ~24 days
+        return new Dictionary<string, object?>
+        {
+            { "x-message-ttl", (int)Math.Min(timeToLive.TotalMilliseconds, int.MaxValue) }
+        };
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_lazyConnection.IsValueCreated)
@@ -228,14 +316,7 @@ public class RabbitMqService : IRabbitMqService
         }
 
         // Declare dead letter queue for Integration exchange
-        await channel.QueueDeclareAsync(queue: _deadLetterQueueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
-        await channel.QueueBindAsync(queue: _deadLetterQueueName,
-            exchange: _integrationExchangeName,
-            routingKey: _deadLetterRoutingKey);
+        await DeclareDeadLetterQueueAsync(connection);
 
         return connection;
     }

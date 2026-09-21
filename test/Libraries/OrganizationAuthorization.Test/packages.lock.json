@@ -1385,7 +1385,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.9.0, )",
+          "Core": "[2026.9.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1455,8 +1455,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Common": "[2026.9.0, )",
-          "Core": "[2026.9.0, )",
+          "Common": "[2026.9.1, )",
+          "Core": "[2026.9.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.Diagnostics.Testing": "[10.8.0, 10.8.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1470,7 +1470,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.0, )"
+          "HttpExtensions": "[2026.9.1, )"
         }
       },
       "httpextensions": {
@@ -1479,7 +1479,7 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.9.0, )"
+          "Core": "[2026.9.1, )"
         }
       },
       "serilogfilelogging": {

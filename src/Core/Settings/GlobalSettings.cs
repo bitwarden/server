@@ -325,6 +325,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
 
+            public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -366,6 +369,9 @@ public class GlobalSettings : IGlobalSettings
 
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
+
+            public TimeSpan DeadLetterTimeToLive { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";

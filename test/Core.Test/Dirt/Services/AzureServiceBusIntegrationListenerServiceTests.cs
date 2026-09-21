@@ -102,6 +102,25 @@ public class AzureServiceBusIntegrationListenerServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task HandleMessageAsync_FailureNotRetryable_DoesNotApplyRetry(IntegrationMessage<WebhookIntegrationConfiguration> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.RetryCount = 0;
+        message.DelayUntilDate = null;
+
+        var result = IntegrationHandlerResult.Fail(
+            message: message,
+            category: IntegrationFailureCategory.AuthenticationFailed, // NOT retryable
+            failureReason: "403");
+        _handler.HandleAsync(Arg.Any<string>()).Returns(result);
+
+        Assert.False(await sutProvider.Sut.HandleMessageAsync(message.ToJson()));
+
+        Assert.Equal(0, message.RetryCount);
+        Assert.Null(message.DelayUntilDate);
+    }
+
+    [Theory, BitAutoData]
     public async Task HandleMessageAsync_FailureRetryableButTooManyRetries_PublishesToDeadLetterQueue(IntegrationMessage<WebhookIntegrationConfiguration> message)
     {
         var sutProvider = GetSutProvider();

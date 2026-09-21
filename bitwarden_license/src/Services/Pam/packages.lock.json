@@ -914,7 +914,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.0, )"
+          "HttpExtensions": "[2026.9.1, )"
         }
       },
       "httpextensions": {
@@ -923,7 +923,7 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.9.0, )"
+          "Core": "[2026.9.1, )"
         }
       },
       "pam.domain": {
