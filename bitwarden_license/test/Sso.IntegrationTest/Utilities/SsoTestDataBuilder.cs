@@ -1,5 +1,4 @@
 ﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
@@ -168,22 +167,6 @@ public class SsoTestDataBuilder
     {
         _isNativeClient = true;
         return this;
-    }
-
-    /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM34423StagedStatus"/> feature flag for the test.
-    /// SSO Staged-row promotion (Scenario 3 in AutoProvisionUserAsync) is gated behind this
-    /// flag, so tests exercising that branch must opt in.
-    /// </summary>
-    public SsoTestDataBuilder WithPM34423StagedStatusFlag(bool enabled = true)
-    {
-        return WithFeatureFlags(factory =>
-        {
-            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
-            {
-                svc.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(enabled);
-            });
-        });
     }
 
     /// <summary>
