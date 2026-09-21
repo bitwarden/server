@@ -54,6 +54,8 @@ BEGIN
            o.[SmServiceAccounts],
            o.[MaxAutoscaleSmSeats],
            o.[MaxAutoscaleSmServiceAccounts],
+           o.[PamSeats],
+           o.[MaxAutoscalePamSeats],
            o.[SecretsManagerBeta],
            o.[LimitCollectionCreation],
            o.[LimitCollectionDeletion],

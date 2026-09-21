@@ -52,6 +52,8 @@ SELECT
     [SmServiceAccounts],
     [MaxAutoscaleSmSeats],
     [MaxAutoscaleSmServiceAccounts],
+    [PamSeats],
+    [MaxAutoscalePamSeats],
     [SecretsManagerBeta],
     [LimitCollectionCreation],
     [LimitCollectionDeletion],
