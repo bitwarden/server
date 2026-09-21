@@ -1158,6 +1158,35 @@ public class OrganizationServiceTests
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
     }
 
+    [Theory, BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithManageRotation_WhenSavingUserHasManageRotation_Passes(
+        CurrentContextOrganization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Permissions = new Permissions { ManageRotation = true };
+        var invitePermissions = new Permissions { ManageRotation = true };
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+
+        await sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, OrganizationUserType.Custom, null, invitePermissions);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithManageRotation_WhenSavingUserLacksManageRotation_Throws(
+        CurrentContextOrganization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Permissions = new Permissions { ManageRotation = false };
+        var invitePermissions = new Permissions { ManageRotation = true };
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organization.Id, OrganizationUserType.Custom, null, invitePermissions));
+
+        Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
+    }
+
     [Theory]
     [OrganizationInviteCustomize(
          InviteeUserType = OrganizationUserType.Custom,
