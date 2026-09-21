@@ -51,11 +51,18 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
         HidePasswords = collectionDetails.HidePasswords;
         Manage = collectionDetails.Manage;
         DefaultUserCollectionEmail = collectionDetails.DefaultUserCollectionEmail;
+        HasEnabledAccessRule = collectionDetails.HasEnabledAccessRule;
     }
 
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
     public bool Manage { get; set; }
+
+    /// <summary>
+    /// True if the collection is governed by an access rule that is currently enabled. Lets a client
+    /// mark the collection as privileged without reading the organization's access rules.
+    /// </summary>
+    public bool HasEnabledAccessRule { get; set; }
 }
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel
@@ -100,6 +107,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
         HidePasswords = collection.HidePasswords;
         Manage = collection.Manage;
         Unmanaged = collection.Unmanaged;
+        HasEnabledAccessRule = collection.HasEnabledAccessRule;
         Groups = collection.Groups?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
         Users = collection.Users?.Select(g => new SelectionReadOnlyResponseModel(g)) ?? Enumerable.Empty<SelectionReadOnlyResponseModel>();
     }
@@ -116,4 +124,16 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
     public bool HidePasswords { get; set; }
     public bool Manage { get; set; }
     public bool Unmanaged { get; set; }
+
+    /// <summary>
+    /// True if the collection is governed by an access rule that is currently enabled. Lets a client
+    /// mark the collection as privileged without reading the organization's access rules.
+    /// </summary>
+    /// <remarks>
+    /// Only the <see cref="CollectionAdminDetails"/> constructor can populate this — it is computed by
+    /// the collection read paths. The bare <see cref="Collection"/> constructors are used for the
+    /// create/update responses and the provider fallbacks, which have no rule state to report and so
+    /// leave it false.
+    /// </remarks>
+    public bool HasEnabledAccessRule { get; set; }
 }

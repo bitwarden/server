@@ -123,6 +123,12 @@ public class OrganizationVaultOptions
     public int KdfIterations { get; init; } = 5_000;
 
     /// <summary>
+    /// When set, creates a real Stripe test-environment customer and subscription for the organization.
+    /// Null (the default) means the seed makes no Stripe calls at all.
+    /// </summary>
+    public StripeBillingOptions? StripeBilling { get; init; }
+
+    /// <summary>
     /// Optional overrides for collection management settings applied on top of the organization's initial values.
     /// Null means "leave all collection management settings unchanged from <see cref="Bit.Seeder.Factories.OrganizationSeeder.Create"/>".
     /// </summary>

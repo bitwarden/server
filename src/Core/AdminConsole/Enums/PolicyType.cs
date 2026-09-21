@@ -66,7 +66,7 @@ public static class PolicyTypeExtensions
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
             PolicyType.OrganizationUserNotification => "Vault banner message",
             PolicyType.SendControls => "Send controls",
-            PolicyType.FillAssist => "Fill Assist",
+            PolicyType.FillAssist => "Activate fill assist",
         };
     }
 }

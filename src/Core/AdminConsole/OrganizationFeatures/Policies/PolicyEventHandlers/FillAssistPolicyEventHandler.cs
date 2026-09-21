@@ -8,9 +8,10 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
-public class FillAssistPolicyEventHandler : IPolicyValidationEvent
+public class FillAssistPolicyEventHandler : IPolicyValidationEvent, IEnforceDependentPoliciesEvent
 {
     public PolicyType Type => PolicyType.FillAssist;
+    public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
 
     public Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
     {

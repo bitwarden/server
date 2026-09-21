@@ -4,8 +4,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-#nullable enable
-
 namespace Bit.Api.AdminConsole.Public.Models;
 
 public abstract class MemberBaseModel

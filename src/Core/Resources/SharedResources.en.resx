@@ -517,9 +517,6 @@
   <data name="CouldNotFindOrganizationUser" xml:space="preserve">
     <value>Could not find organization user for user '{0}' organization '{1}'</value>
   </data>
-  <data name="NoSeatsAvailable" xml:space="preserve">
-    <value>No seats available for organization, '{0}'</value>
-  </data>
   <data name="OrganizationUserAccessRevoked" xml:space="preserve">
     <value>Your access to organization {0} has been revoked. Please contact your administrator for assistance.</value>
   </data>

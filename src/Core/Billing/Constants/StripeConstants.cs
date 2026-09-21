@@ -116,11 +116,33 @@ public static class StripeConstants
         public const string MigrationCohortName = "migration_cohort_name";
         public const string MigrationGraceServiceAccounts = "migration_grace_service_accounts";
         public const string CancellingUserId = "cancellingUserId";
+        public const string PurchasableReference = "purchasable_reference";
+    }
+
+    /// <summary>
+    /// The stable, plan-agnostic values carried in <see cref="MetadataKeys.PurchasableReference"/>.
+    /// </summary>
+    public static class PurchasableReferences
+    {
+        public const string PasswordManagerSeat = "pm-seat";
+        public const string PasswordManagerStorage = "pm-storage";
+        public const string SecretsManagerSeat = "sm-seat";
+        public const string SecretsManagerServiceAccount = "sm-service-account";
     }
 
     public static class CancellationOrigins
     {
         public const string UnpaidSubscription = "unpaid_subscription";
+    }
+
+    /// <summary>
+    /// The values carried in <see cref="MetadataKeys.TrialInitiationPath"/>.
+    /// </summary>
+    public static class TrialInitiationPaths
+    {
+        public const string MarketingInitiated = "marketing-initiated";
+        public const string ProductInitiated = "product-initiated";
+        public const string SalesAssisted = "sales-assisted";
     }
 
     public static class PaymentBehavior

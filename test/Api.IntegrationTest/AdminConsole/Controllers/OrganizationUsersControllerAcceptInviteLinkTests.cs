@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -13,8 +12,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -33,12 +30,6 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     public OrganizationUsersControllerAcceptInviteLinkTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -141,7 +132,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var joinerLoginHelper = new LoginHelper(_factory, joinerClient);
         await joinerLoginHelper.LoginAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var acceptRequest = new AcceptOrganizationInviteLinkRequestModel
         {
             OrganizationId = created.OrganizationId,
@@ -400,7 +391,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
         await CreatePendingEmailInvitationAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel
@@ -521,7 +512,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
         await CreateStagedMembershipAsync(joinerEmail);
 
-        const string resetPasswordKey = "2.reset-password-key";
+        const string resetPasswordKey = "4.YWJjZA==";
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel

@@ -535,26 +535,20 @@ public class UpcomingInvoiceHandler(
         if (activeSchedule != null)
         {
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            DiscountExtensions.RequireScheduleDiscountExpansions(subscription, logger);
+
             var phases = new List<SubscriptionSchedulePhaseOptions>();
 
-            for (var i = 0; i < activeSchedule.Phases.Count; i++)
+            foreach (var phase in activeSchedule.Phases)
             {
-                var phase = activeSchedule.Phases[i];
-
                 // Skip phases that have already completed
                 if (phase.EndDate <= now)
                 {
                     continue;
                 }
 
-                // When a phase's predecessor has ended, the phase is already active and
-                // its one-time migration discount has been applied and consumed.
-                // Re-including it would cause Stripe to re-apply it.
-                var discountConsumed = i > 0 && activeSchedule.Phases[i - 1].EndDate <= now;
-
-                // Gate on StartDate > now, not !discountConsumed (false for the active phase 0),
-                // so we never re-stack the customer coupon onto the already-billing current period.
-                var customerDiscount = phase.StartDate > now ? subscription.Customer?.Discount : null;
+                var isFuture = phase.StartDate > now;
 
                 phases.Add(new SubscriptionSchedulePhaseOptions
                 {
@@ -563,12 +557,14 @@ public class UpcomingInvoiceHandler(
                     Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                     {
                         Price = item.PriceId,
-                        Quantity = item.Quantity
+                        Quantity = item.Quantity,
+                        Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                            item.Discounts?.Select(d => d.CouponId) ?? [])
                     }).ToList(),
-                    Discounts = discountConsumed
-                        ? []
-                        : customerDiscount.MergeDiscountCouponIds(
-                            phase.Discounts?.Select(d => d.CouponId)).ToPhaseDiscountOptions(),
+                    Discounts = isFuture
+                        ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                            subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                        : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                     Metadata = phase.Metadata,
                     ProrationBehavior = phase.ProrationBehavior,
                     AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions

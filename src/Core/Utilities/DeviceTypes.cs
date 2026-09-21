@@ -33,7 +33,8 @@ public static class DeviceTypes
         DeviceType.OperaExtension,
         DeviceType.EdgeExtension,
         DeviceType.VivaldiExtension,
-        DeviceType.SafariExtension
+        DeviceType.SafariExtension,
+        DeviceType.DuckDuckGoExtension
     ];
 
     public static IReadOnlyCollection<DeviceType> BrowserTypes { get; } =

@@ -3,7 +3,7 @@
   "organization": {
     "fixture": "redwood-analytics",
     "planType": "enterprise-annually",
-    "seats": 10
+    "seats": 25
   },
   "roster": {
     "fixture": "enterprise-basic"

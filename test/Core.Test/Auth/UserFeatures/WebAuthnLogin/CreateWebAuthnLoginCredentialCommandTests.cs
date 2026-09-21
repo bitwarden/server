@@ -8,8 +8,8 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
-using static Fido2NetLib.Fido2;
 
 namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 
@@ -38,7 +38,7 @@ public class CreateWebAuthnLoginCredentialCommandTests
         var existingCredentials = credentialGenerator.Take(CreateWebAuthnLoginCredentialCommand.MaxCredentialsPerUser - 1).ToList();
         sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
         sutProvider.GetDependency<IFido2>().MakeNewCredentialAsync(
-            response, options, Arg.Any<IsCredentialIdUniqueToUserAsyncDelegate>(), Arg.Any<byte[]>(), Arg.Any<CancellationToken>()
+            Arg.Any<MakeNewCredentialParams>(), Arg.Any<CancellationToken>()
         ).Returns(MakeCredentialResult());
 
         // Act
@@ -49,17 +49,34 @@ public class CreateWebAuthnLoginCredentialCommandTests
         await sutProvider.GetDependency<IWebAuthnCredentialRepository>().Received().CreateAsync(Arg.Any<WebAuthnCredential>());
     }
 
-    private CredentialMakeResult MakeCredentialResult()
+    [Theory, BitAutoData]
+    internal async Task MakeNewCredentialAsyncThrows_ReturnsNull(SutProvider<CreateWebAuthnLoginCredentialCommand> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
     {
-        return new CredentialMakeResult("ok", "", new AttestationVerificationSuccess
+        // Arrange
+        var existingCredentials = credentialGenerator.Take(CreateWebAuthnLoginCredentialCommand.MaxCredentialsPerUser - 1).ToList();
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
+        sutProvider.GetDependency<IFido2>().MakeNewCredentialAsync(
+            Arg.Any<MakeNewCredentialParams>(), Arg.Any<CancellationToken>()
+        ).ThrowsAsync<Fido2VerificationException>();
+
+        // Act
+        var result = await sutProvider.Sut.CreateWebAuthnLoginCredentialAsync(user, "name", options, response, false, null, null, null);
+
+        // Assert
+        Assert.Null(result);
+        await sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive().CreateAsync(Arg.Any<WebAuthnCredential>());
+    }
+
+    private RegisteredPublicKeyCredential MakeCredentialResult()
+    {
+        return new RegisteredPublicKeyCredential
         {
-            Aaguid = new Guid(),
-            Counter = 0,
-            CredentialId = new Guid().ToByteArray(),
-            CredType = "public-key",
+            AaGuid = new Guid(),
+            SignCount = 0,
+            Id = new Guid().ToByteArray(),
+            AttestationFormat = "public-key",
             PublicKey = new byte[0],
-            Status = "ok",
             User = new Fido2User(),
-        });
+        };
     }
 }

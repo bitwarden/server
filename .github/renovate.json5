@@ -3,11 +3,27 @@
   extends: ["github>bitwarden/renovate-config"], // Extends our default configuration for pinned dependencies
   enabledManagers: [
     "cargo",
+    "custom.regex",
     "dockerfile",
     "docker-compose",
     "github-actions",
     "npm",
     "nuget",
+  ],
+  customManagers: [
+    {
+      customType: "regex",
+      description: "Azurite test container image pinned in DataProtectionServicesTests.cs",
+      managerFilePatterns: [
+        "/^test/SharedWeb\\.Test/DataProtectionServicesTests\\.cs$/",
+      ],
+      // currentDigest is captured so Renovate rewrites the digest alongside the
+      // tag. Bumping the tag alone would leave a digest that no longer resolves.
+      matchStrings: [
+        '"(?<depName>mcr\\.microsoft\\.com/azure-storage/azurite):(?<currentValue>[^"@]+)@(?<currentDigest>sha256:[a-f0-9]{64})"',
+      ],
+      datasourceTemplate: "docker",
+    },
   ],
   packageRules: [
     // ==================== Team Ownership Rules ====================
@@ -117,6 +133,12 @@
     {
       matchUpdateTypes: ["lockFileMaintenance"],
       description: "Platform owns lock file maintenance",
+      commitMessagePrefix: "[deps] Platform:",
+      reviewers: ["team:team-platform-dev"],
+    },
+    {
+      matchPackageNames: ["mcr.microsoft.com/azure-storage/azurite"],
+      description: "Platform owned test container image",
       commitMessagePrefix: "[deps] Platform:",
       reviewers: ["team:team-platform-dev"],
     },

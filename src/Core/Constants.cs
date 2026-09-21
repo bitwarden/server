@@ -141,9 +141,10 @@ public static partial class FeatureFlagKeys
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
+    public const string InviteLinkNotification = "pm-39601-invite-link-notification";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
+    public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
     public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
@@ -244,6 +245,7 @@ public static partial class FeatureFlagKeys
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
+    public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
 
     /* Tools Team */
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
@@ -311,6 +313,7 @@ public static partial class FeatureFlagKeys
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
+    public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
