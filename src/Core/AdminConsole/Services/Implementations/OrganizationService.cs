@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -854,11 +855,24 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            return (false, $"Seat limit has been reached.");
+            // Shares the message with the InviteUsers validation pipeline so the two invite paths stay in step.
+            var seatLimitMessage = await CanManageBillingAsync(organization.Id)
+                ? PasswordManagerSeatLimitHasBeenReachedError.Code
+                : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
+
+            return (false, string.Format(seatLimitMessage, organization.Seats.Value));
         }
 
         return (true, failureReason);
     }
+
+    /// <summary>
+    /// Seat scaling is also triggered by callers without an authenticated member (SCIM, the Public API, and
+    /// background work), where nobody could raise the seat limit in place. <see cref="ICurrentContext.EditSubscription"/>
+    /// requires a user, so short circuit those callers.
+    /// </summary>
+    private async Task<bool> CanManageBillingAsync(Guid organizationId) =>
+        _currentContext.UserId.HasValue && await _currentContext.EditSubscription(organizationId);
 
     public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {

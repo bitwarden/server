@@ -779,7 +779,7 @@ public class OrganizationServiceTests
     [BitAutoData(0, 100, 100, true, "")]
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
-    [BitAutoData(1, 100, 100, false, "Seat limit has been reached")]
+    [BitAutoData(1, 100, 100, false, "Seat limit of 100 has been reached")]
     public async Task CanScaleAsync(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
@@ -800,6 +800,66 @@ public class OrganizationServiceTests
             Assert.Contains(expectedFailureMessage, failureMessage);
         }
         Assert.Equal(expectedResult, result);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_AtSeatCap_WhenCallerCanManageBilling_TellsThemToIncreaseTheSeatLimit(
+        Guid callingUserId,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 100;
+        organization.MaxAutoscaleSeats = 100;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingUserId);
+        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+
+        Assert.False(result);
+        Assert.Equal("Seat limit of 100 has been reached. Increase your seat limit to invite more members.",
+            failureMessage);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_AtSeatCap_WhenCallerCannotManageBilling_TellsThemToContactTheOwner(
+        Guid callingUserId,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 100;
+        organization.MaxAutoscaleSeats = 100;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingUserId);
+        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(false);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+
+        Assert.False(result);
+        Assert.Equal("Seat limit of 100 has been reached. Contact your organization owner to increase the seat limit.",
+            failureMessage);
+    }
+
+    /// <summary>
+    /// SCIM, the Public API and background work scale seats without an authenticated member, so there is nobody who
+    /// could raise the seat limit in place and <see cref="ICurrentContext.EditSubscription"/> cannot be consulted.
+    /// </summary>
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_AtSeatCap_WithoutAnAuthenticatedUser_TellsThemToContactTheOwner(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 100;
+        organization.MaxAutoscaleSeats = 100;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+
+        Assert.False(result);
+        Assert.Equal("Seat limit of 100 has been reached. Contact your organization owner to increase the seat limit.",
+            failureMessage);
+        await sutProvider.GetDependency<ICurrentContext>().DidNotReceive().EditSubscription(Arg.Any<Guid>());
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
