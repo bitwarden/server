@@ -860,7 +860,7 @@ public class OrganizationService : IOrganizationService
                 ? PasswordManagerSeatLimitHasBeenReachedError.Code
                 : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
 
-            return (false, string.Format(seatLimitMessage, organization.Seats.Value));
+            return (false, string.Format(seatLimitMessage, organization.MaxAutoscaleSeats.Value));
         }
 
         return (true, failureReason);

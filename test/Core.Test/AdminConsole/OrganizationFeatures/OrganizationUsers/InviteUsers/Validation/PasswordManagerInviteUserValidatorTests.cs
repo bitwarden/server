@@ -58,11 +58,13 @@ public class InviteUsersPasswordManagerValidatorTests
         Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
-        organization.Seats = 4;
-        organization.MaxAutoscaleSeats = 4;
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
+        // Autoscaling to 11 overshoots the cap of 10, so the limit the member hit is 10, not their current 5.
+        organization.Seats = 5;
+        organization.MaxAutoscaleSeats = 10;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var seatsOccupiedByUsers = 4;
-        var additionalSeats = 1;
+        var seatsOccupiedByUsers = 5;
+        var additionalSeats = 6;
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(invitingUserId);
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
@@ -75,7 +77,7 @@ public class InviteUsersPasswordManagerValidatorTests
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(
-            string.Format(PasswordManagerSeatLimitHasBeenReachedError.Code, organization.Seats),
+            string.Format(PasswordManagerSeatLimitHasBeenReachedError.Code, organization.MaxAutoscaleSeats),
             (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 
@@ -86,11 +88,12 @@ public class InviteUsersPasswordManagerValidatorTests
         Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
-        organization.Seats = 4;
-        organization.MaxAutoscaleSeats = 4;
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
+        organization.Seats = 5;
+        organization.MaxAutoscaleSeats = 10;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var seatsOccupiedByUsers = 4;
-        var additionalSeats = 1;
+        var seatsOccupiedByUsers = 5;
+        var additionalSeats = 6;
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(invitingUserId);
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(false);
@@ -103,7 +106,7 @@ public class InviteUsersPasswordManagerValidatorTests
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(
-            string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.Seats),
+            string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.MaxAutoscaleSeats),
             (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 
@@ -117,11 +120,12 @@ public class InviteUsersPasswordManagerValidatorTests
         Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
-        organization.Seats = 4;
-        organization.MaxAutoscaleSeats = 4;
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
+        organization.Seats = 5;
+        organization.MaxAutoscaleSeats = 10;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var seatsOccupiedByUsers = 4;
-        var additionalSeats = 1;
+        var seatsOccupiedByUsers = 5;
+        var additionalSeats = 6;
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
@@ -133,7 +137,7 @@ public class InviteUsersPasswordManagerValidatorTests
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(
-            string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.Seats),
+            string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.MaxAutoscaleSeats),
             (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
         await sutProvider.GetDependency<ICurrentContext>().DidNotReceive().EditSubscription(Arg.Any<Guid>());
     }

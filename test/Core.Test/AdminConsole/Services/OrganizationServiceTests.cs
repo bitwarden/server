@@ -780,6 +780,8 @@ public class OrganizationServiceTests
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
     [BitAutoData(1, 100, 100, false, "Seat limit of 100 has been reached")]
+    // Seats and the autoscale cap differ here, pinning the cap as the number the message reports.
+    [BitAutoData(25, 100, 120, false, "Seat limit of 120 has been reached")]
     public async Task CanScaleAsync(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
@@ -808,16 +810,17 @@ public class OrganizationServiceTests
         Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
         organization.Seats = 100;
-        organization.MaxAutoscaleSeats = 100;
+        organization.MaxAutoscaleSeats = 120;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingUserId);
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
 
-        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 25);
 
         Assert.False(result);
-        Assert.Equal("Seat limit of 100 has been reached. Increase your seat limit to invite more members.",
+        Assert.Equal("Seat limit of 120 has been reached. Increase your seat limit to invite more members.",
             failureMessage);
     }
 
@@ -827,16 +830,17 @@ public class OrganizationServiceTests
         Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
         organization.Seats = 100;
-        organization.MaxAutoscaleSeats = 100;
+        organization.MaxAutoscaleSeats = 120;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingUserId);
         sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(false);
 
-        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 25);
 
         Assert.False(result);
-        Assert.Equal("Seat limit of 100 has been reached. Contact your organization owner to increase the seat limit.",
+        Assert.Equal("Seat limit of 120 has been reached. Contact your organization owner to increase the seat limit.",
             failureMessage);
     }
 
@@ -849,15 +853,16 @@ public class OrganizationServiceTests
         Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
+        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
         organization.Seats = 100;
-        organization.MaxAutoscaleSeats = 100;
+        organization.MaxAutoscaleSeats = 120;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
-        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 1);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 25);
 
         Assert.False(result);
-        Assert.Equal("Seat limit of 100 has been reached. Contact your organization owner to increase the seat limit.",
+        Assert.Equal("Seat limit of 120 has been reached. Contact your organization owner to increase the seat limit.",
             failureMessage);
         await sutProvider.GetDependency<ICurrentContext>().DidNotReceive().EditSubscription(Arg.Any<Guid>());
     }
