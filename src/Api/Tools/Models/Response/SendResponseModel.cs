@@ -69,11 +69,14 @@ public class SendResponseModel : HttpExtensions.ResponseModel
                 Text = new SendTextModel(textData);
                 break;
             case SendType.Item:
-                // These fields are included in send.Data, but since the entire
-                // object is encrypted as a blob we can't extract them here.
-                Name = string.Empty;
-                Notes = string.Empty;
-                Data = send.Data ?? throw new NullReferenceException("Send Data is required");
+                var itemData =
+                    JsonSerializer.Deserialize<SendItemData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send item data.");
+                Name = itemData.Name;
+                Notes = itemData.Notes;
+                Data = new SendDataModel(itemData);
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
@@ -133,7 +136,7 @@ public class SendResponseModel : HttpExtensions.ResponseModel
     /// <summary>
     /// Encrypted string containing secret Send data
     /// </summary>
-    public string? Data { get; set; }
+    public SendDataModel? Data { get; set; }
 
     /// <summary>
     /// A base64-encoded byte array containing the Send's encryption key.

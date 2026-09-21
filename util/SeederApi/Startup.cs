@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -35,6 +36,7 @@ public class Startup
 
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
+        services.AddSecretsManagerEfRepositories();
         services.AddTestPlayIdTracking(globalSettings);
         services.AddManglerService(globalSettings);
 

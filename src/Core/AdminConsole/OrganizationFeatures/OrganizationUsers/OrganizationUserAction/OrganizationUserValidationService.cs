@@ -1,7 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.Models.Data;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Utilities.v2;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -11,33 +10,44 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Organizat
 
 /// <inheritdoc />
 public class OrganizationUserValidationService(
-    IProviderUserRepository providerUserRepository,
     IOrganizationUserRepository organizationUserRepository) : IOrganizationUserValidationService
 {
-    public async Task<Error?> CanManageAsync(Guid actingUserId, IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser)
-    {
-        if (IsAuthorizedByRole(actingUser, targetUser.Type) || await IsProviderAsync(actingUserId, targetUser.OrganizationId))
-        {
-            return null;
-        }
+    public Error? CanManage(IOrganizationUserRole? actingUser, IOrganizationUserRole targetUser) =>
+        IsAuthorizedByRole(actingUser, targetUser.Type) ? null : CannotManageError(targetUser.Type);
 
-        return CannotManageError(targetUser.Type);
-    }
-
-    public async Task<Error?> CanManageRoleChangeAsync(Guid actingUserId, IOrganizationUserRole actingUser,
-        IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
+    public Error? CanManageRoleChange(IOrganizationUserRole actingUser, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
     {
         // Must be able to manage both the current and requested role.
         var authorizedByRole = IsAuthorizedByRole(actingUser, targetUser.Type)
                                && IsAuthorizedByRole(actingUser, newTargetUser.Type);
 
-        if (!authorizedByRole && !await IsProviderAsync(actingUserId, targetUser.OrganizationId))
+        return authorizedByRole
+            ? ValidateCustomPermissionsGrant(actingUser, newTargetUser)
+            : CannotManageError(targetUser.Type, newTargetUser.Type);
+    }
+
+    public Error? CanManageRoleChange(IActingUser performedBy, IOrganizationUserRole targetUser, IOrganizationUserRole newTargetUser)
+    {
+        // SystemUsers exist outside the organization hierarchy.
+        if (performedBy is not StandardUser standardUser)
         {
-            return CannotManageError(targetUser.Type, newTargetUser.Type);
+            return null;
         }
 
-        return ValidateCustomPermissionsGrant(actingUser, newTargetUser);
+        return GetActingUser(standardUser, targetUser.OrganizationId)
+            .Match(
+                error => error,
+                role => CanManageRoleChange(role, targetUser, newTargetUser));
     }
+
+    private static CommandResult<OrganizationUserRole> GetActingUser(StandardUser standardUser, Guid organizationId) =>
+        standardUser switch
+        {
+            // Providers can act as owners when managing organization members
+            { IsProvider: true } => new OrganizationUserRole(OrganizationUserType.Owner, organizationId),
+            { OrganizationUserType: not null } => new OrganizationUserRole(standardUser.OrganizationUserType.Value, organizationId, standardUser.Permissions),
+            _ => new ActingUserMustBeMemberOrProvider()
+        };
 
     public async Task<Error?> ValidateFreeOrgAdminLimitAsync(Guid? userId, PlanType planType,
         OrganizationUserType currentUserType, OrganizationUserType newUserType)
@@ -93,9 +103,4 @@ public class OrganizationUserValidationService(
                 targetType is OrganizationUserType.User or OrganizationUserType.Custom,
             _ => false
         };
-
-    // Provider users aren't org members but hold Owner-level authority.
-    private async Task<bool> IsProviderAsync(Guid actingUserId, Guid organizationId) =>
-        (await providerUserRepository.GetManyOrganizationDetailsByUserAsync(actingUserId, ProviderUserStatusType.Confirmed))
-        .Any(po => po.OrganizationId == organizationId);
 }

@@ -21,6 +21,10 @@ public static class ServiceCollectionExtensions
                 "Bitwarden-Region",
                 globalSettings.BaseServiceUri.CloudRegion?.ToLower(CultureInfo.InvariantCulture) ?? "us"
             );
+            if (!string.IsNullOrEmpty(globalSettings.PricingApiKey))
+            {
+                httpClient.DefaultRequestHeaders.Add("X-Pricing-Api-Key", globalSettings.PricingApiKey);
+            }
         });
     }
 }

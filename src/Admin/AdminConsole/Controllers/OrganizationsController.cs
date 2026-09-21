@@ -29,6 +29,7 @@ using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
 using Bit.Core.Billing.Services;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -587,7 +588,10 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationRepository.DeleteAsync(organization);
+        // Enqueue the event-log cleanup in the same transaction as the delete. This is an
+        // established organization, so its events must be purged from storage for GDPR.
+        await _organizationRepository.DeleteAndCreateDeleteTasksAsync(
+            organization, [OrganizationDeleteTaskType.EventsCleanup]);
         await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
 
         return RedirectToAction("Index");

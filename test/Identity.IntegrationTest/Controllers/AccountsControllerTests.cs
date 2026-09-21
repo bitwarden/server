@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
@@ -30,9 +29,6 @@ namespace Bit.Identity.IntegrationTest.Controllers;
 
 public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 {
-    private const string GenerateInviteLinkFlagSettingKey =
-        $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.GenerateInviteLink}";
-
     private readonly IdentityApplicationFactory _factory;
 
     public AccountsControllerTests(IdentityApplicationFactory factory)
@@ -108,7 +104,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     {
         // OpenOrgInvite payload without a matching invite link on the org is rejected.
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var email = $"test+register+badlink+{name}@email.com";
 
@@ -156,39 +151,10 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task PostRegisterSendEmailVerification_WithOpenOrgInviteAndFeatureFlagOff_ReturnsNotFound(string name, bool receiveMarketingEmails)
-    {
-        // With the flag turned off, the endpoint must refuse to honor the OpenOrgInvite payload
-        // — mirroring [RequireFeature] on the sibling invite-link surfaces (→ 404). The other
-        // invite-link OpenOrgInvite tests in this file explicitly turn the flag ON; this one is
-        // the sole flag-OFF integration case.
-        var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "false");
-
-        var model = new RegisterSendVerificationEmailRequestModel
-        {
-            Email = $"test+flagoff+{name}@example.com",
-            Name = name,
-            ReceiveMarketingEmails = receiveMarketingEmails,
-            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
-            {
-                OrganizationId = Guid.NewGuid(),
-                Code = Guid.NewGuid(),
-                SealedOpenOrgInviteData = "opaque-base64url-blob",
-            },
-        };
-
-        var context = await localFactory.PostRegisterSendEmailVerificationAsync(model);
-
-        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
-    }
-
-    [Theory, BitAutoData]
     public async Task PostRegisterSendEmailVerification_WithMatchingOrgInvite_BypassesClaimedDomainBlock(string name, bool receiveMarketingEmails)
     {
         // Isolated factory to keep the seeded org/policy/domain out of the shared fixture.
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var email = $"test+claimed+{name}@{claimedDomain}";
@@ -218,7 +184,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         // Attacker scenario: sender's invite belongs to OrgB, but the email's domain is claimed by OrgA.
         // OrgA's block policy must still fire because the exclusion is scoped to OrgB, not OrgA.
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var email = $"test+attacker+{name}@{claimedDomain}";
@@ -254,7 +219,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         // exclusion — the invite link would reject this email at accept time, so the exclusion
         // must gate on the link's AllowedDomains as well.
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var permittedDomain = $"partner-{Guid.NewGuid():N}.example.com";
@@ -600,13 +564,75 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithOpenOrgInviteAndOpenRegistrationDisabled_Succeeds(
+        [Required] string name, bool receiveMarketingEmails,
+        [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint,
+        [Required] string userSymmetricKey, [Required] KeysRequestModel userAsymmetricKeys,
+        int kdfMemory, int kdfParallelism)
+    {
+        // The DisableUserRegistration self-hosted admin toggle targets open self-registration.
+        // Possession of a valid invite link is the authorization for this path, so both
+        // register-start and register-finish via an open org invite must proceed even when
+        // that toggle is on.
+        userAsymmetricKeys.AccountKeys = null;
+        var localFactory = new IdentityApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:disableUserRegistration", "true");
+
+        var email = $"test+openinvitedisabled+{name}@email.com";
+        var (_, inviteLink) = await SeedOrgWithInviteLinkAsync(localFactory, allowedDomains: new[] { "email.com" });
+
+        var sendReqModel = new RegisterSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            OpenOrgInvite = new RegisterStartOpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+                SealedOpenOrgInviteData = "opaque-base64url-blob",
+            },
+        };
+        var sendCtx = await localFactory.PostRegisterSendEmailVerificationAsync(sendReqModel);
+        Assert.Equal(StatusCodes.Status204NoContent, sendCtx.Response.StatusCode);
+        Assert.NotNull(localFactory.RegistrationTokens[email]);
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            EmailVerificationToken = localFactory.RegistrationTokens[email],
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism,
+            OpenOrgInvite = new OpenOrgInviteRequestModel
+            {
+                OrganizationId = inviteLink.OrganizationId,
+                Code = Guid.Parse(inviteLink.Code),
+            },
+        };
+        var finishCtx = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, finishCtx.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users.SingleAsync(u => u.Email == email);
+        Assert.NotNull(user);
+        Assert.Equal(email, user.Email);
+        Assert.Equal(name, user.Name);
+    }
+
+    [Theory, BitAutoData]
     public async Task RegistrationWithEmailVerification_WithMatchingOpenOrgInvite_Succeeds([Required] string name, bool receiveMarketingEmails,
         [StringLength(1000), Required] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, [Required] string userSymmetricKey,
         [Required] KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
     {
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var email = $"test+claimedfinish+{name}@{claimedDomain}";
@@ -671,7 +697,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     {
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var email = $"test+2fapolicy+{name}@email.com";
         var (_, inviteLink) = await SeedOrgWithInviteLinkAndTwoFactorPolicyAsync(localFactory);
@@ -738,7 +763,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         // is persisted. Neither fix in isolation covers this cross-feature path.
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var email = $"test+bothpolicies+{name}@{claimedDomain}";
@@ -808,7 +832,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         // not receive the domain-block exclusion when finishing registration either.
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var email = $"test+finishnotallowed+{name}@email.com";
 
@@ -853,7 +876,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
     {
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var email = $"test+register+badfinishlink+{name}@email.com";
 
@@ -897,7 +919,6 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         // block policy. The domain-block check must still exclude only OrgB, so OrgA's policy fires → 400.
         userAsymmetricKeys.AccountKeys = null;
         var localFactory = new IdentityApplicationFactory();
-        localFactory.UpdateConfiguration(GenerateInviteLinkFlagSettingKey, "true");
 
         var claimedDomain = $"claimed-{Guid.NewGuid():N}.example.com";
         var email = $"test+attackerfinish+{name}@{claimedDomain}";

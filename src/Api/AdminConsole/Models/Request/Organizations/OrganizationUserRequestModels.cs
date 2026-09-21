@@ -117,7 +117,11 @@ public class OrganizationUserUpdateRequestModel
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
+        // Custom permissions only apply to the Custom role. Clear them for any other role so a member demoted from
+        // Custom doesn't keep a stale permissions blob.
+        existingUser.Permissions = Type.Value == OrganizationUserType.Custom
+            ? CoreHelpers.ClassToJsonData(Permissions)
+            : null;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         existingUser.AccessPam = AccessPam;
         return existingUser;

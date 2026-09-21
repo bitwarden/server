@@ -88,6 +88,8 @@ public class InviteUsersPasswordManagerValidatorTests
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
+        Assert.Equal(
+            string.Format(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, organization.Seats),
+            (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 }

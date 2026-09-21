@@ -2,7 +2,7 @@
 using Bit.Core.KeyManagement.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -37,9 +37,9 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
+    public DatabaseTransactionAction SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (connection, transaction) =>
         {
             await connection.QueryAsync(
                 "[dbo].[UserSignatureKeyPair_SetForRotation]",
@@ -58,9 +58,9 @@ public class UserSignatureKeyPairRepository : Repository<UserSignatureKeyPair, G
         };
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
+    public DatabaseTransactionAction UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (connection, transaction) =>
         {
             await connection.QueryAsync(
                 "[dbo].[UserSignatureKeyPair_UpdateForRotation]",

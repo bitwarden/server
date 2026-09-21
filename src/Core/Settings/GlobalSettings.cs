@@ -82,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
-    public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
@@ -96,11 +95,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
-    /// <summary>
-    /// This Hash Key is used to prevent enumeration attacks against the Send Access feature.
-    /// </summary>
-    public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual string PricingApiKey { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
     public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
@@ -329,6 +325,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
 
+            public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -370,6 +369,9 @@ public class GlobalSettings : IGlobalSettings
 
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
+
+            public TimeSpan DeadLetterTimeToLive { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
@@ -571,6 +573,10 @@ public class GlobalSettings : IGlobalSettings
         public string BlobName { get; set; } = "dataprotection.pfx";
 
         public string? CertificatePassword { get; set; }
+
+        public KeyProtectionPolicyType KeyProtectionPolicy { get; set; } =
+            KeyProtectionPolicyType.Certificate;
+
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
@@ -589,6 +595,24 @@ public class GlobalSettings : IGlobalSettings
         /// before activating PendingProtection to keep existing keys readable.
         /// </summary>
         public PendingProtectionSettings? PendingProtection { get; set; }
+
+        /// <summary>
+        /// Defines how ASP.NET Core data-protection keys are protected at rest.
+        /// Migration between types is not supported.
+        /// </summary>
+        public enum KeyProtectionPolicyType
+        {
+            /// <summary>
+            /// ASP.NET Core data-protection keys are wrapped using the configured certificate.
+            /// </summary>
+            Certificate = 0,
+
+            /// <summary>
+            /// Keys are persisted without application-level certificate wrapping and rely on storage
+            /// encryption at rest and access controls.
+            /// </summary>
+            StorageManaged = 1,
+        }
 
         public class CertificateInfo
         {
@@ -723,13 +747,6 @@ public class GlobalSettings : IGlobalSettings
         public string AccessKeyId { get; set; }
         public string AccessKeySecret { get; set; }
         public string Region { get; set; }
-    }
-
-    public class ServiceBusSettings : ConnectionStringSettings
-    {
-        public string ApplicationCacheTopicName { get; set; }
-        public string ApplicationCacheSubscriptionName { get; set; }
-        public string WebSiteInstanceId { get; set; }
     }
 
     public class AppleIapSettings

@@ -4,6 +4,7 @@ using Bit.Api.Tools.Models.Request;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
@@ -65,7 +66,7 @@ public class SendRequestModelTests
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
-            AuthType = AuthType.Password,
+            AuthType = AuthType.Email,
             DeletionDate = deletionDate,
             Disabled = false,
             ExpirationDate = null,
@@ -74,15 +75,16 @@ public class SendRequestModelTests
             MaxAccessCount = null,
             Name = "encrypted_name",
             Notes = null,
-            Password = "Password",
-            Data = "encrypted_data",
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+            },
             Type = SendType.Item,
         };
 
         var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
-        sendAuthorizationService.HashPassword(Arg.Any<string>())
-            .Returns((info) => $"hashed_{(string)info[0]}");
-
         var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
 
         Assert.Equal(deletionDate, send.DeletionDate);
@@ -90,8 +92,10 @@ public class SendRequestModelTests
         Assert.Null(send.ExpirationDate);
         Assert.False(send.HideEmail);
         Assert.Equal("encrypted_key", send.Key);
-        Assert.Equal("hashed_Password", send.Password);
-        Assert.Equal("encrypted_data", send.Data);
+        Assert.Equal("owner@bitwarden.com", send.Emails);
+        var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
+        Assert.Equal(sendItemData.EncryptionVersion, sendRequest.Data.EncryptionVersion);
+        Assert.Equal(sendItemData.Data, sendRequest.Data.Data);
     }
 
     [Fact]
@@ -100,7 +104,7 @@ public class SendRequestModelTests
         var deletionDate = DateTime.UtcNow.AddDays(5);
         var sendRequest = new SendRequestModel
         {
-            AuthType = AuthType.Password,
+            AuthType = AuthType.Email,
             DeletionDate = deletionDate,
             Disabled = false,
             ExpirationDate = null,
@@ -109,14 +113,12 @@ public class SendRequestModelTests
             MaxAccessCount = null,
             Name = "encrypted_name",
             Notes = null,
-            Password = "Password",
+            Emails = "owner@bitwarden.com",
             Data = null,
             Type = SendType.Item,
         };
 
         var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
-        sendAuthorizationService.HashPassword(Arg.Any<string>())
-            .Returns((info) => $"hashed_{(string)info[0]}");
 
         Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
     }

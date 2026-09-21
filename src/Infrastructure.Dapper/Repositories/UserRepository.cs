@@ -6,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -242,7 +241,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(
         User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
@@ -292,7 +291,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public async Task UpdateUserKeyAndEncryptedDataV2Async(
         User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<DatabaseTransactionAction> updateDataActions)
     {
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();

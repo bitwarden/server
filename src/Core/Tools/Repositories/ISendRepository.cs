@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 
@@ -76,7 +75,7 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="sends">A list of sends with updated data</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<Send> sends);
 
     /// <summary>

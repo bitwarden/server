@@ -5,6 +5,7 @@ using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -15,6 +16,9 @@ namespace Bit.SharedWeb.Test.DataProtectionServicesTests;
 
 public class DataProtectionServicesTests
 {
+    private const string AzuriteImage =
+        "mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5";
+
     // Created using:
     // using var rsa = RSA.Create(2048);
     // var now = DateTimeOffset.UtcNow;
@@ -106,6 +110,42 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
                 Assert.Equal("MyTestData", context.Protector.Unprotect(protectedData));
             }
         );
+    }
+
+    [Fact]
+    public async Task StorageManaged_PersistsUnwrappedKeysWithoutAcquiringCertificates()
+    {
+        await using var azurite = CreateAzuriteContainer();
+
+        await azurite.StartAsync();
+
+        var azuriteConnectionString = $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://{azurite.Hostname}:{azurite.GetMappedPublicPort(10000)}/devstoreaccount1;";
+
+        var blobServiceClient = new BlobServiceClient(azuriteConnectionString);
+        var dataProtection = (await blobServiceClient.CreateBlobContainerAsync("aspnet-dataprotection")).Value;
+        var configuration = new Dictionary<string, string?>
+        {
+            { "GlobalSettings:Storage:ConnectionString", azuriteConnectionString },
+            { "GlobalSettings:DataProtection:KeyProtectionPolicy", "StorageManaged" },
+            { "GlobalSettings:DataProtection:CertificatePassword", "Unusable-Protection-Password" },
+            { "GlobalSettings:DataProtection:BlobName", "missing-protection-certificate.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:FileName", "missing-unprotect-certificate.pfx" },
+            { "GlobalSettings:DataProtection:UnprotectCertificates:0:Password", "Unusable-Unprotect-Password" },
+        };
+
+        string protectedData;
+        using (var firstApp = CreateApp(configuration))
+        {
+            protectedData = GetProtector(firstApp).Protect("StorageManagedData");
+        }
+
+        var keyRingBlob = dataProtection.GetBlobClient("keys.xml");
+        Assert.True((await keyRingBlob.ExistsAsync()).Value);
+        var keyRing = (await keyRingBlob.DownloadContentAsync()).Value.Content.ToString();
+        Assert.DoesNotContain("encryptedSecret", keyRing);
+
+        using var secondApp = CreateApp(configuration);
+        Assert.Equal("StorageManagedData", GetProtector(secondApp).Unprotect(protectedData));
     }
 
     [Fact]
@@ -225,9 +265,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // for a deployment sequence that is safe regardless of the order changes land.
 
         // Setup "existing" azure infrastructure.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -361,9 +399,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         //   Secret:     CertificatePassword = NewPw
         //   Non-secret: BlobName = "mynewcert.pfx"
         //   Non-secret: PendingProtection:Enabled = false  → falls back to updated BlobName/CertificatePassword
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -490,9 +526,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // Previously, PendingProtection was nested inside the CertificatePassword branch, so
         // an absent/placeholder CertificatePassword silently skipped pending and caused a
         // misleading "check your blob storage connection string" startup failure.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -536,9 +570,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // divergent key ring across a rolling deploy. The current implementation throws
         // InvalidOperationException at startup with the call-site context ("Unprotect 0") in
         // the message so operators can tell which entry went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -575,9 +607,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // implementation throws InvalidOperationException at startup with the call-site context
         // ("Unprotect 0") in the message and the underlying CryptographicException as the inner
         // exception so operators can tell which entry went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -617,9 +647,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // become an object but with a null `FileName` which led to an ArgumentNullException that was
         // swallowed and `null` was returned. In our new fail-fast code this properly leads to an exception
         // at startup.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -664,9 +692,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // but as long as Enabled=false is in their that unprotect certificate will not attempt to be
         // loaded and an otherwise invalid configuration does not cause startup issues and can be used.
         // An unprotect certificate that has been used to actually protect keys should NEVER be disabled
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -717,9 +743,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // InvalidOperationException with the call-site context ("protect") in the message and
         // the underlying RequestFailedException as the inner exception so operators can tell
         // which cert went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -743,13 +767,9 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     [Fact]
     public void ThumbprintPlaceholder_InDevelopment_DoesNotThrow()
     {
-        // In local development, developers often have a placeholder thumbprint like "____"
-        // in their config because no real cert exists on their machine. The previous
-        // implementation threw InvalidOperationException at startup whenever GetCertificate
-        // returned null, even in Development — making local development impossible with a
-        // thumbprint configured. The current implementation defers the null check to the
-        // non-development guard further down, so Development environments start up cleanly
-        // and data protection simply uses its ephemeral default storage.
+        // Development does not use certificate key wrapping, so certificate acquisition is
+        // skipped entirely. Placeholder thumbprints therefore do not prevent local startup,
+        // and data protection retains its existing Development persistence behavior.
         using var services = CreateApp(
             new Dictionary<string, string?>
             {
@@ -793,9 +813,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         // throws InvalidOperationException with the call-site context ("protect") in the message
         // and the underlying CryptographicException as the inner exception so operators can tell
         // which cert went wrong from the log alone.
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 
@@ -836,12 +854,15 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
         return protectedData;
     }
 
+    private static IContainer CreateAzuriteContainer() =>
+        new ContainerBuilder(AzuriteImage)
+            .WithPortBinding(10000, true)
+            .Build();
+
     private static async Task RunTestAsync(Func<TestSetupContext, Task> testSetup, Action<TestRunContext> test)
     {
         // Start azurite
-        await using var azurite = new ContainerBuilder("mcr.microsoft.com/azure-storage/azurite")
-            .WithPortBinding(10000, true)
-            .Build();
+        await using var azurite = CreateAzuriteContainer();
 
         await azurite.StartAsync();
 

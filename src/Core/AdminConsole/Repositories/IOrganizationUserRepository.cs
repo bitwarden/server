@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -64,6 +63,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
+    /// <summary>
+    /// The batch form of <see cref="GetByOrganizationEmailAsync"/>. Matches on OrganizationUser.Email, which
+    /// only members without a linked account (staged, invited) have.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationEmailsAsync(Guid organizationId, IEnumerable<string> emails);
     Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
     /// <summary>
@@ -88,7 +92,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="resetPasswordKeys">A list of organization users with updated reset password keys</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
     /// <summary>

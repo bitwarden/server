@@ -15,6 +15,9 @@ namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAccessLeaseRepository
 {
+    // Bounds CreateFromApprovedRequestAsync's retry of provider serialization failures.
+    private const int MaxMintAttempts = 3;
+
     public AccessLeaseRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, context => context.AccessLeases)
     { }
@@ -115,7 +118,32 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
+    /// <remarks>
+    /// A provider serialization failure is retried rather than surfaced. The per-cipher guard below reads a
+    /// predicate rather than a row, so under Serializable isolation this transaction is a candidate for abort
+    /// whenever any other transaction inserts a lease before it commits -- including one that grants access to an
+    /// unrelated cipher. A losing attempt therefore runs again on a fresh transaction and re-reads the state its
+    /// guard needs, arriving at the same deterministic outcome the stored procedure's UPDLOCK/HOLDLOCK blocks for.
+    /// Retries are bounded: a failure that outlives them propagates, because on a path that grants access to Vault
+    /// Data an unresolved persistence failure must not be reported as a benign mint outcome.
+    /// </remarks>
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
+        bool enforceSingleActiveLease)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await MintFromApprovedRequestAsync(lease, now, enforceSingleActiveLease);
+            }
+            catch (Exception e) when (attempt < MaxMintAttempts && IsSerializationFailure(e))
+            {
+                // The aborted transaction committed nothing, so the next attempt starts from a fresh scope.
+            }
+        }
+    }
+
+    private async Task<AccessLeaseMintOutcome> MintFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -125,9 +153,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // UPDLOCK/HOLDLOCK range lock used for the per-cipher singleton guard: it keeps a concurrent same-cipher
         // activation from reading a pre-mint state. Unlike the SQL Server proc (which blocks a concurrent caller
         // until this transaction commits, then re-evaluates deterministically), a losing concurrent transaction here
-        // may instead fail at commit time with a provider-level serialization error rather than cleanly returning
-        // SingleActiveLeaseConflict/PreconditionFailed -- callers should be prepared to treat such an exception as a
-        // conflict and re-read.
+        // fails at commit time with a provider-level serialization error instead of cleanly returning
+        // SingleActiveLeaseConflict/PreconditionFailed -- which is why the caller of this method retries it.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         try
@@ -247,6 +274,23 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         await transaction.CommitAsync();
     }
+
+    /// <summary>
+    /// True when the provider refused the transaction because it could not serialize it against a concurrent one:
+    /// PostgreSQL's SSI aborting it at commit, or a deadlock victim elsewhere. The transaction is already gone in
+    /// every case, so the only recovery is to run the whole attempt again.
+    /// </summary>
+    private static bool IsSerializationFailure(Exception e) => e switch
+    {
+        Npgsql.PostgresException pg => pg.SqlState is "40001" or "40P01",
+        MySqlConnector.MySqlException my => my.ErrorCode is MySqlConnector.MySqlErrorCode.LockDeadlock
+            or MySqlConnector.MySqlErrorCode.LockWaitTimeout,
+        Microsoft.Data.SqlClient.SqlException ms => ms.Errors
+            .Cast<Microsoft.Data.SqlClient.SqlError>()
+            .Any(error => error.Number is 1205),
+        Microsoft.Data.Sqlite.SqliteException lite => lite.SqliteErrorCode is 5 or 6,
+        _ => e.InnerException is not null && IsSerializationFailure(e.InnerException),
+    };
 
     /// <summary>
     /// True when the write failed because a duplicate key was inserted -- here, the unique

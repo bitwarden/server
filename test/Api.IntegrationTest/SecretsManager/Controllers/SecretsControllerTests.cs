@@ -104,7 +104,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var secretIds = new List<Guid>();
         for (var i = 0; i < 3; i++)
         {
-            var secret = await _secretRepository.CreateAsync(new Secret
+            var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
             {
                 OrganizationId = org.Id,
                 Key = _mockEncryptedString,
@@ -310,7 +310,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -357,7 +357,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             await _loginHelper.LoginAsync(email);
         }
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -414,7 +414,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             Name = _mockEncryptedString
         });
 
-        await _secretRepository.CreateAsync(new Secret
+        await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -461,7 +461,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -496,7 +496,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -579,7 +579,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var project = await _projectRepository.CreateAsync(new Project { Name = "123", OrganizationId = anotherOrg.Id });
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -608,7 +608,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var projectA = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123A" });
         var projectB = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123B" });
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -641,7 +641,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -727,7 +727,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -973,7 +973,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var secretIds = new List<Guid>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var secret = await _secretRepository.CreateAsync(new Secret
+            var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
             {
                 OrganizationId = orgId,
                 Key = _mockEncryptedString,
@@ -1167,7 +1167,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         await SetupProjectPermissionAndLoginAsync(permissionType, project);
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,

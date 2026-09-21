@@ -10,7 +10,7 @@
   "dependencies": {
     "bootstrap": "5.3.6",
     "font-awesome": "4.7.0",
-    "jquery": "3.7.1"
+    "jquery": "4.0.0"
   },
   "devDependencies": {
     "css-loader": "7.1.2",

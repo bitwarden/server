@@ -1,15 +1,16 @@
 ﻿namespace Bit.Sso.Utilities;
 
 /// <summary>
-/// Builds redirect URLs back to the web client's /login from the SSO callback
-/// when authentication is refused for a recoverable reason. Localizes the URL
-/// contract in one place so future scenarios reuse the same shape rather than
-/// duplicating query-string composition at each catch site.
+/// Builds redirect URLs the SSO callback sends the browser to when authentication
+/// is refused. Two shapes are supported: a <c>/login</c> redirect for cases the
+/// user can retry after a stashed-invite match, and a <c>/sso-login-failed</c>
+/// direct redirect for cases with no user-side remediation. Localized here so
+/// query-string composition doesn't drift across catch sites.
 /// </summary>
 public static class SsoRedirectUrlBuilder
 {
     /// <summary>
-    /// Stable error codes appended to the redirect URL as the `error` query
+    /// Stable error codes appended to the /login redirect URL as the `error` query
     /// param. The web client's WebLoginComponentService switches on these.
     /// Adding a new scenario: add a constant here, update the switch in
     /// web-login-component.service.ts, add a matching i18n key.
@@ -18,7 +19,18 @@ public static class SsoRedirectUrlBuilder
     {
         public const string InviteAcceptanceRequired = "ssoOrgInviteAcceptanceRequired";
         public const string OrgMembershipRequired = "ssoOrgMembershipRequired";
+        public const string StagedOrgUserInviteAcceptanceRequired = "ssoStagedOrgUserInviteAcceptanceRequired";
         // Future: AccessRevoked = "ssoOrganizationAccessRevoked", etc.
+    }
+
+    /// <summary>
+    /// Stable kind identifiers appended to the /sso-login-failed redirect URL as
+    /// the `kind` query param. Must match the web client's
+    /// <c>SsoLoginFailedErrorKind</c> string values.
+    /// </summary>
+    public static class SsoLoginFailedErrorKind
+    {
+        public const string NoSeatsAvailable = "no-seats-available";
     }
 
     /// <summary>
@@ -49,5 +61,15 @@ public static class SsoRedirectUrlBuilder
                + $"&organizationName={Uri.EscapeDataString(organizationDisplayName)}"
                + $"&error={errorCode}";
         return $"{vaultWithHashUrl}/login?{qs}";
+    }
+
+    /// <summary>
+    /// Composes a redirect URL of the form
+    /// <c>{vaultWithHashUrl}/sso-login-failed?kind=…</c>. The <c>kind</c> value is
+    /// a server-controlled constant from <see cref="SsoLoginFailedErrorKind"/>.
+    /// </summary>
+    public static string BuildSsoLoginFailedRedirectUrl(string vaultWithHashUrl, string kind)
+    {
+        return $"{vaultWithHashUrl}/sso-login-failed?kind={kind}";
     }
 }

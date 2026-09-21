@@ -34,6 +34,9 @@ using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
+using Bit.HttpExtensions;
+using Bit.Subscriptions.Organization;
+using Bit.Subscriptions.User;
 
 
 #if !OSS
@@ -211,6 +214,14 @@ public class Startup
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
+        // Billing subscriptions minimal API libraries
+        services.AddUserSubscriptions();
+        services.AddOrganizationSubscriptions();
+        if (!globalSettings.SelfHosted)
+        {
+            services.AddOpenApiEndpointDataSource(MapSubscriptionEndpoints);
+        }
+
         // MVC
         services.AddMvc(config =>
         {
@@ -223,12 +234,6 @@ public class Startup
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
-
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
-        }
 
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);
@@ -301,6 +306,12 @@ public class Startup
                 {
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
                 });
+            }
+
+            // Billing subscriptions minimal API endpoints
+            if (!globalSettings.SelfHosted)
+            {
+                MapSubscriptionEndpoints(endpoints);
             }
         });
 
@@ -394,5 +405,13 @@ public class Startup
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);
+    }
+
+    private static void MapSubscriptionEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        endpoints.MapGroup("/account/billing/subscription/premium")
+            .MapUserSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
+            .MapOrganizationSubscriptionEndpoints();
     }
 }

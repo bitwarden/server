@@ -6,9 +6,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.KeyManagement.UserKey.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -164,7 +164,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ModelUser(model);
 
         model.AccountKeys.PublicKeyEncryptionKeyPairData.PublicKey = "new-public";
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
     }
 
@@ -176,7 +176,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType2String;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
     }
 
@@ -188,7 +188,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType7String;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided account private key was not wrapped with AES-256-CBC-HMAC", ex.Message);
     }
@@ -200,7 +200,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ExistingUser(user, signatureRepository);
         SetV1ModelUser(model);
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions);
         Assert.Empty(saveEncryptedDataActions);
     }
@@ -212,7 +212,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ExistingUser(user, signatureRepository);
         SetV2ModelUser(model);
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions);
         Assert.NotEmpty(saveEncryptedDataActions);
         Assert.Equal(user.SecurityState, model.AccountKeys.SecurityStateData!.SecurityState);
@@ -226,7 +226,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.SignatureKeyPairData.VerifyingKey = "different-verifying-key";
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided verifying key does not match the user's current verifying key.", ex.Message);
     }
@@ -239,7 +239,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey = null;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("No signed public key provided, but the user already has a signature key pair.", ex.Message);
     }
@@ -252,7 +252,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.SignatureKeyPairData.WrappedSigningKey = _mockEncryptedType2String;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided signing key data is not wrapped with XChaCha20-Poly1305.", ex.Message);
     }
@@ -265,7 +265,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.SignatureKeyPairData.VerifyingKey = "";
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided signature key pair data does not contain a valid verifying key.", ex.Message);
     }
@@ -278,7 +278,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = _mockEncryptedType2String;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("The provided private key encryption key is not wrapped with XChaCha20-Poly1305.", ex.Message);
     }
@@ -291,7 +291,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.SignedPublicKey = null;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("No signed public key provided, but the user already has a signature key pair.", ex.Message);
     }
@@ -304,7 +304,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.SecurityStateData = null;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("No signed security state provider for V2 user", ex.Message);
     }
@@ -317,7 +317,7 @@ public class RotateUserAccountKeysCommandTests
         SetV2ModelUser(model);
         model.AccountKeys.SignatureKeyPairData = null;
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("Signature key pair data is required for V2 encryption.", ex.Message);
     }
@@ -330,7 +330,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "";
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<ArgumentException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("Invalid encryption type string.", ex.Message);
     }
@@ -343,7 +343,7 @@ public class RotateUserAccountKeysCommandTests
         SetV1ModelUser(model);
         model.AccountKeys.PublicKeyEncryptionKeyPairData.WrappedPrivateKey = "9.xxx";
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
         var ex = await Assert.ThrowsAsync<ArgumentException>(async () => await sutProvider.Sut.UpdateAccountKeysAsync(model, user, saveEncryptedDataActions));
         Assert.Equal("Invalid encryption type string.", ex.Message);
     }
@@ -365,12 +365,12 @@ public class RotateUserAccountKeysCommandTests
         send.RevisionDate = oldDate;
         model.Sends = [send];
 
-        var saveEncryptedDataActions = new List<UpdateEncryptedDataForKeyRotation>();
+        var saveEncryptedDataActions = new List<DatabaseTransactionAction>();
 
         sutProvider.Sut.UpdateUserData(model, user, saveEncryptedDataActions);
         foreach (var dataAction in saveEncryptedDataActions)
         {
-            await dataAction.Invoke();
+            await dataAction.Invoke(null!, null!);
         }
 
         var updatedCiphers = sutProvider.GetDependency<ICipherRepository>()
@@ -435,7 +435,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -466,7 +466,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent without reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -506,7 +506,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Push notification sent without reason (standard logout)
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -549,7 +549,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -584,7 +584,7 @@ public class RotateUserAccountKeysCommandTests
 
         // Assert - Standard logout push, not KeyRotation reason
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -644,9 +644,9 @@ public class RotateUserAccountKeysCommandTests
         Assert.False(result.Succeeded);
         Assert.Contains(result.Errors, e => e.Code == "SomeError");
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive()
-            .UpdateUserKeyAndEncryptedDataV2Async(Arg.Any<User>(), Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(Arg.Any<User>(), Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
-            .PushLogOutAsync(Arg.Any<Guid>(), Arg.Any<bool>(), Arg.Any<PushNotificationLogOutReason?>());
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -739,10 +739,10 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.Equal(model.MasterPasswordUnlockData.MasterKeyWrappedUserKey, user.Key);
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -769,7 +769,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -794,7 +794,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.V2UpgradeToken);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -970,9 +970,9 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -991,9 +991,9 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1020,7 +1020,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -1041,7 +1041,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.V2UpgradeToken);
         Assert.Null(user.Key);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1066,7 +1066,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Null(user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1112,9 +1112,9 @@ public class RotateUserAccountKeysCommandTests
         Assert.Equal(model.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1133,9 +1133,9 @@ public class RotateUserAccountKeysCommandTests
         Assert.Equal(model.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IUserRepository>().Received(1)
-            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<UpdateEncryptedDataForKeyRotation>>());
+            .UpdateUserKeyAndEncryptedDataV2Async(user, Arg.Any<IEnumerable<DatabaseTransactionAction>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]
@@ -1162,7 +1162,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Contains(_mockEncryptedType2String, user.V2UpgradeToken);
         Assert.Equal(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KeyRotation);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KeyRotation));
     }
 
     [Theory]
@@ -1187,7 +1187,7 @@ public class RotateUserAccountKeysCommandTests
         Assert.Equal(model.KeyConnectorKeyWrappedUserKey, user.Key);
         Assert.NotEqual(originalSecurityStamp, user.SecurityStamp);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
     [Theory]

@@ -3,7 +3,7 @@
 using System.Data;
 using System.Security.Cryptography;
 using Bit.Core;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
@@ -132,10 +132,13 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId, IEnumerable<Send> sends)
+    public DatabaseTransactionAction UpdateForKeyRotation(Guid userId, IEnumerable<Send> sends)
     {
-        return async (connection, transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Protect all sends before bulk update
             var sendsList = sends.ToList();
             foreach (var send in sendsList)

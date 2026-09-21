@@ -35,6 +35,13 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
     /// </summary>
     public IHubClients NotificationsHubClients { get; }
 
+    /// <summary>
+    /// The mock <see cref="IHubClients"/> wired into <see cref="AnonymousNotificationsHub"/>. Use
+    /// this to assert that <c>POST /send</c> routed a notification to the expected anonymous group
+    /// (e.g. <see cref="Bit.Core.Enums.PushType.AuthRequestResponse"/>).
+    /// </summary>
+    public IHubClients AnonymousHubClients { get; }
+
     public NotificationsApplicationFactory()
     {
         _identityFactory = new IdentityApplicationFactory();
@@ -52,7 +59,8 @@ public sealed class NotificationsApplicationFactory : IAsyncDisposable
 
         var (notificationsHubContext, notificationsClients) = BuildHubContext<NotificationsHub>();
         NotificationsHubClients = notificationsClients;
-        var (anonymousHubContext, _) = BuildHubContext<AnonymousNotificationsHub>();
+        var (anonymousHubContext, anonymousClients) = BuildHubContext<AnonymousNotificationsHub>();
+        AnonymousHubClients = anonymousClients;
 
         _notificationsFactory = new WebApplicationFactory<Bit.Notifications.Program>().WithWebHostBuilder(builder =>
         {

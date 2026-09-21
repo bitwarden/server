@@ -169,10 +169,17 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
         bool accessPam,
         TimeProvider timeProvider)
     {
-        if (permissions is not null)
+        if (organizationUserType != OrganizationUserType.Custom)
+        {
+            // Custom permissions only apply to the Custom role. Clear them so a member demoted from Custom doesn't
+            // keep a stale permissions blob.
+            Permissions = null;
+        }
+        else if (permissions is not null)
         {
             SetPermissions(permissions);
         }
+
         Type = organizationUserType;
         AccessSecretsManager = accessSecretsManager;
         AccessPam = accessPam;
