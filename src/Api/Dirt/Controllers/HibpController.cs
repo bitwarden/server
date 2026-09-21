@@ -3,7 +3,6 @@
 
 using System.Net;
 using System.Security.Cryptography;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,37 +12,58 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Dirt.Controllers;
 
+/// <summary>
+/// Controller for endpoints that make calls to HaveIBeenPwned APIs. This avoids CORS complications in the browser by acting as a proxy for the client.
+/// </summary>
 [Route("hibp")]
 [Authorize("Application")]
 public class HibpController : Controller
 {
-    private const string HibpBreachApi = "https://haveibeenpwned.com/api/v3/breachedaccount/{0}" +
-        "?truncateResponse=false&includeUnverified=false";
-    private static HttpClient _httpClient;
-
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly IUserService _userService;
-    private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly string _userAgent;
-
-    static HibpController()
-    {
-        _httpClient = new HttpClient();
-    }
 
     public HibpController(
+        IHttpClientFactory httpClientFactory,
         IUserService userService,
-        ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
+        _httpClientFactory = httpClientFactory;
         _userService = userService;
-        _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _userAgent = _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden";
     }
 
+    // <summary>
+    // Forwards call to the HaveIBeenPwned Pwned passwords API for the supplied hash prefix and returns the response. 
+    // Documentation for the endpoint available at: https://haveibeenpwned.com/API/V3#PwnedPasswords
+    // </summary>
+    [HttpGet("range/{hash:length(5)}")]
+    public async Task<IActionResult> GetRangeAsync(string hash)
+    {
+        var httpClient = _httpClientFactory.CreateClient();
+
+        var url = $"https://api.pwnedpasswords.com/range/{hash}";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("User-Agent", _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
+        request.Headers.Add("Add-Padding", "true"); // enables padding in response to further protect privacy
+
+        var response = await httpClient.SendAsync(request);
+        if (response.IsSuccessStatusCode)
+        {
+            var data = await response.Content.ReadAsStringAsync();
+            return Content(data, "text/plain");
+        }
+        else
+        {
+            throw new BadRequestException("Request failed. Status code: " + response.StatusCode);
+        }
+    }
+
+    // <summary>
+    // Forwards call to the HaveIBeenPwned Breached Accounts API for the supplied username and returns the response. 
+    // Documentation for the endpoint available at: https://haveibeenpwned.com/API/V3#BreachesForAccount
     [HttpGet("breach")]
-    public async Task<IActionResult> Get(string username)
+    public async Task<IActionResult> GetBreachAsync(string username)
     {
         return await SendAsync(WebUtility.UrlEncode(username), true);
     }
@@ -54,11 +74,16 @@ public class HibpController : Controller
         {
             throw new BadRequestException("HaveIBeenPwned API key not set.");
         }
-        var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, username));
+
+        var httpClient = _httpClientFactory.CreateClient();
+
+        var url = $"https://haveibeenpwned.com/api/v3/breachedaccount/{username}?truncateResponse=false&includeUnverified=false";
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
         request.Headers.Add("hibp-client-id", GetClientId());
-        request.Headers.Add("User-Agent", _userAgent);
-        var response = await _httpClient.SendAsync(request);
+        request.Headers.Add("User-Agent", _globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
+
+        var response = await httpClient.SendAsync(request);
         if (response.IsSuccessStatusCode)
         {
             var data = await response.Content.ReadAsStringAsync();
