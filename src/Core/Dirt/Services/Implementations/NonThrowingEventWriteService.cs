@@ -9,6 +9,10 @@ namespace Bit.Core.Dirt.Services.Implementations;
 /// records an operation, it is not part of one, and a request must not fail because its event could not
 /// be written. A dropped write is reported through <see cref="EventWriteMetrics"/> and the log.
 /// </summary>
+/// <remarks>
+/// Not for callers whose purpose is to record the event itself, such as the Events host's collect
+/// endpoint, where a dropped write has to reach the client instead of reading as success.
+/// </remarks>
 public class NonThrowingEventWriteService : IEventWriteService
 {
     private readonly IEventWriteService _inner;
@@ -33,30 +37,37 @@ public class NonThrowingEventWriteService : IEventWriteService
         }
         catch (Exception ex)
         {
-            RecordDroppedWrite(ex, droppedCount: 1);
+            RecordDroppedWrite(ex, [e]);
         }
     }
 
     public async Task CreateManyAsync(IEnumerable<IEvent> events)
     {
-        // Materialized so the dropped count is accurate and a deferred sequence is not enumerated twice
-        var eventList = events as IList<IEvent> ?? events.ToList();
+        // Starts empty so a sequence that throws while being enumerated is still counted as a failure,
+        // with no events to attribute it to, rather than escaping a service that must not throw
+        IReadOnlyCollection<IEvent> eventList = [];
 
         try
         {
+            // Materialized so the dropped count is accurate and a deferred sequence is not enumerated twice
+            eventList = events as IReadOnlyCollection<IEvent> ?? events.ToList();
             await _inner.CreateManyAsync(eventList);
         }
         catch (Exception ex)
         {
-            RecordDroppedWrite(ex, eventList.Count);
+            RecordDroppedWrite(ex, eventList);
         }
     }
 
-    private void RecordDroppedWrite(Exception ex, int droppedCount)
+    private void RecordDroppedWrite(Exception ex, IReadOnlyCollection<IEvent> droppedEvents)
     {
-        _metrics.RecordWriteFailure(ex.GetType().Name, droppedCount);
+        _metrics.RecordWriteFailure(ex.GetType().Name, droppedEvents);
 
-        // The count is safe to log; the events themselves are not
-        _logger.LogError(ex, "Failed to write {DroppedCount} event(s). The events were dropped.", droppedCount);
+        // Counts and event types are safe to log; the events themselves are not
+        _logger.LogError(
+            ex,
+            "Failed to write {DroppedCount} event(s). The events were dropped. Types: {EventTypes}",
+            droppedEvents.Count,
+            droppedEvents.Select(droppedEvent => droppedEvent.Type).Distinct());
     }
 }

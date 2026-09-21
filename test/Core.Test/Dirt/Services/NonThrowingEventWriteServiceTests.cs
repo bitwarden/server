@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.Metrics;
 using Bit.Core.Dirt.Services.Implementations;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -100,6 +101,27 @@ public class NonThrowingEventWriteServiceTests
         Assert.Equal(1, TotalFor(metrics, EventWriteMetrics.DroppedInstrumentName));
     }
 
+    [Fact]
+    public async Task CreateManyAsync_EnumeratingTheSequenceThrows_DoesNotThrowAndCountsTheFailure()
+    {
+        var subject = BuildSubject(out var metrics);
+
+        static IEnumerable<IEvent> Failing()
+        {
+            throw new InvalidOperationException("projection blew up");
+#pragma warning disable CS0162 // Required to make the method an iterator
+            yield break;
+#pragma warning restore CS0162
+        }
+
+        await subject.CreateManyAsync(Failing());
+
+        Assert.Equal(1, TotalFor(metrics, EventWriteMetrics.WriteFailureInstrumentName));
+
+        // Nothing was enumerated, so there are no events to attribute the loss to
+        Assert.Equal(0, TotalFor(metrics, EventWriteMetrics.DroppedInstrumentName));
+    }
+
     [Theory, BitAutoData]
     public async Task CreateAsync_InnerServiceSucceeds_CountsNothing(EventMessage eventMessage)
     {
@@ -120,7 +142,31 @@ public class NonThrowingEventWriteServiceTests
         await subject.CreateAsync(eventMessage);
 
         var measurement = Assert.Single(metrics[EventWriteMetrics.WriteFailureInstrumentName].GetMeasurementSnapshot());
-        Assert.Equal(nameof(TimeoutException), measurement.Tags["exception.type"]);
+        Assert.Equal(nameof(TimeoutException), measurement.Tags[EventWriteMetrics.ExceptionTypeTagName]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateManyAsync_InnerServiceThrows_AttributesTheDroppedCountToEachEventType(
+        EventMessage firstLogin,
+        EventMessage secondLogin,
+        EventMessage failedLogin)
+    {
+        firstLogin.Type = EventType.User_LoggedIn;
+        secondLogin.Type = EventType.User_LoggedIn;
+        failedLogin.Type = EventType.User_FailedLogIn;
+        _inner.CreateManyAsync(Arg.Any<IEnumerable<IEvent>>()).ThrowsAsync(new InvalidOperationException("topic is full"));
+        var subject = BuildSubject(out var metrics);
+
+        await subject.CreateManyAsync([firstLogin, secondLogin, failedLogin]);
+
+        var byEventType = metrics[EventWriteMetrics.DroppedInstrumentName]
+            .GetMeasurementSnapshot()
+            .ToDictionary(
+                measurement => measurement.Tags[EventWriteMetrics.EventTypeTagName],
+                measurement => measurement.Value);
+
+        Assert.Equal(2, byEventType[nameof(EventType.User_LoggedIn)]);
+        Assert.Equal(1, byEventType[nameof(EventType.User_FailedLogIn)]);
     }
 
     private NonThrowingEventWriteService BuildSubject(out MetricSnapshot metrics)

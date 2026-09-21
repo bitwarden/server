@@ -809,6 +809,25 @@ public class EventIntegrationServiceCollectionExtensionsTests
     [Fact]
     public void AddEventWriteServices_WriteServiceConfigured_ResolvesTheNonThrowingWrapper()
     {
+        var services = BuildSelfHostedWriteServiceCollection();
+
+        var writeService = services.BuildServiceProvider().GetRequiredService<IEventWriteService>();
+
+        Assert.IsType<NonThrowingEventWriteService>(writeService);
+    }
+
+    [Fact]
+    public void AddEventWriteServices_SurfaceWriteFailures_ResolvesTheUnwrappedService()
+    {
+        var services = BuildSelfHostedWriteServiceCollection(surfaceWriteFailures: true);
+
+        var writeService = services.BuildServiceProvider().GetRequiredService<IEventWriteService>();
+
+        Assert.IsType<RepositoryEventWriteService>(writeService);
+    }
+
+    private IServiceCollection BuildSelfHostedWriteServiceCollection(bool surfaceWriteFailures = false)
+    {
         var services = new ServiceCollection();
         services.AddLogging();
         services.TryAddSingleton(Substitute.For<IEventRepository>());
@@ -817,10 +836,9 @@ public class EventIntegrationServiceCollectionExtensionsTests
             ["GlobalSettings:SelfHosted"] = "true"
         });
 
-        services.AddEventWriteServices(globalSettings);
+        services.AddEventWriteServices(globalSettings, surfaceWriteFailures);
 
-        var writeService = services.BuildServiceProvider().GetRequiredService<IEventWriteService>();
-        Assert.IsType<NonThrowingEventWriteService>(writeService);
+        return services;
     }
 
     [Fact]
