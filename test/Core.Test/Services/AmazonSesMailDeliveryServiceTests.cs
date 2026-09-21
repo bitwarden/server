@@ -28,7 +28,8 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
                         AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
                         AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
                         Region = "Region-AmazonSesMailDeliveryServiceTests"
-                    }
+                    },
+            Mail = { ReplyToEmail = "no-reply@bitwarden.com" }
         };
 
         _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
@@ -82,5 +83,45 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
                 Assert.Contains(request.Tags, x => x.Name == "Sender");
                 Assert.Contains(request.Tags, x => x.Name == "Category");
             }));
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WithReplyToAddress_SetsReplyToAddresses()
+    {
+        var captured = await CaptureRequestAsync("support@bitwarden.com");
+
+        Assert.Equal(["support@bitwarden.com"], captured.ReplyToAddresses);
+        Assert.Contains("no-reply@bitwarden.com", captured.Source);
+        Assert.DoesNotContain("support@bitwarden.com", captured.Source);
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WithoutReplyToAddress_LeavesReplyToAddressesUnset()
+    {
+        var captured = await CaptureRequestAsync(replyToAddress: null);
+
+        Assert.Null(captured.ReplyToAddresses);
+    }
+
+    /// <remarks>
+    /// Captures at call time and asserts outside the callback: an <c>Arg.Do</c> passed to
+    /// <c>Received()</c> never runs, so assertions placed inside one do not execute.
+    /// </remarks>
+    private async Task<SendEmailRequest> CaptureRequestAsync(string? replyToAddress)
+    {
+        SendEmailRequest? captured = null;
+        await _amazonSimpleEmailService.SendEmailAsync(Arg.Do<SendEmailRequest>(r => captured = r));
+
+        await _sut.SendEmailAsync(new MailMessage
+        {
+            ToEmails = new List<string> { "to@example.com" },
+            Subject = "Subject",
+            HtmlContent = "HtmlContent",
+            TextContent = "TextContent",
+            ReplyToAddress = replyToAddress
+        });
+
+        Assert.NotNull(captured);
+        return captured;
     }
 }
