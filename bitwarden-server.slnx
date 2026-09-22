@@ -102,6 +102,7 @@
     <Project Path="util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj" />
     <Project Path="util/MySqlMigrations/MySqlMigrations.csproj" />
     <Project Path="util/PostgresMigrations/PostgresMigrations.csproj" />
+    <Project Path="util/RestrictedDependencies/RestrictedDependencyBaselines/RestrictedDependencyBaselines.csproj" />
     <Project Path="util/RustSdk/RustSdk.csproj" />
     <Project Path="util/Seeder/Seeder.csproj" />
     <Project Path="util/SeederApi/SeederApi.csproj" />
