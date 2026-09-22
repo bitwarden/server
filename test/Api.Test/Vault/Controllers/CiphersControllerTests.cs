@@ -3460,4 +3460,47 @@ public class CiphersControllerTests
                 Arg.Is<CipherDetails>(c => c.Archives == cipherOrgDetails.Archives),
                 attachmentId, userId, true);
     }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task DeleteAttachmentAdmin_WithLimitItemDeletion_WithoutManagePermission_ThrowsNotFoundException(
+        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId, string attachmentId,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        cipherDetails.UserId = null;
+        cipherDetails.OrganizationId = organization.Id;
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+
+        organization.Type = organizationUserType;
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id)
+            .Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CipherDetails>
+            {
+                cipherDetails
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility
+            {
+                Id = organization.Id,
+                LimitItemDeletion = true
+            });
+
+        // The admin route skips the service permission check, so this gate is the whole control:
+        // it must reject for the same reason the sibling item-delete admin routes do.
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DeleteAttachmentAdmin(cipherDetails.Id, attachmentId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default, default, default);
+    }
 }

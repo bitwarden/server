@@ -1733,7 +1733,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
