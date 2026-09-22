@@ -98,7 +98,6 @@ public class CipherRequestModel : IValidatableObject
                 "The Name field is required.", new[] { nameof(Name) });
         }
 
-#pragma warning disable CS0612 // Validating the obsolete legacy map is still required while it is accepted.
         if (Attachments != null)
         {
             // The legacy map's values are file names that clients store encrypted. Attributes cannot be
@@ -117,7 +116,6 @@ public class CipherRequestModel : IValidatableObject
                 }
             }
         }
-#pragma warning restore CS0612
     }
 
     /// <summary>

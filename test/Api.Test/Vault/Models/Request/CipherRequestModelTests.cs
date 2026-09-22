@@ -343,9 +343,7 @@ public class CipherRequestModelTests
             Type = CipherType.Login,
             Name = ENC_STRING,
             Login = new CipherLoginModel(),
-#pragma warning disable CS0612
             Attachments = new Dictionary<string, string> { { attachmentId, ENC_STRING } },
-#pragma warning restore CS0612
         };
 
         request.ToCipher(cipher);
@@ -379,9 +377,7 @@ public class CipherRequestModelTests
             Type = CipherType.Login,
             Name = ENC_STRING,
             Login = new CipherLoginModel(),
-#pragma warning disable CS0612
             Attachments = new Dictionary<string, string> { { attachmentId, newFileName } },
-#pragma warning restore CS0612
         };
 
         request.ToCipher(cipher);
@@ -398,9 +394,7 @@ public class CipherRequestModelTests
         {
             Type = CipherType.Login,
             Name = ENC_STRING,
-#pragma warning disable CS0612
             Attachments = new Dictionary<string, string> { { "attachment-id", "OWNED-not-an-encstring" } },
-#pragma warning restore CS0612
         };
 
         var results = ValidateModel(request);
@@ -415,9 +409,7 @@ public class CipherRequestModelTests
         {
             Type = CipherType.Login,
             Name = ENC_STRING,
-#pragma warning disable CS0612
             Attachments = new Dictionary<string, string> { { "attachment-id", ENC_STRING } },
-#pragma warning restore CS0612
         };
 
         var results = ValidateModel(request);
