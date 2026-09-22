@@ -41,6 +41,7 @@ internal static class BaselineWriter
         foreach (var file in files)
         {
             var path = Path.Combine(directory, BudgetModel.FileNameFor(file.Type));
+            EnsurePathWithinDirectory(path, directory);
             var content = file.Serialize();
             var summary = $"{file.Type}: {file.Usages.Sum(u => u.Count)} use(s) at {file.Usages.Count} site(s)";
             if (File.Exists(path) && File.ReadAllText(path) == content)
@@ -51,6 +52,16 @@ internal static class BaselineWriter
 
             File.WriteAllText(path, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             output.WriteLine($"wrote {summary}");
+        }
+    }
+
+    private static void EnsurePathWithinDirectory(string path, string directory)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var fullDirectory = Path.GetFullPath(directory + Path.DirectorySeparatorChar);
+        if (!fullPath.StartsWith(fullDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Path traversal detected.");
         }
     }
 }
