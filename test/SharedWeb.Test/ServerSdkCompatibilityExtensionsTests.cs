@@ -136,24 +136,24 @@ public class ServerSdkCompatibilityExtensionsTests
     }
 
     [Fact]
-    public void Vfo1Foundation_PinnedOn_EvenWhenConfiguredOff()
+    public void Vfo1Foundation_PinnedOff_EvenWhenConfiguredOn()
     {
         using var provider = CreateProvider(new Dictionary<string, string?>
         {
-            { $"Features:FlagValues:{FeatureFlagKeys.VFO1Foundation}", "false" },
+            { $"Features:FlagValues:{FeatureFlagKeys.VFO1Foundation}", "true" },
         });
         using var scope = provider.CreateScope();
 
         var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
 
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
+        Assert.False(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
         Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
 
         // The clients fall back to their own default for an omitted flag, so /config has to
         // state the pinned flag outright rather than leave it out.
         var all = featureService.GetAll();
         Assert.True(all.TryGetValue(FeatureFlagKeys.VFO1Foundation, out var pinnedValue));
-        Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
+        Assert.Equal(JsonValueKind.False, pinnedValue!.GetValueKind());
     }
 
     [Theory]
