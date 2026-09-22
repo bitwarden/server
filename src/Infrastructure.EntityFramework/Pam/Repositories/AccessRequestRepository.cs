@@ -118,8 +118,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         var dbContext = GetDatabaseContext(scope);
 
         // Caller-scoped self-read: cipher/collection/requester names are omitted since they come from the caller's
-        // own vault. Bounded like AccessRequest_ReadManyByRequesterId: history is retention-windowed, but anything
-        // still actionable (open or approved, unlapsed) stays visible regardless of age.
+        // own vault.
         var requests = await dbContext.AccessRequests
             .Where(r => r.RequesterId == requesterId
                 && (since == null
@@ -158,8 +157,6 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Actionable only: no action recorded and window still open; a lapsed row is derived Expired and belongs
-        // to history instead. An open request carries no approvers yet.
         var requests = await dbContext.AccessRequests
             .Where(r => ids.Contains(r.CollectionId)
                 && r.Action == AccessRequestAction.None
@@ -174,8 +171,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         var usersById = await GetUsersByIdAsync(dbContext, requests.Select(r => r.RequesterId));
 
-        // No lease lookup: an open request has never been activated (a lease is only ever minted from Approved),
-        // so there's nothing to find.
+        // No lease lookup and no decisions: an open request has never been activated (a lease is only ever minted
+        // from Approved) and carries no approvers yet.
         return requests
             .Select(request => ProjectDetails(request, lease: null, now, usersById))
             .ToList();
@@ -192,8 +189,6 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // The exact complement of the pending read: an action recorded, or a window lapsed with none (derived
-        // Expired).
         var requests = await dbContext.AccessRequests
             .Where(r => ids.Contains(r.CollectionId)
                 && (r.Action != AccessRequestAction.None || r.NotAfter <= now)
@@ -225,8 +220,6 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // The WHERE guard keeps the write idempotent under a race, so a second approver can't move an
-        // already-resolved request; the decision is recorded only when the transition actually happened.
         var rowsAffected = await dbContext.AccessRequests
             .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None)
             .ExecuteUpdateAsync(s => s
@@ -252,12 +245,14 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         await transaction.CommitAsync();
     }
 
+    /// <remarks>
+    /// Runs in a transaction so the claim's row lock holds across both statements, not just its own.
+    /// </remarks>
     public async Task CancelAsync(Guid id, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Requires a transaction so the claim's row lock holds across both statements, not just its own.
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         await ClaimRequestRowAsync(dbContext, id);

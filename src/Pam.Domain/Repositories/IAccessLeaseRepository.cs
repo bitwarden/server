@@ -27,8 +27,8 @@ public interface IAccessLeaseRepository
     /// Returns the active lease on the cipher that ends <em>last</em>, across all members, or null when free.
     /// </summary>
     /// <remarks>
-    /// Deliberately cipher-scoped, mirroring the singleton guard's own filter, since scoping to the caller's
-    /// reachable collections would miss a holder whose path the caller cannot reach.
+    /// Cipher-scoped, mirroring the singleton guard's own filter: the holder may sit in a collection the caller
+    /// cannot reach.
     /// </remarks>
     Task<AccessLease?> GetActiveByCipherIdAsync(Guid cipherId, DateTime now);
 

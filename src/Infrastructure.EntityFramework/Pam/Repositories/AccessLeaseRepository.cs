@@ -127,8 +127,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
                 && (
                     // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
                     ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
-                    // Window closed on its own (end = NotAfter); byte 1 (retired stored Expired) is deliberately not
-                    // matched since ComputeLeaseStatus has no arm for it and would throw.
+                    // Window closed on its own: its end is NotAfter.
                     || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
                 ))
             .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
@@ -164,9 +163,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable covers only the per-cipher guard, matching the procedure's range lock. Other writes are
-        // protected by the claim below; wider Serializable use aborted unrelated writers, so this restores parity
-        // with [AccessLease_CreateFromApprovedRequest].
+        // Serializable covers only the per-cipher guard, matching the procedure's range lock; every other write
+        // here is protected by the claim below instead.
         var isolation = enforceSingleActiveLease
             ? System.Data.IsolationLevel.Serializable
             : System.Data.IsolationLevel.ReadCommitted;

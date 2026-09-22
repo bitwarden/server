@@ -15,9 +15,8 @@ using Xunit;
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 /// <summary>
-/// The activation/retraction write skew and the claim that closes it: activation used to write only AccessLease
-/// while retraction wrote only AccessRequest, so both could commit and leave a cancelled request holding a live
-/// lease. Both sides now claim the request row first.
+/// Activation and retraction both claim the AccessRequest row before writing, so the two can never both commit
+/// and leave a cancelled request holding a live lease.
 /// </summary>
 /// <remarks>
 /// Not a <c>Task.WhenAll</c> race, since the losing interleaving is rare and plan-dependent. Each test instead
@@ -29,9 +28,6 @@ public class AccessRequestActivationRaceTests
     /// Grace period given to the blocked counterparty before the held row is released: long enough that a
     /// passing run isn't luck, well under every provider's lock wait timeout.
     /// </summary>
-    /// <remarks>
-    /// Held this long deliberately; shortening it would let a merely slow run read as "blocked" for the wrong reason.
-    /// </remarks>
     private static readonly TimeSpan BlockedGrace = TimeSpan.FromSeconds(2);
 
     // Activation's claim: a retraction that reached the row first must block the mint, which then fails its CAS.
