@@ -115,6 +115,29 @@ public class CollectionsController : Controller
         ));
     }
 
+    [HttpGet("organization-details")]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetOrganizationCollectionsWithDetails(Guid orgId)
+    {
+        var authorized =
+            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadOrganizationDetails(orgId))).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
+
+        var allOrgCollections = await _collectionRepository
+            .GetManyOrganizationCollectionsWithPermissionsAsync(orgId, _currentContext.UserId.Value);
+
+        if (await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            await _providerService.LogProviderAccessToOrganizationAsync(orgId);
+        }
+
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+            allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
+        );
+    }
+
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> GetAll(Guid orgId)
     {
