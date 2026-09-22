@@ -200,14 +200,20 @@
     },
     {
       groupName: "Admin and SSO npm dependencies",
-      matchFileNames: ["src/Admin/package.json", "bitwarden_license/src/Sso/package.json"],
+      matchFileNames: [
+        "src/Admin/package.json",
+        "bitwarden_license/src/Sso/package.json",
+      ],
       matchUpdateTypes: ["minor", "patch"],
       description: "Admin & SSO npm packages",
       commitMessagePrefix: "[deps] Auth:",
       reviewers: ["team:team-auth-dev"],
     },
     {
-      matchPackageNames: ["/^Microsoft\\.EntityFrameworkCore\\./", "/^dotnet-ef/"],
+      matchPackageNames: [
+        "/^Microsoft\\.EntityFrameworkCore\\./",
+        "/^dotnet-ef/",
+      ],
       groupName: "EntityFrameworkCore",
       description: "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset",
     },
@@ -226,7 +232,15 @@
     {
       matchPackageNames: ["https://github.com/bitwarden/sdk-internal.git"],
       groupName: "sdk-internal",
-      dependencyDashboardApproval: true
+      dependencyDashboardApproval: true,
+    },
+    {
+      matchPackageNames: ["mjml", "mjml-core"],
+      groupName: "mjml",
+      description: "UIF owned dependencies - mjml packages must version together",
+      commitMessagePrefix: "[deps] UIF:",
+      reviewers: ["team:team-ui-foundation"],
+      dependencyDashboardApproval: true,
     },
 
     // ==================== Dashboard Rules ====================
@@ -234,8 +248,8 @@
       // For any Microsoft.Extensions.* and Microsoft.AspNetCore.* packages, we want to create PRs for patch updates.
       // This overrides the default that ignores patch updates for nuget dependencies.
       matchPackageNames: [
-          "/^Microsoft\\.Extensions\\./",
-          "/^Microsoft\\.AspNetCore\\./",
+        "/^Microsoft\\.Extensions\\./",
+        "/^Microsoft\\.AspNetCore\\./",
       ],
       matchUpdateTypes: ["patch"],
       dependencyDashboardApproval: false,
@@ -265,7 +279,10 @@
     {
       // AutoMapper 15+ changed to a commercial license, so we stay on the
       // last MIT-licensed major version (14.x).
-      matchPackageNames: ["AutoMapper","AutoMapper.Extensions.Microsoft.DependencyInjection"],
+      matchPackageNames: [
+        "AutoMapper",
+        "AutoMapper.Extensions.Microsoft.DependencyInjection",
+      ],
       allowedVersions: "<15",
       description: "Pin AutoMapper below 15",
     },
