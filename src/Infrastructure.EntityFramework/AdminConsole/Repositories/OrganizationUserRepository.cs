@@ -1176,10 +1176,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             .Where(os => organizationUserIds.Contains(os.SponsoringOrganizationUserId))
             .ExecuteDeleteAsync();
 
-        var userIds = organizationUsersToDelete.Select(ou => ou.UserId).ToList();
-        await dbContext.SsoUsers
-            .Where(su => su.OrganizationId != null && userIds.Contains(su.UserId))
-            .ExecuteDeleteAsync();
+        var organizationUserGroups = organizationUsersToDelete.GroupBy(ou => ou.OrganizationId);
+        foreach (var organizationGroup in organizationUserGroups)
+        {
+            var organizationId = organizationGroup.Key;
+            var userIdsForOrg = organizationGroup.Select(ou => ou.UserId).ToList();
+            await dbContext.SsoUsers
+                .Where(su => su.OrganizationId == organizationId && userIdsForOrg.Contains(su.UserId))
+                .ExecuteDeleteAsync();
+        }
 
         await dbContext.OrganizationUsers
             .Where(ou => organizationUserIds.Contains(ou.Id))
