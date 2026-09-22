@@ -5,7 +5,8 @@ CREATE TABLE [dbo].[AccessLease] (
     [CollectionId]      UNIQUEIDENTIFIER    NOT NULL,
     [CipherId]          UNIQUEIDENTIFIER    NOT NULL,
     [RequesterId]       UNIQUEIDENTIFIER    NOT NULL,
-    [Status]            TINYINT             NOT NULL,
+    -- How the lease ended early (0 None, 2 Revoked, 3 Cancelled); Active/Expired are derived.
+    [Action]            TINYINT             NOT NULL,
     [NotBefore]         DATETIME2 (7)       NOT NULL,
     [NotAfter]          DATETIME2 (7)       NOT NULL,
     [RevokedDate]       DATETIME2 (7)       NULL,
@@ -17,29 +18,26 @@ CREATE TABLE [dbo].[AccessLease] (
 );
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_CipherId_Status]
-    ON [dbo].[AccessLease] ([RequesterId] ASC, [CipherId] ASC, [Status] ASC);
+CREATE NONCLUSTERED INDEX [IX_AccessLease_RequesterId_CipherId_Action]
+    ON [dbo].[AccessLease] ([RequesterId] ASC, [CipherId] ASC, [Action] ASC);
 GO
 
-CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Status]
-    ON [dbo].[AccessLease] ([NotAfter] ASC, [Status] ASC);
+CREATE NONCLUSTERED INDEX [IX_AccessLease_NotAfter_Action]
+    ON [dbo].[AccessLease] ([NotAfter] ASC, [Action] ASC);
 GO
 
--- Supports the governance lease lists (AccessLease_ReadManyActiveByCollectionIds /
--- AccessLease_ReadManyEndedByCollectionIds), which filter by the caller's manageable collection ids.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Status]
-    ON [dbo].[AccessLease] ([CollectionId] ASC, [Status] ASC);
+-- Supports the governance lease lists filtered by the caller's manageable collection ids.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CollectionId_Action]
+    ON [dbo].[AccessLease] ([CollectionId] ASC, [Action] ASC);
 GO
 
--- Supports the per-cipher singleton guard in AccessLease_CreateFromApprovedRequest. That guard filters on CipherId
--- alone under UPDLOCK/HOLDLOCK, so without a CipherId-leading index the range lock it takes covers either the whole
--- table or every currently-active and future lease, serializing unrelated organizations' activations against it.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Status]
-    ON [dbo].[AccessLease] ([CipherId] ASC, [Status] ASC);
+-- Supports the per-cipher singleton guard, which locks by CipherId alone.
+-- NotAfter DESC lets AccessLease_ReadActiveByCipherId seek in-window rows without a sort.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
+    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
 GO
 
--- A request produces at most one lease, ever: activating an approved request and the automatic path each insert
--- exactly one. Unique to backstop racing activations that pass the application-level checks simultaneously.
+-- A request produces at most one lease, ever; unique index backstops racing activations.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessLease_AccessRequestId]
     ON [dbo].[AccessLease] ([AccessRequestId] ASC);
 GO
