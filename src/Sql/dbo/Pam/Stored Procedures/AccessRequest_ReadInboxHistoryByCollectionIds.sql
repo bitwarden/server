@@ -1,13 +1,10 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadInboxHistoryByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
     @Since DATETIME2(7),
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Two result sets (requests, decisions); materialized ids let both share the same rows.
     DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)

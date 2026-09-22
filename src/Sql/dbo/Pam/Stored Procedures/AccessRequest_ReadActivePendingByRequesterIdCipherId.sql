@@ -1,13 +1,10 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadActivePendingByRequesterIdCipherId]
     @RequesterId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Caller's open request for the cipher; a lapsed one derives Expired, allowing resubmission.
     SELECT TOP 1

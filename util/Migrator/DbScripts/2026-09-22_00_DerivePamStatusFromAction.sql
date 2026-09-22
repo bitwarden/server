@@ -441,13 +441,11 @@ GO
 -- AccessRequest reads
 
 CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadDetailsById]
-    @Id UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Now is unused; kept for signature compatibility during rolling deployment.
     -- Two result sets (request, decisions); only stored facts leave this read.
     SELECT
         LR.[Id],
@@ -491,14 +489,11 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadManyByRequesterId]
     @RequesterId UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL,
+    @Now DATETIME2(7),
     @Since DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now and @Since during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- @Since matches the approver-side retention window.
     -- Ids are materialized first so both result sets share the same rows.
@@ -556,13 +551,10 @@ GO
 
 CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadInboxPendingByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Actionable rows have no action and an open window; lapsed rows derive Expired instead.
     SELECT
@@ -592,13 +584,10 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadInboxHistoryByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
     @Since DATETIME2(7),
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Two result sets (requests, decisions); materialized ids let both share the same rows.
     DECLARE @RequestIds TABLE ([Id] UNIQUEIDENTIFIER PRIMARY KEY)
@@ -653,13 +642,10 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_ReadActivePendingByRequesterIdCipherId]
     @RequesterId UNIQUEIDENTIFIER,
     @CipherId UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Caller's open request for the cipher; a lapsed one derives Expired, allowing resubmission.
     SELECT TOP 1
@@ -915,13 +901,10 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[AccessLease_ReadManyEndedByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
     @Since DATETIME2(7),
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Leases ended on/after @Since; "ended" derives from [Action] recording an early end.
     SELECT
