@@ -2715,4 +2715,30 @@ public class CipherServiceTests
             .Received(1)
             .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
     }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_AsOrgAdmin_ReplacesWithPlainCipher_PreservingArchives(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Archives = "{\"archived\":true}";
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId, orgAdmin: true);
+
+        // Cipher_Update only accepts Cipher's own properties and Dapper builds its parameters from
+        // the runtime type, so the org admin path must not hand a CipherDetails to this overload.
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Cipher>(c => c.GetType() == typeof(Cipher) && c.Archives == cipherDetails.Archives));
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<CipherDetails>());
+    }
 }

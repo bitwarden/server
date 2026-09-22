@@ -944,7 +944,9 @@ public class CipherService : ICipherService
         cipher.RevisionDate = DateTime.UtcNow;
         if (orgAdmin)
         {
-            await _cipherRepository.ReplaceAsync(cipher);
+            // Cipher_Update accepts only Cipher's own properties, and Dapper builds its parameters
+            // from the runtime type, so clone to a plain Cipher rather than passing a descendant.
+            await _cipherRepository.ReplaceAsync(cipher.Clone());
         }
         else
         {

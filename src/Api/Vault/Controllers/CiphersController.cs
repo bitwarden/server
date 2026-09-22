@@ -1738,7 +1738,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _cipherService.DeleteAttachmentAsync(new CipherDetails(cipher), attachmentId, userId, true);
+        // Archives is copied across explicitly because the CipherDetails copy constructor omits it
+        // and the write-back would otherwise null the column.
+        var cipherDetails = new CipherDetails(cipher) { Archives = cipher.Archives };
+        var result = await _cipherService.DeleteAttachmentAsync(cipherDetails, attachmentId, userId, true);
 
         var access = await AuthorizeAdminWriteReturnOrThrowAsync(userId, cipher.OrganizationId.Value, result.Cipher);
         return new DeleteAttachmentResponseModel(CipherMiniResponseModel.From(
