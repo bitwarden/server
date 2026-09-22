@@ -11,7 +11,6 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
@@ -25,22 +24,15 @@ public class InviteUsersPasswordManagerValidator(
     IInviteUsersOrganizationValidator inviteUsersOrganizationValidator,
     IProviderRepository providerRepository,
     IStripePaymentService paymentService,
-    IOrganizationRepository organizationRepository,
-    ICurrentContext currentContext
+    IOrganizationRepository organizationRepository
     ) : IInviteUsersPasswordManagerValidator
 {
     /// <summary>
     /// This is for validating if the organization can add additional users.
     /// </summary>
     /// <param name="subscriptionUpdate"></param>
-    /// <param name="canManageBilling">
-    /// Whether the member performing the invite can manage the organization's billing. This only changes which
-    /// remediation the seat limit error suggests, so callers that discard the error message can pass false.
-    /// </param>
     /// <returns></returns>
-    public static ValidationResult<PasswordManagerSubscriptionUpdate> ValidatePasswordManager(
-        PasswordManagerSubscriptionUpdate subscriptionUpdate,
-        bool canManageBilling)
+    public static ValidationResult<PasswordManagerSubscriptionUpdate> ValidatePasswordManager(PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
         if (subscriptionUpdate.Seats is null)
         {
@@ -66,7 +58,7 @@ public class InviteUsersPasswordManagerValidator(
 
         if (subscriptionUpdate.MaxSeatsExceeded)
         {
-            Error<PasswordManagerSubscriptionUpdate> seatLimitError = canManageBilling
+            Error<PasswordManagerSubscriptionUpdate> seatLimitError = subscriptionUpdate.CanManageBilling
                 ? new PasswordManagerSeatLimitHasBeenReachedError(subscriptionUpdate)
                 : new PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError(subscriptionUpdate);
 
@@ -91,7 +83,7 @@ public class InviteUsersPasswordManagerValidator(
 
     public async Task<ValidationResult<PasswordManagerSubscriptionUpdate>> ValidateAsync(PasswordManagerSubscriptionUpdate request)
     {
-        switch (ValidatePasswordManager(request, await CanManageBillingAsync(request.InviteOrganization.OrganizationId)))
+        switch (ValidatePasswordManager(request))
         {
             case Valid<PasswordManagerSubscriptionUpdate> valid
                 when valid.Value.SeatsRequiredToAdd is 0:
@@ -139,12 +131,4 @@ public class InviteUsersPasswordManagerValidator(
 
         return new Valid<PasswordManagerSubscriptionUpdate>(request);
     }
-
-    /// <summary>
-    /// SCIM and the Public API invite without an authenticated member, so there is nobody who could raise the seat
-    /// limit in place. <see cref="ICurrentContext.EditSubscription"/> requires a user, so short circuit those callers
-    /// to the "contact your organization owner" remediation.
-    /// </summary>
-    private async Task<bool> CanManageBillingAsync(Guid organizationId) =>
-        currentContext.UserId.HasValue && await currentContext.EditSubscription(organizationId);
 }

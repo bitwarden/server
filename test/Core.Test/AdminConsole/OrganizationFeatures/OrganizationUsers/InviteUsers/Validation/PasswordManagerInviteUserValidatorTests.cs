@@ -3,11 +3,9 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Context;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
@@ -54,7 +52,6 @@ public class InviteUsersPasswordManagerValidatorTests
     [Theory]
     [BitAutoData]
     public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_WhenInviterCanManageBilling_ShouldTellThemToIncreaseTheSeatLimit(
-        Guid invitingUserId,
         Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
@@ -66,12 +63,10 @@ public class InviteUsersPasswordManagerValidatorTests
         var seatsOccupiedByUsers = 5;
         var additionalSeats = 6;
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(invitingUserId);
-        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
-
         var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
 
-        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers,
+            additionalSeats, canManageBilling: true);
 
         var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
 
@@ -81,42 +76,13 @@ public class InviteUsersPasswordManagerValidatorTests
             (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_WhenInviterCannotManageBilling_ShouldTellThemToContactTheOwner(
-        Guid invitingUserId,
-        Organization organization,
-        SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
-    {
-        // Seats and MaxAutoscaleSeats deliberately differ so the assertion pins which one the message reports.
-        organization.Seats = 5;
-        organization.MaxAutoscaleSeats = 10;
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        var seatsOccupiedByUsers = 5;
-        var additionalSeats = 6;
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(invitingUserId);
-        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(false);
-
-        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
-
-        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
-
-        var result = await sutProvider.Sut.ValidateAsync(subscriptionUpdate);
-
-        Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(
-            string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.MaxAutoscaleSeats),
-            (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
-    }
-
     /// <summary>
-    /// SCIM and the Public API invite without an authenticated member, so there is nobody who could raise the seat
-    /// limit in place and <see cref="ICurrentContext.EditSubscription"/> cannot be consulted.
+    /// The flag defaults to false, which also covers the callers that invite without an authenticated member (SCIM
+    /// and the Public API), where nobody could raise the seat limit in place.
     /// </summary>
     [Theory]
     [BitAutoData]
-    public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_WithoutAnAuthenticatedUser_ShouldTellThemToContactTheOwner(
+    public async Task Validate_NumberOfSeatsToAddIsGreaterThanMaxSeatsAllowed_WhenInviterCannotManageBilling_ShouldTellThemToContactTheOwner(
         Organization organization,
         SutProvider<InviteUsersPasswordManagerValidator> sutProvider)
     {
@@ -126,8 +92,6 @@ public class InviteUsersPasswordManagerValidatorTests
         organization.PlanType = PlanType.EnterpriseAnnually;
         var seatsOccupiedByUsers = 5;
         var additionalSeats = 6;
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
 
@@ -139,7 +103,6 @@ public class InviteUsersPasswordManagerValidatorTests
         Assert.Equal(
             string.Format(PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code, organization.MaxAutoscaleSeats),
             (result as Invalid<PasswordManagerSubscriptionUpdate>)!.Error.Message);
-        await sutProvider.GetDependency<ICurrentContext>().DidNotReceive().EditSubscription(Arg.Any<Guid>());
     }
 
     [Theory]
