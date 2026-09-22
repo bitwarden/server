@@ -1731,14 +1731,14 @@ public class CiphersController : Controller
     public async Task<DeleteAttachmentResponseModel> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(id);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        var result = await _cipherService.DeleteAttachmentAsync(new CipherDetails(cipher), attachmentId, userId, true);
 
         var access = await AuthorizeAdminWriteReturnOrThrowAsync(userId, cipher.OrganizationId.Value, result.Cipher);
         return new DeleteAttachmentResponseModel(CipherMiniResponseModel.From(

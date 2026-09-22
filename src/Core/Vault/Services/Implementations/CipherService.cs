@@ -479,20 +479,20 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(CipherDetails cipherDetails, string attachmentId, Guid deletingUserId,
         bool orgAdmin = false)
     {
-        if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+        if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
-        if (!cipher.ContainsAttachment(attachmentId))
+        if (!cipherDetails.ContainsAttachment(attachmentId))
         {
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin)
+        return await DeleteAttachmentAsync(cipherDetails, cipherDetails.GetAttachments()[attachmentId], orgAdmin)
             ?? throw new NotFoundException();
     }
 
