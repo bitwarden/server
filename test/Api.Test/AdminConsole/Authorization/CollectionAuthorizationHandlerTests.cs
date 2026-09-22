@@ -240,6 +240,149 @@ public class CollectionAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanReadOrganizationDetailsAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadOrganizationDetails(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanReadOrganizationDetailsAsync_WhenCustomUserWithAccessReports_Success(
+        Guid userId,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions { AccessReports = true };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadOrganizationDetails(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanReadOrganizationDetailsAsync_WhenProviderUser_Success(
+        Guid userId,
+        SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadOrganizationDetails(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    // This test verifies the intentional difference from ReadAllWithAccess:
+    // collection-management permissions alone are NOT sufficient for ReadOrganizationDetails.
+    [Theory]
+    [BitAutoData(true, false, false, false)]
+    [BitAutoData(false, true, false, false)]
+    [BitAutoData(false, false, true, false)]
+    [BitAutoData(false, false, false, true)]
+    public async Task CanReadOrganizationDetailsAsync_WhenCollectionManagementPermissionsOnly_NoSuccess(
+        bool editAnyCollection, bool deleteAnyCollection, bool manageUsers, bool manageGroups,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+            ManageUsers = manageUsers,
+            ManageGroups = manageGroups,
+            AccessReports = false
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadOrganizationDetails(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanReadOrganizationDetailsAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            AccessReports = false
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.ReadOrganizationDetails(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organization.Id)
+            .Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,

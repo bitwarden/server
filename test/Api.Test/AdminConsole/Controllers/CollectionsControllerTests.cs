@@ -872,4 +872,111 @@ public class CollectionsControllerTests
             .DidNotReceive()
             .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
     }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithDetails_Unauthorized_ThrowsNotFound(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id));
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceive()
+            .GetManyOrganizationCollectionsWithPermissionsAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithDetails_Authorized_ReturnsAllCollections(
+        Organization organization, Guid userId, List<CollectionAdminDetails> collections,
+        SutProvider<CollectionsController> sutProvider)
+    {
+        // Mix of shared and My Items collections — all should be returned without filtering
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, userId)
+            .Returns(collections);
+
+        var response = await sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(1)
+            .GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, userId);
+
+        Assert.Equal(collections.Count, response.Data.Count());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithDetails_ProviderUser_LogsProviderAccess(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id);
+
+        await sutProvider.GetDependency<IProviderService>()
+            .Received(1)
+            .LogProviderAccessToOrganizationAsync(organization.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsWithDetails_NonProviderUser_DoesNotLogProviderAccess(
+        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                Arg.Any<object>(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
+                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
+                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
+                        && operation.OrganizationId == organization.Id)))
+            .Returns(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(false);
+
+        await sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id);
+
+        await sutProvider.GetDependency<IProviderService>()
+            .DidNotReceive()
+            .LogProviderAccessToOrganizationAsync(Arg.Any<Guid>());
+    }
 }
