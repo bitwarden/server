@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
@@ -7,6 +8,7 @@ using Xunit;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -147,4 +149,59 @@ public class OrganizationUserRepositoryTests
         Assert.True(savedSqlOrgUser == null);
     }
 
+    [CiSkippedTheory, EfOrganizationUserAutoData]
+    public async Task DeleteManyAsync_WithSsoUser_SsoUserIsDeleted(OrganizationUser orgUser, SsoUser ssoUser,
+        User user, Organization org, List<EfAdminConsoleRepo.OrganizationUserRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfRepo.SsoUserRepository> efSsoUserRepos,
+        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+            var postEfUser = await efUserRepos[i].CreateAsync(user);
+            var postEfOrg = await efOrgRepos[i].CreateAsync(org);
+            sut.ClearChangeTracking();
+
+            orgUser.UserId = postEfUser.Id;
+            orgUser.OrganizationId = postEfOrg.Id;
+            var postEfOrgUser = await sut.CreateAsync(orgUser);
+            sut.ClearChangeTracking();
+
+            ssoUser.UserId = postEfUser.Id;
+            ssoUser.OrganizationId = postEfOrg.Id;
+            await efSsoUserRepos[i].CreateAsync(ssoUser);
+            efSsoUserRepos[i].ClearChangeTracking();
+
+            await sut.DeleteManyAsync(new[] { postEfOrgUser.Id });
+            sut.ClearChangeTracking();
+            efSsoUserRepos[i].ClearChangeTracking();
+
+            var savedEfOrgUser = await sut.GetByIdAsync(postEfOrgUser.Id);
+            Assert.True(savedEfOrgUser == null);
+
+            var savedEfSsoUser = await efSsoUserRepos[i].GetByUserIdOrganizationIdAsync(postEfOrg.Id, postEfUser.Id);
+            Assert.True(savedEfSsoUser == null);
+        }
+
+        var postSqlUser = await sqlUserRepo.CreateAsync(user);
+        var postSqlOrg = await sqlOrgRepo.CreateAsync(org);
+
+        orgUser.UserId = postSqlUser.Id;
+        orgUser.OrganizationId = postSqlOrg.Id;
+        var postSqlOrgUser = await sqlOrgUserRepo.CreateAsync(orgUser);
+
+        ssoUser.UserId = postSqlUser.Id;
+        ssoUser.OrganizationId = postSqlOrg.Id;
+        await sqlSsoUserRepo.CreateAsync(ssoUser);
+
+        await sqlOrgUserRepo.DeleteManyAsync(new[] { postSqlOrgUser.Id });
+
+        var savedSqlOrgUser = await sqlOrgUserRepo.GetByIdAsync(postSqlOrgUser.Id);
+        Assert.True(savedSqlOrgUser == null);
+
+        var savedSqlSsoUser = await sqlSsoUserRepo.GetByUserIdOrganizationIdAsync(postSqlOrg.Id, postSqlUser.Id);
+        Assert.True(savedSqlSsoUser == null);
+    }
 }
