@@ -105,15 +105,12 @@ public class CipherRequestModel : IValidatableObject
             var encryptedString = new EncryptedStringAttribute();
             var encryptedStringLength = new EncryptedStringLengthAttribute(1000);
 
-            foreach (var attachment in Attachments)
+            foreach (var attachment in Attachments.Where(a =>
+                         !encryptedString.IsValid(a.Value) || !encryptedStringLength.IsValid(a.Value)))
             {
-                if (!encryptedString.IsValid(attachment.Value) ||
-                    !encryptedStringLength.IsValid(attachment.Value))
-                {
-                    yield return new ValidationResult(
-                        $"The attachment file name for {attachment.Key} is not a valid encrypted string.",
-                        new[] { nameof(Attachments) });
-                }
+                yield return new ValidationResult(
+                    $"The attachment file name for {attachment.Key} is not a valid encrypted string.",
+                    new[] { nameof(Attachments) });
             }
         }
     }
