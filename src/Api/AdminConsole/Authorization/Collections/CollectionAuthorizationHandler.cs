@@ -91,8 +91,8 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         CollectionOperationRequirement requirement, CurrentContextOrganization? org)
     {
         if (org is
-            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-            { Permissions.AccessReports: true })
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.AccessReports: true })
         {
             context.Succeed(requirement);
             return;
