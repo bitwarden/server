@@ -50,6 +50,10 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             case not null when requirement.Name == nameof(CollectionOperations.ReadAllWithAccess):
                 await CanReadAllWithAccessAsync(context, requirement, org);
                 break;
+
+            case not null when requirement.Name == nameof(CollectionOperations.ReadOrganizationDetails):
+                await CanReadOrganizationDetailsAsync(context, requirement, org);
+                break;
         }
     }
 
@@ -70,6 +74,30 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         }
 
         // Allow provider users to read collections if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    /// <summary>
+    /// Grants read-only access to all organization collections with per-user/per-group access details,
+    /// intended for reporting and access intelligence features.
+    /// Intentionally narrower than <see cref="CanReadAllWithAccessAsync"/>: collection management
+    /// permissions (EditAnyCollection, DeleteAnyCollection, ManageUsers, ManageGroups) are not included
+    /// because users with those roles should use the /collections/details endpoint instead.
+    /// </summary>
+    private async Task CanReadOrganizationDetailsAsync(AuthorizationHandlerContext context,
+        CollectionOperationRequirement requirement, CurrentContextOrganization? org)
+    {
+        if (org is
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.AccessReports: true })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);

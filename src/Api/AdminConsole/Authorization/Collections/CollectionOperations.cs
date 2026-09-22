@@ -23,5 +23,10 @@ public static class CollectionOperations
     {
         return new CollectionOperationRequirement(nameof(ReadAllWithAccess), organizationId);
     }
+
+    public static CollectionOperationRequirement ReadOrganizationDetails(Guid organizationId)
+    {
+        return new CollectionOperationRequirement(nameof(ReadOrganizationDetails), organizationId);
+    }
 }
 
