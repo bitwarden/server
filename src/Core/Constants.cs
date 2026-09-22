@@ -313,6 +313,9 @@ public static partial class FeatureFlagKeys
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
+    /// <summary>Sends leasing-gated ciphers to browser extensions in the partial shape.</summary>
+    public const string PamBrowserPartialCiphers = "pm-00000-pam-browser-partial-ciphers";
+
     /// <summary>
     /// Kill switch for the PAM SQL audit trail. Off — the absent-flag default, and the only state self-host ever
     /// sees — leaves the audit store recording as normal; turning it on stops the writes and takes the read endpoint

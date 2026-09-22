@@ -106,6 +106,7 @@ public static class ServerSdkCompatibilityExtensions
         //     clients to their own default (FALSE for PamRotation), so the connector surface was
         //     gated off on both sides.
         //   - VFO1Foundation: the branch stays on the v1 layout while the VFO refresh rolls out.
+        //   - PamBrowserPartialCiphers: UAT serves the PAM-capable extension build.
         // Deliberately not pinned: PamDisableSqlAuditLogging. LaunchDarkly already states it
         // false, which is the recording state, and pinning a kill switch would throw away the
         // one thing it exists for - turning the audit writes off without a deploy.
@@ -115,6 +116,7 @@ public static class ServerSdkCompatibilityExtensions
             [FeatureFlagKeys.PM28191_CipherAdminOpsToSdk] = true,
             [FeatureFlagKeys.PamAccessConnector] = true,
             [FeatureFlagKeys.VFO1Foundation] = false,
+            [FeatureFlagKeys.PamBrowserPartialCiphers] = true,
         });
 
         // ServerContextBuilder needs IHttpContextAccessor and resolves ICurrentContext per-request.
