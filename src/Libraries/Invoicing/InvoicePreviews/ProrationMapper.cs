@@ -3,10 +3,10 @@ using Stripe;
 
 namespace Bit.Invoicing.InvoicePreviews;
 
-/// <summary>Reduces one product's proration lines into a single renderable credit row.</summary>
+/// <summary>Reduces one purchasable's proration lines into a single renderable row.</summary>
 internal static class ProrationMapper
 {
-    internal static PurchasableProration? Summarize(IReadOnlyList<InvoiceLineItem> lines)
+    internal static PurchasableProration? Summarize(string reference, IReadOnlyList<InvoiceLineItem> lines)
     {
         if (lines.Count == 0)
         {
@@ -18,6 +18,7 @@ internal static class ProrationMapper
 
         return new PurchasableProration
         {
+            Reference = reference,
             Charge = chargeCents / 100m,
             Credit = creditCents / 100m,
             Total = (chargeCents - creditCents) / 100m,

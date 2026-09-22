@@ -82,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
-    public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
@@ -326,6 +325,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
 
+            public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -367,6 +369,9 @@ public class GlobalSettings : IGlobalSettings
 
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
+
+            public TimeSpan DeadLetterTimeToLive { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
@@ -493,6 +498,7 @@ public class GlobalSettings : IGlobalSettings
             }
         }
         public string ReplyToEmail { get; set; }
+        public string SupportReplyToEmail { get; set; }
         public string AmazonConfigSetName { get; set; }
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
@@ -742,13 +748,6 @@ public class GlobalSettings : IGlobalSettings
         public string AccessKeyId { get; set; }
         public string AccessKeySecret { get; set; }
         public string Region { get; set; }
-    }
-
-    public class ServiceBusSettings : ConnectionStringSettings
-    {
-        public string ApplicationCacheTopicName { get; set; }
-        public string ApplicationCacheSubscriptionName { get; set; }
-        public string WebSiteInstanceId { get; set; }
     }
 
     public class AppleIapSettings

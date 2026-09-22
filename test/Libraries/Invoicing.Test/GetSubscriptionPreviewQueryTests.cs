@@ -71,6 +71,54 @@ public class GetSubscriptionPreviewQueryTests
     }
 
     [Fact]
+    public async Task Run_ActiveOrganization_PendingInvoiceItems_FallBackToTheirChargeDate()
+    {
+        var pendingChargeDate = new DateTime(2027, 3, 21, 0, 0, 0, DateTimeKind.Utc);
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_pending",
+            PlanType = PlanType.TeamsAnnually
+        };
+        _stripeAdapter.GetSubscriptionAsync("sub_pending", Arg.Any<SubscriptionGetOptions>())
+            .Returns(Subscription("sub_pending", "active", new DateTime(2027, 9, 18, 0, 0, 0, DateTimeKind.Utc),
+                pendingInvoiceItem: pendingChargeDate));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(ProductTierType.Teams, isAnnual: true));
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Teams, PlanCadenceType.Annually)
+            .Returns(SampleInvoicePreview());
+
+        var result = await _sut.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(pendingChargeDate, result!.InvoicePreview.NextPaymentAttempt);
+    }
+
+    [Fact]
+    public async Task Run_ActiveOrganization_InvoiceCarriesNextCharge_PrefersItOverPeriodEnd()
+    {
+        var invoiceChargeDate = new DateTime(2027, 3, 21, 0, 0, 0, DateTimeKind.Utc);
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_active",
+            PlanType = PlanType.TeamsAnnually
+        };
+        _stripeAdapter.GetSubscriptionAsync("sub_active", Arg.Any<SubscriptionGetOptions>())
+            .Returns(Subscription("sub_active", "active", new DateTime(2027, 3, 1, 0, 0, 0, DateTimeKind.Utc)));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(ProductTierType.Teams, isAnnual: true));
+        var invoicePreview = SampleInvoicePreview() with { NextPaymentAttempt = invoiceChargeDate };
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Teams, PlanCadenceType.Annually)
+            .Returns(invoicePreview);
+
+        var result = await _sut.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Equal(invoiceChargeDate, result!.InvoicePreview.NextPaymentAttempt);
+    }
+
+    [Fact]
     public async Task Run_TeamsStarterPlan_CollapsesToTeamsTier()
     {
         var organization = new Organization
@@ -137,13 +185,39 @@ public class GetSubscriptionPreviewQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(ProductTierType.Teams, isAnnual: true));
         _invoicePreviewService
             .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
-            .Returns(SampleInvoicePreview());
+            .Returns(SampleInvoicePreview() with { NextPaymentAttempt = created });
 
         var result = await _sut.Run(organization);
 
         Assert.NotNull(result);
         Assert.Equal(created.AddHours(23), result!.Suspension);
         Assert.Equal(1, result.GracePeriod);
+        Assert.Null(result.InvoicePreview.NextPaymentAttempt);
+    }
+
+    [Fact]
+    public async Task Run_PastDueOrganization_DoesNotCarryTheInvoicesRetryDate()
+    {
+        var retryDate = new DateTime(2027, 3, 21, 0, 0, 0, DateTimeKind.Utc);
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewaySubscriptionId = "sub_pastdue",
+            PlanType = PlanType.TeamsAnnually
+        };
+        _stripeAdapter.GetSubscriptionAsync("sub_pastdue", Arg.Any<SubscriptionGetOptions>())
+            .Returns(Subscription("sub_pastdue", "past_due", new DateTime(2027, 9, 18, 0, 0, 0, DateTimeKind.Utc)));
+        _stripeAdapter.SearchInvoiceAsync(Arg.Any<InvoiceSearchOptions>()).Returns(new List<Invoice>());
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TestPlan(ProductTierType.Teams, isAnnual: true));
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview() with { NextPaymentAttempt = retryDate });
+
+        var result = await _sut.Run(organization);
+
+        Assert.NotNull(result);
+        Assert.Null(result!.InvoicePreview.NextPaymentAttempt);
+        Assert.Equal("past_due", result.Status);
     }
 
     [Fact]
@@ -199,10 +273,12 @@ public class GetSubscriptionPreviewQueryTests
     private static StripeException StripeError(string code) =>
         new(System.Net.HttpStatusCode.BadRequest, new StripeError { Code = code }, code);
 
-    private static Subscription Subscription(string id, string status, DateTime periodEnd) =>
+    private static Subscription Subscription(string id, string status, DateTime periodEnd, DateTime? pendingInvoiceItem = null) =>
         Stripe.Subscription.FromJson($$"""
         {
           "id": "{{id}}", "status": "{{status}}",
+          "collection_method": "charge_automatically",
+          {{(pendingInvoiceItem is null ? "" : $"\"next_pending_invoice_item_invoice\": {new DateTimeOffset(pendingInvoiceItem.Value).ToUnixTimeSeconds()},")}}
           "items": { "data": [
             { "current_period_end": {{new DateTimeOffset(periodEnd).ToUnixTimeSeconds()}},
               "quantity": 5, "price": { "id": "price_pm", "unit_amount": 2558, "metadata": { "purchasable_reference": "pm-seat" } } }
@@ -236,7 +312,7 @@ public class GetSubscriptionPreviewQueryTests
     {
         PasswordManager = new PasswordManagerInvoiceItems
         {
-            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m }
+            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 5, Cost = 100m },
         },
         Cadence = PlanCadenceType.Annually,
         PlanTier = PlanTierType.Teams,
