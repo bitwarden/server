@@ -152,58 +152,11 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     [Theory]
     [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
     [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOff_SuccessLogout(KdfType kdf,
+    public async Task PostKdf_ValidRequest_SuccessSyncAndLogoutWithReason(KdfType kdf,
         int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(false);
-
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var kdfRequest = new KdfRequestModel
-        {
-            KdfType = kdf,
-            Iterations = kdfIterations,
-            Memory = kdfMemory,
-            Parallelism = kdfParallelism,
-        };
-
-        var response = await PostKdfWithKdfRequestAsync(kdfRequest);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        // Validate that the user fields were updated correctly
-        var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(user);
-        Assert.Equal(kdfRequest.KdfType, user.Kdf);
-        Assert.Equal(kdfRequest.Iterations, user.KdfIterations);
-        Assert.Equal(kdfRequest.Memory, user.KdfMemory);
-        Assert.Equal(kdfRequest.Parallelism, user.KdfParallelism);
-        Assert.Equal(_masterKeyWrappedUserKey, user.Key);
-        Assert.NotNull(user.LastKdfChangeDate);
-        Assert.True(user.LastKdfChangeDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.RevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.True(user.AccountRevisionDate > DateTime.UtcNow.AddMinutes(-1));
-        Assert.NotEqual(userBeforeKdfChange.SecurityStamp, user.SecurityStamp);
-        Assert.Equal(PasswordVerificationResult.Success,
-            _passwordHasher.VerifyHashedPassword(user, user.MasterPassword!, _newMasterPasswordHash));
-
-        // Validate push notification
-        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
-    }
-
-    [Theory]
-    [BitAutoData(KdfType.PBKDF2_SHA256, 600001, null, null)]
-    [BitAutoData(KdfType.Argon2id, 4, 65, 5)]
-    public async Task PostKdf_ValidRequestLogoutOnKdfChangeFeatureFlagOn_SuccessSyncAndLogoutWithReason(KdfType kdf,
-        int kdfIterations, int? kdfMemory, int? kdfParallelism)
-    {
-        var userBeforeKdfChange = await _userRepository.GetByEmailAsync(_ownerEmail);
-        Assert.NotNull(userBeforeKdfChange);
-
-        _featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange).Returns(true);
 
         await _loginHelper.LoginAsync(_ownerEmail);
 

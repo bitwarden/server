@@ -18,17 +18,14 @@ public class ChangeKdfCommand : IChangeKdfCommand
     private readonly IPushNotificationService _pushService;
     private readonly IMasterPasswordService _masterPasswordService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
-    private readonly IFeatureService _featureService;
 
     public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService,
-        IMasterPasswordService masterPasswordService, IdentityErrorDescriber describer,
-        IFeatureService featureService)
+        IMasterPasswordService masterPasswordService, IdentityErrorDescriber describer)
     {
         _userService = userService;
         _pushService = pushService;
         _masterPasswordService = masterPasswordService;
         _identityErrorDescriber = describer;
-        _featureService = featureService;
     }
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPasswordAuthenticationHash,
@@ -60,14 +57,12 @@ public class ChangeKdfCommand : IChangeKdfCommand
             throw new BadRequestException("KDF settings are invalid.");
         }
 
-        var logoutOnKdfChange = !_featureService.IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
-
         var data = new UpdateExistingKdfConfigurationData
         {
             MasterPasswordAuthentication = authenticationData,
             MasterPasswordUnlock = unlockData,
             ValidatePassword = true,
-            RefreshStamp = logoutOnKdfChange,
+            RefreshStamp = false,
             MasterPasswordHint = user.MasterPasswordHint, // KDF rotation does not change the hint; carry existing value through
         };
 
@@ -77,16 +72,9 @@ public class ChangeKdfCommand : IChangeKdfCommand
             return IdentityResult.Failed(errors);
         }
 
-        if (logoutOnKdfChange)
-        {
-            await _pushService.PushLogOutAsync(user.Id);
-        }
-        else
-        {
-            // Clients that support the new feature flag will ignore the logout when it matches the reason and the feature flag is enabled.
-            await _pushService.PushLogOutAsync(user.Id, reason: PushNotificationLogOutReason.KdfChange);
-            await _pushService.PushSyncSettingsAsync(user.Id);
-        }
+        // Clients that don't recognize the KdfChange reason will log out; newer clients ignore it and sync settings instead.
+        await _pushService.PushLogOutAsync(user.Id, reason: PushNotificationLogOutReason.KdfChange);
+        await _pushService.PushSyncSettingsAsync(user.Id);
 
         return IdentityResult.Success;
     }
