@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadOrganizationCollectionsWithPermissions]
+CREATE PROCEDURE [dbo].[Collection_ReadOrganizationCollectionsWithPermissions]
     @OrganizationId [UNIQUEIDENTIFIER],
     @UserId [UNIQUEIDENTIFIER]
 AS
