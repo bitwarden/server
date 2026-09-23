@@ -415,6 +415,42 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
+    public async Task GetManyLoginCipherOrganizationDetailsAsync_ReturnsOnlyLoginCiphers(
+        Cipher loginCipher,
+        Cipher nonLoginCipher,
+        Organization org,
+        List<EfVaultRepo.CipherRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos)
+    {
+        foreach (var sut in suts)
+        {
+            var i = suts.IndexOf(sut);
+
+            var efOrg = await efOrgRepos[i].CreateAsync(org);
+            efOrgRepos[i].ClearChangeTracking();
+
+            loginCipher.OrganizationId = efOrg.Id;
+            loginCipher.UserId = null;
+            loginCipher.Type = Bit.Core.Vault.Enums.CipherType.Login;
+
+            nonLoginCipher.OrganizationId = efOrg.Id;
+            nonLoginCipher.UserId = null;
+            nonLoginCipher.Type = Bit.Core.Vault.Enums.CipherType.SecureNote;
+
+            var createdLogin = await sut.CreateAsync(loginCipher);
+            sut.ClearChangeTracking();
+            var createdNonLogin = await sut.CreateAsync(nonLoginCipher);
+            sut.ClearChangeTracking();
+
+            var result = (await sut.GetManyLoginCipherOrganizationDetailsAsync(efOrg.Id)).ToList();
+
+            Assert.Contains(result, c => c.Id == createdLogin.Id);
+            Assert.DoesNotContain(result, c => c.Id == createdNonLogin.Id);
+            Assert.All(result, c => Assert.Equal(Bit.Core.Vault.Enums.CipherType.Login, c.Type));
+        }
+    }
+
+    [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
     public async Task CipherOrganizationDetailsReadByIdQuery_ReturnsAllProperties(
         Cipher cipher,
         Organization org,
