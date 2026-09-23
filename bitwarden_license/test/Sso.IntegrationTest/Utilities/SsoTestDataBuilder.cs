@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
@@ -62,6 +63,7 @@ public class SsoTestDataBuilder
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
+    private bool? _wantAssertionsSignedFlagEnabled;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -159,6 +161,17 @@ public class SsoTestDataBuilder
     public SsoTestDataBuilder AsNativeClient()
     {
         _isNativeClient = true;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables the <see cref="FeatureFlagKeys.PM42892_WantAssertionsSigned"/> feature flag for the test.
+    /// The multi-assertion signature verifier (<c>Saml2AssertionSignatureVerifier.EnsureAssertionsSigned</c>)
+    /// is gated behind this flag, so tests exercising that path must opt in.
+    /// </summary>
+    public SsoTestDataBuilder WithPM42892WantAssertionsSignedFlag(bool enabled = true)
+    {
+        _wantAssertionsSignedFlagEnabled = enabled;
         return this;
     }
 
@@ -308,6 +321,15 @@ public class SsoTestDataBuilder
                         org.Seats = org.Seats!.Value + 1;
                         throw new Exception("simulated partial-autoscale failure");
                     });
+            });
+        }
+
+        // 1.f Configure IFeatureService to reflect the PM42892_WantAssertionsSigned feature flag, if requested
+        if (_wantAssertionsSignedFlagEnabled.HasValue)
+        {
+            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
+            {
+                svc.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned).Returns(_wantAssertionsSignedFlagEnabled.Value);
             });
         }
 

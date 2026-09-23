@@ -408,9 +408,13 @@ public class Saml2WantAssertionsSignedTests
         (CreateSelfSignedCertificate("CN=Test IdP"), CreateSelfSignedCertificate("CN=Test SP"));
 
     // Builds the real, database-backed scheme and returns the pieces each arrangement needs.
+    // Every test in this file exercises the multi-assertion signature verifier
+    // (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned), so PM42892_WantAssertionsSigned
+    // must be enabled here. A test that wants the legacy, pre-flag branch instead must pass
+    // featureFlagEnabled: false.
     private static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
         BuildSchemeAsync(X509Certificate2 idpCertificate, X509Certificate2 spCertificate,
-            bool wantAssertionsSigned)
+            bool wantAssertionsSigned, bool featureFlagEnabled = true)
     {
         var testData = await new SsoTestDataBuilder()
             .WithSsoConfig(cfg => cfg!.SetData(new SsoConfigurationData
@@ -423,6 +427,7 @@ public class Saml2WantAssertionsSignedTests
                 SpWantAssertionsSigned = wantAssertionsSigned,
             }))
             .WithSamlSigningCertificate(spCertificate)
+            .WithPM42892WantAssertionsSignedFlag(featureFlagEnabled)
             .BuildAsync();
 
         var organizationId = testData.Organization!.Id.ToString();
@@ -435,10 +440,11 @@ public class Saml2WantAssertionsSignedTests
     }
 
     private static async Task<Arrangement> ArrangeAsync(string assertionElement,
-        X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned)
+        X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned,
+        bool featureFlagEnabled = true)
     {
         var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned);
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled);
 
         var context = BuildPostContext(testData,
             SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId),
@@ -453,10 +459,10 @@ public class Saml2WantAssertionsSignedTests
     // CouldHandleAsync.
     private static async Task<Arrangement> ArrangeLogoutAsync(string messageXml,
         X509Certificate2 idpCertificate, X509Certificate2 spCertificate, bool wantAssertionsSigned,
-        string formField = "SAMLRequest")
+        string formField = "SAMLRequest", bool featureFlagEnabled = true)
     {
         var (testData, samlOptions, organizationId) =
-            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned);
+            await BuildSchemeAsync(idpCertificate, spCertificate, wantAssertionsSigned, featureFlagEnabled);
 
         var context = BuildPostContext(testData, LogoutPath(organizationId), formField, messageXml);
 

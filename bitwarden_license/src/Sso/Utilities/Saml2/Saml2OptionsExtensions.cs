@@ -4,6 +4,8 @@
 using System.IO.Compression;
 using System.Text;
 using System.Xml;
+using Bit.Core;
+using Bitwarden.Server.Sdk.Features;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 
@@ -94,7 +96,26 @@ public static class Saml2OptionsExtensions
 
         if (options.SPOptions.WantAssertionsSigned)
         {
-            Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
+            var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
+            if (featureService.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned))
+            {
+                Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
+            }
+            else
+            {
+                // This can throw if an IdP sends encrypted assertions in an
+                // <EncryptedAssertion> node. Both <Assertion> and <EncryptedAssertion> are
+                // allowed per OASIS spec in an encrypted case. They are mutually exclusive
+                // on a per-assertion basis.
+                // PM-42982 exists to improve this site to handle all cases.
+                var assertion = envelope["Assertion", Saml2Namespaces.Saml2Name];
+                var isAssertionSigned = assertion != null && XmlHelpers.IsSignedByAny(assertion, idp.SigningKeys,
+                    options.SPOptions.ValidateCertificates, options.SPOptions.MinIncomingSigningAlgorithm);
+                if (!isAssertionSigned)
+                {
+                    throw new Exception("Cannot verify SAML assertion signature.");
+                }
+            }
         }
 
         return true;

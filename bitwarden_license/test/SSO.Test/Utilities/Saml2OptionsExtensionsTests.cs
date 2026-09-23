@@ -3,11 +3,14 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml;
+using Bit.Core;
 using Bit.Sso.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
+using NSubstitute;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
@@ -35,14 +38,17 @@ public class Saml2OptionsExtensionsTests
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
 
-    [Fact]
-    public async Task CouldHandleAsync_NoAssertionAndWantAssertionsSigned_Throws()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CouldHandleAsync_NoAssertionAndWantAssertionsSigned_Throws(bool featureFlagEnabled)
     {
         // An envelope with no <saml:Assertion> element must still cause a throw from the
         // signature check. The algorithm validation try/catch wraps only the validation,
         // so it must not hide this throw.
+        // The throw must occur in both the flag-on and the legacy flag-off signature checks.
         var options = BuildOptions(wantAssertionsSigned: true);
-        using var testContext = BuildPostContext(BuildResponseXml(string.Empty));
+        using var testContext = BuildPostContext(BuildResponseXml(string.Empty), featureFlagEnabled);
         var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -327,14 +333,20 @@ public class Saml2OptionsExtensionsTests
         return context;
     }
 
-    // CouldHandleAsync resolves the inspector metrics from the request services.
-    private static MetricTestContext BuildPostContext(string responseXml)
+    // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
+    // the PM42892_WantAssertionsSigned feature flag, from the request services.
+    private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true)
     {
         var context = BuildRawPostContext(responseXml);
 
         var services = new ServiceCollection();
         services.AddMetrics();
         services.AddSingleton<Saml2AssertionMetrics>();
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned).Returns(featureFlagEnabled);
+        services.AddSingleton(featureService);
+
         var provider = services.BuildServiceProvider();
 
         var collector = new MetricCollector<long>(
