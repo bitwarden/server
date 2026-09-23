@@ -9,6 +9,8 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -470,5 +472,115 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             .ReadFromJsonAsync<AccountRecoveryDetailsList>();
         var details = Assert.Single(result.Data);
         Assert.Equal(memberOrgUser.Id, details.OrganizationUserId);
+    }
+
+    /// <summary>
+    /// H7 — an administrator resetting only two-factor stops that member's remembered devices from
+    /// being trusted. This flag combination had no coverage: every other recovery test here sets
+    /// <c>ResetMasterPassword</c>, which is a different code path.
+    /// </summary>
+    /// <remarks>
+    /// Asserted on the stored stamp, which is the value a presented token is compared against, so a
+    /// changed stamp is what "the previously issued tokens no longer work" means. The end-to-end
+    /// replay is covered in the Identity integration tests.
+    /// </remarks>
+    [Fact]
+    public async Task RecoverAccount_ResetTwoFactorOnly_RevokesRememberedDevices()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
+        var (device, _) = await SeedRememberedDeviceAsync(targetUser, "stamp-before-reset");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = false,
+                ResetTwoFactor = true,
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.NotEqual("stamp-before-reset", row.Stamp);
+    }
+
+    /// <summary>
+    /// The two flags are independent. A password-only recovery is not a two-factor teardown, so it
+    /// must leave remembered devices alone — over-firing would sign people out of remember-me for
+    /// no reason.
+    /// </summary>
+    [Fact]
+    public async Task RecoverAccount_ResetMasterPasswordOnly_LeavesRememberedDevicesAlone()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var userRepository = _factory.GetService<IUserRepository>();
+        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
+        var (device, _) = await SeedRememberedDeviceAsync(targetUser, "stamp-untouched");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = true,
+                ResetTwoFactor = false,
+                NewMasterPasswordHash = "new-master-password-hash",
+                Key = "encrypted-recovery-key",
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.Equal("stamp-untouched", row.Stamp);
+    }
+
+    private async Task<(Device Device, TwoFactorRememberToken Row)> SeedRememberedDeviceAsync(
+        User user, string stamp)
+    {
+        var device = await _factory.GetService<IDeviceRepository>().CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "chrome-test",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            Active = true,
+            LastActivityDate = DateTime.UtcNow,
+        });
+
+        var row = await _factory.GetService<ITwoFactorRememberTokenRepository>()
+            .UpsertAsync(new TwoFactorRememberToken
+            {
+                UserId = user.Id,
+                DeviceId = device.Id,
+                Stamp = stamp,
+                ExpirationDate = DateTime.UtcNow.AddDays(30),
+            });
+
+        return (device, row);
     }
 }
