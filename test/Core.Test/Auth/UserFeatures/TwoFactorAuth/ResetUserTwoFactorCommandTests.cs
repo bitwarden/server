@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
+﻿using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -76,5 +77,43 @@ public class ResetUserTwoFactorCommandTests
         await sutProvider.GetDependency<IUserRepository>()
             .Received(1)
             .ReplaceAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResetAsync_RevokesRememberedDevices(User user)
+    {
+        // Arrange
+        var sutProvider = GetSutProvider();
+
+        // Act
+        await sutProvider.Sut.ResetAsync(user);
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .Received(1)
+            .RevokeAllForUserAsync(user.Id);
+    }
+
+    /// <summary>
+    /// Revocation runs before the write that clears the providers, so a failure leaves two-factor
+    /// intact and the whole operation can simply be retried. A refactor that moves the call after
+    /// the write would break that, and nothing else would notice.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ResetAsync_RevocationFails_DoesNotClearTwoFactor(User user)
+    {
+        // Arrange
+        var sutProvider = GetSutProvider();
+        sutProvider.GetDependency<IRevokeTwoFactorRememberTokensCommand>()
+            .RevokeAllForUserAsync(user.Id)
+            .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
+
+        // Act
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.ResetAsync(user));
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
     }
 }
