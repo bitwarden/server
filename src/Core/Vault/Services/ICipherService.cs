@@ -35,5 +35,5 @@ public interface ICipherService
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
     Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId);
     Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin, long requestLength);
-    Task DeleteAttachmentsForOrganizationAsync(Guid organizationId);
+    Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false);
 }
