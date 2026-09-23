@@ -201,9 +201,12 @@ BEGIN
         @RotationJobId,
         @RotationSource,
         @SyncState
-    FROM (SELECT 1 AS [X]) Seed
-    LEFT JOIN [dbo].[User] AU ON AU.[Id] = @ActorId
-    LEFT JOIN [dbo].[User] RU ON RU.[Id] = @RequesterId
+    FROM
+        (SELECT 1 AS [X]) Seed
+    LEFT JOIN
+        [dbo].[User] AU ON AU.[Id] = @ActorId
+    LEFT JOIN
+        [dbo].[User] RU ON RU.[Id] = @RequesterId
 END
 GO
 
@@ -272,8 +275,10 @@ BEGIN
         [RotationJobId],
         [RotationSource],
         [SyncState]
-    FROM [dbo].[AccessAuditEvent] E
-    WHERE E.[OrganizationId] = @OrganizationId
+    FROM
+        [dbo].[AccessAuditEvent] E
+    WHERE
+        E.[OrganizationId] = @OrganizationId
         AND E.[OccurredDate] >= @StartDate
         AND E.[OccurredDate] <= @EndDate
         -- Resume where the previous page stopped. Keyed on ([OccurredDate], [Id]) rather than [OccurredDate] alone: an
@@ -291,9 +296,12 @@ BEGIN
         -- range holds; an action straddling a bound reads as in-doubt at that edge rather than disappearing from both
         -- sides of it. The [Id] arm keeps the choice deterministic if a pair ever arrives with its phase written twice.
         AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[AccessAuditEvent] P
-            WHERE P.[CorrelationId] = E.[CorrelationId]
+            SELECT
+                1
+            FROM
+                [dbo].[AccessAuditEvent] P
+            WHERE
+                P.[CorrelationId] = E.[CorrelationId]
                 AND P.[OrganizationId] = @OrganizationId
                 AND P.[OccurredDate] >= @StartDate
                 AND P.[OccurredDate] <= @EndDate
@@ -336,7 +344,9 @@ BEGIN
                 AND E.[AccessRuleId] IN (SELECT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@RuleIds))
             )
         )
-    ORDER BY E.[OccurredDate] DESC, E.[Id] DESC
+    ORDER BY
+        E.[OccurredDate] DESC,
+        E.[Id] DESC
 END
 GO
 
@@ -365,8 +375,10 @@ BEGIN
             [CipherId],
             [CollectionId],
             ROW_NUMBER() OVER (PARTITION BY [CipherId] ORDER BY [OccurredDate] DESC, [Id] DESC) AS [Rank]
-        FROM [dbo].[AccessAuditEvent]
-        WHERE [OrganizationId] = @OrganizationId
+        FROM
+            [dbo].[AccessAuditEvent]
+        WHERE
+            [OrganizationId] = @OrganizationId
             AND [OccurredDate] >= @StartDate
             AND [OccurredDate] <= @EndDate
             AND [CipherId] IS NOT NULL
@@ -376,8 +388,10 @@ BEGIN
             [AccessRuleId],
             [RuleName],
             ROW_NUMBER() OVER (PARTITION BY [AccessRuleId] ORDER BY [OccurredDate] DESC, [Id] DESC) AS [Rank]
-        FROM [dbo].[AccessAuditEvent]
-        WHERE [OrganizationId] = @OrganizationId
+        FROM
+            [dbo].[AccessAuditEvent]
+        WHERE
+            [OrganizationId] = @OrganizationId
             AND [OccurredDate] >= @StartDate
             AND [OccurredDate] <= @EndDate
             AND [AccessRuleId] IS NOT NULL
@@ -387,8 +401,10 @@ BEGIN
         [CollectionId],
         CAST(NULL AS UNIQUEIDENTIFIER) AS [RuleId],
         CAST(NULL AS NVARCHAR(256)) AS [RuleName]
-    FROM [Ciphers]
-    WHERE [Rank] = 1
+    FROM
+        [Ciphers]
+    WHERE
+        [Rank] = 1
 
     UNION ALL
 
@@ -397,8 +413,10 @@ BEGIN
         NULL,
         [AccessRuleId],
         [RuleName]
-    FROM [Rules]
-    WHERE [Rank] = 1
+    FROM
+        [Rules]
+    WHERE
+        [Rank] = 1
 END
 GO
 

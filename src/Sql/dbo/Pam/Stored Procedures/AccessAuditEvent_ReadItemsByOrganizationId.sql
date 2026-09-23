@@ -23,8 +23,10 @@ BEGIN
             [CipherId],
             [CollectionId],
             ROW_NUMBER() OVER (PARTITION BY [CipherId] ORDER BY [OccurredDate] DESC, [Id] DESC) AS [Rank]
-        FROM [dbo].[AccessAuditEvent]
-        WHERE [OrganizationId] = @OrganizationId
+        FROM
+            [dbo].[AccessAuditEvent]
+        WHERE
+            [OrganizationId] = @OrganizationId
             AND [OccurredDate] >= @StartDate
             AND [OccurredDate] <= @EndDate
             AND [CipherId] IS NOT NULL
@@ -34,8 +36,10 @@ BEGIN
             [AccessRuleId],
             [RuleName],
             ROW_NUMBER() OVER (PARTITION BY [AccessRuleId] ORDER BY [OccurredDate] DESC, [Id] DESC) AS [Rank]
-        FROM [dbo].[AccessAuditEvent]
-        WHERE [OrganizationId] = @OrganizationId
+        FROM
+            [dbo].[AccessAuditEvent]
+        WHERE
+            [OrganizationId] = @OrganizationId
             AND [OccurredDate] >= @StartDate
             AND [OccurredDate] <= @EndDate
             AND [AccessRuleId] IS NOT NULL
@@ -45,8 +49,10 @@ BEGIN
         [CollectionId],
         CAST(NULL AS UNIQUEIDENTIFIER) AS [RuleId],
         CAST(NULL AS NVARCHAR(256)) AS [RuleName]
-    FROM [Ciphers]
-    WHERE [Rank] = 1
+    FROM
+        [Ciphers]
+    WHERE
+        [Rank] = 1
 
     UNION ALL
 
@@ -55,6 +61,8 @@ BEGIN
         NULL,
         [AccessRuleId],
         [RuleName]
-    FROM [Rules]
-    WHERE [Rank] = 1
+    FROM
+        [Rules]
+    WHERE
+        [Rank] = 1
 END

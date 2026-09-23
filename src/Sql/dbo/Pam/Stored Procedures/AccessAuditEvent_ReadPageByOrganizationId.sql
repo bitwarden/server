@@ -63,8 +63,10 @@ BEGIN
         [RotationJobId],
         [RotationSource],
         [SyncState]
-    FROM [dbo].[AccessAuditEvent] E
-    WHERE E.[OrganizationId] = @OrganizationId
+    FROM
+        [dbo].[AccessAuditEvent] E
+    WHERE
+        E.[OrganizationId] = @OrganizationId
         AND E.[OccurredDate] >= @StartDate
         AND E.[OccurredDate] <= @EndDate
         -- Resume where the previous page stopped. Keyed on ([OccurredDate], [Id]) rather than [OccurredDate] alone: an
@@ -82,9 +84,12 @@ BEGIN
         -- range holds; an action straddling a bound reads as in-doubt at that edge rather than disappearing from both
         -- sides of it. The [Id] arm keeps the choice deterministic if a pair ever arrives with its phase written twice.
         AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[AccessAuditEvent] P
-            WHERE P.[CorrelationId] = E.[CorrelationId]
+            SELECT
+                1
+            FROM
+                [dbo].[AccessAuditEvent] P
+            WHERE
+                P.[CorrelationId] = E.[CorrelationId]
                 AND P.[OrganizationId] = @OrganizationId
                 AND P.[OccurredDate] >= @StartDate
                 AND P.[OccurredDate] <= @EndDate
@@ -127,5 +132,7 @@ BEGIN
                 AND E.[AccessRuleId] IN (SELECT CAST([value] AS UNIQUEIDENTIFIER) FROM OPENJSON(@RuleIds))
             )
         )
-    ORDER BY E.[OccurredDate] DESC, E.[Id] DESC
+    ORDER BY
+        E.[OccurredDate] DESC,
+        E.[Id] DESC
 END
