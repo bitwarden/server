@@ -97,6 +97,58 @@ public class CipherRequestModel : IValidatableObject
             yield return new ValidationResult(
                 "The Name field is required.", new[] { nameof(Name) });
         }
+
+        if (!string.IsNullOrWhiteSpace(Data) && !isBlobEncrypted)
+        {
+            var error = ValidateDataShape();
+            if (error != null)
+            {
+                yield return error;
+            }
+        }
+    }
+
+    private ValidationResult ValidateDataShape()
+    {
+        const string msg = "The Data field is not valid for the specified Type.";
+        try
+        {
+            object result;
+            switch (Type)
+            {
+                case CipherType.Login:
+                    result = JsonSerializer.Deserialize<CipherLoginData>(Data);
+                    break;
+                case CipherType.Card:
+                    result = JsonSerializer.Deserialize<CipherCardData>(Data);
+                    break;
+                case CipherType.Identity:
+                    result = JsonSerializer.Deserialize<CipherIdentityData>(Data);
+                    break;
+                case CipherType.SecureNote:
+                    result = JsonSerializer.Deserialize<CipherSecureNoteData>(Data);
+                    break;
+                case CipherType.SSHKey:
+                    result = JsonSerializer.Deserialize<CipherSSHKeyData>(Data);
+                    break;
+                case CipherType.BankAccount:
+                    result = JsonSerializer.Deserialize<CipherBankAccountData>(Data);
+                    break;
+                case CipherType.DriversLicense:
+                    result = JsonSerializer.Deserialize<CipherDriversLicenseData>(Data);
+                    break;
+                case CipherType.Passport:
+                    result = JsonSerializer.Deserialize<CipherPassportData>(Data);
+                    break;
+                default:
+                    return null;
+            }
+            return result == null ? new ValidationResult(msg, new[] { nameof(Data) }) : null;
+        }
+        catch (JsonException)
+        {
+            return new ValidationResult(msg, new[] { nameof(Data) });
+        }
     }
 
     /// <summary>
