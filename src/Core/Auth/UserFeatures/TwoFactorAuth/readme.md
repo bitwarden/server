@@ -2,6 +2,28 @@
 
 This area of the codebase covers enrollment and management of the multi-factor authentication providers Bitwarden supports — Authenticator (TOTP), YubiKey OTP, Duo (personal and organization), WebAuthn, and Email — plus supporting flows such as recovery codes, login-time challenges, and administrative resets. The sections below document specific aspects of the 2FA domain.
 
+## Remembered devices
+
+A user completing 2FA can ask for the device to be remembered. The server records the device in `TwoFactorRememberToken` — one row per `(UserId, DeviceId)` — and issues a `TwoFactorRememberTokenable` carrying a copy of that row's `Stamp`. On a later login the client presents the token as `TwoFactorProviderType.Remember` and skips the challenge.
+
+### Revocation
+
+The token is only honored while the stamp it carries still matches the row's. `IRevokeTwoFactorRememberTokensCommand.RevokeAllForUserAsync` writes a new stamp to every row for a user, which stops all of their remember tokens being honored at once. The rows are kept, so `CreationDate` still records when each device was first remembered and `RevisionDate` records when it was cut off.
+
+Revocation is deliberately narrow. It affects remember-me only — access tokens, refresh tokens, and live sessions are untouched, so it does not sign the user out anywhere. Their devices simply have to complete 2FA again on the next login.
+
+Three flows revoke, all of them teardowns that leave the account with no second factor:
+
+| Flow | Where |
+| --- | --- |
+| An administrator resets a member's 2FA | `ResetUserTwoFactorCommand.ResetAsync` |
+| A user disables 2FA with a recovery code | `UserService.RecoverTwoFactorAsync` |
+| A user removes their **last** 2FA provider | `UserService.DisableTwoFactorProviderAsync` |
+
+Removing one of several providers does **not** revoke: the user still has working 2FA, so their remembered devices stay trusted. Untrusting a device does not revoke either — that is a separate trusted-device concept.
+
+Two further properties hold without any explicit call. A password change or account key rotation rotates `User.SecurityStamp`, which remember tokens also carry and which is compared on every use. And a remember token is never honored while the account has no 2FA configured at all, whatever the row says — so a teardown that somehow failed to revoke still cannot let a stale token stand in as a second factor until a new provider is enrolled.
+
 ## User Verification
 
 When a user manages their own 2FA enrollment (configuring a new provider, updating an existing one, removing one), the server requires proof that the human at the keyboard is the account owner. This section covers how that proof is established and replayed across the read → write step of a per-provider management flow.
