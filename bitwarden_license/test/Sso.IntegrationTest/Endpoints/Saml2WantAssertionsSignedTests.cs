@@ -344,10 +344,6 @@ public class Saml2WantAssertionsSignedTests
     [Fact]
     public async Task CouldHandleAsync_ResponseWithNoAssertionElementsAndWantAssertionsSigned_Throws()
     {
-        // A <Response> that carries no <Assertion> and no <EncryptedAssertion> throws. The
-        // `assertionElements.Length > 0 &&` guard enforces this. Enumerable.All returns true for
-        // an empty sequence, so without that guard allAssertionsSigned would be true and the
-        // envelope would pass the check untouched.
         var (idpCertificate, spCertificate) = BuildCertificates();
 
         var arrangement = await ArrangeAsync(
