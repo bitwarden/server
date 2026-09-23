@@ -1,4 +1,4 @@
-using Bit.Api.IntegrationTest.Factories;
+﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Invoicing;
 
 namespace Bit.Billing.IntegrationTest;

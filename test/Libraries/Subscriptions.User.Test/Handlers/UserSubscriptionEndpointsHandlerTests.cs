@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
@@ -6,7 +6,6 @@ using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Invoicing.InvoicePreviews.Queries;
 using Bit.Subscriptions.User.Handlers;
 using Bit.Subscriptions.User.Models.Requests;
-using Bit.Subscriptions.User.Queries;
 using NSubstitute;
 using Xunit;
 using UserEntity = Bit.Core.Entities.User;

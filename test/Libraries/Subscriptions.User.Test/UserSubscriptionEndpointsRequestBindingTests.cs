@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Services;
@@ -34,6 +34,21 @@ public class UserSubscriptionEndpointsRequestBindingTests
         Assert.Equal(ProductTierType.Teams, query.ReceivedRequest!.TargetProductTierType);
         Assert.Equal("US", query.ReceivedRequest.Country);
         Assert.Equal("12345", query.ReceivedRequest.PostalCode);
+    }
+
+    [Fact]
+    public async Task GetUpgradePreview_BindsTheEnumTierFromQuery()
+    {
+        // The client sends the numeric tier, but the query binder also accepts the exact enum name;
+        // pin that so a future binding change can't silently break the tier parameter.
+        var user = new UserEntity { Id = Guid.NewGuid() };
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        var query = new FakeGetSubscriptionUpgradePreviewQuery { Result = SamplePreview() };
+
+        var context = await InvokeAsync(query, "targetProductTierType=Teams&country=US&postalCode=12345");
+
+        Assert.Equal((int)HttpStatusCode.OK, context.Response.StatusCode);
+        Assert.Equal(ProductTierType.Teams, query.ReceivedRequest!.TargetProductTierType);
     }
 
     [Fact]

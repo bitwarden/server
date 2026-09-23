@@ -46,8 +46,8 @@ sum charge, credit, and tax across them rather than reading index 0. `EstimatedT
 `AmountDue` are invoice-level and already aggregate every row.
 
 `GET preview` delegates to `Bit.Invoicing`'s `IGetSubscriptionPreviewQuery`, which previews the
-caller's own upcoming subscription renewal. It returns 404 when the caller has no Stripe
-subscription to preview.
+caller's own upcoming subscription renewal. It returns 404 when the caller can't be resolved or has
+no Stripe subscription to preview.
 
 ## Stripe boundary
 
