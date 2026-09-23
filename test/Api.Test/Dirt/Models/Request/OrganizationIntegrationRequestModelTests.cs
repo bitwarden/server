@@ -87,7 +87,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Type), results[0].MemberNames);
-        Assert.Contains("cannot be created directly", results[0].ErrorMessage);
+        Assert.Contains("cannot be created or updated directly", results[0].ErrorMessage);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class OrganizationIntegrationRequestModelTests
 
         Assert.Single(results);
         Assert.Contains(nameof(model.Type), results[0].MemberNames);
-        Assert.Contains("cannot be created directly", results[0].ErrorMessage);
+        Assert.Contains("cannot be created or updated directly", results[0].ErrorMessage);
     }
 
     [Fact]
