@@ -1,7 +1,6 @@
 ﻿namespace Bit.Sso.Utilities;
 
-// FIXME: Rename to Saml2ClaimTypes
-public static class SamlClaimTypes
+public static class Saml2ClaimTypes
 {
     public const string Email = "urn:oid:0.9.2342.19200300.100.1.3";
     public const string GivenName = "urn:oid:2.5.4.42";
@@ -30,8 +29,7 @@ public static class Saml2KeyTransportEncryptionAlgorithms
     public static readonly string[] Accepted = [RsaOaepMgf1p, RsaOaep];
 }
 
-// FIXME: Rename to Saml2NameIdFormats
-public static class SamlNameIdFormats
+public static class Saml2NameIdFormats
 {
     // Common
     public const string Unspecified = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified";
@@ -47,8 +45,7 @@ public static class SamlNameIdFormats
     public const string EntityIdentifier = "urn:oasis:names:tc:SAML:2.0:nameid-format:entity";
 }
 
-// FIXME: Rename to Saml2PropertyKeys
-public static class SamlPropertyKeys
+public static class Saml2PropertyKeys
 {
     public const string ClaimFormat = "http://schemas.xmlsoap.org/ws/2005/05/identity/claimproperties/format";
 }
