@@ -12,6 +12,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -42,6 +43,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IIssueTwoFactorRememberTokenCommand _issueTwoFactorRememberTokenCommand;
 
     protected ICurrentContext CurrentContext { get; }
     protected IFeatureService _featureService { get; }
@@ -70,7 +72,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IIssueTwoFactorRememberTokenCommand issueTwoFactorRememberTokenCommand
     )
     {
         _userManager = userManager;
@@ -92,6 +95,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
+        _issueTwoFactorRememberTokenCommand = issueTwoFactorRememberTokenCommand;
     }
 
     // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
@@ -113,8 +117,12 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // A remember token is issued either because the user asked for one, or because they
+        // presented one in the previous format and it is being replaced. The second condition is
+        // set only on a successful previous-format validation — never merely because the request
+        // used the Remember provider, which would let an active user's remember-me renew forever.
         await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
-            validatorContext.RememberMeRequested);
+            validatorContext.RememberMeRequested || validatorContext.RememberUpgradeRequired);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -321,10 +329,12 @@ public abstract class BaseRequestValidator<T> where T : class
             return false;
         }
 
-        var twoFactorTokenValid =
+        var twoFactorResult =
             await _twoFactorAuthenticationValidator
                 .VerifyTwoFactorAsync(validatorContext.User, twoFactorOrganization, twoFactorProviderType,
-                    twoFactorToken);
+                    twoFactorToken, request.Raw["DeviceIdentifier"]);
+        var twoFactorTokenValid = twoFactorResult.Succeeded;
+        validatorContext.RememberUpgradeRequired = twoFactorResult.LegacyRememberUpgradeRequired;
 
         // 3b. Response for 2FA required but request is not valid or remember token expired state.
         if (!twoFactorTokenValid)
@@ -654,9 +664,10 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (sendRememberToken)
         {
-            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
-            customResponse.Add("TwoFactorToken", token);
+            // The device is non-null here even though the signature allows null: this runs only
+            // after device validation succeeded, and DeviceValidator assigns (and saves, for a new
+            // device) the row on every success path.
+            customResponse.Add("TwoFactorToken", await _issueTwoFactorRememberTokenCommand.IssueAsync(user, device));
         }
 
         return customResponse;
