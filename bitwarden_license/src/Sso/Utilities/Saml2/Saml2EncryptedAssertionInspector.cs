@@ -22,12 +22,15 @@ public static class Saml2EncryptedAssertionInspector
     /// <param name="context">The current request context.</param>
     /// <returns><see langword="false"/> when any exception interrupts the check. Otherwise, <see langword="true"/>.</returns>
     /// <remarks>
-    /// A SAML response can hold more than one assertion, and each encrypted assertion holds one or more keys.
+    /// A SAML response can hold more than one assertion. It is defined in the SAML2.0 Schema Protocol as a choice group
+    /// with 0 minimum occurrences, and unbounded maximum occurrences. Mixing both Assertion and EncryptedAssertion
+    /// in a single Response is allowed. Each encrypted assertion holds one or more keys.
     /// Every key of every assertion must be checked.
     /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
     /// The recorded metric is an anonymous, aggregate count. It never carries an organization or a user identifier.
     /// </remarks>
+    /// <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-assertion-2.0.xsd" /> 
     public static bool TryRecordUnsupportedKeyTransportAlgorithms(XmlElement envelope, HttpContext context)
     {
         try
@@ -72,6 +75,7 @@ public static class Saml2EncryptedAssertionInspector
     /// "possibly encrypted in different ways or for different recipients", so the algorithms can differ.
     /// Every key must be read. Reading only the first key hides a deprecated algorithm behind an accepted one.
     /// </remarks>
+    /// <see href="https://www.w3.org/TR/xmlenc-core1/#sec-ds-RetrievalMethod"/>
     private static IEnumerable<string?> ReadKeyEncryptionAlgorithms(XmlElement encryptedAssertion)
     {
         // Some identity providers place xenc:EncryptedKey beside xenc:EncryptedData instead of inside it.
