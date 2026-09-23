@@ -21,10 +21,8 @@ public class PreAccessEnforcerQuery(
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)
             ?? throw new PreAccessOrganizationNotFoundException();
 
-        // Policies are never enforced if the organization's plan does not support them.
-
         var emptyPolicies = new Dictionary<PolicyType, Policy>();
-        if (!organizationAbility.UsePolicies)
+        if (!organizationAbility.Enabled || !organizationAbility.UsePolicies)
         {
             return new PreAccessPolicyEnforcer(organizationId, emptyPolicies, [], factories);
         }

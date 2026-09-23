@@ -37,12 +37,15 @@ public class PreAccessEnforcerQueryTests
         await _policyRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
     }
 
-    [Theory, BitAutoData]
-    public async Task RunAsync_UsePoliciesDisabled_ReturnsNotEnforced_WithoutLoadingData(
-        Guid organizationId, Guid userId)
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    public async Task RunAsync_PoliciesUnavailable_ReturnsNotEnforced_WithoutLoadingData(
+        bool enabled, bool usePolicies, Guid organizationId, Guid userId)
     {
         // Arrange
-        ArrangeUsePolicies(organizationId, usePolicies: false);
+        ArrangeOrganizationAbility(organizationId, enabled, usePolicies);
 
         // Act
         var enforcer = await CreateSut().RunAsync(organizationId);
@@ -52,7 +55,6 @@ public class PreAccessEnforcerQueryTests
         Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).Enforced);
         await _policyRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
         await _providerUserRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationAsync(default);
-        await _providerUserRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -60,7 +62,7 @@ public class PreAccessEnforcerQueryTests
         Guid organizationId, Guid userId, Guid providerUserId)
     {
         // Arrange
-        ArrangeUsePolicies(organizationId, usePolicies: true);
+        ArrangeOrganizationAbility(organizationId, enabled: true, usePolicies: true);
         _policyRepository.GetManyByOrganizationIdAsync(organizationId).Returns(
         [
             CreatePolicy(organizationId, PolicyType.SingleOrg, enabled: true),
@@ -84,9 +86,9 @@ public class PreAccessEnforcerQueryTests
         await _providerUserRepository.Received(1).GetManyByOrganizationAsync(organizationId);
     }
 
-    private void ArrangeUsePolicies(Guid organizationId, bool usePolicies) =>
+    private void ArrangeOrganizationAbility(Guid organizationId, bool enabled, bool usePolicies) =>
         _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)
-            .Returns(new OrganizationAbility { Id = organizationId, UsePolicies = usePolicies });
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = enabled, UsePolicies = usePolicies });
 
     private static Policy CreatePolicy(Guid organizationId, PolicyType type, bool enabled) =>
         new() { Id = Guid.NewGuid(), OrganizationId = organizationId, Type = type, Enabled = enabled };
