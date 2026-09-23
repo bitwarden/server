@@ -353,6 +353,55 @@ public class CipherResponseModelTests
         Assert.Null(response.Passport);
     }
 
+    [Fact]
+    public void Constructor_Full_NullFieldElement_DropsElementAndSerializesWithoutThrowing()
+    {
+        // Fields is a valid, deserializable array containing a null element, so ValidateDataShape
+        // (write path) would not reject it. CipherFieldModel dereferences its data unconditionally, so
+        // this must not throw during construction or during response serialization.
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Fields":[null,{"Name":"2.fieldName|encrypted","Type":0}]}""",
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        Assert.NotNull(response.Fields);
+        Assert.Single(response.Fields);
+        Assert.Equal("2.fieldName|encrypted", response.Fields.First().Name);
+
+        // Materialized during construction, not lazily during serialization, so a corrupt element found
+        // later in the list can't crash the response after the guard has already returned.
+        var json = JsonSerializer.Serialize(response);
+        Assert.Contains("2.fieldName|encrypted", json);
+    }
+
+    [Fact]
+    public void Constructor_Full_NullPasswordHistoryElement_DropsElementAndSerializesWithoutThrowing()
+    {
+        var cipher = new Cipher
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","PasswordHistory":[null,{"Password":"2.password|encrypted","LastUsedDate":"2024-01-01T00:00:00Z"}]}""",
+            RevisionDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow,
+        };
+
+        var response = new FullCipherMiniResponseModel(FullCipherAccess.Unrestricted(), cipher, _globalSettings, false);
+
+        Assert.NotNull(response.PasswordHistory);
+        Assert.Single(response.PasswordHistory);
+        Assert.Equal("2.password|encrypted", response.PasswordHistory.First().Password);
+
+        var json = JsonSerializer.Serialize(response);
+        Assert.Contains("2.password|encrypted", json);
+    }
+
     private static Cipher LoginCipher(string data) => new()
     {
         Id = Guid.NewGuid(),
