@@ -95,7 +95,10 @@ BEGIN
         @RotationJobId,
         @RotationSource,
         @SyncState
-    FROM (SELECT 1 AS [X]) Seed
-    LEFT JOIN [dbo].[User] AU ON AU.[Id] = @ActorId
-    LEFT JOIN [dbo].[User] RU ON RU.[Id] = @RequesterId
+    FROM
+        (SELECT 1 AS [X]) Seed
+    LEFT JOIN
+        [dbo].[User] AU ON AU.[Id] = @ActorId
+    LEFT JOIN
+        [dbo].[User] RU ON RU.[Id] = @RequesterId
 END
