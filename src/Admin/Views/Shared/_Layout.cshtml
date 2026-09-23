@@ -172,6 +172,18 @@
 
     <script src="~/assets/site.js" asp-append-version="true"></script>
 
+    @Html.AntiForgeryToken()
+    <script>
+        $(document).ready(function () {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $(document).ajaxSend(function (event, jqxhr, settings) {
+                if (settings.type && settings.type.toUpperCase() !== "GET") {
+                    jqxhr.setRequestHeader("X-XSRF-TOKEN", token);
+                }
+            });
+        });
+    </script>
+
     @if (TempData["Error"] != null)
     {
         <script>

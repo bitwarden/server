@@ -531,6 +531,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
