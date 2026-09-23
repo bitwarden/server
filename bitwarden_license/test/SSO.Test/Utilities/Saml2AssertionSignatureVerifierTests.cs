@@ -1,5 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using Bit.Sso.Utilities;
 using Sustainsys.Saml2;
@@ -8,13 +7,6 @@ using Sustainsys.Saml2.Configuration;
 using Sustainsys.Saml2.Exceptions;
 using Sustainsys.Saml2.Metadata;
 using Sustainsys.Saml2.WebSso;
-using CipherData = System.Security.Cryptography.Xml.CipherData;
-using EncryptedData = System.Security.Cryptography.Xml.EncryptedData;
-using EncryptedKey = System.Security.Cryptography.Xml.EncryptedKey;
-using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
-using EncryptionMethod = System.Security.Cryptography.Xml.EncryptionMethod;
-using KeyInfo = System.Security.Cryptography.Xml.KeyInfo;
-using KeyInfoEncryptedKey = System.Security.Cryptography.Xml.KeyInfoEncryptedKey;
 
 namespace Bit.SSO.Test.Utilities;
 
@@ -59,7 +51,7 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void GetAssertionElements_SinglePlaintextAssertion_ReturnsOneElement()
     {
-        var envelope = BuildEnvelope("Response", BuildAssertionDocument().DocumentElement!.OuterXml);
+        var envelope = BuildEnvelope("Response", Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml);
 
         var element = Assert.Single(Saml2AssertionSignatureVerifier.GetAssertionElements(envelope));
         Assert.Equal("Assertion", element.LocalName);
@@ -78,7 +70,7 @@ public class Saml2AssertionSignatureVerifierTests
     public void GetAssertionElements_PlaintextAndEncryptedAssertions_ReturnsBothElements()
     {
         var envelope = BuildEnvelope("Response",
-            BuildAssertionDocument().DocumentElement!.OuterXml + BuildOpaqueEncryptedAssertion());
+            Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml + BuildOpaqueEncryptedAssertion());
 
         var elements = Saml2AssertionSignatureVerifier.GetAssertionElements(envelope);
 
@@ -158,9 +150,9 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void IsSignedByIdentityProvider_PlaintextAssertionSignedByTrustedCertificate_ReturnsTrue()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
         var (options, idp) = BuildOptions(signingCertificate: signingCertificate);
-        var element = GetSingleAssertion(BuildSignedAssertion(signingCertificate).OuterXml);
+        var element = GetSingleAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml);
 
         Assert.True(Saml2AssertionSignatureVerifier.IsSignedByIdentityProvider(element, options, idp));
     }
@@ -168,9 +160,9 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void IsSignedByIdentityProvider_UnsignedPlaintextAssertion_ReturnsFalse()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
         var (options, idp) = BuildOptions(signingCertificate: signingCertificate);
-        var element = GetSingleAssertion(BuildAssertionDocument().DocumentElement!.OuterXml);
+        var element = GetSingleAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml);
 
         Assert.False(Saml2AssertionSignatureVerifier.IsSignedByIdentityProvider(element, options, idp));
     }
@@ -180,10 +172,10 @@ public class Saml2AssertionSignatureVerifierTests
     {
         // XmlHelpers.IsSignedByAny returns false only for a missing <Signature>. A signature that
         // no trusted key verifies raises InvalidSignatureException, and this method does not catch it.
-        var trustedCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var untrustedCertificate = CreateSelfSignedCertificate("CN=Untrusted IdP");
+        var trustedCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var untrustedCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Untrusted IdP");
         var (options, idp) = BuildOptions(signingCertificate: trustedCertificate);
-        var element = GetSingleAssertion(BuildSignedAssertion(untrustedCertificate).OuterXml);
+        var element = GetSingleAssertion(Saml2TestXml.BuildSignedAssertion(untrustedCertificate).OuterXml);
 
         Assert.Throws<InvalidSignatureException>(
             () => Saml2AssertionSignatureVerifier.IsSignedByIdentityProvider(element, options, idp));
@@ -192,11 +184,11 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void IsSignedByIdentityProvider_EncryptedAssertionWithValidSignature_ReturnsTrue()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, idp) = BuildOptions(decryptionCertificate, signingCertificate);
         var element = GetSingleAssertion(
-            EncryptAssertion(BuildSignedAssertion(signingCertificate), decryptionCertificate));
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate), decryptionCertificate));
 
         Assert.True(Saml2AssertionSignatureVerifier.IsSignedByIdentityProvider(element, options, idp));
     }
@@ -204,11 +196,11 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void IsSignedByIdentityProvider_EncryptedAssertionWithoutSignature_ReturnsFalse()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, idp) = BuildOptions(decryptionCertificate, signingCertificate);
         var element = GetSingleAssertion(
-            EncryptAssertion(BuildAssertionDocument().DocumentElement!, decryptionCertificate));
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!, decryptionCertificate));
 
         Assert.False(Saml2AssertionSignatureVerifier.IsSignedByIdentityProvider(element, options, idp));
     }
@@ -219,12 +211,12 @@ public class Saml2AssertionSignatureVerifierTests
         // The IdP encrypts for a certificate the SP does not hold, so the decryptor returns null.
         // The identity provider is null: any signature check dereferences it and throws, so a
         // false result proves the signature check never runs.
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var otherCertificate = CreateSelfSignedCertificate("CN=Other SP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var otherCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Other SP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, _) = BuildOptions(decryptionCertificate);
         var element = GetSingleAssertion(
-            EncryptAssertion(BuildSignedAssertion(signingCertificate), otherCertificate));
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate), otherCertificate));
 
         Assert.Null(Saml2EncryptedAssertionDecryptor.TryDecryptAssertion(
             element, options.SPOptions.DecryptionServiceCertificates));
@@ -240,7 +232,7 @@ public class Saml2AssertionSignatureVerifierTests
     {
         var (options, idp) = BuildOptions();
         var envelope = BuildEnvelope(rootName,
-            includeUnsignedAssertion ? BuildAssertionDocument().DocumentElement!.OuterXml : string.Empty);
+            includeUnsignedAssertion ? Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml : string.Empty);
 
         Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
     }
@@ -295,13 +287,13 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void EnsureAssertionsSigned_AllAssertionsSigned_DoesNotThrow()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, idp) = BuildOptions(decryptionCertificate, signingCertificate);
         var envelope = BuildEnvelope("Response",
             BuildStatusXml(Saml2ResponseTypes.SuccessStatus) +
-            BuildSignedAssertion(signingCertificate, "_plaintext").OuterXml +
-            EncryptAssertion(BuildSignedAssertion(signingCertificate, "_encrypted"), decryptionCertificate));
+            Saml2TestXml.BuildSignedAssertion(signingCertificate, "_plaintext").OuterXml +
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate, "_encrypted"), decryptionCertificate));
 
         Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
     }
@@ -312,10 +304,10 @@ public class Saml2AssertionSignatureVerifierTests
     public void EnsureAssertionsSigned_OneUnsignedAssertion_ThrowsRegardlessOfOrder(bool unsignedFirst)
     {
         // Distinct IDs keep each signature reference bound to its own assertion.
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
         var (options, idp) = BuildOptions(signingCertificate: signingCertificate);
-        var signed = BuildSignedAssertion(signingCertificate, "_signed").OuterXml;
-        var unsigned = BuildAssertionDocument("_unsigned").DocumentElement!.OuterXml;
+        var signed = Saml2TestXml.BuildSignedAssertion(signingCertificate, "_signed").OuterXml;
+        var unsigned = Saml2TestXml.BuildAssertionDocument("_unsigned").DocumentElement!.OuterXml;
         var envelope = BuildEnvelope("Response",
             BuildStatusXml(Saml2ResponseTypes.SuccessStatus) +
             (unsignedFirst ? unsigned + signed : signed + unsigned));
@@ -328,13 +320,13 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void EnsureAssertionsSigned_SignedPlaintextWithUnsignedEncryptedSibling_Throws()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, idp) = BuildOptions(decryptionCertificate, signingCertificate);
         var envelope = BuildEnvelope("Response",
             BuildStatusXml(Saml2ResponseTypes.SuccessStatus) +
-            BuildSignedAssertion(signingCertificate, "_plaintext").OuterXml +
-            EncryptAssertion(BuildAssertionDocument("_encrypted").DocumentElement!, decryptionCertificate));
+            Saml2TestXml.BuildSignedAssertion(signingCertificate, "_plaintext").OuterXml +
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument("_encrypted").DocumentElement!, decryptionCertificate));
 
         var exception = Assert.Throws<Exception>(
             () => Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp));
@@ -344,13 +336,13 @@ public class Saml2AssertionSignatureVerifierTests
     [Fact]
     public void EnsureAssertionsSigned_SignedEncryptedWithUnsignedPlaintextSibling_Throws()
     {
-        var signingCertificate = CreateSelfSignedCertificate("CN=Test IdP");
-        var decryptionCertificate = CreateSelfSignedCertificate("CN=Test SP");
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
         var (options, idp) = BuildOptions(decryptionCertificate, signingCertificate);
         var envelope = BuildEnvelope("Response",
             BuildStatusXml(Saml2ResponseTypes.SuccessStatus) +
-            EncryptAssertion(BuildSignedAssertion(signingCertificate, "_encrypted"), decryptionCertificate) +
-            BuildAssertionDocument("_plaintext").DocumentElement!.OuterXml);
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate, "_encrypted"), decryptionCertificate) +
+            Saml2TestXml.BuildAssertionDocument("_plaintext").DocumentElement!.OuterXml);
 
         var exception = Assert.Throws<Exception>(
             () => Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp));
@@ -384,62 +376,6 @@ public class Saml2AssertionSignatureVerifierTests
         var options = new Saml2Options { SPOptions = spOptions };
         options.IdentityProviders.Add(idp);
         return (options, idp);
-    }
-
-    private static X509Certificate2 CreateSelfSignedCertificate(string subjectName)
-    {
-        using var key = RSA.Create(2048);
-        var now = DateTimeOffset.UtcNow;
-        return new CertificateRequest(subjectName, key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1)
-            .CreateSelfSigned(now, now.AddDays(365));
-    }
-
-    private static XmlDocument BuildAssertionDocument(string assertionId = "_assertion") =>
-        XmlHelpers.XmlDocumentFromString(
-            $"<saml:Assertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" ID=\"{assertionId}\">" +
-            $"<saml:Issuer>{IdpEntityId}</saml:Issuer>" +
-            "</saml:Assertion>");
-
-    private static XmlElement BuildSignedAssertion(X509Certificate2 signingCertificate,
-        string assertionId = "_assertion")
-    {
-        var document = BuildAssertionDocument(assertionId);
-        document.DocumentElement!.Sign(signingCertificate, includeKeyInfo: false);
-        return document.DocumentElement!;
-    }
-
-    // Encrypts an assertion element the same way a real IdP does: an AES content key wraps the
-    // assertion, and the SP's certificate wraps that key. This exercises the same decrypt path
-    // Sustainsys.Saml2 uses in production.
-    private static string EncryptAssertion(XmlElement assertion, X509Certificate2 encryptionCertificate)
-    {
-        var document = XmlHelpers.XmlDocumentFromString(
-            "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-        var importedAssertion = (XmlElement)document.ImportNode(assertion, deep: true);
-        document.DocumentElement!.AppendChild(importedAssertion);
-
-        using var contentKey = Aes.Create();
-        contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(importedAssertion, contentKey, content: false);
-
-        var encryptedData = new EncryptedData
-        {
-            Type = EncryptedXml.XmlEncElementUrl,
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncAES256Url),
-        };
-        encryptedData.CipherData.CipherValue = cipherValue;
-        encryptedData.KeyInfo = new KeyInfo();
-        var encryptedKey = new EncryptedKey
-        {
-            EncryptionMethod = new EncryptionMethod(EncryptedXml.XmlEncRSAOAEPUrl),
-            CipherData = new CipherData(
-                EncryptedXml.EncryptKey(contentKey.Key, encryptionCertificate.GetRSAPublicKey()!, useOAEP: true)),
-        };
-        encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
-
-        EncryptedXml.ReplaceElement(importedAssertion, encryptedData, content: false);
-
-        return document.DocumentElement!.OuterXml;
     }
 
     // An encrypted assertion shape for tests that only select elements and never decrypt.
