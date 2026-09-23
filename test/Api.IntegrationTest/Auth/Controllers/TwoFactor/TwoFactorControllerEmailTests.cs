@@ -7,8 +7,11 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
@@ -263,6 +266,55 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         var response = await _client.PostAsJsonAsync("/two-factor/send-email-login",
             new { Email = _userEmail });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    /// H9 — removing the user's last two-factor provider stops their remembered devices from being
+    /// trusted. Email is the only provider in this fixture, so the real DELETE below is the
+    /// last-provider path.
+    /// </summary>
+    /// <remarks>
+    /// Asserted on the stored stamp rather than by replaying a token: the stamp is the value a
+    /// presented token is compared against, so a changed stamp is exactly what "the previously
+    /// issued tokens no longer work" means. Replaying end-to-end is covered in the Identity tests.
+    /// </remarks>
+    [Fact]
+    public async Task DeleteEmail_RemovesLastProvider_RevokesRememberedDevices()
+    {
+        await EnrollUserInEmail();
+        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+
+        var deviceRepository = _factory.GetService<IDeviceRepository>();
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
+
+        var device = await deviceRepository.CreateAsync(new Device
+        {
+            UserId = user.Id,
+            Name = "chrome-test",
+            Type = DeviceType.ChromeBrowser,
+            Identifier = Guid.NewGuid().ToString(),
+            Active = true,
+            LastActivityDate = DateTime.UtcNow,
+        });
+        await rememberTokenRepository.UpsertAsync(new TwoFactorRememberToken
+        {
+            UserId = user.Id,
+            DeviceId = device.Id,
+            Stamp = "stamp-before-teardown",
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
+        });
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
+            new { MasterPasswordHash = MasterPasswordHash });
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+
+        var disableResponse = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, disableResponse.StatusCode);
+
+        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
+        Assert.NotNull(row);
+        Assert.NotEqual("stamp-before-teardown", row.Stamp);
     }
 
     private Task EnrollUserInEmail() =>
