@@ -125,8 +125,8 @@ public class Saml2WantAssertionsSignedTests
         // An identity-provider-initiated <LogoutRequest> carries no assertions by definition.
         // Sustainsys.Saml2 mounts the single logout endpoint under the same module path as the
         // assertion consumer service, so CouldHandleAsync inspects logout messages too. 
-        // WantAssertionsSigned requires at least one assertion element, so it rejects a
-        // correctly signed logout message. 
+        // WantAssertionsSigned applies only to a <Response>, so a logout message passes
+        // through untouched.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var logoutRequest = BuildSignedLogoutRequest(idpCertificate);
 
