@@ -3,8 +3,10 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using EfTwoFactorRememberToken = Bit.Infrastructure.EntityFramework.Auth.Models.TwoFactorRememberToken;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -284,6 +286,69 @@ public class TwoFactorRememberTokenRepositoryTests
 
         Assert.Null(await sut.GetByUserIdDeviceIdAsync(user.Id, expiredDevice.Id));
         Assert.NotNull(await sut.GetByUserIdDeviceIdAsync(user.Id, liveDevice.Id));
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // R9 — the unique index exists on every provider
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Proves the one-row-per-device constraint is enforced by the database rather than only by the
+    /// upsert's own logic. Inserts directly, since going through <c>UpsertAsync</c> would update.
+    /// </summary>
+    [Theory, DatabaseData]
+    public async Task DuplicateUserIdDeviceId_IsRejectedByUniqueIndex(
+        ITwoFactorRememberTokenRepository sut,
+        IUserRepository userRepository,
+        IDeviceRepository deviceRepository,
+        Database database,
+        IServiceProvider services)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var device = await CreateTestDeviceAsync(deviceRepository, user.Id);
+        await sut.UpsertAsync(NewToken(user.Id, device.Id, "stamp-one"));
+
+        await Assert.ThrowsAnyAsync<Exception>(
+            () => InsertRowDirectlyAsync(services, database, user.Id, device.Id));
+    }
+
+    private static async Task InsertRowDirectlyAsync(
+        IServiceProvider services, Database database, Guid userId, Guid deviceId)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await using var connection = new SqlConnection(database.ConnectionString);
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO [dbo].[TwoFactorRememberToken]
+                    ([Id], [UserId], [DeviceId], [Stamp], [CreationDate], [RevisionDate], [ExpirationDate])
+                VALUES
+                    (@Id, @UserId, @DeviceId, @Stamp, @Now, @Now, @Expiration)
+                """;
+            command.Parameters.Add(new SqlParameter("@Id", CoreHelpers.GenerateComb()));
+            command.Parameters.Add(new SqlParameter("@UserId", userId));
+            command.Parameters.Add(new SqlParameter("@DeviceId", deviceId));
+            command.Parameters.Add(new SqlParameter("@Stamp", "stamp-two"));
+            command.Parameters.Add(new SqlParameter("@Now", DateTime.UtcNow));
+            command.Parameters.Add(new SqlParameter("@Expiration", DateTime.UtcNow.AddDays(30)));
+            await command.ExecuteNonQueryAsync();
+            return;
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        dbContext.TwoFactorRememberTokens.Add(new EfTwoFactorRememberToken
+        {
+            Id = CoreHelpers.GenerateComb(),
+            UserId = userId,
+            DeviceId = deviceId,
+            Stamp = "stamp-two",
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
+        });
+        await dbContext.SaveChangesAsync();
     }
 
     // -------------------------------------------------------------------------------------------

@@ -101,6 +101,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
+        services.AddSingleton<ITwoFactorRememberTokenRepository, Auth.Repositories.TwoFactorRememberTokenRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
