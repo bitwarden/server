@@ -46,7 +46,7 @@ public class UserSubscriptionEndpointsTests
     }
 
     [Fact]
-    public void MapUserSubscriptionEndpoints_MapsPreviewPremiumUpgrade()
+    public void MapUserSubscriptionEndpoints_MapsGetUpgradePreview()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -55,10 +55,10 @@ public class UserSubscriptionEndpointsTests
         var endpoint = ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
-            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/invoice/preview", StringComparison.Ordinal));
+            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/preview", StringComparison.Ordinal));
 
-        Assert.Equal(["POST"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
-        Assert.Equal("PreviewPremiumUpgrade", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("GetAccountSubscriptionUpgradePreview", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
 
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);

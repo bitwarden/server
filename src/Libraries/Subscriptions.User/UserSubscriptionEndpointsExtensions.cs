@@ -24,10 +24,17 @@ public static class UserSubscriptionEndpointsExtensions
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
-        group.MapPost("upgrade/invoice/preview",
-                async (ClaimsPrincipal principal, PreviewPremiumUpgradeRequest request, [FromServices] UserSubscriptionEndpointsHandler handler) =>
-                    await handler.PreviewPremiumUpgradeAsync(principal, request))
-            .WithName("PreviewPremiumUpgrade")
+        group.AddEndpointFilter(async (context, next) =>
+        {
+            context.HttpContext.Response.Headers.CacheControl = "no-store";
+            return await next(context);
+        });
+
+        group.MapGet("upgrade/preview",
+                async (ClaimsPrincipal principal, [AsParameters] GetSubscriptionUpgradePreviewRequest request,
+                       [FromServices] UserSubscriptionEndpointsHandler handler) =>
+                    await handler.GetUpgradePreviewAsync(principal, request))
+            .WithName("GetAccountSubscriptionUpgradePreview")
             .WithDescription("Previews the invoice for upgrading the user's Premium subscription to an organization plan.");
 
         return group;

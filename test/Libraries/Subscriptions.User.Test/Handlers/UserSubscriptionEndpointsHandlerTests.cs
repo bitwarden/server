@@ -4,6 +4,7 @@ using Bit.Core.Services;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.User.Handlers;
 using Bit.Subscriptions.User.Models.Requests;
+using Bit.Subscriptions.User.Queries;
 using NSubstitute;
 using Xunit;
 using UserEntity = Bit.Core.Entities.User;
@@ -16,38 +17,35 @@ public class UserSubscriptionEndpointsHandlerTests
     private readonly ClaimsPrincipal _principal = new();
 
     [Fact]
-    public async Task PreviewPremiumUpgrade_WhenPrincipalDoesNotResolveToUser_ThrowsUnauthorized()
+    public async Task GetUpgradePreviewAsync_WhenPrincipalDoesNotResolveToUser_ThrowsUnauthorized()
     {
         _userService.GetUserByPrincipalAsync(_principal).Returns((UserEntity?)null);
-        var command = new FakePreviewPremiumUpgradeCommand();
-        var sut = new UserSubscriptionEndpointsHandler(_userService, command);
+        var query = new FakeGetSubscriptionUpgradePreviewQuery();
+        var sut = new UserSubscriptionEndpointsHandler(_userService, query);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.PreviewPremiumUpgradeAsync(_principal, Request()));
-        Assert.Equal(0, command.Calls);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.GetUpgradePreviewAsync(_principal, Request()));
+        Assert.Equal(0, query.Calls);
     }
 
     [Fact]
-    public async Task PreviewPremiumUpgrade_RunsTheCommandForTheResolvedUser()
+    public async Task GetUpgradePreviewAsync_RunsTheQueryForTheResolvedUser()
     {
         var user = new UserEntity { Id = Guid.NewGuid() };
         var request = Request();
         var preview = SamplePreview();
         _userService.GetUserByPrincipalAsync(_principal).Returns(user);
-        var command = new FakePreviewPremiumUpgradeCommand { Result = preview };
-        var sut = new UserSubscriptionEndpointsHandler(_userService, command);
+        var query = new FakeGetSubscriptionUpgradePreviewQuery { Result = preview };
+        var sut = new UserSubscriptionEndpointsHandler(_userService, query);
 
-        var result = await sut.PreviewPremiumUpgradeAsync(_principal, request);
+        var result = await sut.GetUpgradePreviewAsync(_principal, request);
 
         Assert.Same(preview, result);
-        Assert.Same(user, command.ReceivedUser);
-        Assert.Same(request, command.ReceivedRequest);
+        Assert.Same(user, query.ReceivedUser);
+        Assert.Same(request, query.ReceivedRequest);
     }
 
-    private static PreviewPremiumUpgradeRequest Request() => new()
-    {
-        TargetProductTierType = ProductTierType.Teams,
-        BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = "US", PostalCode = "12345" }
-    };
+    private static GetSubscriptionUpgradePreviewRequest Request() =>
+        new(ProductTierType.Teams, "US", "12345");
 
     private static InvoicePreview SamplePreview() => new()
     {

@@ -8,11 +8,11 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 ## Public surface
 
 `AddUserSubscriptions()` registers the group's services — the scoped
-`UserSubscriptionEndpointsHandler` and `IPreviewPremiumUpgradeCommand` — and the `Bit.Invoicing`
+`UserSubscriptionEndpointsHandler` and `IGetSubscriptionUpgradePreviewQuery` — and the `Bit.Invoicing`
 library they depend on. `MapUserSubscriptionEndpoints()` creates the group, applies its
 cross-cutting chain (tags, the `internal` group name, the `Application` policy, exception handling,
 the `PM36631_PreviewDrivenCart` feature gate), and maps the endpoints below; the host mounts it at
-`/account/billing/subscription/premium`.
+`/account/billing/subscription`.
 
 Everything else is `internal`. The only type a consumer reads is `Bit.Invoicing`'s `InvoicePreview`.
 
@@ -20,10 +20,14 @@ Everything else is `internal`. The only type a consumer reads is `Bit.Invoicing`
 
 | Route | Handler | Returns |
 | --- | --- | --- |
-| `POST .../upgrade/invoice/preview` | `UserSubscriptionEndpointsHandler.PreviewPremiumUpgradeAsync` | `InvoicePreview` |
+| `GET .../upgrade/preview` | `UserSubscriptionEndpointsHandler.GetUpgradePreviewAsync` | `InvoicePreview` |
+
+Both previews are `GET` requests and send `Cache-Control: no-store` — they are per-user and
+time-sensitive, so the group applies a shared endpoint filter rather than relying on the framework's
+default GET caching behavior.
 
 The handler resolves the caller via `IUserService` (401 if none) and runs
-`IPreviewPremiumUpgradeCommand`. The command validates the request itself (the group runs no
+`IGetSubscriptionUpgradePreviewQuery`. The query validates the request itself (the group runs no
 DataAnnotations filter): the target tier must be Families, Teams, or Enterprise and the billing
 address needs a two-letter country and a postal code. Caller-controllable problems — tier, address,
 a non-Premium user, a tax location Stripe rejects — are 400s. Subscription state the user cannot
