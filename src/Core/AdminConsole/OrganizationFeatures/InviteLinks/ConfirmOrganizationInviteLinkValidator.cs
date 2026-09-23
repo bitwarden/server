@@ -66,6 +66,11 @@ public class ConfirmOrganizationInviteLinkValidator(
             return new ConfirmInviteLinkConfirmationNotSupported();
         }
 
+        if (!user.EmailVerified)
+        {
+            return new ConfirmEmailNotVerified();
+        }
+
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, link.GetAllowedDomains()))
         {
             return new ConfirmEmailDomainNotAllowed(organization.DisplayName());
