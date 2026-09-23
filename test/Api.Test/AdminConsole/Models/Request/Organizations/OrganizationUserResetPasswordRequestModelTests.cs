@@ -223,9 +223,9 @@ public class OrganizationUserResetPasswordRequestModelTests
     [BitAutoData]
     public void PropertyValidation_LegacyKey_RejectsDatabaseFieldProtectionSentinel(string newHash)
     {
-        // Regression test: the legacy Key field must reject a value carrying the server-internal
-        // "P|" storage-protection prefix, otherwise the storage layer treats attacker-supplied
-        // garbage as pre-encrypted and writes it verbatim into another member's User.Key column.
+        // the legacy Key field must reject a value carrying the server-internal
+        // "P|" storage-protection prefix, otherwise it is treated as pre-encrypted
+        // data and writes the value, permanently corrupting the user record.
         var model = new OrganizationUserResetPasswordRequestModel
         {
             NewMasterPasswordHash = newHash,
