@@ -63,11 +63,9 @@ internal class EfOrganizationUser : ICustomization
         fixture.Customizations.Add(new OrganizationUserBuilder());
         fixture.Customizations.Add(new OrganizationBuilder());
         fixture.Customizations.Add(new UserBuilder());
-        fixture.Customize<Bit.Core.Auth.Entities.SsoUser>(composer => composer.Without(su => su.Id));
         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationUserRepository>());
         fixture.Customizations.Add(new EfRepositoryListBuilder<UserRepository>());
         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<SsoUserRepository>());
     }
 }
 

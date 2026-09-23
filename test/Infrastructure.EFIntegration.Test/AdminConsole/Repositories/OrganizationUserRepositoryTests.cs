@@ -146,4 +146,5 @@ public class OrganizationUserRepositoryTests
         savedSqlOrgUser = await sqlOrgUserRepo.GetByIdAsync(postSqlOrgUser.Id);
         Assert.True(savedSqlOrgUser == null);
     }
+
 }
