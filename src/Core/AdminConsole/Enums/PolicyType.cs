@@ -39,33 +39,39 @@ public static class PolicyTypeExtensions
     /// <summary>
     /// Returns the name of the policy for display to the user.
     /// Do not include the word "policy" in the return value.
+    /// Keep these in sync with the policy titles shown in the web client's Admin Console.
     /// </summary>
-    public static string GetName(this PolicyType type)
+    /// <param name="type">The policy type.</param>
+    /// <param name="useVfo1Terminology">
+    /// Whether the <see cref="FeatureFlagKeys.VFO1Foundation"/> feature flag is enabled. Some policies are
+    /// displayed under different names when it is.
+    /// </param>
+    public static string GetName(this PolicyType type, bool useVfo1Terminology)
     {
         return type switch
         {
             PolicyType.TwoFactorAuthentication => "Require two-step login",
             PolicyType.MasterPassword => "Master password requirements",
             PolicyType.PasswordGenerator => "Password generator",
-            PolicyType.SingleOrg => "Single organization",
-            PolicyType.RequireSso => "Require single sign-on authentication",
-            PolicyType.OrganizationDataOwnership => "Enforce organization data ownership",
+            PolicyType.SingleOrg => useVfo1Terminology ? "Single organization membership" : "Single organization",
+            PolicyType.RequireSso => useVfo1Terminology ? "Require SSO" : "Require single sign-on (SSO)",
+            PolicyType.OrganizationDataOwnership => useVfo1Terminology ? "Centralized organization ownership" : "Centralize organization ownership",
             PolicyType.DisableSend => "Remove Send",
             PolicyType.SendOptions => "Send options",
             PolicyType.ResetPassword => "Account recovery administration",
-            PolicyType.MaximumVaultTimeout => "Vault timeout",
-            PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
-            PolicyType.ActivateAutofill => "Active auto-fill",
+            PolicyType.MaximumVaultTimeout => "Session timeout",
+            PolicyType.DisablePersonalVaultExport => "Remove export",
+            PolicyType.ActivateAutofill => "Enable autofill on page load",
             PolicyType.AutomaticAppLogIn => "Automatic login with SSO",
-            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
-            PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
-            PolicyType.RestrictedItemTypesPolicy => "Restricted item types",
-            PolicyType.UriMatchDefaults => "URI match defaults",
-            PolicyType.AutotypeDefaultSetting => "Autotype default setting",
-            PolicyType.AutomaticUserConfirmation => "Automatically confirm invited users",
+            PolicyType.FreeFamiliesSponsorshipPolicy => useVfo1Terminology ? "Remove Sponsored Families Plan" : "Remove sponsored Families plan",
+            PolicyType.RemoveUnlockWithPin => useVfo1Terminology ? "Remove unlock with PIN" : "Remove Unlock with PIN",
+            PolicyType.RestrictedItemTypesPolicy => "Remove card item type",
+            PolicyType.UriMatchDefaults => "Default URI match detection",
+            PolicyType.AutotypeDefaultSetting => "Desktop autotype default setting",
+            PolicyType.AutomaticUserConfirmation => "Automatic user confirmation",
             PolicyType.BlockClaimedDomainAccountCreation => "Block account creation for claimed domains",
-            PolicyType.OrganizationUserNotification => "Vault banner message",
-            PolicyType.SendControls => "Send controls",
+            PolicyType.OrganizationUserNotification => "Vault banner",
+            PolicyType.SendControls => "Manage Send and share",
             PolicyType.FillAssist => "Activate fill assist",
         };
     }

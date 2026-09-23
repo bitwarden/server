@@ -1033,12 +1033,7 @@ public class AccountController : Controller
     private IActionResult InvalidJson(string errorMessageKey, Exception? ex = null)
     {
         Response.StatusCode = ex == null ? 400 : 500;
-        return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
-        {
-            ExceptionMessage = ex?.Message,
-            ExceptionStackTrace = ex?.StackTrace,
-            InnerExceptionMessage = ex?.InnerException?.Message,
-        });
+        return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey)));
     }
 
     private string? TryGetEmailAddressFromClaims(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
