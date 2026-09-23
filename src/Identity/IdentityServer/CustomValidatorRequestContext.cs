@@ -57,4 +57,14 @@ public class CustomValidatorRequestContext
     /// Whether the user has requested a Remember Me token for their current device.
     /// </summary>
     public bool RememberMeRequested { get; set; } = false;
+    /// <summary>
+    /// Whether the Remember Me token presented on this request was in the previous format and should
+    /// be replaced with one in the current format on this response.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="RememberMeRequested"/> on purpose. It is set only when a
+    /// previous-format token was accepted, never merely because the request used the Remember
+    /// provider — which is what keeps a remember-login from extending its own lifetime.
+    /// </remarks>
+    public bool RememberUpgradeRequired { get; set; } = false;
 }
