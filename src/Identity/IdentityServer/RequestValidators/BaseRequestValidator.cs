@@ -117,8 +117,12 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // A remember token is issued either because the user asked for one, or because they
+        // presented one in the previous format and it is being replaced. The second condition is
+        // set only on a successful previous-format validation — never merely because the request
+        // used the Remember provider, which would let an active user's remember-me renew forever.
         await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
-            validatorContext.RememberMeRequested);
+            validatorContext.RememberMeRequested || validatorContext.RememberUpgradeRequired);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -330,6 +334,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 .VerifyTwoFactorAsync(validatorContext.User, twoFactorOrganization, twoFactorProviderType,
                     twoFactorToken, request.Raw["DeviceIdentifier"]);
         var twoFactorTokenValid = twoFactorResult.Succeeded;
+        validatorContext.RememberUpgradeRequired = twoFactorResult.LegacyRememberUpgradeRequired;
 
         // 3b. Response for 2FA required but request is not valid or remember token expired state.
         if (!twoFactorTokenValid)

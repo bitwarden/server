@@ -157,8 +157,28 @@ public class TwoFactorAuthenticationValidator(
         // below. It carries its own server-side state and is validated against that instead.
         if (type is TwoFactorProviderType.Remember)
         {
-            return new TwoFactorVerificationResult(
-                await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
+            // A remember token stands in for a second factor, so it cannot be honored by an account
+            // that has none configured. Applied ahead of the format branch so it covers both.
+            if (!await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
+            {
+                return new TwoFactorVerificationResult(false);
+            }
+
+            if (token?.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal) == true)
+            {
+                return new TwoFactorVerificationResult(
+                    await _validateTwoFactorRememberTokenQuery.ValidateAsync(user, deviceIdentifier, token));
+            }
+
+            // TODO: PM-XXXXX - Remove the legacy token path below once every token issued before this
+            // release has expired. Both formats validate until then. The token lifespan bounds that at
+            // 30 days from the release date, so no token predating it can validate after that point.
+            var legacyTokenValid = await _userManager.VerifyTwoFactorTokenAsync(
+                user, CoreHelpers.CustomProviderName(type), token);
+
+            // Accepting one earns a replacement in the current format on this same response, so the
+            // device moves over on this login rather than waiting out the old token's lifetime.
+            return new TwoFactorVerificationResult(legacyTokenValid, legacyTokenValid);
         }
 
         // Now we are concerning the rest of the Two Factor Provider Types
