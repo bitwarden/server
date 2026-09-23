@@ -167,7 +167,7 @@ public static partial class FeatureFlagKeys
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
-    public const string PM42892_WantAssertionsSigned = "pm-42892-want-assertions-signed";
+    public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";

@@ -165,11 +165,11 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM42892_WantAssertionsSigned"/> feature flag for the test.
+    /// Enables the <see cref="FeatureFlagKeys.PM42982_WantAssertionsSigned"/> feature flag for the test.
     /// The multi-assertion signature verifier (<c>Saml2AssertionSignatureVerifier.EnsureAssertionsSigned</c>)
     /// is gated behind this flag, so tests exercising that path must opt in.
     /// </summary>
-    public SsoTestDataBuilder WithPM42892WantAssertionsSignedFlag(bool enabled = true)
+    public SsoTestDataBuilder WithPM42982WantAssertionsSignedFlag(bool enabled = true)
     {
         _wantAssertionsSignedFlagEnabled = enabled;
         return this;
@@ -324,12 +324,12 @@ public class SsoTestDataBuilder
             });
         }
 
-        // 1.f Configure IFeatureService to reflect the PM42892_WantAssertionsSigned feature flag, if requested
+        // 1.f Configure IFeatureService to reflect the PM42982_WantAssertionsSigned feature flag, if requested
         if (_wantAssertionsSignedFlagEnabled.HasValue)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
-                svc.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned).Returns(_wantAssertionsSignedFlagEnabled.Value);
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(_wantAssertionsSignedFlagEnabled.Value);
             });
         }
 

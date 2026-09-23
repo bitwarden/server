@@ -97,7 +97,7 @@ public static class Saml2OptionsExtensions
         if (options.SPOptions.WantAssertionsSigned)
         {
             var featureService = context.RequestServices.GetRequiredService<IFeatureService>();
-            if (featureService.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned))
+            if (featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned))
             {
                 Saml2AssertionSignatureVerifier.EnsureAssertionsSigned(envelope, options, idp);
             }

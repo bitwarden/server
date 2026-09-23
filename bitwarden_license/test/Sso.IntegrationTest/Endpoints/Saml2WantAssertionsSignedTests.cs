@@ -409,7 +409,7 @@ public class Saml2WantAssertionsSignedTests
 
     // Builds the real, database-backed scheme and returns the pieces each arrangement needs.
     // Every test in this file exercises the multi-assertion signature verifier
-    // (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned), so PM42892_WantAssertionsSigned
+    // (Saml2AssertionSignatureVerifier.EnsureAssertionsSigned), so PM42982_WantAssertionsSigned
     // must be enabled here. A test that wants the legacy, pre-flag branch instead must pass
     // featureFlagEnabled: false.
     private static async Task<(SsoTestData TestData, Saml2Options SamlOptions, string OrganizationId)>
@@ -427,7 +427,7 @@ public class Saml2WantAssertionsSignedTests
                 SpWantAssertionsSigned = wantAssertionsSigned,
             }))
             .WithSamlSigningCertificate(spCertificate)
-            .WithPM42892WantAssertionsSignedFlag(featureFlagEnabled)
+            .WithPM42982WantAssertionsSignedFlag(featureFlagEnabled)
             .BuildAsync();
 
         var organizationId = testData.Organization!.Id.ToString();

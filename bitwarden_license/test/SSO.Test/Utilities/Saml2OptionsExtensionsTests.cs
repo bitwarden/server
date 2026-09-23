@@ -334,7 +334,7 @@ public class Saml2OptionsExtensionsTests
     }
 
     // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
-    // the PM42892_WantAssertionsSigned feature flag, from the request services.
+    // the PM42982_WantAssertionsSigned feature flag, from the request services.
     private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true)
     {
         var context = BuildRawPostContext(responseXml);
@@ -344,7 +344,7 @@ public class Saml2OptionsExtensionsTests
         services.AddSingleton<Saml2AssertionMetrics>();
 
         var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.PM42892_WantAssertionsSigned).Returns(featureFlagEnabled);
+        featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(featureFlagEnabled);
         services.AddSingleton(featureService);
 
         var provider = services.BuildServiceProvider();
