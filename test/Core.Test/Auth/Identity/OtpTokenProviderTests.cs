@@ -583,49 +583,6 @@ public class OtpTokenProviderTests
         Assert.True(isValid);
     }
 
-    // TODO: PM-43465 - Delete this test along with PeekBoundValueAsync once every supported client version
-    // sends the Device-Identifier header on the new device verification resend request.
-    [Theory, BitAutoData]
-    public async Task PeekBoundValueAsync_Pending_ReturnsBoundValueWithoutConsuming(
-        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
-        string purpose,
-        string uniqueIdentifier,
-        string token,
-        string boundValue)
-    {
-        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
-
-        sutProvider.GetDependency<IDistributedCache>()
-            .GetAsync(expectedCacheKey)
-            .Returns(SerializedEntry(token, boundValue));
-
-        var result = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
-
-        Assert.Equal(boundValue, result);
-        await sutProvider.GetDependency<IDistributedCache>()
-            .DidNotReceive()
-            .RemoveAsync(Arg.Any<string>());
-    }
-
-    // TODO: PM-43465 - Delete this test along with PeekBoundValueAsync once every supported client version
-    // sends the Device-Identifier header on the new device verification resend request.
-    [Theory, BitAutoData]
-    public async Task PeekBoundValueAsync_NotPending_ReturnsNull(
-        SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
-        string purpose,
-        string uniqueIdentifier)
-    {
-        var expectedCacheKey = $"{_defaultTokenProviderName}_{purpose}_{uniqueIdentifier}";
-
-        sutProvider.GetDependency<IDistributedCache>()
-            .GetAsync(expectedCacheKey)
-            .Returns((byte[])null);
-
-        var result = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
-
-        Assert.Null(result);
-    }
-
     /// <summary>
     /// Before <c>BoundValue</c> was added, <see cref="OtpTokenProvider{TOptions}"/> stored a bare UTF-8 token
     /// string rather than a JSON <c>OtpCacheEntry</c>. During a rolling deploy, instances still running the
@@ -652,8 +609,12 @@ public class OtpTokenProviderTests
             .RemoveAsync(Arg.Any<string>());
     }
 
+    /// <summary>
+    /// Round-trips a real generated entry rather than a hand-seeded one, so it proves generation actually
+    /// persists the bound value — which a test that seeds the entry itself cannot show.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task GenerateTokenAsync_WithBoundValue_StoresIt(
+    public async Task GenerateTokenAsync_WithBoundValue_PersistsItForValidation(
         SutProvider<OtpTokenProvider<DefaultOtpTokenProviderOptions>> sutProvider,
         string purpose,
         string uniqueIdentifier,
@@ -669,10 +630,12 @@ public class OtpTokenProviderTests
             .When(x => x.SetAsync(expectedCacheKey, Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>()))
             .Do(callInfo => storedBytes = callInfo.ArgAt<byte[]>(1));
 
-        await sutProvider.Sut.GenerateTokenAsync(_defaultTokenProviderName, purpose, uniqueIdentifier, boundValue);
+        var token = await sutProvider.Sut.GenerateTokenAsync(
+            _defaultTokenProviderName, purpose, uniqueIdentifier, boundValue);
 
         sutProvider.GetDependency<IDistributedCache>().GetAsync(expectedCacheKey).Returns(storedBytes);
-        var peeked = await sutProvider.Sut.PeekBoundValueAsync(_defaultTokenProviderName, purpose, uniqueIdentifier);
-        Assert.Equal(boundValue, peeked);
+
+        Assert.True(await sutProvider.Sut.ValidateTokenAsync(
+            token, _defaultTokenProviderName, purpose, uniqueIdentifier, boundValue));
     }
 }

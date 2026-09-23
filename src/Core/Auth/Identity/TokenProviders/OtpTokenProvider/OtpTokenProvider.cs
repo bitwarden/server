@@ -74,23 +74,6 @@ public class OtpTokenProvider<TOptions>(
         return valid;
     }
 
-    // TODO: PM-43465 - Delete this method once every supported client version sends the Device-Identifier
-    // header on the new device verification resend request. It exists only to let that resend fall back to
-    // the device a pending code was issued to.
-    public async Task<string?> PeekBoundValueAsync(string tokenProviderName, string purpose, string uniqueIdentifier)
-    {
-        if (string.IsNullOrEmpty(tokenProviderName)
-            || string.IsNullOrEmpty(purpose)
-            || string.IsNullOrEmpty(uniqueIdentifier))
-        {
-            return null;
-        }
-
-        var cacheKey = BuildCacheKey(tokenProviderName, purpose, uniqueIdentifier);
-        var entry = await GetEntryAsync(cacheKey);
-        return entry?.BoundValue;
-    }
-
     private string BuildCacheKey(string tokenProviderName, string purpose, string uniqueIdentifier)
     {
         return string.Format(CultureInfo.InvariantCulture, _cacheKeyFormat, tokenProviderName, purpose, uniqueIdentifier);

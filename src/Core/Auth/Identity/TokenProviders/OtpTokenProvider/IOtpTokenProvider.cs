@@ -34,16 +34,4 @@ public interface IOtpTokenProvider<TOptions>
     /// </param>
     /// <returns>true if the token matches what is fetched from the cache, false if not.</returns>
     Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
-
-    // TODO: PM-43465 - Delete this member and its implementation once every supported client version sends
-    // the Device-Identifier header on the new device verification resend request. It exists only to let that
-    // resend fall back to the device a pending code was issued to.
-    /// <summary>
-    /// Returns the bound value the currently pending token was generated with, without consuming the token,
-    /// or <see langword="null"/> if no token is pending.
-    /// </summary>
-    /// <param name="tokenProviderName">Name of the token provider, used to distinguish different token providers that may inject this class</param>
-    /// <param name="purpose">Purpose of the OTP token, used to distinguish different types of tokens.</param>
-    /// <param name="uniqueIdentifier">Unique identifier to distinguish one request from another</param>
-    Task<string?> PeekBoundValueAsync(string tokenProviderName, string purpose, string uniqueIdentifier);
 }
