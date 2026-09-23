@@ -24,22 +24,22 @@ public static class ScimFilterParser
             return false;
         }
 
-        var filterLower = filter.ToLowerInvariant();
-
-        foreach (var supportedOp in _supportedOperators)
+        var parts = filter.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3)
         {
-            var opPattern = $" {supportedOp} ";
-            var opIndex = filterLower.IndexOf(opPattern, StringComparison.Ordinal);
-            if (opIndex > 0)
-            {
-                attribute = filterLower[..opIndex].Trim();
-                op = supportedOp;
-                value = filter[(opIndex + opPattern.Length)..].Trim().Trim('"');
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        var candidateOp = parts[1].ToLowerInvariant();
+        if (!_supportedOperators.Contains(candidateOp))
+        {
+            return false;
+        }
+
+        attribute = parts[0].ToLowerInvariant();
+        op = candidateOp;
+        value = parts[2].Trim().Trim('"');
+        return true;
     }
 
     /// <summary>

@@ -41,10 +41,14 @@ public class GetUsersListQuery : IGetUsersListQuery
 
                 if (selector != null)
                 {
-                    userList = orgUsers
+                    var matches = orgUsers
                         .Where(ou => ScimFilterParser.Matches(selector(ou), op, value))
                         .ToList();
-                    totalResults = userList.Count;
+                    totalResults = matches.Count;
+                    userList = matches.OrderBy(ou => ou.Email)
+                        .Skip(startIndex - 1)
+                        .Take(count)
+                        .ToList();
                 }
             }
         }

@@ -42,10 +42,14 @@ public class GetGroupsListQuery : IGetGroupsListQuery
 
                 if (selector != null)
                 {
-                    groupList = groups
+                    var matches = groups
                         .Where(g => ScimFilterParser.Matches(selector(g), op, value))
                         .ToList();
-                    totalResults = groupList.Count;
+                    totalResults = matches.Count;
+                    groupList = matches.OrderBy(g => g.Name)
+                        .Skip(startIndex - 1)
+                        .Take(count)
+                        .ToList();
                 }
             }
         }
