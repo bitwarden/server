@@ -32,14 +32,14 @@ public static class UserSubscriptionEndpointsExtensions
 
         group.MapGet("upgrade/preview",
                 async (ClaimsPrincipal principal, [AsParameters] GetSubscriptionUpgradePreviewRequest request,
-                       [FromServices] UserSubscriptionEndpointsHandler handler) =>
-                    await handler.GetUpgradePreviewAsync(principal, request))
+                       [FromServices] GetAccountSubscriptionUpgradePreviewHandler handler) =>
+                    await handler.HandleAsync(principal, request))
             .WithName("GetAccountSubscriptionUpgradePreview")
             .WithDescription("Previews the invoice for upgrading the user's Premium subscription to an organization plan.");
 
         group.MapGet("preview",
-                async (ClaimsPrincipal principal, [FromServices] UserSubscriptionEndpointsHandler handler) =>
-                    await handler.GetPreviewAsync(principal))
+                async (ClaimsPrincipal principal, [FromServices] GetAccountSubscriptionPreviewHandler handler) =>
+                    await handler.HandleAsync(principal))
             .WithName("GetAccountSubscriptionPreview")
             .WithDescription("Previews the account's upcoming subscription renewal.");
 

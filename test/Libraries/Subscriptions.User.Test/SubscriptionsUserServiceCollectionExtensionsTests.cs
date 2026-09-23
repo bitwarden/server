@@ -13,7 +13,7 @@ namespace Bit.Subscriptions.User.Test;
 public class SubscriptionsUserServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddUserSubscriptions_RegistersTheQueryAndHandler()
+    public void AddUserSubscriptions_RegistersTheQueryAndHandlers()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
@@ -26,6 +26,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         using var scope = services.BuildServiceProvider().CreateScope();
 
         Assert.IsType<GetSubscriptionUpgradePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionUpgradePreviewQuery>());
-        Assert.NotNull(scope.ServiceProvider.GetService<UserSubscriptionEndpointsHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionUpgradePreviewHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPreviewHandler>());
     }
 }

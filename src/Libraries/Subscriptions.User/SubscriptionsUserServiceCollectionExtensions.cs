@@ -14,7 +14,8 @@ public static class SubscriptionsUserServiceCollectionExtensions
     {
         services.AddInvoicing();
         services.TryAddScoped<IGetSubscriptionUpgradePreviewQuery, GetSubscriptionUpgradePreviewQuery>();
-        services.TryAddScoped<UserSubscriptionEndpointsHandler>();
+        services.TryAddScoped<GetAccountSubscriptionUpgradePreviewHandler>();
+        services.TryAddScoped<GetAccountSubscriptionPreviewHandler>();
         return services;
     }
 }

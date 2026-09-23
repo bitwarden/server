@@ -7,8 +7,9 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddUserSubscriptions()` registers the group's services — the scoped
-`UserSubscriptionEndpointsHandler` and `IGetSubscriptionUpgradePreviewQuery` — and the `Bit.Invoicing`
+`AddUserSubscriptions()` registers the group's services — a scoped handler per endpoint
+(`GetAccountSubscriptionUpgradePreviewHandler`, `GetAccountSubscriptionPreviewHandler`) and
+`IGetSubscriptionUpgradePreviewQuery` — and the `Bit.Invoicing`
 library they depend on. `MapUserSubscriptionEndpoints()` creates the group, applies its
 cross-cutting chain (tags, the `internal` group name, the `Application` policy, exception handling,
 the `PM36631_PreviewDrivenCart` feature gate), and maps the endpoints below; the host mounts it at
@@ -21,14 +22,14 @@ and `SubscriptionPreview`.
 
 | Route | Handler | Returns |
 | --- | --- | --- |
-| `GET .../upgrade/preview` | `UserSubscriptionEndpointsHandler.GetUpgradePreviewAsync` | `InvoicePreview` |
-| `GET .../preview` | `UserSubscriptionEndpointsHandler.GetPreviewAsync` | `SubscriptionPreview` |
+| `GET .../upgrade/preview` | `GetAccountSubscriptionUpgradePreviewHandler.HandleAsync` | `InvoicePreview` |
+| `GET .../preview` | `GetAccountSubscriptionPreviewHandler.HandleAsync` | `SubscriptionPreview` |
 
 Both previews are `GET` requests and send `Cache-Control: no-store` — they are per-user and
 time-sensitive, so the group applies a shared endpoint filter rather than relying on the framework's
 default GET caching behavior.
 
-The handler resolves the caller via `IUserService` (401 if none) and runs
+The upgrade preview handler resolves the caller via `IUserService` (401 if none) and runs
 `IGetSubscriptionUpgradePreviewQuery`. The query validates the request itself (the group runs no
 DataAnnotations filter): the target tier must be Families, Teams, or Enterprise and the billing
 address needs a two-letter country and a postal code. Caller-controllable problems — tier, address,
