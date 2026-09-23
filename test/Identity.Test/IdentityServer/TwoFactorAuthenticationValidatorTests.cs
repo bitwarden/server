@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -26,6 +27,7 @@ namespace Bit.Identity.Test.IdentityServer;
 
 public class TwoFactorAuthenticationValidatorTests
 {
+    private const string DeviceIdentifier = "test-device-identifier";
     private readonly IUserService _userService;
     private readonly UserManagerTestWrapper<User> _userManager;
     private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
@@ -34,6 +36,7 @@ public class TwoFactorAuthenticationValidatorTests
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmail2faSessionTokenable;
     private readonly ITwoFactorIsEnabledQuery _twoFactorEnabledQuery;
+    private readonly IValidateTwoFactorRememberTokenQuery _validateTwoFactorRememberTokenQuery;
     private readonly ICurrentContext _currentContext;
     private readonly TwoFactorAuthenticationValidator _sut;
 
@@ -47,6 +50,7 @@ public class TwoFactorAuthenticationValidatorTests
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _ssoEmail2faSessionTokenable = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
         _twoFactorEnabledQuery = Substitute.For<ITwoFactorIsEnabledQuery>();
+        _validateTwoFactorRememberTokenQuery = Substitute.For<IValidateTwoFactorRememberTokenQuery>();
         _currentContext = Substitute.For<ICurrentContext>();
 
         _sut = new TwoFactorAuthenticationValidator(
@@ -58,6 +62,7 @@ public class TwoFactorAuthenticationValidatorTests
                     _organizationRepository,
                     _ssoEmail2faSessionTokenable,
                     _twoFactorEnabledQuery,
+                    _validateTwoFactorRememberTokenQuery,
                     _currentContext);
     }
 
@@ -375,10 +380,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.U2f, token);
+            user, null, TwoFactorProviderType.U2f, token, DeviceIdentifier);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Succeeded);
     }
 
     [Theory]
@@ -393,10 +398,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.Email, token);
+            user, null, TwoFactorProviderType.Email, token, DeviceIdentifier);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Succeeded);
     }
 
     [Theory]
@@ -410,10 +415,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.OrganizationDuo, token);
+            user, null, TwoFactorProviderType.OrganizationDuo, token, DeviceIdentifier);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Succeeded);
     }
 
     [Theory]
@@ -421,7 +426,6 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData(TwoFactorProviderType.WebAuthn)]
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
-    [BitAutoData(TwoFactorProviderType.Remember)]
     public async void VerifyTwoFactorAsync_Individual_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
@@ -433,10 +437,43 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, DeviceIdentifier);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.Succeeded);
+    }
+
+    /// <summary>
+    /// Remember is not a provider a user configures, so it does not go through the provider-enabled
+    /// checks or UserManager. It is validated against its own server-side state instead.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_Remember_DelegatesToRememberTokenQuery(User user, string token)
+    {
+        // Arrange
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, token, DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, DeviceIdentifier, token);
+    }
+
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_Remember_QueryRejects_ReturnsFalse(User user, string token)
+    {
+        // Arrange
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(false);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, token, DeviceIdentifier);
+
+        // Assert
+        Assert.False(result.Succeeded);
     }
 
     [Theory]
@@ -444,7 +481,6 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData(TwoFactorProviderType.WebAuthn)]
     [BitAutoData(TwoFactorProviderType.Email)]
     [BitAutoData(TwoFactorProviderType.YubiKey)]
-    [BitAutoData(TwoFactorProviderType.Remember)]
     public async void VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsFalse(
         TwoFactorProviderType providerType,
         User user,
@@ -456,10 +492,10 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, DeviceIdentifier);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Succeeded);
     }
 
     [Theory]
@@ -483,10 +519,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.Succeeded);
     }
 
     [Theory]
@@ -503,10 +539,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.Succeeded);
     }
 
     [Theory]
@@ -524,10 +560,10 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, DeviceIdentifier);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Succeeded);
     }
 
     private static UserManagerTestWrapper<User> SubstituteUserManager()

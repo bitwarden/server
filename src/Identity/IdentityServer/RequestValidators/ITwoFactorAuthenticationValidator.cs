@@ -33,6 +33,23 @@ public interface ITwoFactorAuthenticationValidator
     /// <param name="organization">organization of user; can be null</param>
     /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
     /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
-    /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
+    /// <param name="deviceIdentifier">
+    /// The client-generated device identifier from the raw request. Required by the Remember
+    /// provider, which binds its token to a device. It is read from the request rather than from
+    /// <c>CurrentContext</c> or the validated device: device validation runs after this point, so
+    /// neither is populated yet.
+    /// </param>
+    Task<TwoFactorVerificationResult> VerifyTwoFactorAsync(
+        User user,
+        Organization organization,
+        TwoFactorProviderType twoFactorProviderType,
+        string token,
+        string deviceIdentifier);
 }
+
+/// <param name="Succeeded">Whether the presented second factor was accepted.</param>
+/// <param name="LegacyRememberUpgradeRequired">
+/// Set when a remember token in the pre-<c>TwoFactorRememberTokenable</c> format was accepted, so
+/// the caller knows to issue a replacement in the current format on this response.
+/// </param>
+public record TwoFactorVerificationResult(bool Succeeded, bool LegacyRememberUpgradeRequired = false);
