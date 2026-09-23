@@ -240,6 +240,12 @@ public static class ServiceCollectionExtensions
                 DuoUserStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<DuoUserStateTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
+                TwoFactorRememberTokenable.ClearTextPrefix,
+                TwoFactorRememberTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorRememberTokenable>>>()));
 
         services.AddSingleton<IDataProtectorTokenFactory<ProviderDeleteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<ProviderDeleteTokenable>(
