@@ -88,6 +88,7 @@ public class JobsHostedService : BaseJobsHostedService
         {
             new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteExpiredTwoFactorRememberTokensJob), everyFridayAt10pmTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
@@ -122,6 +123,7 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DatabaseUpdateStatisticsJob>();
         services.AddTransient<DatabaseRebuildlIndexesJob>();
         services.AddTransient<DatabaseExpiredGrantsJob>();
+        services.AddTransient<DeleteExpiredTwoFactorRememberTokensJob>();
         services.AddTransient<DatabaseExpiredSponsorshipsJob>();
         services.AddTransient<DeleteSendsJob>();
         services.AddTransient<DeleteCiphersJob>();
