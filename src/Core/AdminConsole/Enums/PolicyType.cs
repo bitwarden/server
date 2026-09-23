@@ -48,32 +48,14 @@ public static class PolicyTypeExtensions
     /// </param>
     public static string GetName(this PolicyType type, bool useVfo1Terminology)
     {
-        if (useVfo1Terminology)
-        {
-            var vfo1Name = type switch
-            {
-                PolicyType.SingleOrg => "Single organization membership",
-                PolicyType.RequireSso => "Require SSO",
-                PolicyType.OrganizationDataOwnership => "Centralized organization ownership",
-                PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Sponsored Families Plan",
-                PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN",
-                _ => null,
-            };
-
-            if (vfo1Name != null)
-            {
-                return vfo1Name;
-            }
-        }
-
         return type switch
         {
             PolicyType.TwoFactorAuthentication => "Require two-step login",
             PolicyType.MasterPassword => "Master password requirements",
             PolicyType.PasswordGenerator => "Password generator",
-            PolicyType.SingleOrg => "Single organization",
-            PolicyType.RequireSso => "Require single sign-on (SSO)",
-            PolicyType.OrganizationDataOwnership => "Centralize organization ownership",
+            PolicyType.SingleOrg => useVfo1Terminology ? "Single organization membership" : "Single organization",
+            PolicyType.RequireSso => useVfo1Terminology ? "Require SSO" : "Require single sign-on (SSO)",
+            PolicyType.OrganizationDataOwnership => useVfo1Terminology ? "Centralized organization ownership" : "Centralize organization ownership",
             PolicyType.DisableSend => "Remove Send",
             PolicyType.SendOptions => "Send options",
             PolicyType.ResetPassword => "Account recovery administration",
@@ -81,8 +63,8 @@ public static class PolicyTypeExtensions
             PolicyType.DisablePersonalVaultExport => "Remove export",
             PolicyType.ActivateAutofill => "Enable autofill on page load",
             PolicyType.AutomaticAppLogIn => "Automatic login with SSO",
-            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove sponsored Families plan",
-            PolicyType.RemoveUnlockWithPin => "Remove Unlock with PIN",
+            PolicyType.FreeFamiliesSponsorshipPolicy => useVfo1Terminology ? "Remove Sponsored Families Plan" : "Remove sponsored Families plan",
+            PolicyType.RemoveUnlockWithPin => useVfo1Terminology ? "Remove unlock with PIN" : "Remove Unlock with PIN",
             PolicyType.RestrictedItemTypesPolicy => "Remove card item type",
             PolicyType.UriMatchDefaults => "Default URI match detection",
             PolicyType.AutotypeDefaultSetting => "Desktop autotype default setting",
