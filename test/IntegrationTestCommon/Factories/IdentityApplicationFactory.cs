@@ -4,12 +4,14 @@ using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Identity;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
@@ -17,6 +19,7 @@ using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
@@ -134,6 +137,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return context;
     }
 
+    /// <param name="twoFactorProviderType">
+    /// Send the numeric provider value rather than the enum name where the distinction matters:
+    /// <see cref="BaseRequestValidator.DetermineValidationOrder"/> selects the validator order with
+    /// <c>int.TryParse</c>, while <c>ValidateTwoFactorAsync</c> parses the same value with
+    /// <c>Enum.TryParse</c>. A name therefore authenticates but silently takes the ordinary order.
+    /// </param>
+    /// <param name="twoFactorRemember">
+    /// "1" asks the server to remember the device. Pass "0" to mirror a client re-authenticating
+    /// with a stored remember token, which is what clients actually send in that case.
+    /// </param>
     public async Task<HttpContext> ContextFromPasswordWithTwoFactorAsync(
         string username,
         string password,
@@ -142,7 +155,8 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         DeviceType deviceType = DeviceType.FirefoxBrowser,
         string deviceName = "firefox",
         string twoFactorProviderType = "Email",
-        string twoFactorToken = "two-factor-token")
+        string twoFactorToken = "two-factor-token",
+        string twoFactorRemember = "1")
     {
         var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -156,10 +170,58 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
             { "password", password },
             { "TwoFactorToken", twoFactorToken },
             { "TwoFactorProvider", twoFactorProviderType },
-            { "TwoFactorRemember", "1" },
+            { "TwoFactorRemember", twoFactorRemember },
         }));
 
         return context;
+    }
+
+    /// <summary>
+    /// Completes a two-factor login and returns the access token alongside the <c>TwoFactorToken</c>
+    /// response field, which is the remember token when the server issued one.
+    /// </summary>
+    /// <returns>
+    /// <c>RememberToken</c> is null when the response carried no <c>TwoFactorToken</c> field at all —
+    /// a meaningful outcome in its own right, not just an absent value.
+    /// </returns>
+    public async Task<(string AccessToken, string? RememberToken)> TokensFromPasswordWithTwoFactorAsync(
+        string username,
+        string password,
+        string deviceIdentifier = DefaultDeviceIdentifier,
+        string clientId = "web",
+        DeviceType deviceType = DeviceType.FirefoxBrowser,
+        string deviceName = "firefox",
+        string twoFactorProviderType = "Email",
+        string twoFactorToken = "two-factor-token",
+        string twoFactorRemember = "1")
+    {
+        var context = await ContextFromPasswordWithTwoFactorAsync(
+            username, password, deviceIdentifier, clientId, deviceType, deviceName,
+            twoFactorProviderType, twoFactorToken, twoFactorRemember);
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
+
+        var rememberToken = root.TryGetProperty("TwoFactorToken", out var twoFactorTokenElement)
+            ? twoFactorTokenElement.GetString()
+            : null;
+
+        return (accessTokenString, rememberToken);
+    }
+
+    /// <summary>
+    /// Mints a remember token the way the server did before this feature existed, for tests that
+    /// need to present one issued by a prior release.
+    /// </summary>
+    public async Task<string> GenerateLegacyRememberTokenAsync(User user)
+    {
+        var userManager = GetService<UserManager<User>>();
+        return await userManager.GenerateTwoFactorTokenAsync(
+            user, CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
     }
 
     public async Task<string> TokenFromAccessTokenAsync(Guid clientId, string clientSecret,
