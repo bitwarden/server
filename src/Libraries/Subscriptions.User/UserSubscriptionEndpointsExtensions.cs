@@ -37,6 +37,12 @@ public static class UserSubscriptionEndpointsExtensions
             .WithName("GetAccountSubscriptionUpgradePreview")
             .WithDescription("Previews the invoice for upgrading the user's Premium subscription to an organization plan.");
 
+        group.MapGet("preview",
+                async (ClaimsPrincipal principal, [FromServices] UserSubscriptionEndpointsHandler handler) =>
+                    await handler.GetPreviewAsync(principal))
+            .WithName("GetAccountSubscriptionPreview")
+            .WithDescription("Previews the account's upcoming subscription renewal.");
+
         return group;
     }
 }

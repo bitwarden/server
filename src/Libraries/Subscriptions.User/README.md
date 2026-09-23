@@ -14,13 +14,15 @@ cross-cutting chain (tags, the `internal` group name, the `Application` policy, 
 the `PM36631_PreviewDrivenCart` feature gate), and maps the endpoints below; the host mounts it at
 `/account/billing/subscription`.
 
-Everything else is `internal`. The only type a consumer reads is `Bit.Invoicing`'s `InvoicePreview`.
+Everything else is `internal`. The only types a consumer reads are `Bit.Invoicing`'s `InvoicePreview`
+and `SubscriptionPreview`.
 
 ### Endpoints
 
 | Route | Handler | Returns |
 | --- | --- | --- |
 | `GET .../upgrade/preview` | `UserSubscriptionEndpointsHandler.GetUpgradePreviewAsync` | `InvoicePreview` |
+| `GET .../preview` | `UserSubscriptionEndpointsHandler.GetPreviewAsync` | `SubscriptionPreview` |
 
 Both previews are `GET` requests and send `Cache-Control: no-store` — they are per-user and
 time-sensitive, so the group applies a shared endpoint filter rather than relying on the framework's
@@ -42,6 +44,10 @@ plan swap, plus a `pm-storage` row holding the credit for the dropped add-on whe
 Row order follows Stripe's invoice-line order, so consumers should select rows by `Reference` and
 sum charge, credit, and tax across them rather than reading index 0. `EstimatedTax`, `Total`, and
 `AmountDue` are invoice-level and already aggregate every row.
+
+`GET preview` delegates to `Bit.Invoicing`'s `IGetSubscriptionPreviewQuery`, which previews the
+caller's own upcoming subscription renewal. It returns 404 when the caller has no Stripe
+subscription to preview.
 
 ## Stripe boundary
 

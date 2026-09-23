@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Services;
 using Bit.Invoicing.InvoicePreviews.Models;
+using Bit.Invoicing.InvoicePreviews.Queries;
 using Bit.Subscriptions.User.Handlers;
 using Bit.Subscriptions.User.Queries;
 using Microsoft.AspNetCore.Builder;
@@ -54,6 +55,7 @@ public class UserSubscriptionEndpointsRequestBindingTests
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddSingleton(_userService);
         builder.Services.AddSingleton<IGetSubscriptionUpgradePreviewQuery>(query);
+        builder.Services.AddSingleton(Substitute.For<IGetSubscriptionPreviewQuery>());
         builder.Services.AddScoped<UserSubscriptionEndpointsHandler>();
         var app = builder.Build();
         app.MapUserSubscriptionEndpoints();

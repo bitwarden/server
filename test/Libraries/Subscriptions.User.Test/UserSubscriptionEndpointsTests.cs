@@ -67,4 +67,25 @@ public class UserSubscriptionEndpointsTests
         Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
         Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
     }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsThePreviewRoute()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == "GetAccountSubscriptionPreview");
+
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Contains("preview", endpoint.RoutePattern.RawText, StringComparison.Ordinal);
+
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
+    }
 }
