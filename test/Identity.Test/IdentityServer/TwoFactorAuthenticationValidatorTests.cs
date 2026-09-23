@@ -448,9 +448,11 @@ public class TwoFactorAuthenticationValidatorTests
     /// checks or UserManager. It is validated against its own server-side state instead.
     /// </summary>
     [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_Remember_DelegatesToRememberTokenQuery(User user, string token)
+    public async void VerifyTwoFactorAsync_Remember_DelegatesToRememberTokenQuery(User user, string tokenBody)
     {
         // Arrange
+        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
 
         // Act
@@ -462,10 +464,110 @@ public class TwoFactorAuthenticationValidatorTests
         await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, DeviceIdentifier, token);
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Tokens issued before the current format existed. This whole region goes away with the
+    // legacy branch once no such token can still be within its lifetime.
+    // ---------------------------------------------------------------------------------------
+
+    /// <summary>L1 — a token in the previous format is still honored.</summary>
     [Theory, BitAutoData]
-    public async void VerifyTwoFactorAsync_Remember_QueryRejects_ReturnsFalse(User user, string token)
+    public async void VerifyTwoFactorAsync_LegacyRemember_ValidToken_ReturnsTrue(User user)
     {
         // Arrange
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    /// <summary>
+    /// L2 — the previous format embeds the user's security stamp and the framework provider compares
+    /// it, so a rotated stamp still rejects these tokens during the transition.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_LegacyRemember_ProviderRejects_ReturnsFalse(User user)
+    {
+        // Arrange
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.False(result.LegacyRememberUpgradeRequired);
+    }
+
+    /// <summary>
+    /// L3 — the two-factor-enabled gate covers the previous format too, so an un-replaced token is
+    /// inert for as long as the account has no second factor configured.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_LegacyRemember_NoTwoFactorEnabled_ReturnsFalse(User user)
+    {
+        // Arrange
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
+
+        // Assert
+        Assert.False(result.Succeeded);
+    }
+
+    /// <summary>L4 — accepting one signals that a replacement should be issued on this response.</summary>
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_LegacyRemember_Accepted_SignalsUpgrade(User user)
+    {
+        // Arrange
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, "legacy-format-token", DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.LegacyRememberUpgradeRequired);
+    }
+
+    /// <summary>
+    /// L7 — a current-format token never reaches the legacy branch, which is what makes removing
+    /// that branch a no-op for anyone already migrated.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_CurrentFormat_SkipsLegacyBranchAndSignalsNoUpgrade(User user)
+    {
+        // Arrange
+        var token = TwoFactorRememberTokenable.ClearTextPrefix + "current-format-token";
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+        _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, null, TwoFactorProviderType.Remember, token, DeviceIdentifier);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.False(result.LegacyRememberUpgradeRequired);
+    }
+
+    [Theory, BitAutoData]
+    public async void VerifyTwoFactorAsync_Remember_QueryRejects_ReturnsFalse(User user, string tokenBody)
+    {
+        // Arrange
+        var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
+        _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
         _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(false);
 
         // Act

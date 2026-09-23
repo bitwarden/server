@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -115,6 +116,96 @@ public class RememberedDeviceLoginTests
 
         var accessToken = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
         Assert.False(string.IsNullOrEmpty(accessToken));
+    }
+
+    /// <summary>
+    /// H6 — a login that presents a remember token must not be issued another one.
+    /// </summary>
+    /// <remarks>
+    /// This is what bounds the remember-me lifetime. The token's lifespan is an absolute cap only
+    /// because the server refuses to re-issue on a remember-login; if it did re-issue, an active
+    /// user's remember-me would be extended on every login and never expire. Asserted over HTTP
+    /// deliberately — it inspects the same response field a client would.
+    /// </remarks>
+    [Fact]
+    public async Task RememberToken_ReplayedOnNextLogin_DoesNotIssueAnotherToken()
+    {
+        var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
+
+        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: _emailProvider, twoFactorToken: _emailToken);
+        Assert.False(string.IsNullOrEmpty(rememberToken));
+
+        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: rememberToken!,
+            twoFactorRemember: "0");
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+        Assert.False(root.TryGetProperty("TwoFactorToken", out _));
+    }
+
+    /// <summary>
+    /// H4 — a token minted the way a previous release minted them is still accepted, so nobody is
+    /// challenged again purely because this release shipped.
+    /// </summary>
+    [Fact]
+    public async Task LegacyRememberToken_IsStillAccepted()
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var legacyToken = await factory.GenerateLegacyRememberTokenAsync(user);
+
+        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: legacyToken,
+            twoFactorRemember: "0");
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// H5 — accepting a legacy token also replaces it, so each device moves to the current format on
+    /// its next login rather than waiting for its token to expire.
+    /// </summary>
+    [Fact]
+    public async Task LegacyRememberToken_IsUpgradedToCurrentFormat()
+    {
+        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
+        var legacyToken = await factory.GenerateLegacyRememberTokenAsync(user);
+
+        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: legacyToken,
+            twoFactorRemember: "0");
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        var upgraded = AssertHelper.AssertJsonProperty(root, "TwoFactorToken", JsonValueKind.String).GetString();
+        Assert.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, upgraded);
+
+        // And the replacement works on the login after that.
+        var replayContext = await factory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail,
+            _testPassword,
+            twoFactorProviderType: _rememberProvider,
+            twoFactorToken: upgraded!,
+            twoFactorRemember: "0");
+
+        using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replayContext);
+        AssertHelper.AssertJsonProperty(replayBody.RootElement, "access_token", JsonValueKind.String);
     }
 
     /// <summary>
