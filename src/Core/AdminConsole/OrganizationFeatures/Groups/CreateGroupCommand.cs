@@ -116,7 +116,11 @@ public class CreateGroupCommand : ICreateGroupCommand
 
         if (collections?.Any() == true)
         {
-            await _groupCollectionAccessValidator.ValidateAsync(group.OrganizationId, collections);
+            var error = await _groupCollectionAccessValidator.ValidateAsync(group.OrganizationId, collections);
+            if (error is not null)
+            {
+                throw error.ToException();
+            }
         }
 
         var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));

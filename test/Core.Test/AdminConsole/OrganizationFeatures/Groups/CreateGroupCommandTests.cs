@@ -10,7 +10,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
@@ -164,6 +163,22 @@ public class CreateGroupCommandTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
     }
 
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task CreateGroup_WithCollectionNotFound_Throws(
+        Organization organization, Group group, List<CollectionAccessSelection> collections)
+    {
+        var sutProvider = SetupSutProvider();
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CollectionNotFound());
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.CreateGroupAsync(group, organization, collections));
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
     private static void SetAccessToNonManage(IEnumerable<CollectionAccessSelection> collections)
     {
         foreach (var cas in collections)
@@ -176,7 +191,7 @@ public class CreateGroupCommandTests
     {
         sutProvider.GetDependency<IGroupCollectionAccessValidator>()
             .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
-            .ThrowsAsync(new BadRequestException("You cannot modify group access for collections with the type as DefaultUserCollection."));
+            .Returns(new CannotModifyDefaultUserCollection());
     }
 
     private static SutProvider<CreateGroupCommand> SetupSutProvider()

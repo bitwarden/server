@@ -13,7 +13,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
@@ -146,11 +145,30 @@ public class UpdateGroupCommandTests
 
         sutProvider.GetDependency<IGroupCollectionAccessValidator>()
             .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
-            .ThrowsAsync(new BadRequestException("You cannot modify group access for collections with the type as DefaultUserCollection."));
+            .Returns(new CannotModifyDefaultUserCollection());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
         Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);
+    }
+
+    [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
+    public async Task UpdateGroup_WithCollectionNotFound_Throws(
+        Group group, Group oldGroup, Organization organization, List<CollectionAccessSelection> collectionAccess)
+    {
+        var sutProvider = SetupSutProvider();
+        ArrangeGroup(sutProvider, group, oldGroup);
+        ArrangeUsers(sutProvider, group);
+
+        sutProvider.GetDependency<IGroupCollectionAccessValidator>()
+            .ValidateAsync(Arg.Any<Guid>(), Arg.Any<ICollection<CollectionAccessSelection>>())
+            .Returns(new CollectionNotFound());
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateGroupAsync(group, organization, collectionAccess));
 
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogGroupEventAsync(default, default, default);

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
@@ -16,17 +15,19 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 public class GroupCollectionAccessValidatorTests
 {
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithSharedCollections_Succeeds(
+    public async Task ValidateAsync_WithSharedCollections_ReturnsNull(
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
         ArrangeCollections(sutProvider, organizationId);
 
-        await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+
+        Assert.Null(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CollectionsDoNotExist_Throws(
+    public async Task ValidateAsync_CollectionsDoNotExist_ReturnsCollectionNotFound(
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
@@ -41,35 +42,38 @@ public class GroupCollectionAccessValidatorTests
                 return result;
             });
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.ValidateAsync(organizationId, collectionAccess));
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+
+        Assert.IsType<CollectionNotFound>(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CollectionsBelongToDifferentOrganization_Throws(
+    public async Task ValidateAsync_CollectionsBelongToDifferentOrganization_ReturnsCollectionNotFound(
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
         ArrangeCollections(sutProvider, CombGuid.Generate());
 
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.ValidateAsync(organizationId, collectionAccess));
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+
+        Assert.IsType<CollectionNotFound>(result);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithDefaultUserCollectionType_Throws(
+    public async Task ValidateAsync_WithDefaultUserCollectionType_ReturnsCannotModifyDefaultUserCollection(
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
         ArrangeCollections(sutProvider, organizationId, CollectionType.DefaultUserCollection);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(organizationId, collectionAccess));
-        Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+
+        var error = Assert.IsType<CannotModifyDefaultUserCollection>(result);
+        Assert.Equal("You cannot modify group access for collections with the type as DefaultUserCollection.", error.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WithOneDefaultUserCollectionAmongShared_Throws(
+    public async Task ValidateAsync_WithOneDefaultUserCollectionAmongShared_ReturnsCannotModifyDefaultUserCollection(
         SutProvider<GroupCollectionAccessValidator> sutProvider,
         Guid organizationId, List<CollectionAccessSelection> collectionAccess)
     {
@@ -84,9 +88,10 @@ public class GroupCollectionAccessValidatorTests
                 return result;
             });
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ValidateAsync(organizationId, collectionAccess));
-        Assert.Contains("You cannot modify group access for collections with the type as DefaultUserCollection.", exception.Message);
+        var result = await sutProvider.Sut.ValidateAsync(organizationId, collectionAccess);
+
+        var error = Assert.IsType<CannotModifyDefaultUserCollection>(result);
+        Assert.Equal("You cannot modify group access for collections with the type as DefaultUserCollection.", error.Message);
     }
 
     private static void ArrangeCollections(SutProvider<GroupCollectionAccessValidator> sutProvider,

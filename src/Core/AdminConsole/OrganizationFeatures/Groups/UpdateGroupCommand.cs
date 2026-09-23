@@ -132,7 +132,11 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (collectionAccess?.Any() == true)
         {
-            await _groupCollectionAccessValidator.ValidateAsync(originalGroup.OrganizationId, collectionAccess);
+            var error = await _groupCollectionAccessValidator.ValidateAsync(originalGroup.OrganizationId, collectionAccess);
+            if (error is not null)
+            {
+                throw error.ToException();
+            }
         }
 
         if (memberAccess?.Any() == true)
