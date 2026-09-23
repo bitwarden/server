@@ -66,8 +66,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @SmServiceAccounts INT = null,
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
-    @PamSeats INT = null,
-    @MaxAutoscalePamSeats INT = null,
     @SecretsManagerBeta BIT = 0,
     @LimitCollectionCreation BIT = NULL,
     @LimitCollectionDeletion BIT = NULL,
@@ -83,7 +81,9 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
     @UseInviteLinks BIT = 0,
-    @UsePam BIT = 0
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -141,8 +141,6 @@ BEGIN
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
         [MaxAutoscaleSmServiceAccounts],
-        [PamSeats],
-        [MaxAutoscalePamSeats],
         [SecretsManagerBeta],
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
@@ -159,7 +157,9 @@ BEGIN
         [UseMyItems],
         [ExemptFromBillingAutomation],
         [UseInviteLinks],
-        [UsePam]
+        [UsePam],
+        [PamSeats],
+        [MaxAutoscalePamSeats]
     )
     VALUES
         (
@@ -214,8 +214,6 @@ BEGIN
             @SmServiceAccounts,
             @MaxAutoscaleSmSeats,
             @MaxAutoscaleSmServiceAccounts,
-            @PamSeats,
-            @MaxAutoscalePamSeats,
             @SecretsManagerBeta,
             @LimitCollectionCreation,
             @LimitCollectionDeletion,
@@ -232,7 +230,9 @@ BEGIN
             @UseMyItems,
             @ExemptFromBillingAutomation,
             @UseInviteLinks,
-            @UsePam
+            @UsePam,
+            @PamSeats,
+            @MaxAutoscalePamSeats
         );
 END
 GO
@@ -290,8 +290,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @SmServiceAccounts INT = null,
     @MaxAutoscaleSmSeats INT = null,
     @MaxAutoscaleSmServiceAccounts INT = null,
-    @PamSeats INT = null,
-    @MaxAutoscalePamSeats INT = null,
     @SecretsManagerBeta BIT = 0,
     @LimitCollectionCreation BIT = null,
     @LimitCollectionDeletion BIT = null,
@@ -307,7 +305,9 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
     @UseInviteLinks BIT = 0,
-    @UsePam BIT = 0
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -365,8 +365,6 @@ BEGIN
         [SmServiceAccounts] = @SmServiceAccounts,
         [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
         [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
-        [PamSeats] = @PamSeats,
-        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats,
         [SecretsManagerBeta] = @SecretsManagerBeta,
         [LimitCollectionCreation] = @LimitCollectionCreation,
         [LimitCollectionDeletion] = @LimitCollectionDeletion,
@@ -383,7 +381,9 @@ BEGIN
         [UseMyItems] = @UseMyItems,
         [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
         [UseInviteLinks] = @UseInviteLinks,
-        [UsePam] = @UsePam
+        [UsePam] = @UsePam,
+        [PamSeats] = @PamSeats,
+        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats
     WHERE
         [Id] = @Id;
 END
@@ -444,8 +444,6 @@ SELECT
     [SmServiceAccounts],
     [MaxAutoscaleSmSeats],
     [MaxAutoscaleSmServiceAccounts],
-    [PamSeats],
-    [MaxAutoscalePamSeats],
     [SecretsManagerBeta],
     [LimitCollectionCreation],
     [LimitCollectionDeletion],
@@ -461,7 +459,9 @@ SELECT
     [UseMyItems],
     [ExemptFromBillingAutomation],
     [UseInviteLinks],
-    [UsePam]
+    [UsePam],
+    [PamSeats],
+    [MaxAutoscalePamSeats]
 FROM
     [dbo].[Organization]
 GO
@@ -523,8 +523,6 @@ BEGIN
            o.[SmServiceAccounts],
            o.[MaxAutoscaleSmSeats],
            o.[MaxAutoscaleSmServiceAccounts],
-           o.[PamSeats],
-           o.[MaxAutoscalePamSeats],
            o.[SecretsManagerBeta],
            o.[LimitCollectionCreation],
            o.[LimitCollectionDeletion],
@@ -532,19 +530,33 @@ BEGIN
            o.[AllowAdminAccessToAllCollectionItems],
            o.[UseRiskInsights],
            o.[UseInviteLinks],
-           o.[UsePam]
+           o.[UsePam],
+           o.[PamSeats],
+           o.[MaxAutoscalePamSeats]
     FROM [dbo].[OrganizationView] o
     INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 
 END
 GO
 
--- Refresh views that SELECT * from OrganizationView so they pick up the new columns
-EXEC sp_refreshview '[dbo].[OrganizationCipherDetailsCollectionsView]';
+-- Refresh all views that depend on the Organization table so their metadata is rebuilt
+EXEC sp_refreshview N'[dbo].[OrganizationAbilityView]';
 GO
 
-EXEC sp_refreshview '[dbo].[ProviderOrganizationOrganizationDetailsView]';
+EXEC sp_refreshview N'[dbo].[OrganizationCipherDetailsCollectionsView]';
 GO
 
-EXEC sp_refreshview '[dbo].[UserPremiumAccessView]';
+EXEC sp_refreshview N'[dbo].[OrganizationPlanTypeView]';
+GO
+
+EXEC sp_refreshview N'[dbo].[OrganizationUserOrganizationDetailsView]';
+GO
+
+EXEC sp_refreshview N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+GO
+
+EXEC sp_refreshview N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
+GO
+
+EXEC sp_refreshview N'[dbo].[UserPremiumAccessView]';
 GO
