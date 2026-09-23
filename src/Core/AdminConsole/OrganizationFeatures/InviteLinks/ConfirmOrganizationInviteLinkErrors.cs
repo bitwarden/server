@@ -24,6 +24,13 @@ public record ConfirmInviteLinkConfirmationNotSupported()
     public string Type => "invite_link_confirmation_not_supported";
 }
 
+public record ConfirmEmailNotVerified()
+    : EmailNotVerified(), IValidationError
+{
+    public string PropertyName => "organizationId";
+    public string Type => "email_not_verified";
+}
+
 public record ConfirmEmailDomainNotAllowed(string OrgName)
     : EmailDomainNotAllowed(OrgName), IValidationError
 {
