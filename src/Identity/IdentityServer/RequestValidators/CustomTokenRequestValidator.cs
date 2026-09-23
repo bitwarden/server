@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
@@ -47,7 +48,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IIssueTwoFactorRememberTokenCommand issueTwoFactorRememberTokenCommand)
         : base(
             userManager,
             userService,
@@ -67,7 +69,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand)
+            updateDeviceLastActivityCommand,
+            issueTwoFactorRememberTokenCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
