@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,8 +13,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Services;
-using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
-using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -961,206 +960,73 @@ public class EventServiceTests
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
     }
 
-    [Theory, BitAutoData, SecretCustomize]
-    public async Task LogUserSecretsEvent_LogsActingUser(Secret secret,
-        EventType eventType, DateTime date, Guid userId, string ipAddress, DeviceType deviceType,
-        SutProvider<EventService> sutProvider)
-    {
-        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, secret.OrganizationId);
-
-        await sutProvider.Sut.LogUserSecretsEventAsync(userId, new[] { secret }, eventType, date);
-
-        var expected = new List<IEvent>
-        {
-            new EventMessage
-            {
-                IpAddress = ipAddress,
-                DeviceType = deviceType,
-                OrganizationId = secret.OrganizationId,
-                SecretId = secret.Id,
-                Type = eventType,
-                ActingUserId = userId,
-                Date = date
-            }
-        };
-
-        await sutProvider.GetDependency<IEventWriteService>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
-    }
-
-    [Theory, BitAutoData, ProjectCustomize]
-    public async Task LogUserProjectsEvent_LogsActingUser(Project project,
-        EventType eventType, DateTime date, Guid userId, string ipAddress, DeviceType deviceType,
-        SutProvider<EventService> sutProvider)
-    {
-        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, project.OrganizationId);
-
-        await sutProvider.Sut.LogUserProjectsEventAsync(userId, new[] { project }, eventType, date);
-
-        var expected = new List<IEvent>
-        {
-            new EventMessage
-            {
-                IpAddress = ipAddress,
-                DeviceType = deviceType,
-                OrganizationId = project.OrganizationId,
-                ProjectId = project.Id,
-                Type = eventType,
-                ActingUserId = userId,
-                Date = date
-            }
-        };
-
-        await sutProvider.GetDependency<IEventWriteService>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
-    }
-
     /// <summary>
-    /// A batch can span organizations and only those with events enabled may be logged. A
-    /// single-item test cannot tell the per-item filter apart from a no-op.
+    /// The granted member is the subject of this event, not its acting user, so it belongs in
+    /// OrganizationUserId (which backs MemberId/OrganizationUserId on the response models) rather
+    /// than UserId. UserId stays null, matching every other object-centric event (cipher,
+    /// collection, group, policy, secret, project) where the acted-upon object -- not a raw
+    /// user id -- occupies the type-specific column.
     /// </summary>
-    [Theory, BitAutoData, SecretCustomize]
-    public async Task LogUserSecretsEvent_SkipsOrganizationsWithEventsDisabled(
-        Secret enabledOrgSecret, EventType eventType, DateTime date, Guid userId,
-        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    [Theory, BitAutoData]
+    public async Task LogServiceAccountPeopleEvent_HumanActor_SetsOrganizationUserIdNotUserId(
+        Guid actingUserId, OrganizationUser orgUser, Guid organizationUserId, Guid grantedServiceAccountId,
+        EventType eventType, DateTime date, SutProvider<EventService> sutProvider)
     {
-        var disabledOrgSecret = new Secret { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
-
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
+        var policy = new UserServiceAccountAccessPolicy
         {
-            { enabledOrgSecret.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
-            { disabledOrgSecret.OrganizationId, new OrganizationAbility { UseEvents = false, Enabled = true } }
+            OrganizationUserId = organizationUserId,
+            GrantedServiceAccountId = grantedServiceAccountId
         };
-        var expectedOrgIds = new[] { enabledOrgSecret.OrganizationId, disabledOrgSecret.OrganizationId };
 
-        // Arg.Is rather than Arg.Any, so that passing the wrong selector or an empty list fails
-        // here instead of silently disabling all Secrets Manager audit logging.
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(orgUser);
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.OrderBy(id => id).SequenceEqual(expectedOrgIds.OrderBy(id => id))))
-            .Returns(orgAbilities);
-        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
-        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+            .GetOrganizationAbilityAsync(orgUser.OrganizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
 
-        await sutProvider.Sut.LogUserSecretsEventAsync(
-            userId, new[] { enabledOrgSecret, disabledOrgSecret }, eventType, date);
-
-        var expected = new List<IEvent>
-        {
-            new EventMessage
-            {
-                IpAddress = ipAddress,
-                DeviceType = deviceType,
-                OrganizationId = enabledOrgSecret.OrganizationId,
-                SecretId = enabledOrgSecret.Id,
-                Type = eventType,
-                ActingUserId = userId,
-                Date = date
-            }
-        };
-
-        await sutProvider.GetDependency<IEventWriteService>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
-    }
-
-    /// <inheritdoc cref="LogUserSecretsEvent_SkipsOrganizationsWithEventsDisabled"/>
-    [Theory, BitAutoData, ProjectCustomize]
-    public async Task LogUserProjectsEvent_SkipsOrganizationsWithEventsDisabled(
-        Project enabledOrgProject, EventType eventType, DateTime date, Guid userId,
-        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
-    {
-        var disabledOrgProject = new Project { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid() };
-
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>
-        {
-            { enabledOrgProject.OrganizationId, new OrganizationAbility { UseEvents = true, Enabled = true } },
-            { disabledOrgProject.OrganizationId, new OrganizationAbility { UseEvents = false, Enabled = true } }
-        };
-        var expectedOrgIds = new[] { enabledOrgProject.OrganizationId, disabledOrgProject.OrganizationId };
-
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.OrderBy(id => id).SequenceEqual(expectedOrgIds.OrderBy(id => id))))
-            .Returns(orgAbilities);
-        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
-        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-
-        await sutProvider.Sut.LogUserProjectsEventAsync(
-            userId, new[] { enabledOrgProject, disabledOrgProject }, eventType, date);
-
-        var expected = new List<IEvent>
-        {
-            new EventMessage
-            {
-                IpAddress = ipAddress,
-                DeviceType = deviceType,
-                OrganizationId = enabledOrgProject.OrganizationId,
-                ProjectId = enabledOrgProject.Id,
-                Type = eventType,
-                ActingUserId = userId,
-                Date = date
-            }
-        };
-
-        await sutProvider.GetDependency<IEventWriteService>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
-    }
-
-    /// <summary>
-    /// Pins the invariant the backfill migration depends on: machine-account secret and project
-    /// events carry a ServiceAccountId and leave both user columns NULL, so machine reads are
-    /// never attributed to a human in the org event log or on the public events API. The
-    /// migration uses "UserId IS NOT NULL" to exclude these rows, so populating UserId here
-    /// would make the backfill copy a user id onto a machine read. The count assertion matters:
-    /// All() is true for an empty sequence, so without it a filtered-out batch passes silently.
-    /// </summary>
-    [Theory, BitAutoData, SecretCustomize]
-    public async Task LogServiceAccountSecretsEvent_LeavesUserColumnsNull(
-        Secret secret, EventType eventType, DateTime date, Guid serviceAccountId,
-        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
-    {
-        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, secret.OrganizationId);
-
-        await sutProvider.Sut.LogServiceAccountSecretsEventAsync(
-            serviceAccountId, new[] { secret }, eventType, date);
+        await sutProvider.Sut.LogServiceAccountPeopleEventAsync(
+            actingUserId, policy, eventType, IdentityClientType.User, date);
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
-            Arg.Is<IEnumerable<IEvent>>(events =>
-                events.Count() == 1
-                && events.All(e =>
-                    e.UserId == null && e.ActingUserId == null && e.ServiceAccountId == serviceAccountId)));
+            Arg.Is<IEnumerable<IEvent>>(events => events.Count() == 1 && events.All(e =>
+                e.OrganizationId == orgUser.OrganizationId &&
+                e.Type == eventType &&
+                e.GrantedServiceAccountId == grantedServiceAccountId &&
+                e.OrganizationUserId == organizationUserId &&
+                e.UserId == null &&
+                e.ServiceAccountId == null &&
+                e.ActingUserId == actingUserId &&
+                e.Date == date)));
     }
 
-    /// <inheritdoc cref="LogServiceAccountSecretsEvent_LeavesUserColumnsNull"/>
-    [Theory, BitAutoData, ProjectCustomize]
-    public async Task LogServiceAccountProjectsEvent_LeavesUserColumnsNull(
-        Project project, EventType eventType, DateTime date, Guid serviceAccountId,
-        string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    /// <inheritdoc cref="LogServiceAccountPeopleEvent_HumanActor_SetsOrganizationUserIdNotUserId"/>
+    [Theory, BitAutoData]
+    public async Task LogServiceAccountPeopleEvent_MachineActor_SetsOrganizationUserIdNotUserId(
+        Guid actingServiceAccountId, OrganizationUser orgUser, Guid organizationUserId, Guid grantedServiceAccountId,
+        EventType eventType, DateTime date, SutProvider<EventService> sutProvider)
     {
-        ArrangeOrganizationWithEvents(sutProvider, ipAddress, deviceType, project.OrganizationId);
+        var policy = new UserServiceAccountAccessPolicy
+        {
+            OrganizationUserId = organizationUserId,
+            GrantedServiceAccountId = grantedServiceAccountId
+        };
 
-        await sutProvider.Sut.LogServiceAccountProjectsEventAsync(
-            serviceAccountId, new[] { project }, eventType, date);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(orgUser);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgUser.OrganizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogServiceAccountPeopleEventAsync(
+            actingServiceAccountId, policy, eventType, IdentityClientType.ServiceAccount, date);
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
-            Arg.Is<IEnumerable<IEvent>>(events =>
-                events.Count() == 1
-                && events.All(e =>
-                    e.UserId == null && e.ActingUserId == null && e.ServiceAccountId == serviceAccountId)));
-    }
-
-    private static void ArrangeOrganizationWithEvents(SutProvider<EventService> sutProvider,
-        string ipAddress, DeviceType deviceType, params Guid[] organizationIds)
-    {
-        var orgAbilities = organizationIds.ToDictionary(
-            organizationId => organizationId,
-            _ => new OrganizationAbility { UseEvents = true, Enabled = true });
-
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
-            .GetOrganizationAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids =>
-                ids.OrderBy(id => id).SequenceEqual(organizationIds.OrderBy(id => id))))
-            .Returns(orgAbilities);
-        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
-        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+            Arg.Is<IEnumerable<IEvent>>(events => events.Count() == 1 && events.All(e =>
+                e.OrganizationUserId == organizationUserId &&
+                e.UserId == null &&
+                e.ServiceAccountId == actingServiceAccountId &&
+                e.ActingUserId == null)));
     }
 }

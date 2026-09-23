@@ -621,7 +621,7 @@ public class EventService : IEventService
                 Type = type,
                 GrantedServiceAccountId = policy.GrantedServiceAccountId,
                 ServiceAccountId = serviceAccountId,
-                UserId = policy.OrganizationUserId,
+                OrganizationUserId = policy.OrganizationUserId,
                 ActingUserId = actingUserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
