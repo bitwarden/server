@@ -50,8 +50,6 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @SmServiceAccounts INT = null,
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
-    @PamSeats INT = null,
-    @MaxAutoscalePamSeats INT = null,
     @SecretsManagerBeta BIT = 0,
     @LimitCollectionCreation BIT = NULL,
     @LimitCollectionDeletion BIT = NULL,
@@ -67,7 +65,9 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
     @UseInviteLinks BIT = 0,
-    @UsePam BIT = 0
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -125,8 +125,6 @@ BEGIN
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
         [MaxAutoscaleSmServiceAccounts],
-        [PamSeats],
-        [MaxAutoscalePamSeats],
         [SecretsManagerBeta],
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
@@ -143,7 +141,9 @@ BEGIN
         [UseMyItems],
         [ExemptFromBillingAutomation],
         [UseInviteLinks],
-        [UsePam]
+        [UsePam],
+        [PamSeats],
+        [MaxAutoscalePamSeats]
     )
     VALUES
         (
@@ -198,8 +198,6 @@ BEGIN
             @SmServiceAccounts,
             @MaxAutoscaleSmSeats,
             @MaxAutoscaleSmServiceAccounts,
-            @PamSeats,
-            @MaxAutoscalePamSeats,
             @SecretsManagerBeta,
             @LimitCollectionCreation,
             @LimitCollectionDeletion,
@@ -216,6 +214,8 @@ BEGIN
             @UseMyItems,
             @ExemptFromBillingAutomation,
             @UseInviteLinks,
-            @UsePam
+            @UsePam,
+            @PamSeats,
+            @MaxAutoscalePamSeats
         );
 END

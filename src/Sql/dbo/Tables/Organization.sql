@@ -50,8 +50,6 @@ CREATE TABLE [dbo].[Organization] (
     [SmServiceAccounts]             INT              NULL,
     [MaxAutoscaleSmSeats]           INT              NULL,
     [MaxAutoscaleSmServiceAccounts] INT              NULL,
-    [PamSeats]                      INT              NULL,
-    [MaxAutoscalePamSeats]          INT              NULL,
     [SecretsManagerBeta]            BIT              NOT NULL CONSTRAINT [DF_Organization_SecretsManagerBeta] DEFAULT (0),
     [LimitCollectionCreation]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreation] DEFAULT (0),
     [LimitCollectionDeletion]       BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionDeletion] DEFAULT (0),
@@ -69,6 +67,8 @@ CREATE TABLE [dbo].[Organization] (
     [ExemptFromBillingAutomation]   BIT              NOT NULL CONSTRAINT [DF_Organization_ExemptFromBillingAutomation] DEFAULT (0),
     [UseInviteLinks]                BIT              NOT NULL CONSTRAINT [DF_Organization_UseInviteLinks] DEFAULT (0),
     [UsePam]                        BIT              NOT NULL CONSTRAINT [DF_Organization_UsePam] DEFAULT (0),
+    [PamSeats]                      INT              NULL,
+    [MaxAutoscalePamSeats]          INT              NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

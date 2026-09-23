@@ -52,8 +52,6 @@ SELECT
     [SmServiceAccounts],
     [MaxAutoscaleSmSeats],
     [MaxAutoscaleSmServiceAccounts],
-    [PamSeats],
-    [MaxAutoscalePamSeats],
     [SecretsManagerBeta],
     [LimitCollectionCreation],
     [LimitCollectionDeletion],
@@ -69,6 +67,8 @@ SELECT
     [UseMyItems],
     [ExemptFromBillingAutomation],
     [UseInviteLinks],
-    [UsePam]
+    [UsePam],
+    [PamSeats],
+    [MaxAutoscalePamSeats]
 FROM
     [dbo].[Organization]

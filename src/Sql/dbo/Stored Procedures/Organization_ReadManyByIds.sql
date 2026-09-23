@@ -54,8 +54,6 @@ BEGIN
            o.[SmServiceAccounts],
            o.[MaxAutoscaleSmSeats],
            o.[MaxAutoscaleSmServiceAccounts],
-           o.[PamSeats],
-           o.[MaxAutoscalePamSeats],
            o.[SecretsManagerBeta],
            o.[LimitCollectionCreation],
            o.[LimitCollectionDeletion],
@@ -63,7 +61,9 @@ BEGIN
            o.[AllowAdminAccessToAllCollectionItems],
            o.[UseRiskInsights],
            o.[UseInviteLinks],
-           o.[UsePam]
+           o.[UsePam],
+           o.[PamSeats],
+           o.[MaxAutoscalePamSeats]
     FROM [dbo].[OrganizationView] o
     INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 
