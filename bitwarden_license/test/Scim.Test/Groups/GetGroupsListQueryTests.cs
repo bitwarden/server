@@ -115,6 +115,60 @@ public class GetGroupsListCommandTests
         Assert.Equal(expectedTotalResults, result.totalResults);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetGroupsList_FilterDisplayName_Ne_Success(SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
+    {
+        groups = SetGroupsOrganizationId(groups, organizationId);
+        string name = groups.First().Name;
+        string filter = $"displayName ne \"{name}\"";
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(groups);
+
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
+
+        Assert.Equal(groups.Count - 1, result.totalResults);
+        Assert.DoesNotContain(result.groupList, g => g.Name == name);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetGroupsList_FilterDisplayName_Co_Success(SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
+    {
+        groups = SetGroupsOrganizationId(groups, organizationId);
+        groups.First().Name = "Test-Contains-Group";
+        string filter = "displayName co \"Contains\"";
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(groups);
+
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
+
+        Assert.Single(result.groupList);
+        Assert.Equal("Test-Contains-Group", result.groupList.First().Name);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetGroupsList_FilterDisplayName_Sw_Success(SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
+    {
+        groups = SetGroupsOrganizationId(groups, organizationId);
+        groups.First().Name = "Prefix-Test-Group";
+        string filter = "displayName sw \"Prefix-\"";
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(groups);
+
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
+
+        Assert.Single(result.groupList);
+        Assert.Equal("Prefix-Test-Group", result.groupList.First().Name);
+    }
+
     private IList<Group> SetGroupsOrganizationId(IList<Group> groups, Guid organizationId)
     {
         return groups.Select(g =>
