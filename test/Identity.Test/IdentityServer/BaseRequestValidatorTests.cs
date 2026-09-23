@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -60,6 +61,7 @@ public class BaseRequestValidatorTests
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IIssueTwoFactorRememberTokenCommand _issueTwoFactorRememberTokenCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -84,6 +86,7 @@ public class BaseRequestValidatorTests
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        _issueTwoFactorRememberTokenCommand = Substitute.For<IIssueTwoFactorRememberTokenCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -104,7 +107,8 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator,
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            _issueTwoFactorRememberTokenCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -395,8 +399,8 @@ public class BaseRequestValidatorTests
 
         // 4 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token")
-            .Returns(Task.FromResult(false));
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 5 -> set up SSO required verification to succeed
         _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
@@ -445,8 +449,8 @@ public class BaseRequestValidatorTests
 
         // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token")
-            .Returns(Task.FromResult(false));
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 6 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
@@ -982,8 +986,8 @@ public class BaseRequestValidatorTests
 
         // 5. Recovery code is valid (UserService.RecoverTwoFactorAsync will be called internally)
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-12345")
-            .Returns(Task.FromResult(true));
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-12345", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1046,8 +1050,8 @@ public class BaseRequestValidatorTests
 
         // 5. Recovery code is INVALID
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code")
-            .Returns(Task.FromResult(false));
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1125,8 +1129,8 @@ public class BaseRequestValidatorTests
 
         // 5. Recovery code is valid
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-67890")
-            .Returns(Task.FromResult(true));
+            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-67890", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // 6. Device validation passes
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -1270,8 +1274,8 @@ public class BaseRequestValidatorTests
             .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
 
         _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(requestContext.User, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code")
-            .Returns(Task.FromResult(true));
+            .VerifyTwoFactorAsync(requestContext.User, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code", Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // SsoRequestValidator handles the recovery + SSO scenario
         requestContext.TwoFactorRecoveryRequested = true;
