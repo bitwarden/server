@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Core.Auth.Enums;
+using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
@@ -41,6 +42,29 @@ public class ResendNewDeviceOtpTests
         var (factory, mailService, user) = await ArrangeAsync();
         await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
         mailService.ClearReceivedCalls();
+
+        var response = await PostResendAsync(factory, user.Email, deviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertCodeSentAsync(mailService);
+    }
+
+    // TODO: PM-43465 - Delete this test once mobile sends the Device-Identifier header on this request
+    // (PM-43467) and that release has aged out of the support window.
+    /// <summary>
+    /// The common reason to press resend is that the previous code already expired, so the record naming the
+    /// device must outlive the code. Expiry is simulated by evicting the code's cache entry, because the test
+    /// host cannot advance the clock — the record lives under its own key with a longer expiration, so a real
+    /// timeout removes the same entry this evicts.
+    /// </summary>
+    [Fact]
+    public async Task ResendNewDeviceOtp_NoHeader_CodeExpired_StillSendsCode()
+    {
+        var (factory, mailService, user) = await ArrangeAsync();
+        await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+        mailService.ClearReceivedCalls();
+
+        await ExpireVerificationCodeAsync(factory, user);
 
         var response = await PostResendAsync(factory, user.Email, deviceIdentifier: null);
 
@@ -107,6 +131,20 @@ public class ResendNewDeviceOtpTests
     {
         var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
         await twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
+    }
+
+    /// <summary>
+    /// Evicts the cache entry holding the verification code, leaving any other new device verification state
+    /// in place — the same end state a real expiration of that entry reaches.
+    /// </summary>
+    private static async Task ExpireVerificationCodeAsync(ApiApplicationFactory factory, User user)
+    {
+        var cache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        var codeCacheKey =
+            $"NewDeviceVerification_NewDeviceVerificationCode_{user.Id}_{user.SecurityStamp}";
+
+        Assert.NotNull(await cache.GetAsync(codeCacheKey));
+        await cache.RemoveAsync(codeCacheKey);
     }
 
     private static async Task<HttpResponseMessage> PostResendAsync(

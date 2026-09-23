@@ -9,6 +9,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
@@ -68,6 +69,31 @@ public class NewDeviceVerificationTests
 
         await PostPasswordTokenAsync(
             factory, user.Email, requestModel.MasterPasswordHash, ChallengedDeviceIdentifier);
+
+        var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
+        var recorded = await twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
+
+        Assert.Equal(ChallengedDeviceIdentifier, recorded);
+    }
+
+    // TODO: PM-43465 - Delete this test once mobile sends the Device-Identifier header on the resend
+    // request (PM-43467) and that release has aged out of the support window.
+    /// <summary>
+    /// A client that cannot identify its device on a resend relies on this record, and the usual reason to
+    /// press resend is that the previous code already expired — so the record has to survive the code. The
+    /// two are stored separately for that reason. Expiry is simulated by evicting the code's cache entry,
+    /// because the test host cannot advance the clock; a real timeout removes that same entry.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task NewDeviceVerification_CodeExpired_ChallengedDeviceStillRecorded(
+        RegisterFinishRequestModel requestModel)
+    {
+        var (factory, user) = await ArrangeUserWithDeviceHistoryAsync(requestModel);
+
+        await PostPasswordTokenAsync(
+            factory, user.Email, requestModel.MasterPasswordHash, ChallengedDeviceIdentifier);
+
+        await ExpireVerificationCodeAsync(factory, user);
 
         var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
         var recorded = await twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
@@ -144,6 +170,21 @@ public class NewDeviceVerificationTests
         await database.SaveChangesAsync();
 
         return (factory, user);
+    }
+
+    /// <summary>
+    /// Evicts the cache entry holding the verification code, leaving any other new device verification state
+    /// in place — the same end state a real expiration of that entry reaches. Asserts the entry was there
+    /// first, so the test cannot pass against a challenge that never issued a code.
+    /// </summary>
+    private static async Task ExpireVerificationCodeAsync(IdentityApplicationFactory factory, User user)
+    {
+        var cache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        var codeCacheKey =
+            $"NewDeviceVerification_NewDeviceVerificationCode_{user.Id}_{user.SecurityStamp}";
+
+        Assert.NotNull(await cache.GetAsync(codeCacheKey));
+        await cache.RemoveAsync(codeCacheKey);
     }
 
     private static async Task<HttpContext> PostPasswordTokenAsync(
