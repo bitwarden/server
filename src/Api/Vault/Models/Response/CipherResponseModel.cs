@@ -98,57 +98,67 @@ public abstract class CipherMiniResponseModel : ResponseModel
             return;
         }
 
-        CipherData cipherData;
-        switch (cipher.Type)
+        try
         {
-            case CipherType.Login:
-                var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-                cipherData = loginData;
-                Login = new CipherLoginModel(loginData);
-                break;
-            case CipherType.SecureNote:
-                var secureNoteData = JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
-                cipherData = secureNoteData;
-                SecureNote = new CipherSecureNoteModel(secureNoteData);
-                break;
-            case CipherType.Card:
-                var cardData = JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
-                cipherData = cardData;
-                Card = new CipherCardModel(cardData);
-                break;
-            case CipherType.Identity:
-                var identityData = JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
-                cipherData = identityData;
-                Identity = new CipherIdentityModel(identityData);
-                break;
-            case CipherType.SSHKey:
-                var sshKeyData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
-                cipherData = sshKeyData;
-                SSHKey = new CipherSSHKeyModel(sshKeyData);
-                break;
-            case CipherType.BankAccount:
-                var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
-                cipherData = bankAccountData;
-                BankAccount = new CipherBankAccountModel(bankAccountData);
-                break;
-            case CipherType.DriversLicense:
-                var driversLicenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
-                cipherData = driversLicenseData;
-                DriversLicense = new CipherDriversLicenseModel(driversLicenseData);
-                break;
-            case CipherType.Passport:
-                var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
-                cipherData = passportData;
-                Passport = new CipherPassportModel(passportData);
-                break;
-            default:
-                throw new ArgumentException("Unsupported " + nameof(Type) + ".");
-        }
+            CipherData cipherData;
+            switch (cipher.Type)
+            {
+                case CipherType.Login:
+                    var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+                    cipherData = loginData;
+                    Login = new CipherLoginModel(loginData);
+                    break;
+                case CipherType.SecureNote:
+                    var secureNoteData = JsonSerializer.Deserialize<CipherSecureNoteData>(cipher.Data);
+                    cipherData = secureNoteData;
+                    SecureNote = new CipherSecureNoteModel(secureNoteData);
+                    break;
+                case CipherType.Card:
+                    var cardData = JsonSerializer.Deserialize<CipherCardData>(cipher.Data);
+                    cipherData = cardData;
+                    Card = new CipherCardModel(cardData);
+                    break;
+                case CipherType.Identity:
+                    var identityData = JsonSerializer.Deserialize<CipherIdentityData>(cipher.Data);
+                    cipherData = identityData;
+                    Identity = new CipherIdentityModel(identityData);
+                    break;
+                case CipherType.SSHKey:
+                    var sshKeyData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
+                    cipherData = sshKeyData;
+                    SSHKey = new CipherSSHKeyModel(sshKeyData);
+                    break;
+                case CipherType.BankAccount:
+                    var bankAccountData = JsonSerializer.Deserialize<CipherBankAccountData>(cipher.Data);
+                    cipherData = bankAccountData;
+                    BankAccount = new CipherBankAccountModel(bankAccountData);
+                    break;
+                case CipherType.DriversLicense:
+                    var driversLicenseData = JsonSerializer.Deserialize<CipherDriversLicenseData>(cipher.Data);
+                    cipherData = driversLicenseData;
+                    DriversLicense = new CipherDriversLicenseModel(driversLicenseData);
+                    break;
+                case CipherType.Passport:
+                    var passportData = JsonSerializer.Deserialize<CipherPassportData>(cipher.Data);
+                    cipherData = passportData;
+                    Passport = new CipherPassportModel(passportData);
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported " + nameof(Type) + ".");
+            }
 
-        Name = cipherData.Name;
-        Notes = cipherData.Notes;
-        Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
-        PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
+            Name = cipherData.Name;
+            Notes = cipherData.Notes;
+            Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
+            PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
+        }
+        catch (Exception e) when (e is JsonException or NullReferenceException)
+        {
+            // One cipher with an unparseable Data blob must not deny vault access to every org member.
+            // Return a partial item (null typed fields) rather than propagating a 500.
+            // NullReferenceException covers the case where Deserialize returns null (e.g. Data = "null")
+            // and the typed model constructor dereferences it unconditionally.
+        }
     }
 
     public Guid Id { get; set; }
