@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity.TokenProviders;
+﻿using System.Text;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
@@ -58,18 +59,46 @@ public class NewDeviceVerificationOtpStoreTests
                 $"{user.Id}_{user.SecurityStamp}", deviceIdentifier);
     }
 
-    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once every supported
-    // client version sends the Device-Identifier header on the new device verification resend request.
+    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once mobile sends the
+    // Device-Identifier header on the resend request (PM-43467) and that release has aged out of the
+    // support window.
+    /// <summary>
+    /// The pending device record must outlive the code, because the usual reason to press resend is that the
+    /// previous code already expired. Asserts the two are written to different keys under different
+    /// expirations, so the record survives a read that the code no longer would.
+    /// </summary>
     [Theory, BitAutoData]
-    public async Task GetPendingDeviceIdentifierAsync_DelegatesToOtpTokenProvider(
+    public async Task IssueAsync_WritesPendingDeviceUnderItsOwnKeyAndLongerTtl(
+        SutProvider<NewDeviceVerificationOtpStore> sutProvider, User user)
+    {
+        var deviceIdentifier = "device-identifier";
+        var uniqueIdentifier = $"{user.Id}_{user.SecurityStamp}";
+
+        await sutProvider.Sut.IssueAsync(user, deviceIdentifier);
+
+        await sutProvider.GetDependency<IDistributedCache>()
+            .Received(1)
+            .SetAsync(
+                $"NewDeviceVerification_PendingDevice_{uniqueIdentifier}",
+                Arg.Is<byte[]>(bytes => Encoding.UTF8.GetString(bytes) == deviceIdentifier),
+                Arg.Is<DistributedCacheEntryOptions>(options =>
+                    options.AbsoluteExpirationRelativeToNow == TimeSpan.FromMinutes(15)),
+                Arg.Any<CancellationToken>());
+    }
+
+    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once mobile sends the
+    // Device-Identifier header on the resend request (PM-43467) and that release has aged out of the
+    // support window.
+    [Theory, BitAutoData]
+    public async Task GetPendingDeviceIdentifierAsync_ReadsPendingDeviceKey(
         SutProvider<NewDeviceVerificationOtpStore> sutProvider, User user)
     {
         var deviceIdentifier = "device-identifier";
 
-        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
-            .PeekBoundValueAsync("NewDeviceVerification", "NewDeviceVerificationCode",
-                $"{user.Id}_{user.SecurityStamp}")
-            .Returns(deviceIdentifier);
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync($"NewDeviceVerification_PendingDevice_{user.Id}_{user.SecurityStamp}",
+                Arg.Any<CancellationToken>())
+            .Returns(Encoding.UTF8.GetBytes(deviceIdentifier));
 
         Assert.Equal(deviceIdentifier, await sutProvider.Sut.GetPendingDeviceIdentifierAsync(user));
     }
@@ -113,8 +142,9 @@ public class NewDeviceVerificationOtpStoreTests
             await sutProvider.Sut.ValidateAndConsumeAsync(user, "submitting-device-identifier", code));
     }
 
-    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once every supported
-    // client version sends the Device-Identifier header on the new device verification resend request.
+    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once mobile sends the
+    // Device-Identifier header on the resend request (PM-43467) and that release has aged out of the
+    // support window.
     [Theory, BitAutoData]
     public async Task GetPendingDeviceIdentifierAsync_Issued_ReturnsDevice(User user)
     {
@@ -126,8 +156,9 @@ public class NewDeviceVerificationOtpStoreTests
         Assert.Equal(deviceIdentifier, await sutProvider.Sut.GetPendingDeviceIdentifierAsync(user));
     }
 
-    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once every supported
-    // client version sends the Device-Identifier header on the new device verification resend request.
+    // TODO: PM-43465 - Delete this test along with GetPendingDeviceIdentifierAsync once mobile sends the
+    // Device-Identifier header on the resend request (PM-43467) and that release has aged out of the
+    // support window.
     [Theory, BitAutoData]
     public async Task GetPendingDeviceIdentifierAsync_NotIssued_ReturnsNull(User user)
     {
@@ -139,7 +170,8 @@ public class NewDeviceVerificationOtpStoreTests
     /// <summary>
     /// Builds a store backed by a real <see cref="OtpTokenProvider{TOptions}"/> over a real, in-memory
     /// <see cref="IDistributedCache"/>, so issue/validate/get round-trip through actual cache entries instead
-    /// of mocked calls.
+    /// of mocked calls. The store and the provider share one cache, matching production, where both resolve
+    /// the same "persistent" keyed instance.
     /// </summary>
     private static SutProvider<NewDeviceVerificationOtpStore> BuildSutProviderOverRealCache()
     {
@@ -151,6 +183,7 @@ public class NewDeviceVerificationOtpStoreTests
         var sutProvider = new SutProvider<NewDeviceVerificationOtpStore>().Create();
         return sutProvider
             .SetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>(otpTokenProvider, "otpTokenProvider")
+            .SetDependency<IDistributedCache>(distributedCache, "distributedCache")
             .Create();
     }
 }
