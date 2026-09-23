@@ -1925,6 +1925,36 @@ public class OrganizationUserRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task DeleteManyAsync_WithSsoUser_SsoUserIsDeleted(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ISsoUserRepository ssoUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+
+        await ssoUserRepository.CreateAsync(new SsoUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            ExternalId = "external-id",
+        });
+
+        // Act
+        await organizationUserRepository.DeleteManyAsync(new[] { organizationUser.Id });
+
+        // Assert
+        var deletedOrganizationUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.Null(deletedOrganizationUser);
+
+        var deletedSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organization.Id, user.Id);
+        Assert.Null(deletedSsoUser);
+    }
+
+    [Theory, DatabaseData]
     public async Task DeleteManyAsync_WithSsoUserInAnotherOrganization_OnlyDeletesRemovedOrganizationsSsoUser(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
