@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,6 +9,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -921,6 +923,52 @@ public class UserRepositoryTests
         Assert.Equal("newHash", updatedUser.MasterPassword);
         Assert.Equal("hint", updatedUser.MasterPasswordHint);
         Assert.Equal("wrapped-user-key", updatedUser.Key);
+    }
+
+    // Regression test: a caller-supplied value that merely starts with the database field
+    // protection sentinel ("P|") but is not real protector output must never be stored verbatim.
+    // Storing it verbatim makes every later read of the row throw, permanently destroying the
+    // account (see the account-recovery storage-protection sentinel report).
+    //
+    // Asserting round-trip equality (sentinel included) tests the actual invariant. The prior
+    // version of this test asserted `readBack.Key != "the poisoned payload"`, but on the broken
+    // path `UnprotectData` throws `CryptographicException` before that assertion is ever reached
+    // - it only caught the regression by virtue of the test erroring out first.
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_DoesNotStoreVerbatim(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var poisonedKey = "P|not-a-protected-value-poc1234";
+        user.Key = poisonedKey;
+        await userRepository.ReplaceAsync(user);
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.Equal(poisonedKey, readBack.Key);
+    }
+
+    // Covers the branch the fix added: a value that is already genuinely protected (real protector
+    // output behind the "P|" sentinel) must round-trip unchanged rather than being protected again.
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyIsAlreadyGenuinelyProtectedValue_DoesNotDoubleProtect(
+        IUserRepository userRepository, IDataProtectionProvider dataProtectionProvider)
+    {
+        var dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        var alreadyProtectedKey = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect("wrapped-user-key"));
+
+        var user = await userRepository.CreateTestUserAsync();
+
+        user.Key = alreadyProtectedKey;
+        await userRepository.ReplaceAsync(user);
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.Equal("wrapped-user-key", readBack.Key);
     }
 
     private static UserAccountKeysData BuildV2AccountKeysData() => new()

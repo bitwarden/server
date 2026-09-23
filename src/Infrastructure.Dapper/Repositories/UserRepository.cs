@@ -589,18 +589,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     private void ProtectData(User user)
     {
-        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (user.MasterPassword != null)
         {
-            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.MasterPassword!));
+            user.MasterPassword = ProtectValue(user.MasterPassword);
         }
 
-        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        if (user.Key != null)
         {
-            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.Key!));
+            user.Key = ProtectValue(user.Key);
         }
     }
+
+    private string ProtectValue(string value) => DatabaseFieldProtectionHelper.Protect(_dataProtector, value)!;
 
     private void UnprotectData(User? user)
     {
@@ -609,17 +609,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             return;
         }
 
-        if (user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            user.MasterPassword = _dataProtector.Unprotect(
-                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
-        }
-
-        if (user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
-        {
-            user.Key = _dataProtector.Unprotect(
-                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
-        }
+        user.MasterPassword = DatabaseFieldProtectionHelper.Unprotect(_dataProtector, user.MasterPassword);
+        user.Key = DatabaseFieldProtectionHelper.Unprotect(_dataProtector, user.Key);
     }
 
     private void UnprotectData(IEnumerable<User> users)
