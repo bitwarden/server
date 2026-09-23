@@ -75,8 +75,7 @@ public class Saml2WantAssertionsSignedTests
     [Fact]
     public async Task CouldHandleAsync_SignedEncryptedAssertionAndWantAssertionsSigned_DoesNotThrow()
     {
-        // Before PM-42982, this always threw. The pre-flight check only ever looked
-        // for a plaintext <Assertion> node, which never exists in this form.
+        // Ensures that WantAssertionsSigned operates correctly on an EncryptedAssertion.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedAssertion = BuildSignedAssertion(idpCertificate);
         var encryptedAssertionXml = EncryptAssertion(signedAssertion, spCertificate);
@@ -105,10 +104,7 @@ public class Saml2WantAssertionsSignedTests
     [Fact]
     public async Task CouldHandleAsync_SignedPlaintextAssertionWithUnsignedEncryptedSiblingAndWantAssertionsSigned_Throws()
     {
-        // Before PM-42982, the pre-flight check found only the first <Assertion> node and
-        // stopped, so a signed plaintext assertion let an unsigned encrypted sibling
-        // through. This branch checks every assertion element in the envelope, so the
-        // unsigned sibling now fails the whole response.
+        // Check every assertion element in the envelope.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedPlaintextAssertion = BuildSignedAssertion(idpCertificate);
         var unsignedEncryptedAssertionXml =
