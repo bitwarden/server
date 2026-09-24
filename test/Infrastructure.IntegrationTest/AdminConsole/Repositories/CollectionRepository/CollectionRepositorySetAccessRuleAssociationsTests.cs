@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
 using Xunit;
@@ -25,7 +26,12 @@ public class CollectionRepositorySetAccessRuleAssociationsTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, "Assign");
 
-        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = $"test {Guid.NewGuid()}",
+            RevisionDate = DateTime.UtcNow.AddMinutes(-10),
+        });
         var before = await collectionRepository.GetByIdAsync(collection.Id);
         Assert.NotNull(before);
         Assert.Null(before.AccessRuleId);
