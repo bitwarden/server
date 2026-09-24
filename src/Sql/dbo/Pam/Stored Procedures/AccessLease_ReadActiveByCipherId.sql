@@ -1,18 +1,17 @@
-CREATE PROCEDURE [dbo].[AccessLease_ReadActiveByRequesterIdCipherId]
-    @RequesterId UNIQUEIDENTIFIER,
+CREATE PROCEDURE [dbo].[AccessLease_ReadActiveByCipherId]
     @CipherId UNIQUEIDENTIFIER,
     @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
 
+    -- Whether anyone holds this cipher's lease now, matching the singleton guard's scope.
     SELECT TOP 1
         *
     FROM
         [dbo].[AccessLease]
     WHERE
-        [RequesterId] = @RequesterId
-        AND [CipherId] = @CipherId
+        [CipherId] = @CipherId
         AND [Action] = 0 -- None (no early end)
         AND [NotBefore] <= @Now
         AND [NotAfter] > @Now
