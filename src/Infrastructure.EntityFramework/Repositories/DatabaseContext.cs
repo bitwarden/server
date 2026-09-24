@@ -223,7 +223,7 @@ public class DatabaseContext : DbContext
         eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
         eAccessLease.HasIndex(p => new { p.NotAfter, p.Action });
         eAccessLease.HasIndex(p => new { p.CollectionId, p.Action });
-        eAccessLease.HasIndex(p => new { p.CipherId, p.Action });
+        eAccessLease.HasIndex(p => new { p.CipherId, p.Action, p.NotAfter }).IsDescending(false, false, true);
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
             .HasOne<AccessRequest>()

@@ -841,6 +841,33 @@ public class AccessRequestRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task ResolveWithDecisionAsync_LapsedRequest_LeavesItUntouchedAndAppendsNoDecision(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IAccessRequestRepository accessRequestRepository)
+    {
+        // An unanswered request whose window has lapsed reads Expired; a late verdict must not restamp it.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var collection = await collectionRepository.CreateTestCollectionAsync(organization);
+        var now = DateTime.UtcNow;
+
+        var lapsed = await accessRequestRepository.CreateAsync(BuildRequest(
+            organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now.AddHours(-3)));
+
+        await accessRequestRepository.ResolveWithDecisionAsync(
+            lapsed, BuildHumanDecision(lapsed.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "too late", now),
+            AccessRequestAction.Denied, now);
+
+        var persisted = await accessRequestRepository.GetByIdAsync(lapsed.Id);
+        Assert.Equal(AccessRequestAction.None, persisted!.Action);
+        Assert.Null(persisted.ActionDate);
+
+        var details = await accessRequestRepository.GetDetailsByIdAsync(lapsed.Id, now);
+        Assert.Equal(AccessRequestStatus.Expired, details!.Status);
+        Assert.Empty(details.Decisions);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task CancelWithDecisionAsync_PendingRequest_DeniesAndRecordsTheApproversDecision(
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,

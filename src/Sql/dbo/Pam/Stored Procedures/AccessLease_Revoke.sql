@@ -21,7 +21,9 @@ BEGIN
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
     OUTPUT INSERTED.[AccessRequestId] INTO @Ended
-    WHERE [Id] = @AccessLeaseId AND [Action] = 0 -- None (no early end)
+    WHERE [Id] = @AccessLeaseId
+        AND [Action] = 0 -- None (no early end)
+        AND [NotAfter] > @Now
 
     INSERT INTO [dbo].[AccessDecision]
     (

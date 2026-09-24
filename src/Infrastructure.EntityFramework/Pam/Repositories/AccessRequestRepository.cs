@@ -228,7 +228,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         // The WHERE guard keeps the write idempotent under a race, so a second approver can't move an
         // already-resolved request; the decision is recorded only when the transition actually happened.
         var rowsAffected = await dbContext.AccessRequests
-            .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None)
+            .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None && r.NotAfter > now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, action)
                 .SetProperty(r => r.ActionDate, now));
