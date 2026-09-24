@@ -4,8 +4,8 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Commands;
 using Bit.Subscriptions.User.Models.Requests;
+using Bit.Subscriptions.User.Queries;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -13,23 +13,23 @@ using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 using PremiumPurchasable = Bit.Core.Billing.Pricing.Premium.Purchasable;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Test.Commands;
+namespace Bit.Subscriptions.User.Test.Queries;
 
-public class PreviewPremiumUpgradeCommandTests
+public class GetSubscriptionUpgradePreviewQueryTests
 {
     private const string PremiumSeatPriceId = "premium-annually";
     private const string PremiumStoragePriceId = "storage-gb-annually";
     private const string SubscriptionId = "sub_premium";
     private const string CustomerId = "cus_premium";
 
-    private readonly RecordingLogger<PreviewPremiumUpgradeCommand> _logger = new();
+    private readonly RecordingLogger<GetSubscriptionUpgradePreviewQuery> _logger = new();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
-    private readonly PreviewPremiumUpgradeCommand _sut;
+    private readonly GetSubscriptionUpgradePreviewQuery _sut;
 
-    public PreviewPremiumUpgradeCommandTests() =>
-        _sut = new PreviewPremiumUpgradeCommand(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService);
+    public GetSubscriptionUpgradePreviewQueryTests() =>
+        _sut = new GetSubscriptionUpgradePreviewQuery(_logger, _pricingClient, _stripeAdapter, _invoicePreviewService);
 
     [Theory]
     [InlineData(ProductTierType.Free)]
@@ -40,36 +40,22 @@ public class PreviewPremiumUpgradeCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.Run(PremiumUser(), Request(targetProductTierType)));
 
-        Assert.True(exception.ModelState!.ContainsKey(nameof(PreviewPremiumUpgradeRequest.TargetProductTierType)));
+        Assert.True(exception.ModelState!.ContainsKey(nameof(GetSubscriptionUpgradePreviewRequest.TargetProductTierType)));
         await _stripeAdapter.DidNotReceiveWithAnyArgs().GetSubscriptionAsync(default!, default);
     }
 
-    [Fact]
-    public async Task Run_WhenBillingAddressIsNull_ThrowsBadRequestWithModelState()
-    {
-        var request = new PreviewPremiumUpgradeRequest { TargetProductTierType = ProductTierType.Teams, BillingAddress = null! };
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(PremiumUser(), request));
-
-        Assert.True(exception.ModelState!.ContainsKey(nameof(PreviewPremiumUpgradeRequest.BillingAddress)));
-    }
-
     [Theory]
-    [InlineData(null, "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
-    [InlineData("", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
-    [InlineData("  ", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
-    [InlineData("USA", "12345", nameof(PremiumUpgradeBillingAddressRequest.Country))]
-    [InlineData("US", null, nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
-    [InlineData("US", "", nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
-    [InlineData("US", "   ", nameof(PremiumUpgradeBillingAddressRequest.PostalCode))]
+    [InlineData(null, "12345", nameof(GetSubscriptionUpgradePreviewRequest.Country))]
+    [InlineData("", "12345", nameof(GetSubscriptionUpgradePreviewRequest.Country))]
+    [InlineData("  ", "12345", nameof(GetSubscriptionUpgradePreviewRequest.Country))]
+    [InlineData("USA", "12345", nameof(GetSubscriptionUpgradePreviewRequest.Country))]
+    [InlineData("US", null, nameof(GetSubscriptionUpgradePreviewRequest.PostalCode))]
+    [InlineData("US", "", nameof(GetSubscriptionUpgradePreviewRequest.PostalCode))]
+    [InlineData("US", "   ", nameof(GetSubscriptionUpgradePreviewRequest.PostalCode))]
     public async Task Run_WhenBillingAddressIsMalformed_ThrowsBadRequestWithModelState(
         string? country, string? postalCode, string expectedKey)
     {
-        var request = new PreviewPremiumUpgradeRequest
-        {
-            TargetProductTierType = ProductTierType.Teams,
-            BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = country!, PostalCode = postalCode! }
-        };
+        var request = new GetSubscriptionUpgradePreviewRequest(ProductTierType.Teams, country, postalCode);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(PremiumUser(), request));
 
@@ -255,11 +241,8 @@ public class PreviewPremiumUpgradeCommandTests
         GatewayCustomerId = CustomerId
     };
 
-    private static PreviewPremiumUpgradeRequest Request(ProductTierType targetProductTierType) => new()
-    {
-        TargetProductTierType = targetProductTierType,
-        BillingAddress = new PremiumUpgradeBillingAddressRequest { Country = "US", PostalCode = "12345" }
-    };
+    private static GetSubscriptionUpgradePreviewRequest Request(ProductTierType targetProductTierType) =>
+        new(targetProductTierType, "US", "12345");
 
     private void ArrangeFamiliesUpgrade()
     {
