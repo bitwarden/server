@@ -7,8 +7,8 @@ namespace Bit.Api.AdminConsole.Authorization.Collections;
 
 /// <summary>
 /// Business rules for collection authorization. These rules do not read the database.
-/// <see cref="OrganizationWide"/> holds the permissions that apply to every collection in the organization.
-/// <see cref="PerCollection"/> holds the permissions that apply to one collection.
+/// <see cref="OrganizationRole"/> holds the permissions that apply to every collection in the organization.
+/// <see cref="CollectionAssignment"/> holds the permissions that apply to one collection.
 /// <see cref="CollectionAuthorizationService"/> reads the data that these rules need, calls both sets of rules,
 /// and applies the provider user bypass.
 /// </summary>
@@ -17,9 +17,9 @@ public static class CollectionRules
     /// <summary>
     /// Rules that authorize an operation on one collection, without an organization-wide permission.
     /// A false result does not deny the operation. The caller can still be authorized by
-    /// <see cref="OrganizationWide"/>.
+    /// <see cref="OrganizationRole"/>.
     /// </summary>
-    public static class PerCollection
+    public static class CollectionAssignment
     {
         /// <summary>
         /// Returns true if the caller can manage one collection without an organization-wide permission.
@@ -50,9 +50,9 @@ public static class CollectionRules
     /// <summary>
     /// Permissions that authorize an operation on every collection in the organization, including the collections
     /// that the caller is not assigned to. A false result does not deny the operation. The caller can still be
-    /// authorized for one collection by <see cref="PerCollection.CanManage"/>.
+    /// authorized for one collection by <see cref="CollectionAssignment.CanManage"/>.
     /// </summary>
-    public static class OrganizationWide
+    public static class OrganizationRole
     {
         /// <summary>
         /// Returns true if the caller can update the metadata (name, externalId) of every collection in the

@@ -15,13 +15,13 @@ public class CollectionAuthorizationService(
     private HashSet<Guid>? _callerManagedCollectionIds;
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
-        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationWide.CanUpdate)).Contains(collectionId);
+        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate)).Contains(collectionId);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationWide.CanModifyUserAccess);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationWide.CanModifyGroupAccess);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess);
 
     /// <summary>
     /// Returns the subset of <paramref name="collectionIds"/> that the caller is authorized to operate on.
@@ -64,12 +64,12 @@ public class CollectionAuthorizationService(
         var callerManagedCollectionIds = await GetCallerManagedCollectionIdsAsync(currentContext.UserId.Value);
         var hasUnmanagedCollections = requestedCollectionIds.Any(id => !callerManagedCollectionIds.Contains(id));
         // Only Owners and Admins can manage orphaned collections, and only unmanaged collections need the check.
-        var orphanedCollectionIds = hasUnmanagedCollections && CollectionRules.PerCollection.CanManageOrphanedCollections(organization)
+        var orphanedCollectionIds = hasUnmanagedCollections && CollectionRules.CollectionAssignment.CanManageOrphanedCollections(organization)
             ? await GetOrphanedCollectionIdsAsync(organizationId)
             : new HashSet<Guid>();
 
         var authorizedCollectionIds = requestedCollectionIds
-            .Where(id => CollectionRules.PerCollection.CanManage(
+            .Where(id => CollectionRules.CollectionAssignment.CanManage(
                 organization,
                 callerManagesCollection: callerManagedCollectionIds.Contains(id),
                 isCollectionOrphaned: orphanedCollectionIds.Contains(id)))
@@ -131,7 +131,7 @@ public class CollectionAuthorizationService(
 
         var organizationCollections = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(organizationId);
         var orphanedIds = organizationCollections
-            .Where(result => CollectionRules.PerCollection.IsOrphaned(result.Item2))
+            .Where(result => CollectionRules.CollectionAssignment.IsOrphaned(result.Item2))
             .Select(result => result.Item1.Id)
             .ToHashSet();
         _orphanedCollectionIdsByOrganizationId[organizationId] = orphanedIds;

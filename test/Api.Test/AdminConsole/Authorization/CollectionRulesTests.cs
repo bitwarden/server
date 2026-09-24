@@ -14,7 +14,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { EditAnyCollection = true });
 
-        var result = CollectionRules.OrganizationWide.CanUpdate(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanUpdate(organization, Ability(allowAdminAccess: false));
 
         Assert.True(result);
     }
@@ -26,7 +26,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanUpdate(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanUpdate(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -38,7 +38,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanUpdate(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanUpdate(organization, Ability(allowAdminAccess: false));
 
         Assert.False(result);
     }
@@ -50,7 +50,7 @@ public class CollectionRulesTests
         // collection metadata.
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
-        var result = CollectionRules.OrganizationWide.CanUpdate(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanUpdate(organization, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -58,7 +58,7 @@ public class CollectionRulesTests
     [Fact]
     public void CanUpdate_WhenMissingOrgAccess_Failure()
     {
-        var result = CollectionRules.OrganizationWide.CanUpdate(null, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanUpdate(null, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -68,7 +68,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { EditAnyCollection = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.True(result);
     }
@@ -80,7 +80,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type, new Permissions { ManageUsers = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -90,7 +90,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -100,7 +100,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.False(result);
     }
@@ -112,7 +112,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -124,7 +124,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.False(result);
     }
@@ -136,7 +136,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -144,7 +144,7 @@ public class CollectionRulesTests
     [Fact]
     public void CanModifyUserAccess_WhenMissingOrgAccess_Failure()
     {
-        var result = CollectionRules.OrganizationWide.CanModifyUserAccess(null, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyUserAccess(null, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -154,7 +154,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { EditAnyCollection = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.True(result);
     }
@@ -166,7 +166,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type, new Permissions { ManageGroups = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -176,7 +176,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageGroups = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -186,7 +186,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageGroups = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.False(result);
     }
@@ -197,7 +197,7 @@ public class CollectionRulesTests
         // ManageUsers must not authorize a change to group access. ManageGroups authorizes that change.
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -209,7 +209,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.True(result);
     }
@@ -221,7 +221,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: false));
 
         Assert.False(result);
     }
@@ -233,7 +233,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -241,7 +241,7 @@ public class CollectionRulesTests
     [Fact]
     public void CanModifyGroupAccess_WhenMissingOrgAccess_Failure()
     {
-        var result = CollectionRules.OrganizationWide.CanModifyGroupAccess(null, Ability(allowAdminAccess: true));
+        var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(null, Ability(allowAdminAccess: true));
 
         Assert.False(result);
     }
@@ -255,7 +255,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.PerCollection.CanManage(organization, callerManagesCollection: true, isCollectionOrphaned: false);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: true, isCollectionOrphaned: false);
 
         Assert.True(result);
     }
@@ -267,7 +267,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.PerCollection.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
 
         Assert.True(result);
     }
@@ -279,7 +279,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.PerCollection.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: false);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: false);
 
         Assert.False(result);
     }
@@ -293,7 +293,7 @@ public class CollectionRulesTests
         // collection does not authorize the operation.
         var organization = Organization(type);
 
-        var result = CollectionRules.PerCollection.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
 
         Assert.False(result);
     }
@@ -301,7 +301,7 @@ public class CollectionRulesTests
     [Fact]
     public void CanManage_WhenMissingOrgAccess_OrphanedDoesNotGrantAccess()
     {
-        var result = CollectionRules.PerCollection.CanManage(null, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(null, callerManagesCollection: false, isCollectionOrphaned: true);
 
         Assert.False(result);
     }
@@ -311,7 +311,7 @@ public class CollectionRulesTests
     {
         var accessDetails = AccessDetails(userManages: false, groupManages: false);
 
-        var result = CollectionRules.PerCollection.IsOrphaned(accessDetails);
+        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
 
         Assert.True(result);
     }
@@ -321,7 +321,7 @@ public class CollectionRulesTests
     {
         var accessDetails = AccessDetails(userManages: true, groupManages: false);
 
-        var result = CollectionRules.PerCollection.IsOrphaned(accessDetails);
+        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
 
         Assert.False(result);
     }
@@ -331,7 +331,7 @@ public class CollectionRulesTests
     {
         var accessDetails = AccessDetails(userManages: false, groupManages: true);
 
-        var result = CollectionRules.PerCollection.IsOrphaned(accessDetails);
+        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
 
         Assert.False(result);
     }
