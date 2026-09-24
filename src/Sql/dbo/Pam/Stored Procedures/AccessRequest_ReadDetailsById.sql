@@ -1,11 +1,9 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadDetailsById]
-    @Id UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Now is unused; kept for signature compatibility during rolling deployment.
     -- Two result sets (request, decisions); only stored facts leave this read.
     SELECT
         LR.[Id],

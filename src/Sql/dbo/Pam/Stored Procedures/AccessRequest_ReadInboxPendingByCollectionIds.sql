@@ -1,12 +1,9 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadInboxPendingByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Actionable rows have no action and an open window; lapsed rows derive Expired instead.
     SELECT
