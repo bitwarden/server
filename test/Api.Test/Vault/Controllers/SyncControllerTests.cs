@@ -488,6 +488,38 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task Get_GatedCiphers_DeliveredPartialToBrowserExtensions_WhenFlagOn(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var (gated, visible) = SetupLeasingSync(user, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(true);
+
+        var result = await sutProvider.Sut.Get();
+
+        var gatedResponse = Assert.Single(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Null(gatedResponse.Data);
+        Assert.NotNull(gatedResponse.PartialData);
+        Assert.NotNull(Assert.Single(result.Ciphers, c => c.Id == visible.Id).Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCiphers_FilteredForBrowserExtensions_WhenFlagOff(
+        User user, SutProvider<SyncController> sutProvider)
+    {
+        var (gated, visible) = SetupLeasingSync(user, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Get_NoDeviceType_FiltersGatedCiphers(
         User user, SutProvider<SyncController> sutProvider)
     {

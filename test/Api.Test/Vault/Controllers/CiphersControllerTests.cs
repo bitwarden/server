@@ -8,6 +8,7 @@ using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -3449,5 +3450,55 @@ public class CiphersControllerTests
 
         await sutProvider.GetDependency<ICipherRepository>()
             .DidNotReceiveWithAnyArgs().UpdatePartialAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_LeasingGatedCipher_BrowserExtensionWithFlagOn_ReturnsPartialShape(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var cipher = ArrangeGatedCipherRead(user, sutProvider, DeviceType.ChromeExtension);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(true);
+
+        var response = await sutProvider.Sut.Get(cipher.Id);
+
+        Assert.Null(response.Data);
+        Assert.NotNull(response.PartialData);
+        Assert.DoesNotContain("2.password|encrypted", response.PartialData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_LeasingGatedCipher_BrowserExtensionWithFlagOff_ThrowsNotFound(
+        User user, SutProvider<CiphersController> sutProvider)
+    {
+        var cipher = ArrangeGatedCipherRead(user, sutProvider, DeviceType.ChromeExtension);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(cipher.Id));
+    }
+
+    /// <summary>
+    /// Arranges a personal login the lease gate withholds full data for, read by a client of the given type.
+    /// </summary>
+    private static CipherDetails ArrangeGatedCipherRead(
+        User user, SutProvider<CiphersController> sutProvider, DeviceType deviceType)
+    {
+        var cipher = new CipherDetails
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+            UserId = user.Id,
+        };
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id, user.Id).Returns(cipher);
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>()).Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+
+        return cipher;
     }
 }

@@ -55,6 +55,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -70,7 +71,8 @@ public class CiphersController : Controller
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        ICipherLeaseGate cipherLeaseGate)
+        ICipherLeaseGate cipherLeaseGate,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -86,6 +88,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -93,7 +96,8 @@ public class CiphersController : Controller
     /// cipher is withheld entirely rather than sent partial — see <see cref="PartialCipherSupport"/>.
     /// </summary>
     private bool ClientSupportsPartialCiphers =>
-        PartialCipherSupport.IsSupportedBy(_currentContext.DeviceType);
+        PartialCipherSupport.IsSupportedBy(
+            _currentContext.DeviceType, _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
 
     /// <summary>
     /// Resolves single-cipher read access under credential leasing. Returns null when the caller gets the
