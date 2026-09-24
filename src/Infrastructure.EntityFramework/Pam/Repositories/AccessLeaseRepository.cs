@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
-using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -108,35 +107,6 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         return Mapper.Map<List<CoreEntity>>(leases);
     }
 
-    public async Task<ICollection<CoreEntity>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
-        DateTime since, DateTime now)
-    {
-        var ids = collectionIds.ToList();
-        if (ids.Count == 0)
-        {
-            return new List<CoreEntity>();
-        }
-
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        // End is RevokedDate for an early end, NotAfter for a natural close; mirrors the matching stored procedure.
-        var leases = await dbContext.AccessLeases
-            .Where(l => ids.Contains(l.CollectionId)
-                && (
-                    // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
-                    ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
-                    // Window closed on its own (end = NotAfter); byte 1 (retired stored Expired) is deliberately not
-                    // matched since ComputeLeaseStatus has no arm for it and would throw.
-                    || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
-                ))
-            .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
-            .AsNoTracking()
-            .ToListAsync();
-
-        return Mapper.Map<List<CoreEntity>>(leases);
-    }
-
     /// <remarks>
     /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
     /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
@@ -151,9 +121,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable covers only the per-cipher guard, matching the procedure's range lock. Other writes are
-        // protected by the claim below; wider Serializable use aborted unrelated writers, so this restores parity
-        // with [AccessLease_CreateFromApprovedRequest].
+        // Serializable covers only the per-cipher guard, matching the procedure's range lock; every other write
+        // here is protected by the claim below instead.
         var isolation = enforceSingleActiveLease
             ? System.Data.IsolationLevel.Serializable
             : System.Data.IsolationLevel.ReadCommitted;
@@ -279,11 +248,11 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Expiry is derived, not stored; PamLeaseExpirySweep's journal decides which run owns a lease.
-        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key.
-        var due = await dbContext.AccessLeases
-            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter > since &&
-                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
+        // Expiry is derived, not stored; stamping SweptDate decides which run owns a lease.
+        // The per-lease conditional update is the claim: a racing sweep that stamped it first leaves us zero rows.
+        var candidates = await dbContext.AccessLeases
+            .Where(l => l.Action == AccessLeaseAction.None && l.SweptDate == null && l.NotAfter <= now &&
+                l.NotAfter > since)
             .Select(l => new PamExpiredLease
             {
                 Id = l.Id,
@@ -296,28 +265,20 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             })
             .ToListAsync();
 
-        if (due.Count > 0)
+        var swept = new List<PamExpiredLease>(candidates.Count);
+        foreach (var candidate in candidates)
         {
-            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
-                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
-            try
+            var id = candidate.Id;
+            var claimed = await dbContext.AccessLeases
+                .Where(l => l.Id == id && l.Action == AccessLeaseAction.None && l.SweptDate == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(l => l.SweptDate, now));
+            if (claimed == 1)
             {
-                await dbContext.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                // A concurrent sweep journaled some of these first. Report nothing; the next run picks up the rest.
-                var dueIds = due.Select(l => l.Id).ToList();
-                if (await dbContext.PamLeaseExpirySweeps.AnyAsync(s => dueIds.Contains(s.AccessLeaseId)))
-                {
-                    return [];
-                }
-
-                throw;
+                swept.Add(candidate);
             }
         }
 
-        return due;
+        return swept;
     }
 
     /// <summary>
