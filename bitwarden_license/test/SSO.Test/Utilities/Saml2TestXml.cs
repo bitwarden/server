@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Xml;
 using Sustainsys.Saml2;
 using CipherData = System.Security.Cryptography.Xml.CipherData;
@@ -41,19 +42,25 @@ internal static class Saml2TestXml
         return document.DocumentElement!;
     }
 
-    // Encrypts an assertion element the same way a real IdP does: an AES content key wraps the
-    // assertion, and the SP's certificate wraps that key. This exercises the same decrypt path
-    // Sustainsys.Saml2 uses in production.
-    public static string EncryptAssertion(XmlElement assertion, X509Certificate2 encryptionCertificate)
+    /// <summary>
+    /// Encrypts XML into an <c>&lt;EncryptedAssertion&gt;</c> with the same method as a real
+    /// identity provider. An AES content key encrypts the payload, and the service provider
+    /// certificate encrypts that key. This is real XML encryption. It tests the decryption path
+    /// that Sustainsys.Saml2 uses in production.
+    /// </summary>
+    /// <param name="payloadXml">
+    /// The plaintext. It does not have to be one assertion. Decryption moves every top-level node
+    /// of the plaintext into the <c>&lt;EncryptedAssertion&gt;</c>. A payload with more than one
+    /// node, or with a nested assertion, tests those shapes.
+    /// </param>
+    public static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate)
     {
         var document = XmlHelpers.XmlDocumentFromString(
             "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-        var importedAssertion = (XmlElement)document.ImportNode(assertion, deep: true);
-        document.DocumentElement!.AppendChild(importedAssertion);
 
         using var contentKey = Aes.Create();
         contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(importedAssertion, contentKey, content: false);
+        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
 
         var encryptedData = new EncryptedData
         {
@@ -70,7 +77,7 @@ internal static class Saml2TestXml
         };
         encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
 
-        EncryptedXml.ReplaceElement(importedAssertion, encryptedData, content: false);
+        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
 
         return document.DocumentElement!.OuterXml;
     }

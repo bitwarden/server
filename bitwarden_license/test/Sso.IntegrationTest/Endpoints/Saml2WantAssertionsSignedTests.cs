@@ -78,7 +78,7 @@ public class Saml2WantAssertionsSignedTests
         // Ensures that WantAssertionsSigned operates correctly on an EncryptedAssertion.
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedAssertion = BuildSignedAssertion(idpCertificate);
-        var encryptedAssertionXml = EncryptAssertion(signedAssertion, spCertificate);
+        var encryptedAssertionXml = EncryptAssertion(signedAssertion.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             encryptedAssertionXml, idpCertificate, spCertificate, wantAssertionsSigned: true);
@@ -90,7 +90,7 @@ public class Saml2WantAssertionsSignedTests
     public async Task CouldHandleAsync_UnsignedEncryptedAssertionAndWantAssertionsSigned_Throws()
     {
         var (idpCertificate, spCertificate) = BuildCertificates();
-        var unsignedAssertion = BuildAssertionDocument().DocumentElement!;
+        var unsignedAssertion = BuildAssertionDocument().DocumentElement!.OuterXml;
         var encryptedAssertionXml = EncryptAssertion(unsignedAssertion, spCertificate);
 
         var arrangement = await ArrangeAsync(
@@ -108,11 +108,35 @@ public class Saml2WantAssertionsSignedTests
         var (idpCertificate, spCertificate) = BuildCertificates();
         var signedPlaintextAssertion = BuildSignedAssertion(idpCertificate);
         var unsignedEncryptedAssertionXml =
-            EncryptAssertion(BuildAssertionDocument().DocumentElement!, spCertificate);
+            EncryptAssertion(BuildAssertionDocument().DocumentElement!.OuterXml, spCertificate);
 
         var arrangement = await ArrangeAsync(
             signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml,
             idpCertificate, spCertificate, wantAssertionsSigned: true);
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_EncryptedAssertionNestingUnsignedAssertionAheadOfSignedOne_Throws()
+    {
+        // Decryption moves every top-level node of the plaintext into the <EncryptedAssertion>.
+        // An unsigned assertion in an <Advice> element can come before a signed top-level assertion.
+        // Sustainsys.Saml2 builds claims from the first descendant assertion in document order.
+        // The check must read that same element. If the check reads the first direct child, the
+        // check verifies the signed assertion and accepts the unsigned assertion.
+        var (idpCertificate, spCertificate) = BuildCertificates();
+        var payload =
+            "<saml:Advice xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">" +
+            BuildAssertionDocument("_nested").DocumentElement!.OuterXml +
+            "</saml:Advice>" +
+            BuildSignedAssertion(idpCertificate, "_signed").OuterXml;
+
+        var arrangement = await ArrangeAsync(
+            EncryptAssertion(payload, spCertificate), idpCertificate, spCertificate,
+            wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => arrangement.SamlOptions.CouldHandleAsync(arrangement.Scheme, arrangement.Context));
@@ -284,7 +308,7 @@ public class Saml2WantAssertionsSignedTests
         var foreignCertificate = CreateSelfSignedCertificate("CN=Other SP");
 
         var arrangement = await ArrangeAsync(
-            EncryptAssertion(BuildSignedAssertion(idpCertificate), foreignCertificate),
+            EncryptAssertion(BuildSignedAssertion(idpCertificate).OuterXml, foreignCertificate),
             idpCertificate, spCertificate, wantAssertionsSigned: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -543,19 +567,20 @@ public class Saml2WantAssertionsSignedTests
         return document.DocumentElement!;
     }
 
-    // Encrypts an assertion element the same way a real IdP does: an AES content key wraps the
-    // assertion, and the SP's certificate wraps that key. This is real XML encryption, not a fixed
-    // fixture, so it exercises the same decrypt path Sustainsys.Saml2 uses in production.
-    private static string EncryptAssertion(XmlElement assertion, X509Certificate2 encryptionCertificate)
+    // Encrypts XML into an <EncryptedAssertion> with the same method as a real identity provider.
+    // An AES content key encrypts the payload, and the service provider certificate encrypts that key.
+    // This is real XML encryption, not a fixed fixture. It tests the decryption path that
+    // Sustainsys.Saml2 uses in production. The payload does not have to be one assertion.
+    // Decryption moves every top-level node of the payload into the <EncryptedAssertion>.
+    // A payload with more than one node, or with a nested assertion, tests those shapes.
+    private static string EncryptAssertion(string payloadXml, X509Certificate2 encryptionCertificate)
     {
         var document = XmlHelpers.XmlDocumentFromString(
             "<saml:EncryptedAssertion xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\" />");
-        var importedAssertion = (XmlElement)document.ImportNode(assertion, deep: true);
-        document.DocumentElement!.AppendChild(importedAssertion);
 
         using var contentKey = Aes.Create();
         contentKey.KeySize = 256;
-        var cipherValue = new EncryptedXml().EncryptData(importedAssertion, contentKey, content: false);
+        var cipherValue = new EncryptedXml().EncryptData(Encoding.UTF8.GetBytes(payloadXml), contentKey);
 
         var encryptedData = new EncryptedData
         {
@@ -572,7 +597,7 @@ public class Saml2WantAssertionsSignedTests
         };
         encryptedData.KeyInfo.AddClause(new KeyInfoEncryptedKey(encryptedKey));
 
-        EncryptedXml.ReplaceElement(importedAssertion, encryptedData, content: false);
+        document.DocumentElement!.AppendChild(document.ImportNode(encryptedData.GetXml(), deep: true));
 
         return document.DocumentElement!.OuterXml;
     }

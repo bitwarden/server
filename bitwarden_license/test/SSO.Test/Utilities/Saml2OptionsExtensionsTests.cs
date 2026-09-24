@@ -58,7 +58,7 @@ public class Saml2OptionsExtensionsTests
         var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
 
         var signedAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
-        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(signedAssertion, decryptionCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(signedAssertion.OuterXml, decryptionCertificate);
 
         using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
         var (context, collector) = testContext;
@@ -75,7 +75,7 @@ public class Saml2OptionsExtensionsTests
         var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
 
         var unsignedAssertion = Saml2TestXml.BuildAssertionDocument().DocumentElement!;
-        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(unsignedAssertion, decryptionCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(unsignedAssertion.OuterXml, decryptionCertificate);
 
         using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
         var (context, collector) = testContext;
@@ -97,7 +97,7 @@ public class Saml2OptionsExtensionsTests
         const string unsignedPlaintextAssertion =
             "<saml:Assertion ID=\"_plaintext\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>";
         var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
-            Saml2TestXml.BuildAssertionDocument().DocumentElement!, decryptionCertificate);
+            Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
 
         using var testContext = BuildPostContext(
             BuildResponseXml(unsignedPlaintextAssertion + encryptedAssertionXml));
@@ -119,7 +119,7 @@ public class Saml2OptionsExtensionsTests
 
         var signedPlaintextAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
         var unsignedEncryptedAssertionXml =
-            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!, decryptionCertificate);
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
 
         using var testContext = BuildPostContext(
             BuildResponseXml(signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml));
@@ -141,7 +141,7 @@ public class Saml2OptionsExtensionsTests
 
         var signedPlaintextAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
         var signedEncryptedAssertionXml =
-            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate), decryptionCertificate);
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml, decryptionCertificate);
 
         using var testContext = BuildPostContext(
             BuildResponseXml(signedPlaintextAssertion.OuterXml + signedEncryptedAssertionXml));

@@ -44,7 +44,14 @@ public static class Saml2EncryptedAssertionDecryptor
                     // Decrypt declares a non-nullable XmlElement return, so the invocation result is never null.
                     var decrypted = (XmlElement)DecryptMethod.Invoke(
                         null, new object[] { encryptedAssertion, privateKey })!;
-                    return decrypted["Assertion", Saml2Namespaces.Saml2Name];
+
+                    // Decryption moves every top-level node of the plaintext into the
+                    // <EncryptedAssertion>. The assertion can be at any depth, and it can have siblings.
+                    // Saml2Response.RetrieveAssertionElements builds claims from the first descendant
+                    // <Assertion> in document order. The signature check must read that same element.
+                    return (XmlElement?)decrypted
+                        .GetElementsByTagName("Assertion", Saml2Namespaces.Saml2Name)
+                        .Item(0);
                 }
                 catch (TargetInvocationException)
                 {
