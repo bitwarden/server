@@ -1,10 +1,14 @@
-﻿using Bit.Core.Auth.Identity.TokenProviders;
+﻿using System.Globalization;
+using System.Net;
+using System.Text;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
+using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 
@@ -212,6 +216,63 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         var response = await client.PostAsync("/connect/token", requestBody);
 
         // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
+    }
+
+    /// <summary>
+    /// Before <c>OtpTokenProvider</c> added a bound value, it cached a bare UTF-8 token rather than the
+    /// current JSON envelope. A rolling deploy leaves that older shape in the shared cache for a time, so
+    /// an upgraded instance reading it back must reject the OTP cleanly instead of erroring.
+    /// </summary>
+    [Fact]
+    public async Task SendAccess_EmailOtpProtectedSend_LegacyRawTokenCacheEntry_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+        var email = "test@example.com";
+        var otp = "123456";
+
+        var factory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                var featureService = Substitute.For<IFeatureService>();
+                featureService.IsEnabled(Arg.Any<string>()).Returns(true);
+                services.AddSingleton(featureService);
+
+                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
+                sendAuthQuery.GetAuthenticationMethod(sendId)
+                    .Returns(new EmailOtp([email]));
+                services.AddSingleton(sendAuthQuery);
+
+                var mailService = Substitute.For<IMailService>();
+                services.AddSingleton(mailService);
+
+                // Deliberately not mocking IOtpTokenProvider here: this test needs the real
+                // OtpTokenProvider reading from the real shared cache to exercise the legacy shape.
+            });
+        });
+
+        var client = factory.CreateClient();
+
+        var cacheKey = string.Format(
+            CultureInfo.InvariantCulture,
+            "{0}_{1}_{2}",
+            SendAccessConstants.OtpToken.TokenProviderName,
+            SendAccessConstants.OtpToken.Purpose,
+            string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email));
+
+        var persistentCache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        await persistentCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(otp));
+
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenErrors.InvalidRequest, content);
     }
