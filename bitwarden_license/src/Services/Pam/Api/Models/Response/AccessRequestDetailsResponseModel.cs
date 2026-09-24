@@ -32,7 +32,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         LeaseNotAfter = details.NotAfter.AsUtc();
         Reason = details.Reason;
         SubmittedAt = details.CreationDate.AsUtc();
-        ResolvedAt = details.ResolvedDate.AsUtc();
+        ResolvedAt = details.ActionDate.AsUtc();
         // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
         // Empty only while pending (no decision recorded yet).
         Decisions = details.Decisions

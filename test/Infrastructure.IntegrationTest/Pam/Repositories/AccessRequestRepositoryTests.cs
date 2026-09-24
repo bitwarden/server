@@ -737,7 +737,7 @@ public class AccessRequestRepositoryTests
         var historyRow = Assert.Single(history);
         Assert.Equal(lapsed.Id, historyRow.Id);
         Assert.Equal(AccessRequestStatus.Expired, historyRow.Status);
-        Assert.Null(historyRow.ResolvedDate); // nobody acted; the end time is NotAfter, not a resolution
+        Assert.Null(historyRow.ActionDate); // nobody acted; the end time is NotAfter, not a resolution
     }
 
     [DatabaseTheory, DatabaseData]

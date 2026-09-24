@@ -144,7 +144,7 @@ public class DecideAccessRequestCommandTests
         var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve("looks good"));
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
-        Assert.Equal(_now, result.ResolvedDate);
+        Assert.Equal(_now, result.ActionDate);
         var decision = Assert.Single(result.Decisions);
         Assert.Equal(AccessDeciderKind.Human, decision.DeciderKind);
         Assert.Equal(userId, decision.ApproverId!.Value);
