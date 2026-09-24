@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- @Now is accepted but unused now; only stored facts leave this read.
+    -- @Now is unused; kept for signature compatibility during rolling deployment.
     -- Two result sets (request, decisions); only stored facts leave this read.
     SELECT
         LR.[Id],
