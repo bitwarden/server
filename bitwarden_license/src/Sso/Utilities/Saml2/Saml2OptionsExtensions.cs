@@ -9,7 +9,7 @@ using Bitwarden.Server.Sdk.Features;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 
-namespace Bit.Sso.Utilities;
+namespace Bit.Sso.Utilities.Saml2;
 
 public static class Saml2OptionsExtensions
 {
