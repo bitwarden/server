@@ -325,11 +325,11 @@ public class SsoTestDataBuilder
         }
 
         // 1.f Configure IFeatureService to reflect the PM42982_WantAssertionsSigned feature flag, if requested
-        if (_wantAssertionsSignedFlagEnabled.HasValue)
+        if (_wantAssertionsSignedFlagEnabled is { } wantAssertionsSignedFlagEnabled)
         {
             factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
             {
-                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(_wantAssertionsSignedFlagEnabled.Value);
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(wantAssertionsSignedFlagEnabled);
             });
         }
 
