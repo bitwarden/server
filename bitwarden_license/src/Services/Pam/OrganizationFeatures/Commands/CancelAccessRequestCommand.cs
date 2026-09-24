@@ -44,8 +44,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new NotFoundException();
         }
 
-        // Only a request that has not produced a lease can be cancelled: still open, or approved but not yet
-        // activated. Surfaced as a conflict so the client refreshes.
+        // Only an open request, or an approved one not yet activated, can be cancelled.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
@@ -53,10 +52,8 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // An approved request that has minted a lease is governed by that lease, not the request. Checked before
-        // the window guard below: an extension pushes the lease's end out in place while the request row keeps
-        // its original window, so an activated request can have a lapsed window and a live lease that must be
-        // sent to Revoke, not told the window ended.
+        // A minted lease governs the request. Checked before the window guard, since an extension can keep the lease
+        // live after the request's window lapses.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
@@ -65,8 +62,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 : new ConflictException("This request has already been resolved.");
         }
 
-        // No lease exists, so a lapsed window derives Expired everywhere it is read; a cancellation must
-        // not restamp it.
+        // A lapsed window reads as Expired; cancelling must not restamp it.
         if (!request.IsWindowOpen(now))
         {
             throw new ConflictException("This request's window has already ended.");
@@ -79,8 +75,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         }
         else
         {
-            // A managing approver retracts the request: Denied, recorded as a human Deny decision so the audit
-            // trail names the approver, mirroring RevokeAccessLeaseCommand.
+            // A managing approver retracts the request: Denied, with a human Deny decision naming the approver.
             var decision = new AccessDecision
             {
                 AccessRequestId = request.Id,

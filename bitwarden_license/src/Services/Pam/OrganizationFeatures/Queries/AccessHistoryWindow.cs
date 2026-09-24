@@ -3,22 +3,18 @@
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
 /// <summary>
-/// The single retention window every PAM history surface reads through: the approver's resolved-request history,
-/// the lease history, the audit trail, and the requester's own request history.
+/// The retention window every PAM history read goes through.
 /// </summary>
 public static class AccessHistoryWindow
 {
     /// <summary>
-    /// How far back a history read reaches; older activity may be omitted. The audit trail pages within this
-    /// window; the other history surfaces read it whole.
+    /// How far back a history read reaches.
     /// </summary>
     public const int RetentionDays = 90;
 
     /// <summary>
-    /// The bounds a caller-supplied range resolves to, clamped to the window. An absent bound means "as far as the
-    /// window allows", not "unbounded". An inverted pair is swapped rather than refused, matching
-    /// <c>ApiHelpers.GetDateRange</c> on the organization event log. A span wider than the window is refused
-    /// rather than silently clamped.
+    /// Clamps a caller-supplied range to the window. A missing bound reaches as far as the window allows and an
+    /// inverted pair is swapped.
     /// </summary>
     /// <exception cref="BadRequestException">The requested span is wider than the retention window.</exception>
     public static (DateTime Since, DateTime Until) ResolveRange(DateTime? start, DateTime? end, DateTime now)

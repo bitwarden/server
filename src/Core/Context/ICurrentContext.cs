@@ -90,9 +90,7 @@ public interface ICurrentContext
     bool AccessSecretsManager(Guid organizationId);
 
     /// <summary>
-    /// Whether the caller holds a Privileged Access Manager license in the given organization: the per-seat
-    /// entitlement (<c>OrganizationUser.AccessPam</c>) drawn against the subscription (<c>Organization.UsePam</c>).
-    /// A lapsed organization reads as unlicensed.
+    /// Whether the caller holds a PAM license (<c>OrganizationUser.AccessPam</c>) in the given organization.
     /// </summary>
     bool AccessPam(Guid organizationId);
 

@@ -43,14 +43,12 @@ public class AccessRequestResultResponseModel : ResponseModel
     public AccessRequestDetailsResponseModel Request { get; set; } = null!;
 
     /// <summary>
-    /// Projects the just-written request onto the read model the response is shaped from. Submission returns
-    /// the entity it created rather than re-reading it, so join-only fields (requester name/email) are left
-    /// null and no lease exists yet. The automatic verdict, if any, is mapped straight from the command's own
-    /// decision.
+    /// Projects the just-created request onto the response. Join-only fields (requester name/email) are null and
+    /// no lease exists yet.
     /// </summary>
     private static AccessRequestDetails ToDetails(AccessRequest request, AccessDecision? decision, DateTime now)
     {
-        // The window is open by construction (submit refuses end <= now), landing on Pending or Approved.
+        // Submit refuses end <= now, so this is Pending or Approved.
         var details = AccessRequestDetails.From(request, now);
         details.Decisions = decision is null
             ? []

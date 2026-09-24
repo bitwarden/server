@@ -12,10 +12,11 @@ public interface IDecideAccessRequestCommand
     /// <exception cref="Bit.Core.Exceptions.NotFoundException">
     /// The request does not exist or the caller cannot Manage its collection.
     /// </exception>
-    /// <exception cref="Bit.Core.Exceptions.ConflictException">The request is no longer pending.</exception>
+    /// <exception cref="Bit.Core.Exceptions.ConflictException">
+    /// The request is no longer pending, or its window has ended.
+    /// </exception>
     /// <exception cref="Bit.Core.Exceptions.BadRequestException">
-    /// Self-approval, or an approval verdict on a window that has already ended. 400 rather than 403 for
-    /// self-approval: Bitwarden clients treat 403 as a forced logout.
+    /// Self-decision, a denial without a reason, or an extension request.
     /// </exception>
     Task<AccessRequestDetails> DecideAsync(Guid userId, Guid requestId, AccessDecisionSubmission submission);
 }

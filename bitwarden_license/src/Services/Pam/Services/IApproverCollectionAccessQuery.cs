@@ -1,9 +1,8 @@
 ﻿namespace Bit.Services.Pam.Services;
 
 /// <summary>
-/// Resolves which collections the current user can Manage — the single authorization predicate for the approver
-/// inbox. A user "approves" a request iff they can Manage the collection that holds the request's cipher. The list
-/// endpoints use the full set as a filter; the decision/revoke endpoints check a single collection.
+/// Resolves which collections a user can Manage: a user may approve a request iff they can Manage its
+/// collection.
 /// </summary>
 public interface IApproverCollectionAccessQuery
 {

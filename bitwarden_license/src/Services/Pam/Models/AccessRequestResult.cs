@@ -1,21 +1,17 @@
 ﻿using Bit.Pam.Entities;
-using Bit.Pam.Enums;
 using Bit.Services.Pam.Enums;
 
 namespace Bit.Services.Pam.Models;
 
 /// <summary>
-/// The result of submitting an access request. Neither path mints a lease at submit: the
-/// <see cref="AccessApprovalMode.Automatic"/> path creates an already-<see cref="AccessRequestStatus.Approved"/>
-/// request the requester then activates, while the <see cref="AccessApprovalMode.Human"/> path creates a
-/// <see cref="AccessRequestStatus.Pending"/> request awaiting an approver.
+/// The result of submitting an access request: approved for the requester to activate on the
+/// <see cref="AccessApprovalMode.Automatic"/> path, pending an approver on the
+/// <see cref="AccessApprovalMode.Human"/> path.
 /// </summary>
 /// <param name="ApprovalMode">Which workflow resolved the submission.</param>
 /// <param name="Request">The request that was created.</param>
 /// <param name="Decision">
-/// The automatic verdict recorded alongside an auto-approved request, or null on the
-/// <see cref="AccessApprovalMode.Human"/> path. Carried here since it's written in the same operation as the
-/// request rather than read back.
+/// The automatic verdict recorded with an auto-approved request; null on the human path.
 /// </param>
 public sealed record AccessRequestResult(
     AccessApprovalMode ApprovalMode,

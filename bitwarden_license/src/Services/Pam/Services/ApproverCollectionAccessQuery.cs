@@ -26,8 +26,7 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 
     public async Task<HashSet<Guid>> GetManageableCollectionIdsAsync(Guid userId)
     {
-        // Collections the user is assigned with Manage (the repository aggregates Manage across direct and group
-        // access), mirroring BulkCollectionAuthorizationHandler. This read already spans disabled organizations.
+        // Collections assigned with Manage, directly or via a group, including in disabled organizations.
         var assigned = await _collectionRepository.GetManyByUserIdAsync(userId);
         var manageable = assigned.Where(c => c.Manage).Select(c => c.Id).ToHashSet();
 
@@ -40,8 +39,7 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
             await FoldInManageAllCollectionsAsync(org, manageable);
         }
 
-        // A suspended organization is absent from the claim-based request context; fold in the user's confirmed
-        // memberships read directly from the database, which includes disabled orgs, so governance stays visible.
+        // A suspended organization is missing from the claims, so fold in confirmed memberships from the database.
         var memberships = await _organizationUserRepository.GetManyDetailsByUserAsync(
             userId, OrganizationUserStatusType.Confirmed);
         foreach (var membership in memberships.Where(ou => !contextOrgIds.Contains(ou.OrganizationId)))

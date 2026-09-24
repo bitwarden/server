@@ -39,8 +39,7 @@ public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
 
         foreach (var collection in paths)
         {
-            // An ungated path is an escape: the caller can reach the cipher without any singleton rule, so the
-            // constraint does not bind for them.
+            // An ungated path is an escape, so the constraint does not bind.
             if (!collection.AccessRuleId.HasValue)
             {
                 return false;
@@ -48,8 +47,7 @@ public class SingleActiveLeaseEvaluator : ISingleActiveLeaseEvaluator
 
             var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId.Value);
 
-            // A missing rule, a disabled one, or one that doesn't ask for a singleton is likewise an escape path:
-            // a disabled rule governs nothing, same as GoverningRuleResolver and the leasing gate.
+            // So is a missing, disabled, or non-singleton rule.
             if (accessRule is not { Enabled: true, SingleActiveLease: true })
             {
                 return false;

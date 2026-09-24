@@ -66,8 +66,6 @@ internal static class OrganizationExtensions
             Key = shouldIncludeKey ? encryptedOrgKey : null,
             Type = type,
             Status = status,
-            // Set here so every seeding path agrees; otherwise members of a UsePam organization seed unlicensed
-            // and PamLicenseGuard refuses them.
             AccessPam = organization.UsePam
         };
     }
