@@ -250,7 +250,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(lease.NotAfter, result.NotBefore);
         Assert.Equal(expectedNotAfter, result.NotAfter);
         Assert.Equal("incident", result.Reason);
-        Assert.Equal(_now, result.ResolvedDate);
+        Assert.Equal(_now, result.ActionDate);
 
         var decision = Assert.Single(result.Decisions);
         Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
@@ -294,7 +294,7 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(lease.NotAfter, result.NotBefore);
         Assert.Equal(lease.NotAfter.AddSeconds(duration), result.NotAfter);
         Assert.Equal("incident", result.Reason);
-        Assert.Equal(_now, result.ResolvedDate);
+        Assert.Equal(_now, result.ActionDate);
 
         // The automatic verdict names why, so the requester's history can show it without guessing from the status.
         var decision = Assert.Single(result.Decisions);
