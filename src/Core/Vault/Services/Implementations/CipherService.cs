@@ -515,7 +515,7 @@ public class CipherService : ICipherService
         // default user collection, since those are also excluded from attachment cleanup
         var organizationCiphers = await GetApplicableOrganizationCiphers(organizationId, true);
         await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync(organizationCiphers.Select(c => c.Id));
-        await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
+        await DeleteAttachmentsForCiphersAsync(organizationCiphers);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
 
@@ -525,7 +525,11 @@ public class CipherService : ICipherService
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
     {
         var ciphers = await GetApplicableOrganizationCiphers(organizationId, excludeDefaultUserCollectionCiphers);
+        await DeleteAttachmentsForCiphersAsync(ciphers);
+    }
 
+    private async Task DeleteAttachmentsForCiphersAsync(IEnumerable<Cipher> ciphers)
+    {
         var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
         foreach (var cipherId in cipherIdsWithAttachments)
