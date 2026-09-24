@@ -43,6 +43,13 @@ public static class UserSubscriptionEndpointsExtensions
             .WithName("GetAccountSubscriptionPreview")
             .WithDescription("Previews the account's upcoming subscription renewal.");
 
+        group.MapGet("purchase/premium/preview",
+                async (ClaimsPrincipal principal, [AsParameters] GetPremiumPurchasePreviewRequest request,
+                       [FromServices] GetAccountPremiumPurchasePreviewHandler handler) =>
+                    await handler.HandleAsync(principal, request))
+            .WithName("GetAccountPremiumPurchasePreview")
+            .WithDescription("Previews the invoice for purchasing a Premium subscription.");
+
         return group;
     }
 }
