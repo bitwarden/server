@@ -5,7 +5,6 @@ CREATE TABLE [dbo].[AccessLease] (
     [CollectionId]      UNIQUEIDENTIFIER    NOT NULL,
     [CipherId]          UNIQUEIDENTIFIER    NOT NULL,
     [RequesterId]       UNIQUEIDENTIFIER    NOT NULL,
-    -- How the lease ended early (0 None, 2 Revoked, 3 Cancelled); Active/Expired are derived.
     [Action]            TINYINT             NOT NULL,
     [NotBefore]         DATETIME2 (7)       NOT NULL,
     [NotAfter]          DATETIME2 (7)       NOT NULL,
