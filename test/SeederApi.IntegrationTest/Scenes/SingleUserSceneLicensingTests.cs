@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Bit.Core.Billing.Services;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
@@ -59,5 +60,30 @@ public class SingleUserSceneLicensingTests : IAsyncLifetime
         }, Guid.NewGuid().ToString());
 
         response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task SeedEndpoint_CloudHost_SelfHostedPremium_ReturnsBadRequestWithoutCreatingUser()
+    {
+        var email = $"cloud-selfhost-{Guid.NewGuid()}@bitwarden.com";
+
+        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
+        {
+            Template = nameof(SingleUserScene),
+            Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request
+            {
+                Email = email,
+                Password = "asdfasdfasdf",
+                Premium = true,
+                SelfHosted = true
+            })
+        }, Guid.NewGuid().ToString());
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("cloud mode", await response.Content.ReadAsStringAsync());
+
+        // The mangler prefixes the local part, so match on the suffix.
+        var db = _factory.GetDatabaseContext();
+        Assert.False(db.Users.Any(u => u.Email.EndsWith(email)));
     }
 }
