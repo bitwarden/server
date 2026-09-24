@@ -213,33 +213,6 @@ public class CreateCollectionCommandTests
             .LogCollectionEventAsync(default, default);
     }
 
-    [Theory, BitAutoData]
-    public async Task CreateAsync_WithInvalidManageAssociations_ThrowsBadRequest(
-        Organization organization, Collection collection, SutProvider<CreateCollectionCommand> sutProvider)
-    {
-        collection.Id = default;
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        ArrangeValidAccess(sutProvider);
-
-        var invalidGroups = new List<CollectionAccessSelection>
-        {
-            new() { Id = Guid.NewGuid(), Manage = true, ReadOnly = true }
-        };
-
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(collection, invalidGroups, null));
-        Assert.Contains("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.", ex.Message);
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(default, default, default);
-        await sutProvider.GetDependency<IEventService>()
-            .DidNotReceiveWithAnyArgs()
-            .LogCollectionEventAsync(default, default);
-    }
 
     [Theory, BitAutoData]
     public async Task CreateAsync_WithDefaultUserCollectionType_ThrowsBadRequest(

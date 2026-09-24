@@ -110,7 +110,7 @@ public class OrganizationSponsorshipsControllerTests
     [Theory]
     [BitAutoData]
     public async Task PreValidateSponsorshipToken_ValidatesToken_Success(string sponsorshipToken, User user,
-        OrganizationSponsorship sponsorship,
+        OrganizationSponsorship sponsorship, Organization sponsoringOrganization,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
         SutProvider<OrganizationSponsorshipsController> sutProvider)
     {
@@ -122,10 +122,35 @@ public class OrganizationSponsorshipsControllerTests
         sutProvider.GetDependency<IPolicyQuery>()
             .RunAsync(Arg.Any<Guid>(), PolicyType.FreeFamiliesSponsorshipPolicy)
             .Returns(policy);
-        await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(sponsorship.SponsoringOrganizationId!.Value).Returns(sponsoringOrganization);
+
+        var response = await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
 
         await sutProvider.GetDependency<IValidateRedemptionTokenCommand>().Received(1)
             .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email);
+        Assert.True(response.IsTokenValid);
+        Assert.Equal(sponsoringOrganization.DisplayName(), response.SponsoringOrganizationName);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PreValidateSponsorshipToken_InvalidToken_DoesNotReturnSponsoringOrganizationName(
+        string sponsorshipToken, User user, OrganizationSponsorship sponsorship,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id)
+            .Returns(user);
+        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+            .ValidateRedemptionTokenAsync(sponsorshipToken, user.Email).Returns((false, sponsorship));
+
+        var response = await sutProvider.Sut.PreValidateSponsorshipToken(sponsorshipToken);
+
+        Assert.False(response.IsTokenValid);
+        Assert.Null(response.SponsoringOrganizationName);
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
     }
 
     [Theory]

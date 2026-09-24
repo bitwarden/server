@@ -48,7 +48,8 @@
     <PackageReference Include="Microsoft.Bot.Builder" Version="[4.23.0]" />
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="[4.23.0]" />
     <PackageReference Include="Microsoft.Bot.Connector" Version="[4.23.0]" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="[7.0.0]" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="[7.0.2]" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="[7.0.2]" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="[1.8.0]" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="[10.0.10]" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="[10.0.10]" />

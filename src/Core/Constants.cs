@@ -145,7 +145,6 @@ public static partial class FeatureFlagKeys
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -306,10 +305,7 @@ public static partial class FeatureFlagKeys
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
-
-    /* UIF Team */
-    public const string RouterFocusManagement = "router-focus-management";
-
+    public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";

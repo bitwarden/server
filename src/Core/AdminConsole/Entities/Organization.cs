@@ -254,6 +254,16 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// </summary>
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     /// <summary>
+    /// The number of Privileged Access Management seats included in the organization's subscription.
+    /// NULL if the organization does not have access to Privileged Access Management.
+    /// </summary>
+    public int? PamSeats { get; set; }
+    /// <summary>
+    /// The maximum number of Privileged Access Management seats the organization can autoscale to.
+    /// NULL if autoscaling is not limited.
+    /// </summary>
+    public int? MaxAutoscalePamSeats { get; set; }
+    /// <summary>
     /// If set to true, only owners, admins, and some custom users can create and delete collections.
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
     /// they have Can Manage permissions for.
