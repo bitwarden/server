@@ -30,7 +30,7 @@ public static class Saml2EncryptedAssertionInspector
     /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
     /// The recorded metric is an anonymous, aggregate count. It never carries an organization or a user identifier.
     /// </remarks>
-    /// <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-assertion-2.0.xsd" /> 
+    /// <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-protocol-2.0.xsd" /> 
     public static bool TryRecordUnsupportedKeyTransportAlgorithms(XmlElement envelope, HttpContext context)
     {
         try

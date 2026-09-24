@@ -22,7 +22,7 @@ public static class Saml2AssertionSignatureVerifier
         // reach this method too.
         // Both LogoutRequest and LogoutResponse use the POST and the Redirect binding. 
         // Neither carries an assertion, and this check must not reject them.
-        // <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-assertion-2.0.xsd" />
+        // <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-schema-protocol-2.0.xsd" />
         if (!IsAuthnResponse(envelope))
         {
             return;
