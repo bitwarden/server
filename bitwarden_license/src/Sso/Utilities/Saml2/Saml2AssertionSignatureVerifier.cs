@@ -31,7 +31,8 @@ public static class Saml2AssertionSignatureVerifier
         var assertionElements = GetAssertionElements(envelope);
 
         // An identity provider that refuses to authenticate returns an error status and no
-        // assertions per the OASIS spec (needs citation). That message has nothing to check.
+        // assertions per section 4.1.4.2 of the OASIS spec. That message has nothing to check.
+        // <see href="https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf" />
         if (assertionElements.Length == 0 && HasErrorStatus(envelope))
         {
             return;
