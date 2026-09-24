@@ -925,8 +925,9 @@ public class UserRepositoryTests
         Assert.Equal("wrapped-user-key", updatedUser.Key);
     }
 
-    // Malformed requests containing a hard coded protection sentinel ("P|")
-    // corrupt the target account during account recovery
+    // A caller-supplied value that starts with the database field protection sentinel ("P|")
+    // but is not real protector output must never suppress encryption. If it did, the value
+    // would be stored verbatim and every later read of the row would throw
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_DoesNotStoreVerbatim(
         IUserRepository userRepository)
@@ -937,6 +938,8 @@ public class UserRepositoryTests
         user.Key = poisonedKey;
         await userRepository.ReplaceAsync(user);
 
+        // Reading the row back must not throw, and the recovered value must match the original
+        // input exactly
         var readBack = await userRepository.GetByIdAsync(user.Id);
 
         Assert.NotNull(readBack);
