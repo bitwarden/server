@@ -30,7 +30,7 @@ ALTER TABLE [dbo].[Send]
 GO
 
 -- Create new stored procedure for reading Sends by Cipher IDs
-CREATE PROCEDURE [dbo].[Send_ReadByCipherIds]
+CREATE OR ALTER PROCEDURE [dbo].[Send_ReadByCipherIds]
     @CipherIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

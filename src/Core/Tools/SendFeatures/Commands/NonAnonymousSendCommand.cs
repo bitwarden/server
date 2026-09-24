@@ -329,7 +329,9 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
     public async Task DeleteItemSendsByUserAsync(Guid userId)
     {
-        var userCiphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+        // This is only used in the code path used by the personal vault purge,
+        // so we need to exclude any organization ciphers the user has access to.
+        var userCiphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
         await DeleteSendsByCiphersAsync(userCiphers.Select(c => c.Id));
     }
 }

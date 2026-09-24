@@ -511,7 +511,9 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        var organizationCiphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        // When deleting linked Sends we want to exclude those linked to Ciphers in the
+        // default user collection, since those are also excluded from attachment cleanup
+        var organizationCiphers = await GetApplicableOrganizationCiphers(organizationId, true);
         await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync(organizationCiphers.Select(c => c.Id));
         await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
 
@@ -521,6 +523,18 @@ public class CipherService : ICipherService
     }
 
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
+    {
+        var ciphers = await GetApplicableOrganizationCiphers(organizationId, excludeDefaultUserCollectionCiphers);
+
+        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
+
+        foreach (var cipherId in cipherIdsWithAttachments)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
+        }
+    }
+
+    private async Task<ICollection<Cipher>> GetApplicableOrganizationCiphers(Guid organizationId, bool excludeDefaultUserCollectionCiphers)
     {
         var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
@@ -539,12 +553,7 @@ public class CipherService : ICipherService
             ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
         }
 
-        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
-
-        foreach (var cipherId in cipherIdsWithAttachments)
-        {
-            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
-        }
+        return ciphers;
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
