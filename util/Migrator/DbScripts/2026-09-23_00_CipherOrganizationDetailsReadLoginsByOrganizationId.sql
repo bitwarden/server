@@ -1,5 +1,5 @@
 -- PM-43785: Add stored procedure to fetch only Login-type ciphers for an organization,
--- excluding those in default user collections. Used by the Access Intelligence
+-- including those in default user collections. Used by the Access Intelligence
 -- Login-only cipher endpoint (GET /ciphers/organization-details/logins).
 
 CREATE OR ALTER PROCEDURE [dbo].[CipherOrganizationDetails_ReadLoginsByOrganizationId]
