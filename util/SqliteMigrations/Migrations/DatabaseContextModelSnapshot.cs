@@ -230,6 +230,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 
@@ -252,6 +255,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Plan")
                         .IsRequired()
