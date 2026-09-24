@@ -1106,10 +1106,11 @@ public class CipherService : ICipherService
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
-    // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
+    // Validates collection changes for a cipher:
+    //  - A cipher residing in a default ("My Items") collection can only be modified by that collection's owner.
+    //  - A cipher cannot be added to a default collection when it is only currently in shared collections.
     private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId)
     {
-
         if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue)
         {
             return;
@@ -1118,6 +1119,25 @@ public class CipherService : ICipherService
         if (newCollectionIds == null)
         {
             return;
+        }
+
+        // A cipher that lives in a default collection is personal to its owner. No other member may change its collection assignments.
+        var currentDefaultCollections = (await _collectionRepository.GetManyByManyIdsAsync(
+                await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(updatedCipher.Id)))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .ToList();
+
+        if (currentDefaultCollections.Count != 0)
+        {
+            var ownedDefaultCollectionIds = (await _collectionRepository.GetManyByUserIdAsync(userId))
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+            if (currentDefaultCollections.Any(c => !ownedDefaultCollectionIds.Contains(c.Id)))
+            {
+                throw new NotFoundException();
+            }
         }
 
         var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, updatedCipher.Id);
