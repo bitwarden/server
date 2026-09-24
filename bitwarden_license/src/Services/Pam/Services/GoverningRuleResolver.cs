@@ -14,18 +14,15 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
-    private readonly IAccessRuleEngine _ruleEngine;
 
     public GoverningRuleResolver(
         ICollectionCipherRepository collectionCipherRepository,
         ICollectionRepository collectionRepository,
-        IAccessRuleRepository accessRuleRepository,
-        IAccessRuleEngine ruleEngine)
+        IAccessRuleRepository accessRuleRepository)
     {
         _collectionCipherRepository = collectionCipherRepository;
         _collectionRepository = collectionRepository;
         _accessRuleRepository = accessRuleRepository;
-        _ruleEngine = ruleEngine;
     }
 
     public async Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals)
@@ -39,66 +36,93 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         var collectionIds = collectionCiphers.Select(cc => cc.CollectionId).ToHashSet();
         var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        var governedCollections = collections
-            .Where(c => collectionIds.Contains(c.Id) && c.AccessRuleId.HasValue);
+        var paths = collections.Where(c => collectionIds.Contains(c.Id)).ToList();
 
-        // Load every rule on the collections through which the caller reaches the cipher, keeping each paired with
-        // the collection it gates. A rule is dropped — so it stops governing — when it is disabled (Enabled is false;
-        // the admin has switched it off, and a disabled rule does not gate access) or no longer loads (deleted after
-        // the collection was read; deletes clear the link, so a missing rule is only a race). Dropping a disabled rule
-        // also stops it shadowing a newer active rule under the oldest-wins selection below.
+        // Gating is a union: every path the caller can reach the cipher through must gate. A path carrying no rule,
+        // a disabled one, or one that no longer loads is an escape releasing the credential in full, so nothing
+        // governs — matching CipherLeaseGate's bulk read and SingleActiveLeaseEvaluator (PM-42916).
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
-        foreach (var collection in governedCollections)
+        foreach (var collection in paths)
         {
-            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId!.Value);
-            if (accessRule is { Enabled: true })
+            if (!collection.AccessRuleId.HasValue)
             {
-                candidates.Add((collection, accessRule));
+                return null;
             }
+
+            var accessRule = await _accessRuleRepository.GetByIdAsync(collection.AccessRuleId.Value);
+            if (accessRule is not { Enabled: true })
+            {
+                return null;
+            }
+
+            candidates.Add((collection, accessRule));
         }
 
+        // Only reachable when no mapped collection loaded: no path is left to gate.
         if (candidates.Count == 0)
         {
             return null;
         }
 
-        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id so the choice is total
-        // and stable. Selection is purely structural — it does NOT depend on how a rule's conditions evaluate for the
-        // current signals — so a newer path never pre-empts an older one, whichever is the more permissive. This is a
-        // deliberate trade of determinism over least-restriction: a member may be routed to an approver even though a
-        // newer path would have auto-granted, because the older rule governs. The chosen rule's conditions are then
-        // evaluated below only to decide whether it routes to a human or resolves automatically.
+        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id, regardless of
+        // whether a newer path would have been more permissive.
         var (governingCollection, governingRule) = candidates
             .OrderBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
             .First();
 
-        var conditions = Parse(governingRule.Conditions);
-        var outcome = _ruleEngine.Evaluate(conditions, signals).Outcome;
+        return Build(governingCollection.OrganizationId, governingCollection.Id, governingRule);
+    }
+
+    public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)
+    {
+        var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
+
+        // Dropped as ResolveAsync drops an escape path: a disabled or deleted rule leaves the pin governing
+        // nothing, so the caller is left ungated rather than held to a rule the admin took out of service.
+        return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
+    }
+
+    /// <summary>
+    /// Projects a stored rule onto the shape its callers evaluate. Shared by both resolution paths so a rule reached
+    /// through the caller's collections and the same rule reached through a request's pin are always described
+    /// identically.
+    /// </summary>
+    private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
+    {
+        var (conditions, unreadable) = Parse(rule.Conditions);
+
+        // Whether the rule routes to a human is structural: carried by a HumanApprovalCondition among the rule's
+        // conditions, not by how those conditions evaluate for these signals (Combine gives deny precedence over
+        // requires-approval, which would fold a human-gated rule to an outright Deny).
+        var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
-            governingCollection.OrganizationId,
-            governingCollection.Id,
-            outcome == AccessEvaluationOutcome.RequiresApproval,
+            organizationId,
+            collectionId,
+            requiresHumanApproval,
             conditions)
         {
-            RuleId = governingRule.Id,
-            AllowsExtensions = governingRule.AllowsExtensions,
-            MaxExtensionDurationSeconds = governingRule.MaxExtensionDurationSeconds,
+            RuleId = rule.Id,
+            AllowsExtensions = rule.AllowsExtensions,
+            MaxExtensionDurationSeconds = rule.MaxExtensionDurationSeconds,
+            DefaultLeaseDurationSeconds = rule.DefaultLeaseDurationSeconds,
+            MaxLeaseDurationSeconds = rule.MaxLeaseDurationSeconds,
+            ConditionsUnreadable = unreadable,
         };
     }
 
     /// <summary>
-    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>. A malformed or
-    /// unparseable document fails safe to a single human-approval condition so access is never silently auto-approved
-    /// on conditions the server could not understand; the human-approval path then routes it to an approver rather
-    /// than issuing an automatic lease.
+    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>, reporting whether it had
+    /// to fall back. A malformed or unparseable document fails safe to a single human-approval condition, since the
+    /// flag is needed to tell that stand-in apart from a genuine <c>[human_approval]</c> rule.
     /// </summary>
-    private static IReadOnlyList<AccessCondition> Parse(string conditionsJson)
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) Parse(string conditionsJson)
     {
         try
         {
-            return JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options) ?? FailSafe();
+            var conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
+            return conditions is null ? FailSafe() : (conditions, false);
         }
         // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
         // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
@@ -110,5 +134,6 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         }
     }
 
-    private static IReadOnlyList<AccessCondition> FailSafe() => [new HumanApprovalCondition()];
+    private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) FailSafe() =>
+        ([new HumanApprovalCondition()], true);
 }

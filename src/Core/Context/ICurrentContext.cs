@@ -88,5 +88,13 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+
+    /// <summary>
+    /// Whether the caller holds a Privileged Access Manager license in the given organization: the per-seat
+    /// entitlement (<c>OrganizationUser.AccessPam</c>) drawn against the subscription (<c>Organization.UsePam</c>).
+    /// A lapsed organization reads as unlicensed.
+    /// </summary>
+    bool AccessPam(Guid organizationId);
+
     CurrentContextOrganization? GetOrganization(Guid orgId);
 }
