@@ -26,6 +26,8 @@ public class CollectionRepositorySetAccessRuleAssociationsTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var rule = await CreateRuleAsync(accessRuleRepository, organization.Id, "Assign");
 
+        // Backdated so the bumped RevisionDate is always strictly later, even on a run fast enough to land in the
+        // same datetime tick.
         var collection = await collectionRepository.CreateAsync(new Collection
         {
             OrganizationId = organization.Id,
