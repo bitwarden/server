@@ -8,7 +8,6 @@ CREATE TABLE [dbo].[AccessRequest] (
     [NotBefore]             DATETIME2 (7)       NOT NULL,
     [NotAfter]              DATETIME2 (7)       NOT NULL,
     [Reason]                NVARCHAR(MAX)       NULL,
-    -- Action taken on the request; Pending/Expired are derived, not stored here.
     [Action]                TINYINT             NOT NULL,
     [CreationDate]          DATETIME2 (7)       NOT NULL,
     [ActionDate]            DATETIME2 (7)       NULL,
