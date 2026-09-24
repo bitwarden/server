@@ -10,7 +10,7 @@ public enum AccessLeaseAction : byte
     /// <summary>No early end recorded; Active vs Expired is the clock's call at read time.</summary>
     None = 0,
 
-    // Byte 1 (the old stored Expired) stays unused so Revoked/Cancelled keep their stored values and stay aligned with AccessRequestAction.Denied/Cancelled.
+    // 1 is unused: Revoked/Cancelled keep their stored values, aligned with AccessRequestAction.Denied/Cancelled.
 
     /// <summary>An operator ended the lease early; RevokedBy/RevokedDate record who and the timestamp.</summary>
     Revoked = 2,
