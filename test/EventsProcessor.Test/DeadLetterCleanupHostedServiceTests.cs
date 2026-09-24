@@ -3,6 +3,7 @@ using Bit.Core.Dirt.Services;
 using Bit.Core.Settings;
 using Bit.EventsProcessor;
 using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
 
 namespace EventsProcessor.Test;
 
