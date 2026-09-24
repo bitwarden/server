@@ -7,6 +7,7 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
@@ -22,6 +23,7 @@ public class TeamsIntegrationController(
     IBot bot,
     IBotFrameworkHttpAdapter adapter,
     ITeamsService teamsService,
+    IGlobalSettings globalSettings,
     TimeProvider timeProvider) : Controller
 {
     [HttpGet("{organizationId:guid}/integrations/teams/redirect")]
@@ -32,12 +34,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        var callbackUrl = Url.RouteUrl(
-            routeName: "TeamsIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        var callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
             throw new BadRequestException("Unable to build callback Url");
@@ -102,12 +99,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        var callbackUrl = Url.RouteUrl(
-            routeName: "TeamsIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        var callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
             throw new BadRequestException("Unable to build callback Url");
@@ -140,5 +132,23 @@ public class TeamsIntegrationController(
     public async Task IncomingPostAsync()
     {
         await adapter.ProcessAsync(Request, Response, bot);
+    }
+
+    /// <summary>
+    /// Builds the OAuth callback URL from the configured API base URL rather than the incoming request.
+    /// In cloud, TLS terminates before the request reaches the API, so the request scheme is "http" and
+    /// Microsoft Entra ID rejects the redirect URI. Self-hosted instances also need the "/api" prefix that the
+    /// reverse proxy strips before the request reaches the API.
+    /// </summary>
+    private string? BuildCallbackUrl()
+    {
+        var apiBaseUrl = globalSettings.BaseServiceUri.Api;
+        var callbackPath = Url.RouteUrl(routeName: "TeamsIntegration_Create", values: null);
+        if (string.IsNullOrEmpty(apiBaseUrl) || string.IsNullOrEmpty(callbackPath))
+        {
+            return null;
+        }
+
+        return $"{apiBaseUrl.TrimEnd('/')}{callbackPath}";
     }
 }
