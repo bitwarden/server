@@ -21,7 +21,7 @@ public static class CollectionRules
     /// </summary>
     public static class CollectionAssignment
     {
-        /// <summary>Facts needed by <see cref="CanManage"/>, bundled instead of passed as two bools.</summary>
+        /// <summary>The facts <see cref="CanManage"/> needs to decide access to one collection.</summary>
         public readonly record struct ManagementFacts(bool CallerManagesCollection, bool IsOrphaned);
 
         /// <summary>
