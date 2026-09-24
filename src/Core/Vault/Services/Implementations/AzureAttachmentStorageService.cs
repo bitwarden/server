@@ -251,7 +251,7 @@ public class AzureAttachmentStorageService : IAttachmentStorageService
             await InitAsync(container);
             var blobContainerClient = _attachmentContainers[container];
 
-            var blobItems = blobContainerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: path);
+            var blobItems = blobContainerClient.GetBlobsAsync(new GetBlobsOptions { Prefix = path });
             await foreach (var blobItem in blobItems)
             {
                 BlobClient blobClient = blobContainerClient.GetBlobClient(blobItem.Name);

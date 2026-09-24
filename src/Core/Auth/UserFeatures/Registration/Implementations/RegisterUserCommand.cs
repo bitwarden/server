@@ -279,8 +279,6 @@ public class RegisterUserCommand : IRegisterUserCommand
         User user, RegisterFinishData registerFinishData,
         string emailVerificationToken, OpenOrgInviteRequestModel openOrgInvite)
     {
-        ValidateOpenRegistrationAllowed();
-
         var validationResult = await _validateOrganizationInviteLinkQuery.ValidateAsync(
             openOrgInvite.OrganizationId, openOrgInvite.Code, user.Email);
         if (validationResult.IsError)

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Services;
 using Bit.Seeder;
 using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
@@ -140,6 +141,34 @@ public class RecipeBuilderValidationTests
         builder.AddCiphers(50);
         var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
         Assert.Contains("Generated ciphers require a generator", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_BillingWithoutOrganization_Throws()
+    {
+        // The billing step reads context.Organization, so an individual-user recipe could only
+        // fail at run time — after the commit — without this guard.
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.CreateIndividualUser("solo@bw.example", premium: true, maxStorageGb: 1);
+        builder.WithStripeBilling(new StripeBillingOptions());
+
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
+        Assert.Contains("Stripe billing requires an organization", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_BillingWithOrganization_Succeeds()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.AddOwner();
+        builder.WithStripeBilling(new StripeBillingOptions());
+
+        builder.Validate();
     }
 
     [Fact]

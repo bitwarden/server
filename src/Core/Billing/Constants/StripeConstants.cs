@@ -135,6 +135,16 @@ public static class StripeConstants
         public const string UnpaidSubscription = "unpaid_subscription";
     }
 
+    /// <summary>
+    /// The values carried in <see cref="MetadataKeys.TrialInitiationPath"/>.
+    /// </summary>
+    public static class TrialInitiationPaths
+    {
+        public const string MarketingInitiated = "marketing-initiated";
+        public const string ProductInitiated = "product-initiated";
+        public const string SalesAssisted = "sales-assisted";
+    }
+
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";

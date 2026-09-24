@@ -60,6 +60,11 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
             msg.AddBccs(message.BccEmails.Select(e => new EmailAddress(CoreHelpers.PunyEncode(e))).ToList());
         }
 
+        if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
+        {
+            msg.SetReplyTo(new EmailAddress(CoreHelpers.PunyEncode(message.ReplyToAddress)));
+        }
+
         msg.SetSubject(message.Subject);
         msg.AddContent(MimeType.Text, message.TextContent);
         msg.AddContent(MimeType.Html, message.HtmlContent);

@@ -7,7 +7,6 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
@@ -282,48 +282,111 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
+        // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
+        // fall through to SetInitialPasswordV1Async, which uses the V1 command to handle modern
+        // V1 MP JIT requests and all legacy-shape requests (TDE and MP JIT). See its doc comment
+        // for the full list of scenarios.
+        if (model.HasAuthAndUnlockData())
         {
+            // TDE set-password (for TDE users who obtain the "manage account recovery" permission).
+            // _tdeSetPasswordCommand handles both V1 and V2 TDE users (it sets the master password
+            // without touching cryptographic state).
+            // 
+            // Note: Why not check the V2RegistrationTDEJIT flag?
+            // The V2RegistrationTDEJIT flag governs SSO+TDE account creation, not set-password, so
+            // don't reference it here (no feature-flag gate), because it isn't relevant. A TDE user
+            // reaching this endpoint already has keys that were set up at registration time, regardless
+            // of the flag.
             if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
-            }
-            else
-            {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-            }
-        }
-        else
-        {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-            try
-            {
-                user = model.ToUser(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordHash,
-                model.Key,
-                model.OrgIdentifier);
-
-            if (result.Succeeded)
-            {
                 return;
             }
 
-            foreach (var error in result.Errors)
+            // V2 encryption - MP JIT.
+            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
+            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
+            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
+            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
+            if (model.AccountKeys != null &&
+                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                return;
             }
+        }
 
+        await SetInitialPasswordV1Async(user, model);
+    }
+
+    /// <summary>
+    /// Handles setting an initial password for V1 users in the following scenarios:
+    /// 1. TDE user where request contains legacy fields (MasterPasswordHash + Key)
+    /// 2. MP JIT user where request contains legacy fields (MasterPasswordHash + Key + Keys)
+    /// 3. MP JIT user where request contains MPAD + MPUD + legacy Keys (not AccountKeys)
+    /// </summary>
+    /// <remarks>
+    /// TODO: In order to remove this method, all 3 of those scenarios need to become unused. This means
+    /// removal can only happen when BOTH of the following are true:
+    /// 
+    /// 1. Client-side changes in https://bitwarden.atlassian.net/browse/PM-35599 have been merged
+    ///    and have aged out according to the Bitwarden release support policy. This covers scenarios
+    ///    #1-2 above (legacy TDE and legacy MP JIT).
+    /// 
+    /// 2. The EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
+    ///    https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has
+    ///    aged out according to the Bitwarden release support policy. This covers scenarios #2-3 above (legacy
+    ///    and modern MP JIT).
+    /// </remarks>
+    private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
+    {
+        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
+        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
+        // a client/server flag-state mismatch or a non-Angular caller.
+        if (model.AccountKeys != null)
+        {
+            throw new BadRequestException(
+                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
+        }
+
+        try
+        {
+            // Stage 1 (PM-27044) compatibility: the client MUST send salt == email.lower.trim
+            // on initial SET. Clients currently derive the master key from the email as salt at
+            // login time, so a divergent salt persisted here would make the account un-loginable.
+            // Mirrors the check in SetInitialPasswordData.ValidateDataForUser; removable in
+            // Stage 3 when PM-28143 clears and clients consume the explicit salt from prelogin.
+            model.MasterPasswordUnlock?.ToData().ValidateSaltUnchangedForUser(user);
+            model.MasterPasswordAuthentication?.ToData().ValidateSaltUnchangedForUser(user);
+
+            // ToUser() handles fallbacks if MPAD + MPUD are not present (i.e. legacy shape)
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
             throw new BadRequestException(ModelState);
         }
+
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+            user,
+            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash,
+            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key,
+            model.OrgIdentifier);
+
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]
@@ -583,12 +646,6 @@ public class AccountsController : Controller
         }
         else
         {
-            // Check if the user is claimed by any organization.
-            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
-            {
-                throw new BadRequestException(new CannotDeleteClaimedAccountError().Message);
-            }
-
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {

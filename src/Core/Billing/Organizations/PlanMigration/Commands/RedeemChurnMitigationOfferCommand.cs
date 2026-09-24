@@ -70,6 +70,7 @@ public class RedeemChurnMitigationOfferCommand(
         {
             return DefaultConflict;
         }
+        DiscountExtensions.RequireScheduleDiscountExpansions(subscription, _logger);
 
         var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
             new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
@@ -107,13 +108,24 @@ public class RedeemChurnMitigationOfferCommand(
         var phase2 = migrationPhases[1];
 
         var currentPhase2CouponIds = phase2.Discounts?.Select(d => d.CouponId).ToList() ?? [];
-        var mergedPhase2CouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            currentPhase2CouponIds,
-            churnDiscountCouponCode);
+        var phase2Discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            [churnDiscountCouponCode],
+            preservedCouponIds: currentPhase2CouponIds);
 
-        // No-op only when the merged set equals Phase 2's current discounts — comparing the merged
-        // set (not just the churn coupon) lets an already-redeemed, still-shadowed org self-heal on retry.
-        if (mergedPhase2CouponIds.SequenceEqual(currentPhase2CouponIds, StringComparer.Ordinal))
+        // No-op only when the rebuild's coupon-level footprint adds nothing to Phase 2's current
+        // coupons. Comparing coupon ids -- rather than the Discount/Coupon write-representation
+        // split BuildPhaseLevelDiscounts produces -- keeps the check representation-independent: a
+        // subscription discount carried forward as `Discount = di_...` resolves back to the same
+        // coupon id Phase 2 already shows as `Coupon = ...`.
+        var currentPhase2CouponFootprint = BuildCouponFootprint(currentPhase2CouponIds);
+        var rebuiltPhase2CouponFootprint = BuildCouponFootprint(
+            currentPhase2CouponIds,
+            [subscription.Customer?.Discount?.Source?.CouponId],
+            subscription.Discounts?.Select(d => d.Source?.CouponId) ?? [],
+            [churnDiscountCouponCode]);
+
+        if (rebuiltPhase2CouponFootprint.SetEquals(currentPhase2CouponFootprint))
         {
             _logger.LogInformation(
                 "{Command}: Discounts already present on Phase 2 of schedule ({ScheduleId}) for Organization ({OrganizationId}); no Stripe update needed",
@@ -123,19 +135,23 @@ public class RedeemChurnMitigationOfferCommand(
 
         var phases = new List<SubscriptionSchedulePhaseOptions>
         {
-            // Phase 1 is current_phase with StartDate in the past. Any deviation from its
-            // current state causes Stripe to reject the schedule update with "cannot modify
-            // past phase." Mirror items, discounts, metadata, start/end, and proration
-            // verbatim -- DO NOT edit Phase 1 fields here.
-            BuildMirroredPhaseOptions(phase1),
+            // Phase 1 is current_phase with StartDate in the past; mirror its items, metadata,
+            // start/end, and proration verbatim. Phase-level discounts carry only what is still live
+            // on the subscription (by discount id) so a one-time coupon already consumed on the
+            // current invoice -- still recorded on the phase but gone from subscription.Discounts --
+            // isn't re-minted on the wholesale replace.
+            BuildMirroredPhaseOptions(phase1, subscription),
             new()
             {
                 StartDate = phase2.StartDate,
                 EndDate = phase2.EndDate,
-                Items = phase2.Items
-                    .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
-                    .ToList(),
-                Discounts = mergedPhase2CouponIds.ToPhaseDiscountOptions(),
+                Items = phase2.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
+                {
+                    Price = i.PriceId,
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(i.Discounts?.Select(d => d.CouponId) ?? [])
+                }).ToList(),
+                Discounts = phase2Discounts,
                 Metadata = phase2.Metadata,
                 ProrationBehavior = phase2.ProrationBehavior
             }
@@ -176,6 +192,7 @@ public class RedeemChurnMitigationOfferCommand(
         {
             return DefaultConflict;
         }
+        DiscountExtensions.RequireScheduleDiscountExpansions(subscription, _logger);
 
         var currentCouponIds = subscription.Discounts?
             .Select(d => d.Source?.Coupon?.Id)
@@ -183,31 +200,37 @@ public class RedeemChurnMitigationOfferCommand(
             .ToList() ?? [];
 
         // A discount with no resolvable coupon (deleted in Stripe, or "discounts.source.coupon" not
-        // expanded) is excluded above and stripped by the write below; log it so a future expand
-        // regression that silently drops a live discount stays detectable.
+        // expanded) is still carried forward by BuildSubscriptionLevelDiscounts below, referenced by
+        // its discount id -- dropping it here would delete a live discount from Stripe on the
+        // wholesale replace. Log it purely as a diagnostic: an unresolved coupon usually means
+        // incomplete expansion, or the coupon was deleted in Stripe.
         var unresolvableDiscountCount = subscription.Discounts?.Count(d => string.IsNullOrEmpty(d?.Source?.Coupon?.Id)) ?? 0;
         if (unresolvableDiscountCount > 0)
         {
             _logger.LogWarning(
-                "{Command}: {Count} discount(s) on Subscription ({SubscriptionId}) for Organization ({OrganizationId}) had no resolvable coupon and were excluded from the discount write; ensure 'discounts.source.coupon' is expanded",
+                "{Command}: {Count} discount(s) on Subscription ({SubscriptionId}) for Organization ({OrganizationId}) had no resolvable coupon; carried forward by discount id, but confirm 'discounts.source.coupon' is expanded",
                 CommandName, unresolvableDiscountCount, subscription.Id, organization.Id);
         }
 
-        var mergedCouponIds = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            currentCouponIds,
-            churnDiscountCouponCode);
+        var subscriptionDiscounts = DiscountExtensions.BuildSubscriptionLevelDiscounts(
+            subscription, [churnDiscountCouponCode]);
 
-        // No-op only when the merged set equals the current subscription discounts — comparing the
-        // merged set (not just the churn coupon) lets an already-redeemed, still-shadowed org self-heal.
-        if (mergedCouponIds.SequenceEqual(currentCouponIds, StringComparer.Ordinal))
+        // No-op only when the rebuild's coupon-level footprint adds nothing to the subscription's
+        // current discounts -- see the Phase 2 comment above for why this compares coupon ids
+        // rather than the Discount/Coupon write-representation BuildSubscriptionLevelDiscounts produces.
+        var currentCouponFootprint = BuildCouponFootprint(currentCouponIds);
+        var rebuiltCouponFootprint = BuildCouponFootprint(
+            currentCouponIds,
+            [subscription.Customer?.Discount?.Source?.CouponId],
+            [churnDiscountCouponCode]);
+
+        if (rebuiltCouponFootprint.SetEquals(currentCouponFootprint))
         {
             _logger.LogInformation(
                 "{Command}: Discounts already present on Subscription ({SubscriptionId}) for Organization ({OrganizationId}); no Stripe update needed",
                 CommandName, subscription.Id, organization.Id);
             return new None();
         }
-
-        var existingDiscounts = mergedCouponIds.ToSubscriptionDiscountOptions();
 
         // Stamp the per-assignment one-shot guard BEFORE mutating Stripe. For a `once`-duration
         // coupon this is the only post-consumption defense against double-application: if Stripe
@@ -221,7 +244,7 @@ public class RedeemChurnMitigationOfferCommand(
         try
         {
             await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
-                new SubscriptionUpdateOptions { Discounts = existingDiscounts });
+                new SubscriptionUpdateOptions { Discounts = subscriptionDiscounts });
         }
         catch
         {
@@ -251,20 +274,36 @@ public class RedeemChurnMitigationOfferCommand(
         return new None();
     }
 
-    private static SubscriptionSchedulePhaseOptions BuildMirroredPhaseOptions(SubscriptionSchedulePhase phase) =>
+    private static SubscriptionSchedulePhaseOptions BuildMirroredPhaseOptions(
+        SubscriptionSchedulePhase phase, Subscription subscription) =>
         new()
         {
             StartDate = phase.StartDate,
             EndDate = phase.EndDate,
             Items = phase.Items
-                .Select(i => new SubscriptionSchedulePhaseItemOptions { Price = i.PriceId, Quantity = i.Quantity })
+                .Select(i => new SubscriptionSchedulePhaseItemOptions
+                {
+                    Price = i.PriceId,
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(i.Discounts?.Select(d => d.CouponId) ?? [])
+                })
                 .ToList(),
-            Discounts = phase.Discounts?
-                .Select(d => new SubscriptionSchedulePhaseDiscountOptions { Coupon = d.CouponId })
-                .ToList(),
+            Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             Metadata = phase.Metadata,
             ProrationBehavior = phase.ProrationBehavior
         };
 
-
+    // Builds the set of coupon ids represented across the given sources, skipping null/empty
+    // entries. Used to compare a rebuild's would-be discount set against the current one at the
+    // coupon level, independent of whether either side records a discount by coupon or discount id.
+    private static HashSet<string> BuildCouponFootprint(params IEnumerable<string?>[] couponIdSources)
+    {
+        var footprint = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var couponId in couponIdSources.SelectMany(source => source)
+                     .Where(couponId => !string.IsNullOrEmpty(couponId)))
+        {
+            footprint.Add(couponId!);
+        }
+        return footprint;
+    }
 }

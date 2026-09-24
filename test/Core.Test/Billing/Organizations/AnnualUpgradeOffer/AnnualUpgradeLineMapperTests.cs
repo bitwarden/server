@@ -154,6 +154,19 @@ public class AnnualUpgradeLineMapperTests
     }
 
     [Fact]
+    public void MapOrNull_CouponSourcedDiscounts_AreNotUnusable()
+    {
+        var couponDiscount = new Discount { Source = new DiscountSource { CouponId = "coupon_1" } };
+
+        var result = Map(SubscriptionWith(
+            items: [Item("2023-teams-org-seat-monthly", discounts: [couponDiscount])],
+            discounts: [couponDiscount]));
+
+        Assert.NotNull(result);
+        AssertNothingLogged();
+    }
+
+    [Fact]
     public void MapOrNull_NullItemDiscountEntry_ReturnsNullAndLogsUnusableDiscount()
     {
         // Same JSON-deserialization workaround as UnexpandedDiscountSubscription() above.

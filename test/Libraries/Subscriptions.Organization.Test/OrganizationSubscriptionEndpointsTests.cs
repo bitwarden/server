@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Auth.Identity;
+using Bit.OrganizationAuthorization;
+using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -16,7 +18,9 @@ public class OrganizationSubscriptionEndpointsTests
     {
         var app = WebApplication.CreateBuilder().Build();
 
-        var group = app.MapOrganizationSubscriptionEndpoints();
+        // only organizationId is important for the mapping.
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
         group.MapGet("/__probe", () => Results.Ok());
 
         var endpoint = ((IEndpointRouteBuilder)app).DataSources
@@ -24,9 +28,10 @@ public class OrganizationSubscriptionEndpointsTests
             .OfType<RouteEndpoint>()
             .Single(e => e.RoutePattern.RawText!.Contains("__probe"));
 
-        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
-        Assert.NotNull(authorize);
-        Assert.Equal(Policies.Application, authorize!.Policy);
+        // The group requires both the authenticated Application policy and the org-billing requirement.
+        var authorizeAttributes = endpoint.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute.Policy == Policies.Application);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
 
         // Feature gate: IFeatureMetadata (Bitwarden.Server.Sdk.Features) exposes a FeatureCheck
         // delegate, not a flag-name string — presence guards against a dropped RequireFeature.
@@ -43,5 +48,23 @@ public class OrganizationSubscriptionEndpointsTests
         var groupName = endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>();
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PreviewRequiresStandaloneOrganizationOwner()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var preview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("preview"));
+
+        var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
     }
 }

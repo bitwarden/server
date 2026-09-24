@@ -8,6 +8,7 @@ using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 
@@ -15,13 +16,16 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
 {
     private readonly IUserRepository _userRepository;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
+    private readonly ILogger<TwoFactorIsEnabledQuery> _logger;
 
     public TwoFactorIsEnabledQuery(
         IUserRepository userRepository,
-        IHasPremiumAccessQuery hasPremiumAccessQuery)
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
+        ILogger<TwoFactorIsEnabledQuery> logger)
     {
         _userRepository = userRepository;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<(Guid userId, bool twoFactorIsEnabled)>> TwoFactorIsEnabledAsync(IEnumerable<Guid> userIds)
@@ -130,11 +134,23 @@ public class TwoFactorIsEnabledQuery : ITwoFactorIsEnabledQuery
     /// </summary>
     /// <param name="user">user with two factor providers</param>
     /// <returns>list of enabled provider types</returns>
-    private static IList<TwoFactorProviderType> GetEnabledTwoFactorProviders(User user)
+    private IList<TwoFactorProviderType> GetEnabledTwoFactorProviders(User user)
     {
         var providers = user.GetTwoFactorProviders();
 
-        if (providers == null || providers.Count == 0)
+        if (providers == null)
+        {
+            if (!string.IsNullOrWhiteSpace(user.TwoFactorProviders))
+            {
+                _logger.LogWarning(
+                    "Unable to parse TwoFactorProviders for user {UserId}; treating as no providers enabled.",
+                    user.Id);
+            }
+
+            return Array.Empty<TwoFactorProviderType>();
+        }
+
+        if (providers.Count == 0)
         {
             return Array.Empty<TwoFactorProviderType>();
         }

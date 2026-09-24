@@ -1,0 +1,2061 @@
+-- allium: 3
+-- rotation-server.allium
+
+use "./access-connector.allium" as connector
+
+-- Scope: Bitwarden server side of credential rotation
+-- Includes:
+--   Target system definition and management (id, name, rotation method automatic/manual,
+--     integration kind, password policy, session-termination capability; enable/disable,
+--     update of name and policy)
+--   Rotation configuration (linking a cipher to a target system) and its rotation
+--     triggers, set per credential: an optional schedule and the rotate-on-access-end
+--     opt-in (inlined onto the configuration; no separate settings value); correcting
+--     the account identity / termination opt-in, and deleting the configuration
+--   Rotation scheduling and triggering: on a schedule (cron), on demand, and on
+--     access events (an upstream grant over the credential ending)
+--   Manual rotation fallback for systems that cannot be rotated automatically:
+--     tracking the obligation and recording an out-of-band rotation
+--   Pause/resume of a credential's rotation without losing its configuration
+--   Pull-based dispatch: a due rotation becomes an available RotationJob that a
+--     connected, assigned access connector claims; claiming creates a server-owned RotationAttempt;
+--     a retry is a re-claim
+--   Server-owned RotationAttempt: the record of one rotation try, created on claim,
+--     executed by the access connector, and transitioned on the access connector's reported outcome
+--   Cipher-write authorisation: writes are bound to the access connector's own claimed
+--     RotationJob (no separate nonce) -- ownership and in-flight status
+--   Multi-access connector eligibility: admin-assigned access connector-to-target reachability decides
+--     which access connectors may claim a target's jobs; any eligible access connector claims, with
+--     per-access connector recovery when one drops
+--   Server-side job tracking and recovery, retry orchestration across attempts
+--   Audit emission for every operation: every rotation attempt and outcome, and every
+--     administrative operation (Goal 4). The audit log is the authoritative record that
+--     a credential was rotated.
+-- Excludes:
+--   Connector execution of rotations (governed by access-connector.allium)
+--   The access connector authentication handshake and session lifecycle (modelled in
+--     access-connector.allium); this spec covers only access connector registration/revocation
+--   Cron-expression parsing / next-occurrence computation (deferred NextScheduledTime)
+--   Collection-wide settings (applying one set of rotation triggers across a whole
+--     collection at once) — deferred; triggers are per-credential for now
+--   Operator-alert DELIVERY: the failure policy (§6.8) is now specified here (alerting via
+--     the OperatorAlertRaised pure-sink seam, and auto-pause after consecutive failures), but
+--     HOW an alert reaches an operator (email, in-product notification, paging) is out of
+--     scope, exactly as audit-log persistence is
+--   Bitwarden cipher/Secrets Manager internals (external systems)
+--   Audit-log persistence and WORM/tamper-evidence: this spec emits the audit
+--     events; durable, append-only storage is the existing Phase 1 audit log's
+--     concern (mirrors how pam.allium models LeaseActivationAudited)
+--   Discovery of privileged/orphaned accounts, ephemeral account provisioning,
+--     dependency orchestration beyond the credential, and post-rotation scripting
+--     (Phase 1 non-goals)
+--   Rotation of Secrets Manager secrets (Phase 1 non-goal; see the SM seam note
+--     by RotationConfig and the closing open question)
+-- Dependencies:
+--   access connector/Cipher is governed by access-connector.allium and referenced here by qualified
+--   name. The TargetSystem and its PasswordPolicy, the RotationConfig, the RotationJob and
+--   the RotationAttempt are all owned HERE (server-side). The access connector holds no target-system
+--   or attempt entity and receives the work snapshot it needs (attempt_id, id, name, kind,
+--   password policy, cipher, account identity, terminate flag) on each claim.
+
+config {
+    failure_retry_delay: Duration = 1.hour
+    -- A rotation job's overall deadline: a job still pending or claimed past this is
+    -- timed out (JobTimesOut). Bounds both an unclaimed (unroutable) job and a
+    -- claimed-but-stuck access connector. Generous relative to one rotation attempt.
+    job_ttl: Duration = 1.hour
+    -- Per-job retry budget: rotation retries are server-orchestrated, so a FAILED
+    -- attempt makes the job claimable again (a fresh attempt) until this many attempts
+    -- have failed, after which the job fails. An abandoned attempt (an access connector drop or a
+    -- timeout mid-attempt) is NOT a failure and does not consume the budget.
+    max_attempts: Integer = 5
+    -- Base backoff before a failed job becomes claimable again (exponential per
+    -- attempt in practice; the exact curve is an implementation detail). This spaces
+    -- retries of a GENUINELY FAILED attempt reported by a live access connector (RetryJob) -- a
+    -- different concern from release_delay below, which fences a possibly-still-acting
+    -- partitioned access connector.
+    retry_base_delay: Duration = 1.second
+    -- The claim lease: how long a released (dropped-access connector) job stays un-claimable
+    -- before another access connector may re-claim it. A dropped access connector's job never becomes
+    -- re-claimable while the dropped access connector might still be inside its lease acting on the
+    -- target (the cipher write is fenced by JobBoundWrite; the target system is not).
+    -- Sized to a worst-case SINGLE attempt: the access connector's local transient retries
+    -- (access-connector.allium / config.max_retry_attempts x its exponential backoff)
+    -- across all rotation steps PLUS the session-termination loop. Deliberately DISTINCT
+    -- from retry_base_delay (which spaces failed-attempt retries): the 1-second
+    -- retry_base_delay was the bug for release, letting a partitioned access connector still be
+    -- acting on the target while another re-claimed. Clock skew between server and access connector
+    -- is absorbed by this sizing margin. Placeholder; a tunable in the existing style.
+    release_delay: Duration = 15.minutes
+    -- §6.8 auto-pause threshold: how many consecutive terminal failures (a failed job or a
+    -- timed-out job) a configuration may accrue before the server auto-pauses it (sets
+    -- enabled = false). A success or a recorded manual rotation resets the count. Auto-pause
+    -- pauses the CONFIG, never the target. Placeholder; a tunable in the existing style.
+    max_consecutive_failures: Integer = 3
+    -- §6.8 manual-obligation escalation threshold: how long a manual configuration's
+    -- obligation (awaiting_manual_rotation) may stand unmet past its due time before the
+    -- server raises an operator alert. Placeholder; a tunable in the existing style.
+    manual_obligation_alert_after: Duration = 24.hours
+}
+
+-- Parties
+
+-- The administrator is a Bitwarden user managing rotation. Their identity and
+-- authentication are governed by the Bitwarden platform, outside this spec.
+external entity Administrator {}
+
+-- An upstream access-control system (PAM leasing, AAP grants, ...) that reports
+-- when a grant over a managed credential ends. Modelled as an abstract integration
+-- party so rotation depends on the access-event signal, not on any one leasing
+-- spec. See AccessEventReporting and RotateOnAccessEnd.
+actor AccessEventSource {
+    identified_by: cipher.id
+}
+
+-- Value types
+
+-- A rotation cadence. Carries a cron-style expression for exact timing (e.g. a
+-- maintenance window); UI presets are a convenience that produce such an
+-- expression. The next-occurrence computation is deferred (NextScheduledTime).
+value Schedule {
+    cron: String
+}
+
+-- What kind of password to generate for an automatic target: the constraints a new
+-- password must satisfy. Server-side configuration the admin sets on the TargetSystem;
+-- it is carried to the access connector on each claim (RotationClaimed) as an opaque snapshot
+-- parameter, and the access connector generates a conforming password without modelling the shape
+-- locally -- it holds NO typed copy (it cannot reference server types; see the snapshot
+-- note in access-connector.allium).
+value PasswordPolicy {
+    min_length: Integer
+    max_length: Integer
+    include_uppercase: Boolean
+    include_lowercase: Boolean
+    include_digits: Boolean
+    include_symbols: Boolean
+}
+
+-- Enumerations
+
+-- The best-effort session-termination outcome the access connector reports alongside a successful
+-- rotation. Literals are deliberately distinct from the attempt's own status set so
+-- untyped trigger-param inference cannot confuse the two.
+--   not_requested : termination was not asked for
+--   terminated    : sessions were terminated
+--   term_failed   : termination was requested but its local retries were exhausted
+--                   (the rotation still succeeded; see access-connector.allium / ExecuteRotation)
+enum SessionTerminationOutcome { not_requested | terminated | term_failed }
+
+-- The vault<->target sync state a failed attempt leaves behind, reported by the access connector
+-- with the failure and recorded on the errored attempt. Distinguishes a failure that left
+-- the stored cipher still matching the target from one that changed the target without
+-- updating the vault (the stored credential is then stale until a later attempt or
+-- rotation converges). An abandoned attempt reports nothing, so its sync state is unknown
+-- by construction (see the claim-release race open question). Literals deliberately
+-- distinct from every other enum and status set (checker trigger-param inference).
+--   target_unchanged : the target was not modified; the stored cipher still matches it
+--   target_updated   : the target was changed but the cipher was not updated (vault stale)
+--   indeterminate    : the access connector cannot tell whether the change applied (e.g. a timeout
+--                      after submission)
+enum FailureSyncState { target_unchanged | target_updated | indeterminate }
+
+-- The §6.8 operator-alert kind and severity ride on the pure-sink OperatorAlertRaised
+-- event as untyped literal params, exactly like the RotationAudited outcome literals (which
+-- are likewise bare literals, not a named enum). The literal sets are deliberately DISJOINT
+-- from every other enum, status set and the audit outcome literals (checker trigger-param
+-- inference stays unambiguous). Kept as documented literal sets rather than named enums so
+-- the sink params stay untyped like the audit ones:
+--   kind (AlertKind):
+--     job_failed                : a rotation job terminally failed (every attempt failed)
+--     job_unroutable            : a job timed out having never been claimed (zero attempts) --
+--                                 no eligible access connector connected/assigned
+--     job_stuck                 : a job timed out while claimed (a claiming access connector went stuck)
+--     config_auto_paused        : a config auto-paused after consecutive terminal failures
+--     manual_obligation_overdue : a manual obligation stayed unmet past the threshold
+--   severity (AlertSeverity):
+--     alert_normal              : routine failure requiring attention
+--     alert_elevated            : security- or integrity-significant failure (a stale vault
+--                                 credential, or a missed security-mandated access-end rotation)
+
+-- Entities
+
+-- A target system the access connector can rotate credentials in (Entra, a SQL Server, a custom
+-- script, ...). Defined and owned server-side: the admin registers it with a name and a
+-- rotation method, and the server holds NO connection details -- those live in the
+-- access connector's local resolver, keyed by this id (see access-connector.allium). Status enables or
+-- disables the whole target. Status literals (active|disabled) are deliberately distinct
+-- from ConnectorRegistration's (enrolled|revoked) so untyped trigger-param inference stays
+-- unambiguous.
+entity TargetSystem {
+    id: String
+    name: String
+    -- automatic: the access connector rotates this system's credentials; needs a kind so the access connector
+    --   knows which integration to run (and a password policy + session-termination
+    --   capability, carried to the access connector on a claim).
+    -- manual: no access connector integration -- rotations are recorded out of band (Goal 3); kind,
+    --   password_policy and supports_session_termination do not apply.
+    method: automatic | manual
+    -- Which integration the access connector runs (Entra, MSSQL, or a custom script).
+    kind: entra | mssql | custom_script when method = automatic
+    password_policy: PasswordPolicy when method = automatic
+    -- Whether the target can terminate active sessions for a rotated account. Used at
+    -- config time to reject terminate_sessions on a target that cannot honour it
+    -- (CreateRotationConfig) and shown to admins (TargetSystemView). Because that guard
+    -- makes "requested but unsupported" impossible, this capability no longer rides to the
+    -- access connector on a claim.
+    supports_session_termination: Boolean when method = automatic
+    -- Enable/disable the whole target: a disabled system stops new rotations being offered
+    -- for all of its credentials (jobs already claimed are unaffected).
+    status: active | disabled
+
+    transitions status {
+        active -> disabled
+        disabled -> active
+    }
+}
+
+-- A registered rotation access connector identity. The admin registers an access connector and the server
+-- issues its credential the same way Secrets Manager issues a machine-account access
+-- token: a single string 0.<client_id>.<client_secret>:<encryption_key>. The server
+-- generates all three parts, wraps the organization key under the encryption_key, and
+-- KEEPS the wrapped blob (encrypted_organization_key) so it can hand it back on every
+-- authentication. What it does NOT keep is the encryption_key or the plaintext org key:
+-- the encryption_key lives only in the token string, shown once and delivered out of band
+-- to the access connector (zero-knowledge -- see access-connector.allium / ConnectorSession,
+-- AuthenticationSurface). Only the client_id (and a secret hash, for auth) and this wrapped
+-- blob are retained. Revoking a registration invalidates the credential and the session.
+-- Status literals are deliberately distinct from TargetSystem's (enrolled/revoked, not
+-- active/disabled) so untyped trigger-param inference stays unambiguous.
+entity ConnectorRegistration {
+    id: String
+    name: String
+    client_id: String
+    -- The organization key wrapped under the access connector's provisioned encryption_key (the
+    -- post-colon segment of its access token). Stored at registration and returned to the
+    -- access connector on each authentication, which unwraps it locally. The server never holds the
+    -- encryption_key, so it cannot itself unwrap this (zero-knowledge).
+    encrypted_organization_key: String
+    status: enrolled | revoked
+
+    transitions status {
+        enrolled -> revoked
+        terminal: revoked
+    }
+
+    -- The target systems this access connector is permitted to rotate (admin-assigned).
+    assignments: ConnectorTargetAssignment with connector = this
+    -- Server-side liveness: true while the access connector's connection is up (see
+    -- ConnectorConnection and the connectivity rules). Drives claim eligibility.
+    is_connected: exists ConnectorConnection{connector: this, status: connected}
+}
+
+-- An admin-granted permission that an access connector may rotate a target system. Eligibility
+-- is by reachability: an access connector may claim a rotation only for a target it is assigned.
+-- Many-to-many — a target may have several assigned access connectors (HA), and an access connector may
+-- be assigned many targets. The assignment is the security boundary: an access connector can
+-- only ever claim rotations for assigned targets.
+entity ConnectorTargetAssignment {
+    id: String
+    connector: ConnectorRegistration
+    target_system: TargetSystem
+}
+
+-- The server's per-access connector view of connection liveness, used for claim eligibility
+-- and per-access connector recovery. Created (disconnected) when the access connector is registered, then
+-- flipped as the access connector's authenticated transport comes up or down. Distinct from
+-- the access connector-side connection/session lifecycle in access-connector.allium, which is
+-- one access connector's own view; this is the server's per-access connector view across the fleet.
+entity ConnectorConnection {
+    id: String
+    connector: ConnectorRegistration
+    status: connected | disconnected
+
+    transitions status {
+        disconnected -> connected
+        connected -> disconnected
+    }
+}
+
+-- A rotation configuration links a cipher to a registered target system and carries
+-- its rotation triggers (an optional schedule + the rotate-on-access-end opt-in,
+-- inlined) and schedule state. A cipher has at most one rotation configuration (which
+-- names its target system); see OneConfigPerCipher. The cipher therefore uniquely
+-- identifies the configuration to rotate.
+--
+-- SM seam (Phase 1 non-goal): a future Secrets Manager configuration would point
+-- at an SM secret rather than a cipher. The `cipher` field here and RotationAttempt.job
+-- (via its config) are the single seam to generalise; the scheduling, dispatch, recovery
+-- and audit machinery below is intended to carry an SM rotation unchanged. Kept
+-- cipher-specific for now to avoid speculative structure.
+entity RotationConfig {
+    id: String
+    cipher: connector/Cipher
+    target_system: TargetSystem
+    -- account_identity is an opaque String: the account's identifier in the target system,
+    -- interpreted by the target's kind (an Entra UPN/email, a SQL Server login, a
+    -- custom-script argument). No type or kind discriminator -- the access connector's kind
+    -- integration knows how to read it; it is carried verbatim to the access connector on the claim
+    -- and never parsed server-side.
+    account_identity: String
+    terminate_sessions: Boolean
+    -- Whether this credential rotates automatically or by hand is a property of its target
+    -- system (target_system.method), not the configuration: every credential on an
+    -- automatic target is rotated by the access connector; every credential on a manual target is
+    -- recorded out of band (Goal 3). There is no per-credential override.
+    -- The rotation triggers for this credential, set per credential (last write wins):
+    --   schedule: the optional schedule trigger. Absent => no scheduled rotation; the
+    --     credential still rotates on demand or on an access event.
+    --   rotate_on_access_end: opt-in to the access-event trigger (Goal 2).
+    schedule: Schedule?
+    rotate_on_access_end: Boolean
+    -- The next scheduled rotation, derived from schedule. Absent when there is no
+    -- schedule, so RotationDue (a temporal trigger) never fires for it.
+    next_rotation_at: Timestamp?
+    -- False pauses rotation without losing configuration (UX2: change-freeze). §6.8
+    -- auto-pause also clears this (auto-pausing the config, never the target); the admin
+    -- ResumeRotation is the recovery path.
+    enabled: Boolean
+    last_rotation_at: Timestamp?
+    -- §6.8 failure tracking: consecutive terminal job failures (a failed or timed-out job)
+    -- since the last success or recorded manual rotation. Reaching config.max_consecutive_failures
+    -- auto-pauses the config (AutoPauseAfterConsecutiveFailures). Reset to 0 by MarkJobSucceeded
+    -- and RecordManualRotation. Created 0.
+    consecutive_failures: Integer
+    -- Re-fire guard for the manual-obligation-overdue alert (AlertManualObligationOverdue):
+    -- a temporal trigger that changes no state re-fires forever (the RotationDue livelock
+    -- note), so the alert records that it fired here. Reset when the obligation is cleared
+    -- (RecordManualRotation) or a fresh one is raised (RaiseManualObligationOnAccessEnd,
+    -- ResumeRotation's manual-due path). Created false.
+    manual_obligation_alerted: Boolean
+    -- §6.8 dropped-trigger recovery: set true when an access-end signal arrives for an
+    -- automatic config that cannot be offered right now (the config is paused OR its target
+    -- is disabled -- DeferAccessEndWhileUnavailable). Discharged (a deferred offer emitted
+    -- and this cleared) on ResumeRotation and EnableTargetSystem once the config is offerable
+    -- again. An event trigger must never be lost (contrast a schedule, which may skip missed
+    -- windows). Created false.
+    pending_access_end: Boolean
+
+    jobs: RotationJob with rotation_config = this
+    active_jobs: jobs where status in {pending, claimed}
+    has_active_job: active_jobs.count > 0
+
+    -- A manual configuration that has come due: the obligation an admin must
+    -- satisfy and record (see RecordManualRotation). Surfaced, never dispatched.
+    awaiting_manual_rotation: target_system.method = manual and enabled
+                              and next_rotation_at != null and next_rotation_at <= now
+}
+
+-- A server-side record of one rotation occurrence, from "available" (pending) through
+-- an access connector claiming and executing it. The job IS the cipher-write capability and the
+-- recovery/timeout unit; a RotationAttempt is created on claim and linked directly to the
+-- job (attempt.job).
+--   pending   : available, no access connector yet -- claimable by an eligible access connector
+--   claimed   : an access connector claimed it and is making an attempt
+--   succeeded : an attempt succeeded
+--   failed    : every attempt failed (max_attempts failed attempts reached)
+--   timed_out : still unresolved past the deadline (unroutable, or a stuck access connector)
+-- The single recovery path is the claimed -> pending edge: the job returns to
+-- claimable and a re-claim makes the next attempt. It is taken both when an attempt
+-- fails with retries left (RetryJob, after a backoff) and when the claiming access connector's
+-- connection drops mid-attempt (ReleaseJob -- the claim is released so another access connector,
+-- or the same one on reconnect, can re-claim). There is no separate "lost" state: a
+-- access connector drop is just another reason the job becomes claimable again.
+entity RotationJob {
+    id: String
+    rotation_config: RotationConfig
+    source: scheduled | on_demand | access_end
+    -- The access connector currently handling the job; null while pending (unclaimed), set on
+    -- each claim, cleared on a retry or release. Recovery is scoped by it.
+    claimed_by: ConnectorRegistration?
+    -- When the current claim was taken; set by ClaimRotation, cleared alongside claimed_by
+    -- on a retry (RetryJob) or release (ReleaseJob). Present only while claimed, so it and
+    -- the derived execute_by track the live lease. The claim is a time-bounded LEASE: the
+    -- access connector may act on the target only within claimed_at + release_delay (execute_by), and
+    -- the job never returns to claimable before that window elapses (ReleaseJob).
+    claimed_at: Timestamp?
+    status: pending | claimed | succeeded | failed | timed_out
+    created_at: Timestamp
+    -- When the job (re)becomes claimable: now at creation, pushed out by a backoff
+    -- after a failed attempt so retries are spaced, and out to the dropped claim's lease
+    -- expiry (execute_by) on a release so a partitioned access connector's lease is respected.
+    next_claimable_at: Timestamp
+
+    -- The attempts made against this job. One is created on each claim; an attempt that
+    -- genuinely fails counts toward the retry budget, one abandoned (an access connector drop or a
+    -- timeout mid-attempt) does not.
+    attempts: RotationAttempt with job = this
+    failed_attempts: attempts where status = errored
+    -- All attempts made so far (for display). The job fails once failed_attempts reaches
+    -- max_attempts, so a connectivity drop (an abandoned attempt) is never charged here.
+    attempt_count: attempts.count
+    -- Whether the retry budget still has room: fewer genuine failures than max_attempts.
+    has_retry_budget: failed_attempts.count < config.max_attempts
+
+    -- Overall deadline; a job still pending or claimed past this is timed out.
+    expires_at: created_at + config.job_ttl
+    -- The claim lease deadline: the latest instant the claiming access connector may still act on
+    -- the target for this claim. Derived from claimed_at (set on claim, cleared on
+    -- retry/release), so it is null while unclaimed and present while claimed. Carried to
+    -- the access connector on the claim snapshot (RotationClaimed) so it never initiates a target-side
+    -- step past it (access-connector.allium / ExecuteRotation). ReleaseJob sets
+    -- next_claimable_at to this, so the job never becomes re-claimable while the dropped
+    -- access connector might still be inside its lease.
+    execute_by: claimed_at + config.release_delay
+    -- Claimable right now: pending, its backoff has elapsed, and its configuration is
+    -- still live -- pausing a configuration or disabling its target holds a pending job
+    -- un-claimable (it waits, and times out via JobTimesOut unless re-enabled first),
+    -- mirroring how those states stop new jobs being offered. Jobs already CLAIMED are
+    -- unaffected (see the cancel-in-flight open question).
+    is_claimable: status = pending and next_claimable_at <= now
+                  and rotation_config.enabled
+                  and rotation_config.target_system.status = active
+
+    transitions status {
+        pending -> claimed
+        pending -> timed_out
+        claimed -> pending
+        claimed -> succeeded
+        claimed -> failed
+        claimed -> timed_out
+        terminal: succeeded, failed, timed_out
+    }
+}
+
+-- A server-owned record of one rotation try, from "executing" (created when an access connector
+-- claims a job) through a terminal outcome the access connector reports. The attempt links directly
+-- to its job (job), and through the job to the configuration and cipher. The claiming
+-- access connector executes it (access-connector.allium) from the work snapshot carried on the claim
+-- and reports the outcome by attempt_id; the server transitions the attempt, which then
+-- drives job tracking (RecordRotationSucceeded / RecordRotationFailed -> MarkJobSucceeded /
+-- RetryJob / FailJob).
+--   executing : created on claim; the access connector is making the try
+--   rotated   : the access connector reported success
+--   errored   : the access connector reported a genuine failure (counts toward the retry budget)
+--   abandoned : the claiming access connector dropped, or the job timed out, mid-attempt; NOT a
+--               failure, so it does not consume the retry budget (ReleaseJob, JobTimesOut)
+-- The literal set is deliberately DISJOINT from RotationJob's (pending|claimed|succeeded|
+-- failed|timed_out): even one shared status literal makes the checker's structural
+-- trigger-param inference ambiguous between the two entities and silently drops
+-- transition-graph witnessing on both (false noExit/unreachableValue). So the attempt uses
+-- rotated/errored, not succeeded/failed.
+entity RotationAttempt {
+    id: String
+    job: RotationJob
+    -- The access connector executing this attempt (the one that claimed the job).
+    claimed_by: ConnectorRegistration
+    -- Whether the server accepted a cipher write for this attempt (AcceptCipherUpdate).
+    -- Server-side enforcement of the access connector's VerifiedBeforeSuccess guarantee: a success
+    -- report is recorded only for an attempt whose cipher write actually happened
+    -- (RecordRotationSucceeded), so a buggy access connector reporting success without writing
+    -- cannot leave a succeeded job over a stale vault.
+    cipher_updated: Boolean
+    status: executing | rotated | errored | abandoned
+    failure_reason: String? when status = errored
+    -- The vault<->target sync state the failed try left behind (see FailureSyncState):
+    -- whether the target was changed without the cipher being updated.
+    sync_state: FailureSyncState when status = errored
+    -- The best-effort session-termination outcome the access connector reported with a success.
+    session_termination: SessionTerminationOutcome when status = rotated
+
+    transitions status {
+        executing -> rotated
+        executing -> errored
+        executing -> abandoned
+        terminal: rotated, errored, abandoned
+    }
+}
+
+-- Deferred helpers (server-side)
+
+-- The next occurrence of a schedule strictly after a given time. Encapsulates
+-- cron-expression evaluation, which is an implementation concern.
+deferred NextScheduledTime    -- see: server-side cron evaluation
+
+-- Credential issuance: generate the access connector's symmetric encryption_key and wrap the
+-- organization key under it, yielding the blob stored on the registration and returned on
+-- each authentication. The encryption_key is emitted only inside the one-time access token
+-- (0.<client_id>.<client_secret>:<encryption_key>); it is never retained server-side, so
+-- the server cannot itself unwrap the result. Mirrors Secrets Manager's machine-account
+-- key delivery, applied to the organization key.
+deferred WrapOrganizationKeyForConnector    -- see: zero-knowledge org-key wrapping at registration
+
+-- Connector registration
+
+rule RegisterConnector {
+    when: RegisterConnector(name, client_id)
+    requires: not exists ConnectorRegistration{client_id: client_id}
+    let wrapped_org_key = WrapOrganizationKeyForConnector(client_id)
+    ensures: ConnectorRegistration.created(
+        name: name,
+        client_id: client_id,
+        encrypted_organization_key: wrapped_org_key,
+        status: enrolled
+    )
+    ensures: AdministrationAudited(operation: connector_registered, name: name, client_id: client_id)
+    @guidance
+        -- Provisioning follows Secrets Manager's machine-account mechanic. The server
+        -- generates the credential as one access-token string,
+        -- 0.<client_id>.<client_secret>:<encryption_key>, wraps the organization key under
+        -- the encryption_key (WrapOrganizationKeyForConnector), and stores the wrapped blob on
+        -- the registration (encrypted_organization_key) to hand back on every authentication.
+        -- It retains the client_id and a hash of the client_secret (for auth) plus that
+        -- wrapped blob -- NOT the encryption_key or the plaintext org key. The full token is
+        -- shown once and delivered out of band to the access connector, which keeps the encryption_key
+        -- locally and uses it to unwrap the org key (zero-knowledge; see access-connector.allium
+        -- / HandleAuthenticationSucceeded). The org key is the same symmetric key SM machine
+        -- accounts receive, but the access connector's authorization to write vault ciphers is broader
+        -- than an SM account's -- the resulting crypto blast radius is the "Read blast radius"
+        -- open question, contained at the API layer (ApiScopedReads), not here.
+}
+
+rule InitConnectorConnection {
+    when: registration: ConnectorRegistration.created
+    ensures: ConnectorConnection.created(connector: registration, status: disconnected)
+    @guidance
+        -- Each registered access connector gets one connection record, starting disconnected and
+        -- flipped by the connectivity rules. Guarantees the 1:1 in OneConnectionPerConnector.
+}
+
+rule RevokeConnector {
+    when: RevokeConnector(registration)
+    requires: registration.status = enrolled
+    ensures: registration.status = revoked
+    ensures: AdministrationAudited(operation: connector_revoked, connector: registration)
+    @guidance
+        -- Revoking an access connector invalidates its credential. The next time the access connector
+        -- interacts its session is revoked (access-connector.allium /
+        -- HandleSessionRevoked) and its connection closed; it cannot authenticate
+        -- again until issued a new credential (ReissueConnectorCredential, below).
+        --
+        -- Revoke is a permanent DECOMMISSION and is terminal (enrolled -> revoked, terminal):
+        -- recovery from revoked is a NEW registration + reassignment, by design. To rotate a
+        -- COMPROMISED credential while keeping the access connector's identity and assignments, use
+        -- ReissueConnectorCredential instead.
+        --
+        -- RevokeConnector is the effective IN-FLIGHT BRAKE for a runaway access connector (resolved):
+        -- revoking closes the access connector's transport, which the access connector observes as session loss
+        -- and aborts at its next step boundary (access-connector.allium /
+        -- NoTargetActionPastSessionLoss). The closed transport also flips the access connector's
+        -- ConnectorConnection disconnected, releasing any claimed job for re-claim
+        -- (ConnectorConnectionDropsReleaseJobs -> ReleaseJob). This is the deliberate contrast
+        -- with pause/disable/unassign, which do NOT touch a claimed job (they only stop new
+        -- offers/claims -- see the cancel-in-flight resolution): staleness risk on the target
+        -- is consciously accepted when firing an access connector.
+}
+
+rule ReissueConnectorCredential {
+    when: ReissueConnectorCredential(registration)
+    requires: registration.status = enrolled
+    let wrapped_org_key = WrapOrganizationKeyForConnector(registration.client_id)
+    ensures: registration.encrypted_organization_key = wrapped_org_key
+    ensures: AdministrationAudited(operation: connector_credential_reissued, connector: registration)
+    @guidance
+        -- Rotate an access connector's credential in place without decommissioning it. The server
+        -- generates a fresh client_secret and encryption_key, re-wraps the organization key
+        -- under the new encryption_key (WrapOrganizationKeyForConnector) and replaces the stored
+        -- encrypted_organization_key. It invalidates any live session: the server closes the
+        -- access connector's transport, so the access connector's ConnectorConnection flips disconnected (releasing
+        -- any claimed job, ConnectorConnectionDropsReleaseJobs). The old credential no longer
+        -- authenticates, so the access connector's reconnect is REFUSED (access-connector.allium /
+        -- HandleAuthenticationRejected -> RefuseConnection) until the operator restarts it
+        -- with the new token -- which access-connector.allium / ConnectorStarts permits after a
+        -- terminal refusal. The new token is shown once and delivered out of band, exactly
+        -- like RegisterConnector.
+        --
+        -- Reissue PRESERVES the registration identity, so ConnectorTargetAssignments and audit
+        -- continuity survive credential rotation/compromise. This is the deliberate contrast
+        -- with RevokeConnector (permanent decommission, terminal; recovery is a new registration
+        -- + reassignment). client_id is unchanged (only the secret and encryption_key are
+        -- regenerated), so the registration is still uniquely identified by it.
+}
+
+-- Connector-to-target assignment (eligibility). An access connector may claim rotations only for
+-- the targets an admin has assigned it; this is the eligibility and security
+-- boundary (see ConnectorTargetAssignment).
+
+rule AssignConnectorToTarget {
+    when: AssignConnectorToTarget(connector, target_system)
+    requires: connector.status = enrolled
+    -- Only automatic targets are rotated by the access connector, so only they are assignable.
+    requires: target_system.method = automatic
+    requires: not exists ConnectorTargetAssignment{connector: connector, target_system: target_system}
+    ensures: ConnectorTargetAssignment.created(connector: connector, target_system: target_system)
+    ensures: AdministrationAudited(operation: connector_assigned, connector: connector, target_system: target_system)
+    @guidance
+        -- A pending job for this target waiting for an eligible access connector becomes
+        -- claimable by this access connector as soon as it is assigned (and connected) -- no
+        -- re-offer needed, the job is already pending.
+}
+
+rule UnassignConnectorFromTarget {
+    when: UnassignConnectorFromTarget(assignment)
+    ensures: AdministrationAudited(operation: connector_unassigned, connector: assignment.connector, target_system: assignment.target_system)
+    ensures: not exists assignment
+    @guidance
+        -- Removing an assignment stops this access connector claiming new rotations for the
+        -- target. Any rotation already CLAIMED on this access connector runs to completion and is
+        -- NOT cancelled (resolved): the access connector may already have reset the target-side
+        -- password, and refusing its cipher write would MANUFACTURE the vault-stale state
+        -- the system exists to prevent -- the write must be allowed to land. The emergency
+        -- brake for a runaway access connector is RevokeConnector, which closes the transport and makes
+        -- the access connector abort at its next step boundary (access-connector.allium /
+        -- NoTargetActionPastSessionLoss).
+}
+
+-- Connector connection liveness (server-side). The server observes an access connector's
+-- authenticated transport come up or down and flips its ConnectorConnection, which
+-- claim eligibility and per-access connector recovery read.
+--
+-- The edges map exclusively to the access connector's authenticated TRANSPORT, never to session
+-- state (resolved). connected corresponds to the access connector's ServerConnection reaching
+-- connected (access-connector.allium / OpenConnection); disconnected corresponds to it
+-- leaving connected -- a transient drop (ServerInterruptsConnection) or a terminal refusal
+-- (RefuseConnection), including the server closing the transport after a rejected refresh or
+-- a revocation. A session EXPIRY while the transport stays up is NOT disconnected: flipping
+-- it would trigger ReleaseJob against a healthy access connector mid-refresh, and it is unnecessary
+-- for eligibility because ClaimRotation already re-validates the OAuth token per claim.
+
+rule MarkConnectorConnected {
+    when: ConnectorConnected(registration)
+    let connection = ConnectorConnection{connector: registration}
+    requires: exists connection
+    requires: connection.status = disconnected
+    ensures: connection.status = connected
+}
+
+rule MarkConnectorDisconnected {
+    when: ConnectorDisconnected(registration)
+    let connection = ConnectorConnection{connector: registration}
+    requires: exists connection
+    requires: connection.status = connected
+    ensures: connection.status = disconnected
+}
+
+-- Target system registration
+
+rule RegisterAutomaticTargetSystem {
+    when: RegisterAutomaticTargetSystem(name, kind, password_policy, supports_session_termination)
+    ensures: TargetSystem.created(
+        name: name,
+        method: automatic,
+        kind: kind,
+        password_policy: password_policy,
+        supports_session_termination: supports_session_termination,
+        status: active
+    )
+    ensures: AdministrationAudited(operation: target_registered, name: name)
+    @guidance
+        -- The access connector rotates this system, so it carries the integration kind, the password
+        -- policy new credentials must satisfy, and whether it can terminate sessions. The
+        -- kind, password policy, cipher and account identity ride to the access connector on each
+        -- claim (ClaimRotation -> RotationClaimed); the session-termination capability stays
+        -- here (the config-time guard makes it unnecessary on the claim). Connection
+        -- details are NOT held here -- the access connector resolves them locally by id.
+}
+
+rule RegisterManualTargetSystem {
+    when: RegisterManualTargetSystem(name)
+    ensures: TargetSystem.created(name: name, method: manual, status: active)
+    ensures: AdministrationAudited(operation: target_registered, name: name)
+    @guidance
+        -- A system with no access connector integration: rotations are recorded out of band (Goal 3).
+        -- No kind, password policy or session-termination capability applies.
+}
+
+rule DisableTargetSystem {
+    when: DisableTargetSystem(target_system)
+    requires: target_system.status = active
+    ensures: target_system.status = disabled
+    ensures: AdministrationAudited(operation: target_disabled, target_system: target_system)
+    @guidance
+        -- A disabled target system stops new rotations being offered for its
+        -- configurations, and holds any still-pending job un-claimable (is_claimable).
+        -- Jobs already CLAIMED are unaffected and are NOT cancelled (resolved): the access connector
+        -- may already have reset the target-side password, and refusing its cipher write
+        -- would manufacture the vault-stale state we exist to prevent -- the write must land.
+        -- RevokeConnector is the emergency brake for a runaway access connector (access-connector.allium /
+        -- NoTargetActionPastSessionLoss).
+}
+
+rule EnableTargetSystem {
+    when: EnableTargetSystem(target_system)
+    requires: target_system.status = disabled
+    ensures: target_system.status = active
+    ensures: AdministrationAudited(operation: target_enabled, target_system: target_system)
+    -- Catch-up on re-enable, mirroring ResumeRotation, for each automatic-method config on
+    -- this target. Schedule catch-up SKIPS missed windows (recompute from now); a deferred
+    -- access-end (an EVENT trigger) is never lost -- it is discharged as a fresh offer.
+    for c in RotationConfigs where target_system = target_system and target_system.method = automatic:
+        let recomputed = if c.schedule != null: NextScheduledTime(c.schedule, now)
+                         else: null
+        -- Recompute the schedule for a config that has one (missed windows skipped). A paused
+        -- config still gets its next scheduled time recomputed here; its RotationDue cannot
+        -- fire while paused, and ResumeRotation recomputes again on unpause.
+        ensures: c.next_rotation_at = recomputed
+        -- Discharge a deferred access-end for a config that is now offerable (enabled, and the
+        -- target is active after this rule) and has no active job. pending_access_end is
+        -- cleared for every automatic config that had it latched, so the deferral discharges
+        -- exactly once even for a config still paused (its manual/automatic ResumeRotation
+        -- path no longer needs to).
+        ensures:
+            if c.pending_access_end and c.enabled and not c.has_active_job:
+                OfferRotation(rotation_config: c, source: access_end)
+        ensures: c.pending_access_end = false
+    @guidance
+        -- Re-enabling a target catches its automatic configs up, mirroring ResumeRotation
+        -- (resolving the disabled-target catch-up question). Each such config's next SCHEDULED
+        -- time is recomputed from now -- schedule windows missed while the target was disabled
+        -- are intentionally SKIPPED, consistent with resume (a schedule may skip; an event
+        -- trigger must not be lost). Any access-end deferred while the target was disabled
+        -- (pending_access_end, latched by DeferAccessEndWhileUnavailable) is discharged as a
+        -- fresh OfferRotation(source: access_end) for a config that is enabled and free of an
+        -- active job, and pending_access_end is cleared. Together with the ResumeRotation
+        -- discharge this is the full catch-up: schedules skip, events are preserved.
+}
+
+rule UpdateAutomaticTargetSystem {
+    when: UpdateAutomaticTargetSystem(target_system, name, password_policy, supports_session_termination)
+    requires: target_system.method = automatic
+    -- The capability may be withdrawn only while no configuration relies on it, preserving
+    -- the config-time guarantee that the access connector never sees "requested but unsupported"
+    -- (CreateRotationConfig / UpdateRotationConfig).
+    requires: supports_session_termination
+              or not RotationConfigs.any(c => c.target_system = target_system and c.terminate_sessions)
+    ensures: target_system.name = name
+    ensures: target_system.password_policy = password_policy
+    ensures: target_system.supports_session_termination = supports_session_termination
+    ensures: AdministrationAudited(operation: target_system_updated, target_system: target_system)
+    @guidance
+        -- One request carries the target's whole updatable shape, so the display name
+        -- travels with the policy rather than through a rename of its own. The name has no
+        -- operational effect: the target's id -- which keys the access connector's local credential
+        -- resolution (access-connector.allium / CredentialResolver) -- never changes.
+        -- The password policy and session-termination capability were previously immutable
+        -- after registration -- a wrong policy was permanent. The policy is carried to the
+        -- access connector per claim (RotationClaimed), so an update applies to the NEXT attempt of
+        -- every credential on this target; snapshots already claimed carry the old policy.
+        -- The integration kind is deliberately NOT editable: existing account identities
+        -- are interpreted by the kind, so changing it invalidates them (see the
+        -- method-switching open question).
+}
+
+rule UpdateManualTargetSystem {
+    when: UpdateManualTargetSystem(target_system, name)
+    requires: target_system.method = manual
+    ensures: target_system.name = name
+    ensures: AdministrationAudited(operation: target_system_updated, target_system: target_system)
+    @guidance
+        -- A manual target has no kind, password policy or session-termination capability, so
+        -- its updatable shape is the display name alone -- the same split by method that
+        -- RegisterAutomaticTargetSystem and RegisterManualTargetSystem make for one
+        -- registration request.
+}
+
+rule DeleteTargetSystem {
+    when: DeleteTargetSystem(target_system)
+    -- A configuration naming this target holds it: deleting the target would leave the
+    -- configuration -- and the credential it manages -- pointing at nothing. The
+    -- configurations go first (DeleteRotationConfig), which is also what releases each
+    -- cipher for a configuration elsewhere.
+    requires: not RotationConfigs.any(c => c.target_system = target_system)
+    ensures: AdministrationAudited(operation: target_deleted, target_system: target_system)
+    ensures:
+        for assignment in ConnectorTargetAssignments where target_system = target_system:
+            not exists assignment
+    ensures: not exists target_system
+    @guidance
+        -- Permanent, and deliberately narrower than DisableTargetSystem: disabling stops new
+        -- rotations being offered while the target and its configurations stay intact, so it
+        -- remains the reversible control for a target that is merely unavailable. Deleting is
+        -- for a target that has left the estate.
+        -- Its access connector assignments go with it: an assignment is only the
+        -- connector-to-target edge and means nothing once the target is gone, so it cascades
+        -- rather than blocking (mirroring an access connector's own assignments). No rotation
+        -- can be in flight to be torn up -- a job belongs to a configuration on this target,
+        -- and a surviving configuration blocks the delete outright.
+        -- The audit log, not the row, is the durable record of the target (Goal 4): the event
+        -- carries its name, which is why the audit emission is ordered before the removal.
+}
+
+-- Rotation configuration
+
+rule CreateRotationConfig {
+    when: CreateRotationConfig(cipher, target_system, account_identity, terminate_sessions, schedule, rotate_on_access_end)
+    requires: target_system.status = active
+    requires: not exists RotationConfig{cipher: cipher}
+    -- Session termination may be requested only if the target can honour it. terminate_sessions
+    -- short-circuits the implication, so supports_session_termination (a when-gated field,
+    -- present only for automatic targets) is read only when termination is actually requested,
+    -- which on an automatic target is the only case it can be requested in.
+    requires: not terminate_sessions or (target_system.method = automatic and target_system.supports_session_termination)
+    let initial_next = if schedule != null: NextScheduledTime(schedule, now)
+                       else: null
+    ensures: RotationConfig.created(
+        cipher: cipher,
+        target_system: target_system,
+        account_identity: account_identity,
+        terminate_sessions: terminate_sessions,
+        schedule: schedule,
+        rotate_on_access_end: rotate_on_access_end,
+        next_rotation_at: initial_next,
+        enabled: true,
+        consecutive_failures: 0,
+        manual_obligation_alerted: false,
+        pending_access_end: false
+    )
+    @guidance
+        -- Whether this config rotates automatically or by hand follows target_system.method
+        -- (no per-credential mode). Session termination is rejected up front for a target
+        -- that cannot honour it, so the access connector never sees a "requested but unsupported"
+        -- case. Incremental adoption (Goal 5): configs are created one at a time, per cipher;
+        -- registering a target system and creating its first config is the whole onboarding
+        -- path, with no estate-wide migration step.
+}
+
+rule AuditRotationConfigCreated {
+    when: rotation_config: RotationConfig.created
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: config_created)
+    @guidance
+        -- Every operation is audited (Goal 4). A separate reaction rule (rather than an
+        -- emission inside CreateRotationConfig) so the audit event can reference the
+        -- created configuration without let-binding the creation, which would drop the
+        -- checker's creation-status crediting.
+}
+
+rule UpdateRotationConfig {
+    when: UpdateRotationConfig(actor, rotation_config, account_identity, terminate_sessions, schedule, rotate_on_access_end)
+    requires: not terminate_sessions or (rotation_config.target_system.method = automatic and rotation_config.target_system.supports_session_termination)
+    requires: not rotation_config.has_active_job
+    let next = if schedule != null: NextScheduledTime(schedule, now)
+               else: null
+    ensures: rotation_config.account_identity = account_identity
+    ensures: rotation_config.terminate_sessions = terminate_sessions
+    ensures: rotation_config.schedule = schedule
+    ensures: rotation_config.rotate_on_access_end = rotate_on_access_end
+    ensures: rotation_config.next_rotation_at = next
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: config_updated, actor: actor)
+    @guidance
+        -- One request carries the config's whole updatable shape: the account identity and
+        -- termination opt-in that were UpdateRotationAccount, and the triggers that were
+        -- UpdateRotationSettings. Editing the triggers still recomputes the next scheduled
+        -- time immediately (recompute-on-edit); clearing the schedule (null) leaves the
+        -- credential with no scheduled rotation, while on-demand and access-event triggers
+        -- still work. Same termination guard as CreateRotationConfig, so the access connector still
+        -- never sees a "requested but unsupported" case. Corrects a target-side account
+        -- identity (a typo'd UPN, a renamed SQL login) that was otherwise permanent.
+        -- Merging the two tightened one thing: the in-flight guard that protected the
+        -- account identity now covers the whole request, so the triggers can no longer be
+        -- edited while a job is claimed. The claim snapshot already carried the old
+        -- identity, and a partial edit mid-attempt would make the audit trail ambiguous
+        -- about which account was rotated.
+}
+
+rule PauseRotation {
+    when: PauseRotation(actor, rotation_config)
+    requires: rotation_config.enabled
+    ensures: rotation_config.enabled = false
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: paused, actor: actor)
+    @guidance
+        -- Pause keeps all configuration and only stops new rotations being triggered
+        -- (RotationDue, TriggerRotation and RotateOnAccessEnd all require enabled) and
+        -- holds a still-pending job un-claimable (is_claimable). For change-freeze
+        -- periods (UX2). Jobs already CLAIMED are unaffected and are NOT cancelled
+        -- (resolved), mirroring DisableTargetSystem: refusing the access connector's cipher write
+        -- would manufacture the vault-stale state we exist to prevent, so the write must
+        -- land. RevokeConnector is the emergency brake for a runaway access connector
+        -- (access-connector.allium / NoTargetActionPastSessionLoss).
+}
+
+rule ResumeRotation {
+    when: ResumeRotation(actor, rotation_config)
+    requires: not rotation_config.enabled
+    let is_manual = rotation_config.target_system.method = manual
+    let recomputed = if rotation_config.schedule != null:
+                         NextScheduledTime(rotation_config.schedule, now)
+                     else: null
+    -- A manual obligation that was already due before the pause (its next_rotation_at is set
+    -- and reached). awaiting_manual_rotation itself requires enabled (false while paused), so
+    -- the underlying condition is checked directly here.
+    let manual_obligation_due = rotation_config.next_rotation_at != null
+                                and rotation_config.next_rotation_at <= now
+    -- A manual config owes an obligation on resume if a deferred access-end is pending or one
+    -- was already due; either way next_rotation_at is pulled to now rather than recomputed
+    -- past it (which would erase the obligation).
+    let manual_owes = is_manual and (rotation_config.pending_access_end or manual_obligation_due)
+    ensures: rotation_config.enabled = true
+    ensures:
+        if manual_owes:
+            rotation_config.next_rotation_at = now
+            rotation_config.manual_obligation_alerted = false
+        else:
+            rotation_config.next_rotation_at = recomputed
+    -- Discharge a deferred access-end on an AUTOMATIC config now that it is offerable again
+    -- (enabled restored; the target's status is unchanged by resume, so this only offers when
+    -- the target is active). pending_access_end is cleared in both the automatic and manual
+    -- paths so a deferral is discharged exactly once.
+    ensures:
+        if not is_manual and rotation_config.pending_access_end
+           and rotation_config.target_system.status = active
+           and not rotation_config.has_active_job:
+            OfferRotation(rotation_config: rotation_config, source: access_end)
+    ensures: rotation_config.pending_access_end = false
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: resumed, actor: actor)
+    @guidance
+        -- Resuming recomputes the next SCHEDULED time from now, so a credential paused
+        -- across one or more windows does not fire a backlog on resume -- skipped schedule
+        -- windows are intentionally skipped (a schedule may skip; an event trigger must not
+        -- be lost). Two exceptions preserve dropped EVENT triggers and standing obligations:
+        --   * A deferred access-end (pending_access_end, latched by
+        --     DeferAccessEndWhileUnavailable / DeferManualAccessEndWhilePaused during the
+        --     pause) is discharged here -- an automatic config gets a deferred
+        --     OfferRotation(source: access_end); a manual config has its obligation pulled due
+        --     (next_rotation_at = now). pending_access_end is then cleared.
+        --   * An already-due manual obligation (next_rotation_at set and reached before the
+        --     pause) is NOT erased by the schedule recompute: for a manual config that owes an
+        --     obligation, next_rotation_at is kept at now rather than recomputed past it, and
+        --     manual_obligation_alerted is reset so the overdue alert re-arms.
+        -- This, with EnableTargetSystem's mirror, is the disabled/paused catch-up semantics.
+}
+
+rule DeleteRotationConfig {
+    when: DeleteRotationConfig(actor, rotation_config)
+    requires: not rotation_config.has_active_job
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: config_deleted, actor: actor)
+    ensures:
+        for job in rotation_config.jobs:
+            for attempt in job.attempts:
+                not exists attempt
+            not exists job
+    ensures: not exists rotation_config
+    @guidance
+        -- Un-manages the credential: the cipher stays in the vault untouched; only the
+        -- rotation machinery lets go of it (and the cipher becomes free for a new
+        -- configuration -- OneConfigPerCipher). Blocked while a job is pending or claimed;
+        -- pause first (or let the job resolve), which also stops a pending job being
+        -- claimed meanwhile (is_claimable). The configuration's resolved jobs and their
+        -- attempts are removed with it (no dangling references); the audit log -- not the
+        -- operational records -- is the authoritative rotation history (Goal 4), and it is
+        -- untouched.
+}
+
+-- Scheduling and triggering
+--
+-- All rotation triggers — schedule (RotationDue), on demand (TriggerRotationNow) and
+-- access events (RotateOnAccessEnd) — converge on the single OfferRotation chained
+-- trigger, so OfferRotation is the one place that creates an available job (after
+-- checking enabled, the target's method is automatic, the target is active, and there is
+-- no active job already). The trigger carries why the rotation fired.
+
+rule RotationDue {
+    when: rotation_config: RotationConfig.next_rotation_at <= now
+    requires: rotation_config.enabled
+    requires: rotation_config.target_system.method = automatic
+    requires: rotation_config.target_system.status = active
+    requires: not rotation_config.has_active_job
+    ensures: OfferRotation(rotation_config: rotation_config, source: scheduled)
+    @guidance
+        -- Fires only when next_rotation_at is set and reached (a temporal trigger on
+        -- an absent field never fires, so a credential with no schedule is never due
+        -- here). The guards MUST mirror OfferRotation's full set: a temporal trigger
+        -- whose emission is then dropped by OfferRotation's guards changes no state, so
+        -- nothing would advance next_rotation_at and the trigger would re-fire forever
+        -- (a livelock). With the guard here instead, the rule simply does not fire while
+        -- the target is disabled; the catch-up on re-enable is EnableTargetSystem's schedule
+        -- recompute (mirroring ResumeRotation): missed schedule windows are intentionally
+        -- SKIPPED, consistent with the resume policy (a schedule may skip missed windows; an
+        -- event trigger must never be lost -- see DeferAccessEndWhileUnavailable). A manual
+        -- configuration that comes due is NOT offered; its due-ness is the obligation
+        -- (awaiting_manual_rotation), surfaced for an admin to clear via RecordManualRotation.
+}
+
+rule TriggerRotationNow {
+    when: TriggerRotation(_, rotation_config)
+    requires: rotation_config.target_system.method = automatic
+    requires: rotation_config.target_system.status = active
+    requires: rotation_config.enabled
+    requires: not rotation_config.has_active_job
+    ensures: OfferRotation(rotation_config: rotation_config, source: on_demand)
+    @guidance
+        -- On-demand rotation (Goal 2): an admin rotates a managed credential
+        -- immediately, outside its schedule. Only meaningful for automatic
+        -- configurations — a manual one is rotated by hand and recorded via
+        -- RecordManualRotation.
+}
+
+rule RotateOnAccessEnd {
+    when: AccessGrantEnded(cipher)
+    let rotation_config = RotationConfig{cipher: cipher}
+    requires: exists rotation_config
+    requires: rotation_config.enabled
+    requires: rotation_config.target_system.method = automatic
+    requires: rotation_config.target_system.status = active
+    requires: rotation_config.rotate_on_access_end
+    requires: not rotation_config.has_active_job
+    ensures: OfferRotation(rotation_config: rotation_config, source: access_end)
+    @guidance
+        -- Rotation on access events (Goal 2). When an upstream access-control system
+        -- signals that a grant over a managed credential has ended — a PAM lease
+        -- expiring or being revoked, an AAP grant ending — the cipher's single
+        -- rotation configuration (OneConfigPerCipher) is offered, if it is automatic
+        -- and opted in. The cipher alone resolves the configuration, so the signal
+        -- carries no account identity. The signal is intentionally abstract
+        -- (AccessEventReporting): rotation depends on the event, not on any particular
+        -- leasing spec, so PAM, AAP leasing or a future Secrets Manager can all emit it.
+        -- A manual-target credential that opted in is handled by the companion rule
+        -- RaiseManualObligationOnAccessEnd (disjoint on target_system.method).
+}
+
+rule RaiseManualObligationOnAccessEnd {
+    when: AccessGrantEnded(cipher)
+    let rotation_config = RotationConfig{cipher: cipher}
+    requires: exists rotation_config
+    requires: rotation_config.enabled
+    requires: rotation_config.target_system.method = manual
+    requires: rotation_config.rotate_on_access_end
+    ensures: rotation_config.next_rotation_at = now
+    ensures: rotation_config.manual_obligation_alerted = false
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: manual_rotation_due, source: access_end)
+    @guidance
+        -- The access-end trigger for a MANUALLY-rotated credential: the access connector cannot act,
+        -- but the signal is security-relevant (a grant over the credential just ended) and
+        -- must not be silently dropped. Pulling next_rotation_at to now makes the standing
+        -- manual obligation due immediately (awaiting_manual_rotation becomes true), so it
+        -- surfaces to admins exactly as an overdue scheduled manual rotation would, and
+        -- RecordManualRotation clears it -- resetting the schedule to its next occurrence
+        -- -- once the credential is rotated out of band. Audited so the access event
+        -- leaves a trace even before the obligation is met. Resets manual_obligation_alerted
+        -- so this fresh obligation re-arms the overdue alert (AlertManualObligationOverdue).
+        -- Requires enabled; a manual config paused when the access-end arrives is handled by
+        -- DeferManualAccessEndWhilePaused (disjoint on enabled), so the signal is never lost.
+}
+
+rule DeferAccessEndWhileUnavailable {
+    when: AccessGrantEnded(cipher)
+    let rotation_config = RotationConfig{cipher: cipher}
+    requires: exists rotation_config
+    requires: rotation_config.target_system.method = automatic
+    requires: rotation_config.rotate_on_access_end
+    -- The un-offerable case for an AUTOMATIC config: paused, or its target disabled. This is
+    -- the EXACT complement of RotateOnAccessEnd's enabled-and-active case (both are automatic,
+    -- opted-in), so exactly one of the two fires for any automatic access-end.
+    requires: not rotation_config.enabled or rotation_config.target_system.status = disabled
+    ensures: rotation_config.pending_access_end = true
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: access_end_deferred, source: access_end)
+    @guidance
+        -- An event trigger must never be lost (contrast a schedule, which may skip missed
+        -- windows -- ResumeRotation's / EnableTargetSystem's policy). An access-end for an
+        -- automatic config that cannot be offered RIGHT NOW (the config is paused, or its
+        -- target is disabled) is deferred, not dropped: pending_access_end is latched and the
+        -- deferral is audited. It is discharged (a deferred OfferRotation emitted, source
+        -- access_end, and pending_access_end cleared) the moment the config becomes offerable
+        -- again -- on ResumeRotation or EnableTargetSystem. The guard is the exact complement
+        -- of RotateOnAccessEnd's, so an automatic access-end is either offered now or deferred,
+        -- never dropped. (A manual config is handled by RaiseManualObligationOnAccessEnd when
+        -- enabled and DeferManualAccessEndWhilePaused when paused.)
+}
+
+rule DeferManualAccessEndWhilePaused {
+    when: AccessGrantEnded(cipher)
+    let rotation_config = RotationConfig{cipher: cipher}
+    requires: exists rotation_config
+    requires: rotation_config.target_system.method = manual
+    requires: rotation_config.rotate_on_access_end
+    -- The paused case for a MANUAL config: RaiseManualObligationOnAccessEnd requires enabled,
+    -- so without this a manual access-end during a pause would be dropped too. Disjoint from it
+    -- on enabled (both are manual, opted-in), so exactly one of the two fires.
+    requires: not rotation_config.enabled
+    ensures: rotation_config.pending_access_end = true
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: access_end_deferred, source: access_end)
+    @guidance
+        -- The manual analogue of DeferAccessEndWhileUnavailable: an access-end for an opted-in
+        -- MANUAL config that is paused is latched (pending_access_end) rather than dropped, and
+        -- audited. On ResumeRotation a manual config with pending_access_end has its obligation
+        -- pulled due (next_rotation_at = now) instead of the schedule recompute -- the manual
+        -- discharge path -- so the deferred security-relevant signal surfaces as an obligation
+        -- the moment rotation is resumed. Disjoint from RaiseManualObligationOnAccessEnd on
+        -- enabled, so a manual access-end is either raised-due now or deferred, never dropped.
+}
+
+-- Dispatch: offer a job, an access connector claims it
+--
+-- Pull model. OfferRotation makes a due rotation an available (pending) job; the
+-- server push-notifies eligible (connected, assigned) access connectors; one of them claims it
+-- via ClaimRotation, which creates the server-owned attempt the access connector executes. A retry
+-- is a re-claim of the same job (see RetryJob).
+
+rule OfferRotation {
+    when: OfferRotation(rotation_config, source)
+    requires: rotation_config.enabled
+    requires: rotation_config.target_system.method = automatic
+    requires: not rotation_config.has_active_job
+    requires: rotation_config.target_system.status = active
+    ensures: RotationJob.created(
+        rotation_config: rotation_config,
+        source: source,
+        status: pending,
+        created_at: now,
+        next_claimable_at: now
+    )
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: offered, source: source)
+    @guidance
+        -- The rotation becomes an available job (pending). The server push-notifies
+        -- eligible (connected, assigned) access connectors so one claims it promptly rather than
+        -- polling (NotifyEligibleConnectors -> RotationAvailable); with none, the job simply
+        -- waits (pending) and is re-announced when an access connector connects or is assigned
+        -- (NotifyClaimableJobsOnConnect, NotifyPendingJobsOnAssignment). has_active_job
+        -- stops a second job being made while one is pending or claimed. attempt_count is
+        -- derived from the attempts, so the job is created with none and the count starts
+        -- at 0.
+}
+
+rule NotifyEligibleConnectors {
+    when: job: RotationJob.created
+    ensures: RotationAvailable(job: job)
+    @guidance
+        -- The push nudge of the pull model: a job becoming available is announced so
+        -- eligible (connected, assigned) access connectors claim promptly rather than poll. The
+        -- announcement is advisory -- eligibility and first-claim-wins are enforced by
+        -- ClaimRotation, so over-notification is harmless. RotationAvailable is consumed
+        -- by the access connector (access-connector.allium / ClaimAvailableRotation); the checker
+        -- may flag this cross-file chained trigger as unreachable (INFO). Expected and
+        -- benign.
+}
+
+rule NotifyClaimableJobsOnConnect {
+    when: connection: ConnectorConnection.status transitions_to connected
+    for job in RotationJobs where status = pending:
+        ensures: RotationAvailable(job: job)
+    @guidance
+        -- Catch-up: an access connector that connects (or reconnects) missed the creation-time
+        -- announcements of any jobs still waiting, so pending jobs are re-announced to
+        -- it. Same advisory semantics as NotifyEligibleConnectors: a job whose backoff has
+        -- not elapsed, or that this access connector is not assigned, is simply refused at claim
+        -- time.
+}
+
+rule NotifyPendingJobsOnAssignment {
+    when: assignment: ConnectorTargetAssignment.created
+    for job in RotationJobs where status = pending and rotation_config.target_system = assignment.target_system:
+        ensures: RotationAvailable(job: job)
+    @guidance
+        -- The third un-prompted edge: an access connector assigned to a target AFTER its pending
+        -- job was announced would otherwise learn of it only on its next reconnect. The
+        -- job needs no re-offer (it is already pending -- see AssignConnectorToTarget);
+        -- this merely re-announces it.
+}
+
+rule ClaimRotation {
+    when: ClaimRotation(claimer, job)
+    requires: job.status = pending
+    requires: job.next_claimable_at <= now
+    requires: job.rotation_config.enabled
+    requires: job.rotation_config.target_system.status = active
+    requires: claimer.status = enrolled
+    requires: claimer.is_connected
+    requires: exists ConnectorTargetAssignment{connector: claimer, target_system: job.rotation_config.target_system}
+    let cfg = job.rotation_config
+    ensures: job.status = claimed
+    ensures: job.claimed_by = claimer
+    ensures: job.claimed_at = now
+    ensures: RotationAttempt.created(job: job, claimed_by: claimer, status: executing, cipher_updated: false)
+    ensures: RotationClaimed(
+        attempt_id: RotationAttempt{job: job, status: executing}.id,
+        target_system_id: cfg.target_system.id,
+        target_system_name: cfg.target_system.name,
+        kind: cfg.target_system.kind,
+        password_policy: cfg.target_system.password_policy,
+        cipher: cfg.cipher,
+        account_identity: cfg.account_identity,
+        terminate_sessions: cfg.terminate_sessions,
+        execute_by: job.execute_by
+    )
+    ensures: RotationAudited(rotation_config: cfg, outcome: dispatched, source: job.source)
+    @guidance
+        -- An eligible access connector takes the job; the server marks it claimed, stamps claimed_at
+        -- = now (starting the lease), creates the server-owned RotationAttempt directly (not
+        -- let-bound, so its creation-status is credited), and answers with the work snapshot
+        -- (RotationClaimed) -- including the attempt_id so the access connector can reference its work
+        -- when reporting back and writing the cipher, and execute_by (claimed_at +
+        -- release_delay) so the access connector never initiates a target-side step past its lease
+        -- (access-connector.allium / ExecuteRotation). Creating the attempt increments the
+        -- derived attempt_count. First claim wins: the guard requires the job still pending,
+        -- so a second concurrent claim finds it claimed and fails.
+        --
+        -- The claim is a time-bounded LEASE (execute_by = claimed_at + release_delay): the
+        -- job never returns to claimable before that window elapses (ReleaseJob), so a
+        -- dropped, network-partitioned access connector cannot still be acting on the target while
+        -- another access connector re-claims. This closes the claim-release race at the target system
+        -- together with the access connector's step-boundary abort (access-connector.allium /
+        -- ExecuteRotation, IntegrationSurface / NoTargetActionPastSessionLoss).
+        --
+        -- RotationClaimed is consumed by the access connector (access-connector.allium / StartRotation);
+        -- the checker may flag this cross-file chained trigger as an unreachable trigger
+        -- (INFO) because no rule in THIS module consumes it. That is expected and benign.
+        --
+        -- The claim arrives over the access connector's authenticated channel, but the server does
+        -- not trust the persistent connection alone: it re-validates the claimant's OAuth
+        -- access token (the client-credentials bearer token from authentication, tied to a
+        -- still-active session) as it accepts the claim. This extra check at claim time
+        -- means an access connector whose token has expired or whose credential was revoked cannot
+        -- claim even if its connection still looks up.
+}
+
+-- Outcome reporting (access connector -> server) and attempt-driven job tracking. The access connector reports
+-- the outcome of its try by attempt_id (RotationOutcomeReporting); the server transitions
+-- the server-owned attempt, whose transition in turn drives job tracking. Each job
+-- transition emits the matching audit event (Goal 4).
+
+rule RecordRotationSucceeded {
+    when: ReportRotationSucceeded(reporter, attempt_id, session_termination)
+    let attempt = RotationAttempt{id: attempt_id}
+    requires: exists attempt
+    requires: attempt.status = executing
+    requires: attempt.claimed_by.client_id = reporter.client_id
+    requires: attempt.cipher_updated
+    ensures: attempt.status = rotated
+    ensures: attempt.session_termination = session_termination
+    @guidance
+        -- The access connector reported success for this attempt. The server transitions the
+        -- server-owned attempt executing -> rotated (a let-bound single-entity status
+        -- assignment, which IS credited), recording the best-effort session-termination
+        -- outcome. The attempt's transition drives MarkJobSucceeded. The reporter is matched
+        -- against the attempt's claiming access connector so only the executing access connector can report, and
+        -- the attempt must carry an accepted cipher write (cipher_updated, set by
+        -- AcceptCipherUpdate): success cannot be recorded for an attempt that never wrote
+        -- the vault -- the server-side check backing the access connector's VerifiedBeforeSuccess
+        -- guarantee. A success report failing any of these is refused and audited
+        -- (RejectStaleSuccessReport).
+        --
+        -- ReportRotationSucceeded is provided by the RotationOutcomeReporting surface (below)
+        -- and emitted by the access connector (access-connector.allium / ReportOutcomeToServer); the
+        -- checker may flag a cross-file INFO here.
+}
+
+rule RecordRotationFailed {
+    when: ReportRotationFailed(reporter, attempt_id, failure_reason, sync_state)
+    let attempt = RotationAttempt{id: attempt_id}
+    requires: exists attempt
+    requires: attempt.status = executing
+    requires: attempt.claimed_by.client_id = reporter.client_id
+    ensures: attempt.status = errored
+    ensures: attempt.failure_reason = failure_reason
+    ensures: attempt.sync_state = sync_state
+    @guidance
+        -- The access connector reported a genuine failure for this attempt. The server transitions the
+        -- server-owned attempt executing -> errored (a let-bound single-entity status
+        -- assignment, which IS credited), recording the failure reason and the
+        -- vault<->target sync state the failure left behind (FailureSyncState) -- a
+        -- target_updated failure means the stored cipher is stale until a later attempt
+        -- converges. The attempt's transition drives RetryJob or FailJob depending on the
+        -- retry budget. A succeeded and a failed report are distinct triggers, so no
+        -- outcome discriminator is needed.
+}
+
+rule RejectStaleSuccessReport {
+    when: ReportRotationSucceeded(reporter, attempt_id, session_termination)
+    let attempt = RotationAttempt{id: attempt_id}
+    requires: exists attempt
+    requires: attempt.status != executing
+              or attempt.claimed_by.client_id != reporter.client_id
+              or not attempt.cipher_updated
+    ensures: RotationAudited(rotation_config: attempt.job.rotation_config, outcome: report_rejected)
+    @guidance
+        -- The refusal path OnlyExecutorReports promises, made observable: a report for an
+        -- attempt already resolved (rotated, errored, or abandoned by a release/timeout),
+        -- a report from an access connector other than the claimant (a fenced-off stale access connector), or
+        -- a success report with no accepted cipher write behind it (cipher_updated false)
+        -- is refused AND audited, mirroring RejectCipherUpdate. The guard is the exact
+        -- complement of RecordRotationSucceeded's. A report whose attempt_id matches no
+        -- attempt at all fires nothing -- there is no configuration to audit against.
+}
+
+rule RejectStaleFailureReport {
+    when: ReportRotationFailed(reporter, attempt_id, failure_reason, sync_state)
+    let attempt = RotationAttempt{id: attempt_id}
+    requires: exists attempt
+    requires: attempt.status != executing
+              or attempt.claimed_by.client_id != reporter.client_id
+    ensures: RotationAudited(rotation_config: attempt.job.rotation_config, outcome: report_rejected)
+    @guidance
+        -- As RejectStaleSuccessReport, for the failure report (which needs no cipher
+        -- write). The guard is the exact complement of RecordRotationFailed's.
+}
+
+rule MarkJobSucceeded {
+    when: attempt: RotationAttempt.status transitions_to rotated
+    let job = RotationJob{id: attempt.job.id}
+    let cfg = job.rotation_config
+    requires: job.status = claimed
+    let next = if cfg.schedule != null: NextScheduledTime(cfg.schedule, now)
+               else: null
+    ensures: job.status = succeeded
+    ensures: cfg.last_rotation_at = now
+    ensures: cfg.next_rotation_at = next
+    ensures: cfg.consecutive_failures = 0
+    ensures: RotationAudited(rotation_config: cfg, outcome: succeeded, source: job.source)
+    @guidance
+        -- The attempt succeeded: the job is done and the next scheduled time advances
+        -- to the schedule's next occurrence (or null if the schedule was cleared). The
+        -- attempt links directly to its job (attempt.job); the job is re-bound by a
+        -- single let-lookup (RotationJob{id: attempt.job.id}) so the job-status transition
+        -- is witnessed by a rule whose bound subject IS the RotationJob. A success resets
+        -- the §6.8 consecutive_failures counter to 0, so a run of failures followed by a
+        -- success does not carry old failures toward auto-pause.
+}
+
+rule RetryJob {
+    when: attempt: RotationAttempt.status transitions_to errored
+    let job = RotationJob{id: attempt.job.id}
+    let cfg = job.rotation_config
+    requires: job.status = claimed
+    requires: job.has_retry_budget
+    ensures: job.status = pending
+    ensures: job.claimed_by = null
+    ensures: job.claimed_at = null
+    ensures: job.next_claimable_at = now + config.retry_base_delay
+    ensures: RotationAudited(rotation_config: cfg, outcome: attempt_failed, source: job.source, reason: attempt.failure_reason, sync_state: attempt.sync_state)
+    @guidance
+        -- The attempt failed but the job has retries left (fewer failed attempts than
+        -- max_attempts): it returns to claimable (pending) after a backoff (exponential in
+        -- practice; retry_base_delay is the base), and the next eligible access connector to claim it
+        -- makes a fresh attempt -- the same access connector or another assigned one, so a struggling
+        -- access connector's retry can fail over for free. Each attempt is independent and starts from
+        -- a fresh password. The just-failed attempt remains in the failed set, so it counts
+        -- toward the budget. The job is re-bound by a single let-lookup so its status
+        -- transition is witnessed on the RotationJob subject.
+        --
+        -- This is a genuinely FAILED attempt reported by a LIVE access connector, so retry_base_delay
+        -- (not release_delay) is the correct spacing: the access connector is not partitioned and is
+        -- not still acting on the target, so the target-safety lease that ReleaseJob applies
+        -- to a DROPPED access connector does not apply here. claimed_at is cleared alongside claimed_by
+        -- (the job leaves the claimed state).
+}
+
+rule FailJob {
+    when: attempt: RotationAttempt.status transitions_to errored
+    let job = RotationJob{id: attempt.job.id}
+    let cfg = job.rotation_config
+    requires: job.status = claimed
+    requires: not job.has_retry_budget
+    ensures: job.status = failed
+    ensures: cfg.next_rotation_at = now + config.failure_retry_delay
+    ensures: cfg.consecutive_failures = cfg.consecutive_failures + 1
+    ensures: RotationAudited(rotation_config: cfg, outcome: failed, source: job.source, reason: attempt.failure_reason, sync_state: attempt.sync_state)
+    ensures: RotationFailed(rotation_config: cfg, source: job.source, alert_kind: job_failed, reason: attempt.failure_reason, sync_state: attempt.sync_state)
+    @guidance
+        -- Failed attempts exhausted the budget (max_attempts genuine failures). The job
+        -- fails; the config is rescheduled to a near-term retry (failure_retry_delay), its
+        -- consecutive_failures is incremented, and RotationFailed is emitted as the §6.8 seam
+        -- (alerting via AlertOnRotationFailed and auto-pause via
+        -- AutoPauseAfterConsecutiveFailures chain from it). §6.8 now takes ownership of
+        -- next_rotation_at on terminal failure: the failure_retry_delay reschedule STANDS
+        -- until auto-pause; once consecutive_failures reaches max_consecutive_failures the
+        -- config is auto-paused (enabled = false), and a paused config's RotationDue cannot
+        -- fire -- ending the retry loop. Resume is the existing admin ResumeRotation, which
+        -- recomputes next_rotation_at and (see MarkJobSucceeded) a success resets the count.
+        -- The last attempt's sync_state rides on both emissions: a job that terminally fails
+        -- target_updated has left the stored cipher stale, which elevates the alert severity
+        -- (AlertOnRotationFailed) and is carried on the audit log for operators.
+}
+
+rule JobTimesOut {
+    when: job: RotationJob.expires_at <= now
+    requires: job.status in {pending, claimed}
+    -- A rotated in-flight attempt means the rotation SUCCEEDED and MarkJobSucceeded is
+    -- about to resolve the job: timing it out in that window would record timed_out over
+    -- a vault that was actually rotated (and never set last_rotation_at). Success wins.
+    requires: not job.attempts.any(a => a.status = rotated)
+    let cfg = job.rotation_config
+    -- Unroutable (never claimed -- zero attempts) vs a stuck access connector (claimed, an attempt
+    -- exists), distinguished for the operator alert (4b): the two need different operator
+    -- responses (no eligible access connector vs a wedged one).
+    let timeout_kind = if job.attempt_count = 0: job_unroutable else: job_stuck
+    let timeout_reason = if job.attempt_count = 0: "rotation job timed out (unroutable: no eligible connector)"
+                         else: "rotation job timed out (stuck connector)"
+    ensures: job.status = timed_out
+    ensures: cfg.next_rotation_at = now + config.failure_retry_delay
+    ensures: cfg.consecutive_failures = cfg.consecutive_failures + 1
+    ensures: RotationAudited(rotation_config: cfg, outcome: timed_out, source: job.source, reason: timeout_reason)
+    ensures: RotationFailed(rotation_config: cfg, source: job.source, alert_kind: timeout_kind, reason: timeout_reason)
+    -- Any in-flight attempt is abandoned (not errored), so a stuck-access connector timeout is not
+    -- charged to the retry budget. Rule-level `for` (not a for inside `ensures`) so the
+    -- executing -> abandoned transition is witnessed.
+    for attempt in job.attempts where status = executing:
+        ensures: AbandonAttempt(attempt: attempt)
+    @guidance
+        -- Backstop. A job still unresolved past its deadline is declared timed_out --
+        -- whether it never found an access connector (pending, unroutable) or a claiming access connector
+        -- went unresponsive (claimed, stuck). Any in-flight attempt is marked abandoned, NOT
+        -- failed, so a stuck-access connector timeout is not charged to the retry budget. It stops
+        -- wedging the configuration (has_active_job), the config is rescheduled, its
+        -- consecutive_failures is incremented (feeding §6.8 auto-pause exactly as a terminal
+        -- FailJob does), and RotationFailed is emitted as the §6.8 seam -- with alert_kind
+        -- distinguishing an UNROUTABLE job (zero attempts, no eligible access connector -- resolving
+        -- the unroutable-job escalation question) from a STUCK claiming access connector. A late result
+        -- from an abandoned attempt is fenced off: the attempt is no longer executing and the
+        -- job is no longer claimed, so the outcome rules and AcceptCipherUpdate refuse it.
+}
+
+-- Failure policy (§6.8): alerting and auto-pause
+--
+-- RotationFailed is the seam (emitted by FailJob and JobTimesOut). Two rules chain from it:
+-- AlertOnRotationFailed raises an operator alert, and AutoPauseAfterConsecutiveFailures
+-- auto-pauses a config that has failed too many times in a row. A third rule
+-- (AlertManualObligationOverdue) escalates an overdue manual obligation. All three end at
+-- the pure-sink OperatorAlertRaised event (no rule chains from it; delivery -- email,
+-- in-product -- is out of scope, see Excludes).
+
+rule AlertOnRotationFailed {
+    when: RotationFailed(rotation_config, source, alert_kind, reason, sync_state)
+    -- Elevated when the failure is security- or integrity-significant: a target_updated
+    -- sync_state means the vault now holds a DEAD credential (the target changed, the cipher
+    -- did not), and an access_end source means a SECURITY-MANDATED rotation did not happen.
+    -- sync_state is absent on a timeout (a comparison with null is false), so a timeout is
+    -- elevated only when it was an access_end rotation.
+    let severity = if sync_state = target_updated or source = access_end: alert_elevated
+                   else: alert_normal
+    ensures: OperatorAlertRaised(kind: alert_kind, rotation_config: rotation_config, severity: severity, reason: reason)
+    @guidance
+        -- The §6.8 alert on every terminal job failure and timeout. alert_kind (job_failed,
+        -- job_unroutable, job_stuck) is decided at the emit site (FailJob / JobTimesOut) and
+        -- passed through, so this rule owns only the severity policy and the sink emission. It
+        -- reacts to RotationFailed, which is kept as the seam -- new alerting behaviour is
+        -- added by chaining here, not by touching the failure rules' core logic.
+}
+
+rule AutoPauseAfterConsecutiveFailures {
+    when: RotationFailed(rotation_config, source, alert_kind, reason, sync_state)
+    -- FailJob / JobTimesOut already incremented consecutive_failures before emitting, so this
+    -- reads the post-increment value. Guarded on enabled so it fires at most once per crossing
+    -- (a paused config's RotationDue cannot fire, so no further failures accrue until resume).
+    requires: rotation_config.enabled
+    requires: rotation_config.consecutive_failures >= config.max_consecutive_failures
+    ensures: rotation_config.enabled = false
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: auto_paused, source: source)
+    ensures: OperatorAlertRaised(kind: config_auto_paused, rotation_config: rotation_config, severity: alert_elevated, reason: reason)
+    @guidance
+        -- §6.8 auto-pause: after max_consecutive_failures consecutive terminal failures the
+        -- config is auto-paused (enabled = false) -- the CONFIG, never the target (a shared
+        -- target keeps serving its other configs). This is what takes ownership of
+        -- next_rotation_at on terminal failure: the failure_retry_delay reschedule set by
+        -- FailJob / JobTimesOut stands until this fires, and once paused RotationDue cannot
+        -- fire, ending the retry loop. Recovery is the existing admin ResumeRotation (which
+        -- recomputes next_rotation_at); a success or a recorded manual rotation resets
+        -- consecutive_failures to 0. Auto-pause is always an elevated alert -- a credential
+        -- has stopped rotating entirely.
+}
+
+rule AlertManualObligationOverdue {
+    when: rotation_config: RotationConfig.next_rotation_at + config.manual_obligation_alert_after <= now
+    -- The manual/enabled guards mirror awaiting_manual_rotation; the not-alerted guard is the
+    -- re-fire brake. A temporal trigger that changes no state re-fires forever (the RotationDue
+    -- livelock note), so this records manual_obligation_alerted = true, which both makes this
+    -- guard false on the next evaluation and changes state (so the trigger settles).
+    requires: rotation_config.target_system.method = manual
+    requires: rotation_config.enabled
+    requires: rotation_config.awaiting_manual_rotation
+    requires: not rotation_config.manual_obligation_alerted
+    ensures: rotation_config.manual_obligation_alerted = true
+    ensures: OperatorAlertRaised(kind: manual_obligation_overdue, rotation_config: rotation_config, severity: alert_elevated, reason: "manual rotation obligation overdue")
+    @guidance
+        -- §6.8 manual-obligation escalation (resolving the manual-obligation-escalation
+        -- question): a manual config whose obligation (awaiting_manual_rotation) has stood
+        -- unmet past config.manual_obligation_alert_after raises an elevated operator alert.
+        -- The temporal condition fires once next_rotation_at + threshold is reached; the
+        -- not-alerted guard plus setting manual_obligation_alerted prevents the no-state-change
+        -- re-fire livelock. manual_obligation_alerted is reset whenever a fresh obligation is
+        -- raised (RaiseManualObligationOnAccessEnd, ResumeRotation's manual-due path) or the
+        -- obligation is cleared (RecordManualRotation), so a later obligation re-arms the alert.
+}
+
+-- Recovery
+
+rule ConnectorConnectionDropsReleaseJobs {
+    when: connection: ConnectorConnection.status transitions_to disconnected
+    for job in RotationJobs where claimed_by = connection.connector and status = claimed:
+        ensures: ReleaseJob(job: job)
+    @guidance
+        -- Per-access connector recovery: only jobs claimed by the access connector whose connection dropped
+        -- are released (RotationJob.claimed_by scopes it); other access connectors' jobs are untouched.
+        -- Each released job returns to claimable (ReleaseJob), so another connected
+        -- assigned access connector -- or this one on reconnect -- can re-claim it.
+}
+
+rule ReleaseJob {
+    when: ReleaseJob(job)
+    requires: job.status = claimed
+    -- Success wins, as in JobTimesOut: a rotated in-flight attempt means the access connector
+    -- already reported success and MarkJobSucceeded is about to resolve the job --
+    -- releasing it in that window would discard the success and re-rotate a credential
+    -- that was already rotated.
+    requires: not job.attempts.any(a => a.status = rotated)
+    let cfg = job.rotation_config
+    -- The dropped claim's lease deadline (execute_by = claimed_at + release_delay), read
+    -- before claimed_at is cleared (a let before ensures reads pre-rule state). The job must
+    -- not become re-claimable before the dropped access connector's lease elapses.
+    let lease_expiry = job.execute_by
+    ensures: job.status = pending
+    ensures: job.claimed_by = null
+    ensures: job.claimed_at = null
+    ensures: job.next_claimable_at = lease_expiry
+    ensures: RotationAudited(rotation_config: cfg, outcome: released, source: job.source)
+    -- The in-flight attempt is abandoned (not errored), so losing connectivity is not charged
+    -- to the retry budget. Rule-level `for` witnesses the executing -> abandoned transition.
+    for attempt in job.attempts where status = executing:
+        ensures: AbandonAttempt(attempt: attempt)
+    @guidance
+        -- The access connector holding this job dropped before reporting an outcome, so its claim
+        -- is released: the same job returns to claimable (pending), and any connected
+        -- assigned access connector re-claims it for a fresh attempt. The in-flight attempt is marked
+        -- abandoned rather than failed, so losing connectivity is not charged against the
+        -- retry budget (a genuine attempt failure is, via RetryJob, and only failed attempts
+        -- count). This is the same claimed -> pending recovery edge as a retry; an access connector drop
+        -- is simply another reason to take it. The job_ttl deadline (JobTimesOut) remains the
+        -- backstop for a job that never resolves at all.
+        --
+        -- Crucially the job does NOT become re-claimable until the dropped claim's LEASE
+        -- elapses: next_claimable_at is set to lease_expiry (the dropped claim's claimed_at +
+        -- release_delay), NOT to now + retry_base_delay. A network-partitioned access connector may
+        -- still be mid-rotation against the target after its transport dropped; the cipher
+        -- write is fenced (JobBoundWrite) but the target system is not, so re-claiming before
+        -- the lease elapsed could interleave two access connectors' target-side updates. release_delay
+        -- is sized to a worst-case single attempt so the partitioned access connector has either
+        -- finished or aborted at a step boundary (its own execute_by, carried on the claim,
+        -- has passed -- access-connector.allium / ExecuteRotation) before re-claim. This, with
+        -- the access connector-side abort, resolves the claim-release race at the target system.
+        -- claimed_at is cleared as the job leaves the claimed state.
+}
+
+rule AbandonAttempt {
+    when: AbandonAttempt(attempt)
+    requires: attempt.status = executing
+    ensures: attempt.status = abandoned
+    @guidance
+        -- Emitted per in-flight attempt by ReleaseJob (an access connector drop) and JobTimesOut (a
+        -- stuck job), each via a rule-level `for` so the emission is witnessed. The attempt
+        -- is abandoned, NOT errored, so a connectivity drop or timeout is never charged to
+        -- the retry budget (only errored attempts count -- see failed_attempts). Doing the
+        -- assignment here -- in a rule whose bound subject IS the attempt, guarded by
+        -- `requires: attempt.status = executing` -- is what credits the executing -> abandoned
+        -- transition (a status assigned only inside an emitter's for-loop is not credited).
+}
+
+-- Cipher write authorisation
+--
+-- The access connector writes the rotated, encrypted password back to a cipher (CipherWriteback)
+-- over its authenticated channel, referencing the server-owned attempt it is executing
+-- (by attempt_id). There is no separate write token: the server's own claimed RotationJob
+-- for that cipher is the capability. A write is accepted only against a job claimed by this
+-- access connector; an invalid reference is refused and audited.
+
+rule AcceptCipherUpdate {
+    when: SubmitCipherUpdate(writer, attempt, new_password)
+    requires: attempt.status = executing
+    let job = attempt.job
+    requires: job.status = claimed
+    requires: job.claimed_by = writer
+    ensures: job.rotation_config.cipher.password = new_password
+    ensures: attempt.cipher_updated = true
+    @guidance
+        -- The write is a full-object PUT (no partial-content API): the access connector resends
+        -- the cipher's other fields unchanged and the server replaces the record;
+        -- the cipher's password = new_password is the intended net change. new_password
+        -- is ciphertext the access connector encrypted with the organization key; the server
+        -- persists it without decrypting (zero-knowledge). The attempt links directly to
+        -- its job (attempt.job); ownership (job.claimed_by) and claimed (in-flight) status
+        -- authorise the write, with no separate nonce. A completed, timed-out, or released
+        -- job (or one re-claimed by another access connector, whose old attempt is now abandoned) is
+        -- no longer claimed by this writer, so a stale write is refused (RejectCipherUpdate).
+}
+
+rule RejectCipherUpdate {
+    when: SubmitCipherUpdate(writer, attempt, new_password)
+    let job = attempt.job
+    let cfg = job.rotation_config
+    requires: attempt.status != executing or job.status != claimed or job.claimed_by != writer
+    ensures: RotationAudited(rotation_config: cfg, outcome: write_rejected)
+    @guidance
+        -- Refused: the attempt is no longer executing (already resolved or abandoned), the
+        -- attempt's job is no longer claimed (it completed, timed out, or its claim was
+        -- released by an access connector drop), or the claimed job belongs to a different access connector.
+        -- The guard is the exact complement of AcceptCipherUpdate's, so every submitted
+        -- write either lands or is refused-and-audited -- no silent gap between the two.
+        -- The access connector surfaces this as a failed attempt (it reports via
+        -- ReportRotationFailed); if the job has retries left it becomes claimable again for
+        -- a fresh attempt.
+}
+
+-- Manual rotation fallback (Goal 3)
+
+rule RecordManualRotation {
+    when: RecordManualRotation(actor, rotation_config)
+    requires: rotation_config.target_system.method = manual
+    let next = if rotation_config.schedule != null:
+                   NextScheduledTime(rotation_config.schedule, now)
+               else: null
+    ensures: rotation_config.last_rotation_at = now
+    ensures: rotation_config.next_rotation_at = next
+    ensures: rotation_config.consecutive_failures = 0
+    ensures: rotation_config.manual_obligation_alerted = false
+    ensures: rotation_config.pending_access_end = false
+    ensures: RotationAudited(rotation_config: rotation_config, outcome: manual_recorded, actor: actor)
+    @guidance
+        -- For a manually-managed configuration the access connector never rotates; instead
+        -- the obligation surfaces (awaiting_manual_rotation) and an admin records
+        -- that they rotated the credential out of band. Recording resets the
+        -- schedule (to the schedule's next occurrence, or null) and writes the audit
+        -- trail, exactly as a successful automatic rotation would — an honest record
+        -- that the obligation was met without pretending the system can self-rotate.
+        -- It also settles the §6.8 state for the config: consecutive_failures back to 0,
+        -- manual_obligation_alerted cleared (the overdue alert re-arms for the next
+        -- obligation, AlertManualObligationOverdue), and pending_access_end cleared (any
+        -- deferred access-end is subsumed by this recorded rotation).
+}
+
+-- Audit
+--
+-- Every operation the server performs is written to the audit log (Goal 4); viewing the
+-- audit log is how an operator can tell a credential was rotated. Three pure-sink events
+-- carry it (no rule chains from any):
+--
+-- RotationAudited is emitted on every configuration and rotation event — a configuration
+-- created (config_created), its updatable shape edited -- account identity, termination
+-- opt-in and triggers (config_updated), paused/resumed (paused, resumed),
+-- auto-paused after repeated failures (auto_paused, §6.8), deleted (config_deleted), a job
+-- offered (offered), a claim (the attempt, dispatched), its success (succeeded), a failed
+-- attempt that will be retried (attempt_failed), final failure (failed), a released claim
+-- after an access connector drop (released), timeout (timed_out), a refused cipher write
+-- (write_rejected), a refused stale outcome report (report_rejected), a manual obligation
+-- pulled due by an access event (manual_rotation_due), an access-end deferred because the
+-- config could not be offered (access_end_deferred), and a recorded manual rotation
+-- (manual_recorded). `source` carries why the rotation fired (scheduled / on_demand /
+-- access_end) on every job-derived outcome and on manual_rotation_due, access_end_deferred
+-- and auto_paused; `reason` is the access connector's failure_reason on an attempt_failed or failed
+-- outcome, or a server-side reason on a timed_out outcome; `sync_state` (FailureSyncState)
+-- rides on attempt_failed and failed outcomes so the log records whether a failure left the
+-- stored cipher stale; `actor` is the acting admin on a manual_recorded, config_updated,
+-- config_deleted, paused or resumed outcome. Each is absent where it does
+-- not apply.
+--
+-- AdministrationAudited is emitted on every administrative operation on the fleet and
+-- targets — an access connector registered (connector_registered), revoked (connector_revoked), its
+-- credential reissued in place (connector_credential_reissued), assigned to / unassigned from
+-- a target (connector_assigned, connector_unassigned), and a target system registered / disabled /
+-- enabled / updated / deleted (target_registered, target_disabled, target_enabled,
+-- target_system_updated, target_deleted). Connector connectivity edges
+-- (ConnectorConnected/ConnectorDisconnected) are liveness observations, not operations, and are
+-- not audited directly; a drop's impact on in-flight work is audited via the released outcome.
+--
+-- OperatorAlertRaised is the §6.8 pure-sink operator-alert event (like the audit events, no
+-- rule chains from it): kind (AlertKind: job_failed / job_unroutable / job_stuck /
+-- config_auto_paused / manual_obligation_overdue), rotation_config, severity (AlertSeverity:
+-- alert_normal / alert_elevated) and reason. Emitted by AlertOnRotationFailed,
+-- AutoPauseAfterConsecutiveFailures and AlertManualObligationOverdue. The DELIVERY mechanics
+-- (email, in-product, ...) are deliberately out of scope (see Excludes), exactly as audit
+-- persistence is.
+--
+-- Durable, append-only, tamper-evident (WORM) storage is the existing Phase 1 audit
+-- log's job and is out of scope here; this spec models the events, not their persistence
+-- (mirroring pam.allium's LeaseActivationAudited).
+
+-- Invariants
+
+invariant OneConfigPerCipher {
+    -- A cipher is under at most one rotation configuration. The configuration names
+    -- the target system, so the cipher uniquely identifies what to rotate and where
+    -- (relied on by RotateOnAccessEnd and the RotationConfig{cipher} lookup).
+    for a in RotationConfigs:
+        for b in RotationConfigs:
+            a != b implies a.cipher != b.cipher
+}
+
+invariant AtMostOneActiveJobPerConfig {
+    -- At most one pending-or-claimed job per configuration. This prevents concurrent
+    -- rotations of one credential and keeps a config's single in-flight job unambiguous.
+    for rotation_config in RotationConfigs:
+        rotation_config.active_jobs.count <= 1
+}
+
+invariant ManualConfigNeverJobbed {
+    -- A configuration on a manual target is never offered to the access connector; its rotations
+    -- are recorded out of band. (A target's method is fixed at creation in Phase 1 — see
+    -- the method-switching open question.)
+    for c in RotationConfigs where target_system.method = manual:
+        c.jobs.count = 0
+}
+
+invariant OneAssignmentPerConnectorTarget {
+    -- At most one assignment per (access connector, target) pair.
+    for a in ConnectorTargetAssignments:
+        for b in ConnectorTargetAssignments:
+            a != b implies (a.connector != b.connector or a.target_system != b.target_system)
+}
+
+invariant OneConnectionPerConnector {
+    -- Each access connector has a single connection record (created with the registration).
+    for a in ConnectorConnections:
+        for b in ConnectorConnections:
+            a != b implies a.connector != b.connector
+}
+
+invariant AtMostOneInFlightAttemptPerJob {
+    -- At most one executing attempt per job. A new attempt is created only on a claim, and
+    -- a claim requires the job pending; before a job can be re-claimed its in-flight
+    -- attempt is resolved (succeeded/failed by the outcome report, or abandoned on release
+    -- or timeout). Keeps the RotationAttempt{job, status: executing} lookup unambiguous.
+    for job in RotationJobs:
+        (job.attempts where status = executing).count <= 1
+}
+
+-- Surfaces
+
+surface RotationAdministration {
+    facing _: Administrator
+
+    provides:
+        RegisterConnector(name, client_id)
+        RegisterAutomaticTargetSystem(name, kind, password_policy, supports_session_termination)
+        RegisterManualTargetSystem(name)
+        CreateRotationConfig(cipher, target_system, account_identity, terminate_sessions, schedule, rotate_on_access_end)
+}
+
+surface ConnectorRegistrationView {
+    facing _: Administrator
+    context registration: ConnectorRegistration
+
+    exposes:
+        registration.name
+        registration.client_id
+        registration.status
+        -- Live eligibility state: connection liveness and the targets this access connector may rotate.
+        registration.is_connected
+        registration.assignments
+
+    provides:
+        RevokeConnector(registration)
+            when registration.status = enrolled
+        -- Rotate the access connector's credential in place (fresh secret + encryption_key, org key
+        -- re-wrapped), preserving its identity and assignments. New token shown once.
+        ReissueConnectorCredential(registration)
+            when registration.status = enrolled
+        -- Assign / unassign the targets this access connector may rotate (its eligibility).
+        AssignConnectorToTarget(registration, target_system)
+            when registration.status = enrolled
+        UnassignConnectorFromTarget(assignment)
+}
+
+surface TargetSystemView {
+    facing _: Administrator
+    context target_system: TargetSystem
+
+    exposes:
+        target_system.name
+        target_system.method
+        -- The integration kind, password policy and session-termination capability
+        -- (each present only for an automatic target).
+        target_system.kind
+        target_system.password_policy
+        target_system.supports_session_termination
+        target_system.status
+    provides:
+        DisableTargetSystem(target_system)
+            when target_system.status = active
+        EnableTargetSystem(target_system)
+            when target_system.status = disabled
+        UpdateAutomaticTargetSystem(target_system, name, password_policy, supports_session_termination)
+            when target_system.method = automatic
+        UpdateManualTargetSystem(target_system, name)
+            when target_system.method = manual
+        -- Permanently remove the target. Offered only once nothing is configured against it;
+        -- disable is the reversible control.
+        DeleteTargetSystem(target_system)
+            when not RotationConfigs.any(c => c.target_system = target_system)
+}
+
+surface RotationConfigView {
+    -- A single rotation configuration: its triggers (schedule + access-end opt-in), its
+    -- target's rotation method, the standing obligation for a manual target, and the admin
+    -- actions.
+    facing admin: Administrator
+    context rotation_config: RotationConfig
+
+    exposes:
+        rotation_config.cipher
+        rotation_config.target_system.name
+        rotation_config.target_system.method
+        rotation_config.account_identity
+        rotation_config.terminate_sessions
+        rotation_config.enabled
+        -- The triggers, inlined onto the configuration.
+        rotation_config.schedule
+        rotation_config.rotate_on_access_end
+        rotation_config.last_rotation_at
+        rotation_config.next_rotation_at
+        rotation_config.has_active_job
+        -- The flag that drives the manual-obligation prompt (Goal 3).
+        rotation_config.awaiting_manual_rotation
+
+    provides:
+        -- On-demand rotation for a credential on an automatic target (Goal 2).
+        TriggerRotation(admin, rotation_config)
+            when rotation_config.target_system.method = automatic
+             and rotation_config.target_system.status = active
+             and rotation_config.enabled
+             and not rotation_config.has_active_job
+        -- Record an out-of-band rotation for a credential on a manual target (Goal 3).
+        RecordManualRotation(admin, rotation_config)
+            when rotation_config.target_system.method = manual
+        -- Edit the whole updatable shape for this one credential: the account identity and
+        -- termination opt-in, and the schedule / triggers (recompute-on-edit).
+        UpdateRotationConfig(admin, rotation_config, account_identity, terminate_sessions, schedule, rotate_on_access_end)
+            when not rotation_config.has_active_job
+        -- Pause / resume without losing configuration (UX2).
+        PauseRotation(admin, rotation_config)
+            when rotation_config.enabled
+        ResumeRotation(admin, rotation_config)
+            when not rotation_config.enabled
+        -- Un-manage the credential (the cipher itself is untouched).
+        DeleteRotationConfig(admin, rotation_config)
+            when not rotation_config.has_active_job
+}
+
+surface RotationScheduleListView {
+    -- List of managed credentials and their schedules, so an operator can see at a
+    -- glance what is due to rotate next — what is about to change tonight (UX1).
+    facing _: Administrator
+
+    exposes:
+        for c in RotationConfigs:
+            c.cipher
+            c.target_system.name
+            c.target_system.method
+            c.enabled
+            c.schedule
+            c.rotate_on_access_end
+            c.last_rotation_at
+            c.next_rotation_at
+            c.has_active_job
+            c.awaiting_manual_rotation
+}
+
+surface AccessEventReporting {
+    -- Inbound integration boundary: an upstream access-control system reports that
+    -- a grant over a managed credential has ended. Abstract by design — PAM, AAP
+    -- leasing or (later) Secrets Manager may all be the source.
+    facing _: AccessEventSource
+    context cipher: connector/Cipher
+
+    provides:
+        AccessGrantEnded(cipher)
+}
+
+surface RotationWork {
+    -- The access connector's pull boundary: it claims an available job for a target it is
+    -- assigned. Complemented by the server push-notification (RotationAvailable, emitted
+    -- by NotifyEligibleConnectors / NotifyClaimableJobsOnConnect and consumed by
+    -- access-connector.allium / ClaimAvailableRotation) so access connectors pull promptly rather
+    -- than poll.
+    facing claimer: ConnectorRegistration
+    context job: RotationJob
+
+    provides:
+        ClaimRotation(claimer, job)
+            when job.is_claimable
+
+    @guarantee EligibleClaimsOnly
+        -- A claim is accepted only for a pending, still-claimable job whose target the
+        -- access connector is enrolled, connected and assigned to rotate (ClaimRotation enforces
+        -- all of these). The assignment is the eligibility/security boundary. The claim is
+        -- also re-authenticated: the server validates the access connector's OAuth access token on
+        -- the request (defence in depth beyond the persistent connection), so an expired
+        -- or revoked credential cannot claim.
+
+    @guidance
+        -- Pull with a push nudge: the server notifies eligible (connected, assigned)
+        -- access connectors when a job becomes claimable so they claim promptly rather than
+        -- polling. First claim wins; round-robin / load-balancing emerges from
+        -- whichever eligible access connector claims first, and a busy access connector simply does not claim.
+}
+
+surface RotationOutcomeReporting {
+    -- The access connector reports the outcome of a rotation try back to the server, by attempt_id,
+    -- over its authenticated channel. Mirrors CipherWriteback: a server-side surface the
+    -- access connector calls. The reporter is the access connector's own credential; the server matches it
+    -- against the attempt's claiming access connector so only the executing access connector can report.
+    facing reporter: ConnectorRegistration
+
+    provides:
+        -- Success and failure are distinct reports: a success carries the best-effort
+        -- session-termination outcome, a failure carries a reason. Two triggers (rather than
+        -- one with an outcome discriminator) keep the value sets disjoint from the entity
+        -- status enums, so the checker's trigger-param inference stays unambiguous.
+        ReportRotationSucceeded(reporter, attempt_id, session_termination)
+        -- A failure also carries the vault<->target sync state it left behind
+        -- (FailureSyncState), recorded on the errored attempt and audited.
+        ReportRotationFailed(reporter, attempt_id, failure_reason, sync_state)
+
+    @guarantee OnlyExecutorReports
+        -- An outcome is recorded only for an attempt whose claiming access connector is the reporter
+        -- and which is still executing (RecordRotationSucceeded / RecordRotationFailed
+        -- enforce both). A late report for an attempt already resolved (rotated, errored or
+        -- abandoned by a release/timeout) is refused, fencing off a stale access connector.
+}
+
+surface CipherWriteback {
+    -- The access connector writes a rotated password back to a cipher over its authenticated
+    -- channel, referencing the server-owned attempt it is executing (by attempt_id).
+    -- Today's API has no partial-content update, so the access connector GETs the cipher, swaps in
+    -- the newly-encrypted password (other fields ride along as opaque ciphertext) and
+    -- re-PUTs the whole object. There is no separate write token: the server authorises the
+    -- write against its own claimed RotationJob for that cipher (see AcceptCipherUpdate).
+    facing writer: ConnectorRegistration
+    context attempt: RotationAttempt where status = executing
+
+    provides:
+        SubmitCipherUpdate(writer, attempt, new_password)
+
+    @guarantee JobBoundWrite
+        -- A cipher write is accepted only against the RotationJob claimed by this access connector
+        -- (job.claimed_by = writer) that the attempt links to (attempt.job). The target is
+        -- the job's configuration's cipher, so the access connector cannot redirect the write
+        -- elsewhere. new_password is ciphertext encrypted with the organization key; the
+        -- server stores it without decrypting (zero-knowledge). Because the write is a
+        -- full-object PUT (no partial-content API), it replaces the WHOLE cipher; only the
+        -- password is meant to change, and field-level write integrity is convention, not
+        -- API-enforced. A dedicated partial-update endpoint and/or a separate bearer
+        -- write-token (defence in depth against an ownership-check bug) would tighten this;
+        -- both deferred.
+
+    @guarantee ApiScopedReads
+        -- Defence in depth for the organization key the access connector holds. The access connector's
+        -- credential carries NO general cipher-read scope: the server will not
+        -- enumerate ciphers for it nor serve ciphertext for any cipher except the one
+        -- it is actively rotating (a claimed job). Rotation reads (GETs) only that one
+        -- cipher, to re-PUT it. The organization key thus stays the theoretical crypto
+        -- blast radius, but cannot be turned into broad vault disclosure without ALSO
+        -- breaching this server-side API authorization.
+}
+
+surface ConnectorConnectivity {
+    -- The server observes an access connector's authenticated transport come up or down and
+    -- flips its ConnectorConnection, which claim eligibility and per-access connector recovery read.
+    -- These edges are TRANSPORT-ONLY (resolved): ConnectorConnected/ConnectorDisconnected map
+    -- exclusively to the access connector's authenticated transport coming up/down
+    -- (access-connector.allium ServerConnection connected / disconnected+refused), never to
+    -- session state. A session expiry with the transport up is NOT a disconnect: flipping
+    -- it would release a healthy access connector's job mid-refresh (ReleaseJob), and it is
+    -- unnecessary for eligibility because ClaimRotation re-validates the access connector's OAuth
+    -- token per claim. A rejected refresh or a revocation causes the server to close the
+    -- transport, and THAT close raises disconnected.
+    facing _: ConnectorRegistration
+    context registration: ConnectorRegistration
+
+    provides:
+        ConnectorConnected(registration)
+        ConnectorDisconnected(registration)
+}
+
+-- Open questions
+
+-- Resolved: an access connector is registered server-side (ConnectorRegistration) and authenticates
+-- with a provisioned access token via an OAuth2 client-credentials grant; the session
+-- lifecycle (refresh, revoke) is modelled in access-connector.allium.
+-- Resolved: dispatch is pull-based. A due rotation becomes an available RotationJob
+-- (OfferRotation); an eligible (connected, assigned) access connector claims it (ClaimRotation),
+-- which creates the server-owned RotationAttempt it executes. A retry is a re-claim: a
+-- failed attempt with budget left returns the job to pending after a backoff (RetryJob).
+-- Eligibility is by admin-assigned reachability (ConnectorTargetAssignment); recovery is
+-- per-access connector (a dropped access connector's claimed jobs are released back to claimable for re-claim).
+-- Resolved: the RotationAttempt is server-owned -- the server creates it when an access connector
+-- claims a job (ClaimRotation) and transitions it on the access connector's reported outcome
+-- (RecordRotationSucceeded / RecordRotationFailed). The access connector holds no attempt entity; it
+-- executes from the work snapshot and reports by attempt_id.
+-- Resolved: the per-job retry budget counts only genuinely FAILED attempts. A connectivity
+-- drop (ReleaseJob) or a mid-attempt timeout (JobTimesOut) marks the in-flight attempt
+-- abandoned, which does not count, so losing connectivity is never charged to the budget.
+open question "account_identity integrity (server-tamper resistance): account_identity is stored server-side in plaintext on RotationConfig and carried verbatim to the access connector on the claim (RotationClaimed), where it selects which target-system account the access connector rotates and terminates sessions for. A compromised or malicious Bitwarden server could substitute a different account_identity on the claim, pointing the access connector's privileged target-system operations at an account the admin never chose. Encrypting (or authenticating) account_identity when the admin enters and saves it -- client-side under the organization key at CreateRotationConfig time, exactly as vault ciphers are, so the server stores only ciphertext it can neither read nor forge -- would let the access connector decrypt/verify it on the claim and detect substitution. This extends the zero-knowledge boundary (access-connector.allium / ServerZeroKnowledge and the org-key delivery) from the password to the account identity, and like the access connector's Read blast radius question is closed at the crypto layer; it depends on the admin's client holding the org key at config-save time. Deferred."
+open question "Lease-bound least-privilege access connector auth: today the access connector authenticates with a broad client-credentials session (access-connector.allium / ConnectorSession) whose standing authorization to write vault ciphers is broader than an SM machine account's; individual operations are scoped only after the fact by the claimed RotationJob (AcceptCipherUpdate / JobBoundWrite) and by ApiScopedReads, but the credential itself carries broad authority whenever a session is live. Hardening: carry a lease-id on the RotationJob (from the upstream access grant -- e.g. a PAM lease; see RotateOnAccessEnd / AccessEventReporting) and have the server grant the access connector only the strictly-needed endpoints (read/write of the one cipher, PAM operations for that account) when it presents a lease-id that is currently due for rotation AND matches the cipher it wants to operate on. This turns the access connector's standing authority into a per-lease capability, so a stolen access connector credential with no live, due lease grants nothing -- defence in depth beyond EligibleClaimsOnly, JobBoundWrite and ApiScopedReads. Open: whether this generalises to scheduled and on-demand jobs (which have no upstream lease and would need a server-minted equivalent) or applies only to access-end jobs. Deferred."
+-- Resolved: §6.8 failure policy is now specified here. RotationFailed remains the seam
+-- (FailJob / JobTimesOut emit it); AlertOnRotationFailed raises the pure-sink
+-- OperatorAlertRaised on every terminal failure and timeout (severity elevated when the
+-- failing attempt left the vault stale -- sync_state target_updated -- or the rotation was
+-- a security-mandated access_end). Auto-pause: consecutive_failures accrues on each terminal
+-- failure/timeout and, at config.max_consecutive_failures, AutoPauseAfterConsecutiveFailures
+-- sets the CONFIG (never the target) enabled = false, audits auto_paused and alerts. §6.8
+-- thereby takes ownership of next_rotation_at on terminal failure: the failure_retry_delay
+-- reschedule stands until auto-pause, after which a paused config's RotationDue cannot fire,
+-- ending the loop; recovery is the existing admin ResumeRotation, and a success or recorded
+-- manual rotation resets consecutive_failures. Alert DELIVERY (email, in-product) is out of
+-- scope (Excludes).
+open question "Collection-wide settings (deferred): applying one set of rotation triggers across every managed credential in a collection at once. Deferred to keep Phase 1 per-credential -- the per-credential UpdateRotationConfig path stands in. Revisit with the collection-membership resolution it needs."
+open question "Non-cron cadences: Schedule carries a cron expression for exact timing. Do interval-style presets (e.g. 'every 90 days') need a separate representation, or are all supported presets expressible as cron?"
+open question "Rotation throttling: many credentials on one target coming due together could hammer that target or connector. Not modelled here (no fleet-scale deployment assumed); if needed, throttle in the access connector/connector rather than the server scheduler."
+-- Resolved: unroutable-job escalation is folded into §6.8. JobTimesOut distinguishes an
+-- UNROUTABLE job (zero attempts -- never claimed, no eligible access connector connected/assigned)
+-- from a STUCK claiming access connector via the alert_kind on RotationFailed (job_unroutable vs
+-- job_stuck), and AlertOnRotationFailed raises the operator alert on the shared
+-- OperatorAlertRaised seam. Delivery is out of scope (Excludes), shared with the manual-
+-- obligation and terminal-failure alerts.
+-- Resolved: access connector connectivity edges are TRANSPORT-ONLY. ConnectorConnected/ConnectorDisconnected
+-- map exclusively to the access connector's authenticated transport coming up/down
+-- (access-connector.allium ServerConnection connected / disconnected+refused), never to
+-- session state. A session expiry with the transport up is NOT disconnected: flipping it
+-- would trigger ReleaseJob against a healthy access connector mid-refresh, and it is unnecessary for
+-- eligibility because ClaimRotation re-validates the OAuth token per claim. A rejected
+-- refresh or a revocation causes the server to close the transport, and THAT raises
+-- disconnected (see ConnectorConnectivity and the comment above MarkConnectorConnected).
+-- Resolved: claimed jobs are never cancelled. Pause, disable, unassign and settings changes
+-- only stop NEW offers/claims (existing behaviour: a still-pending job is held un-claimable
+-- by is_claimable / ClaimRotation and times out via JobTimesOut unless re-enabled). They do
+-- NOT cancel a CLAIMED job: the access connector may already have reset the target-side password, and
+-- refusing its cipher write would MANUFACTURE the vault-stale state the system exists to
+-- prevent -- the write must be allowed to land. The emergency brake for a runaway access connector is
+-- RevokeConnector, which closes the transport and makes the access connector abort at its next step
+-- boundary (access-connector.allium / NoTargetActionPastSessionLoss); staleness risk is
+-- consciously accepted when firing an access connector. See the guidance on UnassignConnectorFromTarget,
+-- DisableTargetSystem, PauseRotation and RevokeConnector.
+-- Resolved: manual-obligation escalation is folded into §6.8. AlertManualObligationOverdue
+-- (a temporal rule guarded by the manual/enabled/awaiting-obligation predicates and a
+-- not-alerted re-fire brake) raises an elevated OperatorAlertRaised once a manual config's
+-- obligation has stood unmet past config.manual_obligation_alert_after. manual_obligation_alerted
+-- guards against the no-state-change temporal re-fire livelock and is reset when a fresh
+-- obligation is raised or the obligation is cleared. Delivery is out of scope (Excludes).
+open question "Access-event emitter binding: which upstream systems wire into AccessGrantEnded (PAM leases, AAP grants, ...)? The signal-shape question is resolved — it carries only the cipher, which uniquely resolves the configuration to rotate (OneConfigPerCipher), so no account_identity is needed — but the concrete set of emitters and how they register against AccessEventReporting is still open."
+open question "On-demand and access-triggered jobs record a source but not the triggering admin (config_updated, paused, resumed and manual_recorded carry an actor; the job-derived outcomes do not). Should the audit attribute the on-demand actor end to end?"
+open question "Cipher-level 'last rotated' display: should the vault UI show a last-rotated timestamp on the cipher itself, derived by querying the audit log for rotation events (the audit log being the authoritative record that a rotation happened), rather than a field the rotation machinery maintains? RotationConfig.last_rotation_at exists server-side; this question is about surfacing rotation history on the cipher."
+-- Resolved: disabled-target catch-up and dropped access-end triggers. Principle: EVENT
+-- triggers must never be lost; SCHEDULES may skip missed windows (ResumeRotation's policy).
+--   * Schedule catch-up: EnableTargetSystem now mirrors ResumeRotation -- it recomputes
+--     next_rotation_at from now for each automatic config with a schedule, SKIPPING missed
+--     windows (consistent with resume).
+--   * Dropped access-end: an AccessGrantEnded for an automatic config that cannot be offered
+--     right now (paused OR target disabled) is DEFERRED, not dropped
+--     (DeferAccessEndWhileUnavailable: pending_access_end latched, access_end_deferred
+--     audited; its guard is the exact complement of RotateOnAccessEnd). A manual config
+--     paused when the access-end arrives is likewise deferred (DeferManualAccessEndWhilePaused,
+--     disjoint from RaiseManualObligationOnAccessEnd on enabled). Discharge is on
+--     ResumeRotation and EnableTargetSystem: an automatic config gets a deferred
+--     OfferRotation(source: access_end); a manual config has its obligation pulled due; and
+--     pending_access_end is cleared. Together this is the catch-up semantics -- schedules
+--     skip, events are preserved. (On-demand TriggerRotation while unavailable is NOT
+--     deferred -- an admin can simply re-issue it; only the lossy EVENT trigger needs the
+--     latch.)
+open question "Access-end during an active job is silently dropped: RotateOnAccessEnd requires not has_active_job, and DeferAccessEndWhileUnavailable's guard (not enabled or target disabled) is the exact complement only over enabled x target-status -- it does not cover the has_active_job case. So an AccessGrantEnded arriving while an automatic config is enabled, its target active, and a job pending or claimed fires NEITHER rule: the event is lost, against the 'an event trigger must never be lost' principle. The in-flight job does not necessarily satisfy the access-end intent -- its password may have been generated before the grant ended, and it may yet fail terminally. Candidate resolutions: (a) latch pending_access_end for this case too and discharge it when the active job resolves (MarkJobSucceeded / FailJob / JobTimesOut would need a discharge path, and a success may arguably subsume the deferred trigger); or (b) document the drop as deliberate on the grounds that the concurrent rotation satisfies the access-end intent. (Manual configs are unaffected: they never have jobs -- ManualConfigNeverJobbed.) Deferred."
+-- Resolved: the claim is a time-bounded LEASE, and BOTH candidate mitigations are adopted.
+--   * Lease-sized release (server): ClaimRotation stamps claimed_at = now; execute_by =
+--     claimed_at + config.release_delay is the lease deadline. ReleaseJob sets
+--     next_claimable_at to that lease expiry (NOT now + retry_base_delay), so a dropped
+--     access connector's job never becomes re-claimable while the dropped access connector might still be inside
+--     its lease acting on the target. release_delay is a dedicated recovery knob sized to a
+--     worst-case single attempt, deliberately distinct from retry_base_delay (which spaces
+--     retries of GENUINELY FAILED attempts reported by a live access connector -- RetryJob, unchanged);
+--     the 1-second retry_base_delay was the bug for release. Clock skew is absorbed by
+--     release_delay's sizing margin.
+--   * Connector-side abort (access connector): execute_by rides on the claim (RotationClaimed); the access connector
+--     checks it before each target-side step and never acts past it, and aborts at the step
+--     boundary on session loss (access-connector.allium / NoTargetActionPastSessionLoss). So a
+--     partitioned access connector has finished or aborted before its lease elapses and the job
+--     re-opens. The cipher write is fenced (JobBoundWrite); this fences the TARGET SYSTEM too.
+open question "Method switching: can an admin move a target system between automatic and manual after creation (and supply/clear its kind, password policy and session-termination capability), and what becomes of its configurations' schedules and any active jobs? (ManualConfigNeverJobbed assumes a target's method is fixed at creation.)"
+open question "Secrets Manager support (Phase 1 non-goal): a future configuration would point at an SM secret rather than an access connector/Cipher. Confirm the offer, claim, recovery, scheduling and audit machinery here carries an SM rotation unchanged, and decide whether to generalise the cipher seam or add a parallel SM configuration."
