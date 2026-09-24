@@ -72,7 +72,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
             $"[{Schema}].[AccessRequest_ReadDetailsById]",
-            new { Id = id, Now = now },
+            new { Id = id },
             commandType: CommandType.StoredProcedure);
 
         return (await ReadDetailsWithDecisionsAsync(results, now)).FirstOrDefault();
