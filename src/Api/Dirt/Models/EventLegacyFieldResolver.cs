@@ -5,10 +5,10 @@ namespace Bit.Api.Dirt.Models;
 
 /// <summary>
 /// Reinterprets columns on events written before EventService correctly populated ActingUserId /
-/// OrganizationUserId, so the response models can report those rows accurately without a data
-/// migration. Each affected event type wrote a real value into the wrong column; a backfill would
-/// move it to the right one, but reading it back with the same knowledge at response time has the
-/// same effect for every consumer of these models and is safe to ship and roll back at any time.
+/// OrganizationUserId, so the response models can display those legacy rows correctly without a
+/// data migration. This fixes display only: SQL-side filters (e.g. the public API's
+/// <c>?actingUserId=</c> query and the org "view member's events" page) run before this resolver
+/// and query the raw columns, so they still miss legacy rows. That gap is accepted, not fixed here.
 /// </summary>
 public static class EventLegacyFieldResolver
 {

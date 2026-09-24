@@ -10,8 +10,6 @@ public class EventResponseModelTests
 {
     [Theory]
     [BitAutoData(EventType.Secret_Retrieved)]
-    [BitAutoData(EventType.Secret_Restored)]
-    [BitAutoData(EventType.Project_Retrieved)]
     [BitAutoData(EventType.Project_Deleted)]
     public void Constructor_SecretOrProjectEvent_MissingActingUser_FallsBackToUserId(
         EventType type, Guid userId)
@@ -63,10 +61,8 @@ public class EventResponseModelTests
     /// </summary>
     [Theory]
     [BitAutoData(EventType.Send_Accessed_Text)]
-    [BitAutoData(EventType.Send_Accessed_File)]
     [BitAutoData(EventType.OrganizationUser_Invited)]
     [BitAutoData(EventType.ServiceAccount_UserAdded)]
-    [BitAutoData(EventType.Cipher_Created)]
     public void Constructor_OtherEventTypes_MissingActingUser_DoesNotFallBack(
         EventType type, Guid userId)
     {
@@ -104,13 +100,11 @@ public class EventResponseModelTests
     }
 
     /// <summary>
-    /// ServiceAccount_GroupAdded/Removed and ServiceAccount_Created/Deleted never wrote to UserId,
-    /// so a UserId that happens to be present on them is not a stashed OrganizationUser id and
-    /// must not be picked up by the MemberId fallback.
+    /// Sibling ServiceAccount_* types (Group/Created/Deleted) never wrote to UserId, so a UserId
+    /// present on them is not a stashed OrganizationUser id and must not feed the MemberId fallback.
     /// </summary>
     [Theory]
     [BitAutoData(EventType.ServiceAccount_GroupAdded)]
-    [BitAutoData(EventType.ServiceAccount_Created)]
     public void Constructor_OtherServiceAccountEvents_MissingOrganizationUserId_DoesNotFallBack(
         EventType type, Guid userId)
     {

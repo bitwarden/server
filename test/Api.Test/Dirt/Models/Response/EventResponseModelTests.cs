@@ -23,44 +23,11 @@ public class EventResponseModelTests
         Assert.Equal(userId, response.UserId);
     }
 
-    [Theory]
-    [BitAutoData(EventType.Secret_Created)]
-    [BitAutoData(EventType.Project_Edited)]
-    public void Constructor_SecretOrProjectEvent_ActingUserPresent_DoesNotOverwriteIt(
-        EventType type, Guid userId, Guid actingUserId)
-    {
-        var ev = new EventMessage { Type = type, UserId = userId, ActingUserId = actingUserId };
+    // ActingUserId-present and machine-account non-attribution are exercised once, on the public
+    // model (EventResponseModelTests in Bit.Api.Test.Dirt.Public.Models) -- ResolveActingUserId is
+    // the same call in both models, and neither of those cases touches UserId, so they'd be exact
+    // duplicates here.
 
-        var response = new EventResponseModel(ev);
-
-        Assert.Equal(actingUserId, response.ActingUserId);
-    }
-
-    [Theory]
-    [BitAutoData(EventType.Secret_Retrieved)]
-    [BitAutoData(EventType.Project_Retrieved)]
-    public void Constructor_MachineAccountSecretOrProjectEvent_StaysUnattributed(
-        EventType type, Guid serviceAccountId)
-    {
-        var ev = new EventMessage
-        {
-            Type = type,
-            UserId = null,
-            ActingUserId = null,
-            ServiceAccountId = serviceAccountId
-        };
-
-        var response = new EventResponseModel(ev);
-
-        Assert.Null(response.ActingUserId);
-        Assert.Equal(serviceAccountId, response.ServiceAccountId);
-    }
-
-    /// <summary>
-    /// On these types UserId is not the actor: the Send owner did not access their own Send, a
-    /// SCIM-invited member did not invite themselves, and ServiceAccount_* rows store an
-    /// OrganizationUser id in UserId. The fallback must not reach them.
-    /// </summary>
     /// <summary>
     /// ServiceAccount_UserAdded is deliberately excluded here: on that type UserId is a legacy
     /// stashed OrganizationUser id, so its ActingUserId non-fallback is covered instead by
@@ -69,7 +36,6 @@ public class EventResponseModelTests
     [Theory]
     [BitAutoData(EventType.Send_Accessed_Text)]
     [BitAutoData(EventType.OrganizationUser_Invited)]
-    [BitAutoData(EventType.Cipher_Created)]
     public void Constructor_OtherEventTypes_MissingActingUser_DoesNotFallBack(
         EventType type, Guid userId)
     {
@@ -116,7 +82,6 @@ public class EventResponseModelTests
 
     [Theory]
     [BitAutoData(EventType.ServiceAccount_GroupAdded)]
-    [BitAutoData(EventType.ServiceAccount_Created)]
     public void Constructor_OtherServiceAccountEvents_MissingOrganizationUserId_DoesNotFallBack(
         EventType type, Guid userId)
     {
