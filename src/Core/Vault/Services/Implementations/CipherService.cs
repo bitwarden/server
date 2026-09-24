@@ -1127,7 +1127,7 @@ public class CipherService : ICipherService
             .Where(c => c.Type == CollectionType.DefaultUserCollection)
             .ToList();
 
-        if (currentDefaultCollections.Count != 0)
+        if (currentDefaultCollections.Count > 0)
         {
             var ownedDefaultCollectionIds = (await _collectionRepository.GetManyByUserIdAsync(userId))
                 .Where(c => c.Type == CollectionType.DefaultUserCollection)
