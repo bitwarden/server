@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.Metrics;
 using System.Xml;
-using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;

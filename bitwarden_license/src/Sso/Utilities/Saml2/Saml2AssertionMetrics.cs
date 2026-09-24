@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.Metrics;
 
-namespace Bit.Sso.Utilities;
+namespace Bit.Sso.Utilities.Saml2;
 
 /// <summary>
 /// Emits anonymous, aggregate metrics about SAML assertion inspection.

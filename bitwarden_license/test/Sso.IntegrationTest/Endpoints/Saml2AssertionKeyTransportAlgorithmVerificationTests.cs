@@ -7,6 +7,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Sso.IntegrationTest.Utilities;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;

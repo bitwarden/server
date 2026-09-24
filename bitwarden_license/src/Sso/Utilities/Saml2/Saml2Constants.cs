@@ -1,4 +1,4 @@
-﻿namespace Bit.Sso.Utilities;
+﻿namespace Bit.Sso.Utilities.Saml2;
 
 public static class Saml2ClaimTypes
 {

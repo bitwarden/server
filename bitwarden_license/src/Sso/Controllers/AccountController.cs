@@ -23,6 +23,7 @@ using Bit.Core.Utilities;
 using Bit.Sso.Exceptions;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
