@@ -399,10 +399,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public async Task Post_InviteUsersAfterProvisioningDisabled_CreatesStagedUser()
     {
         var localFactory = new ScimApplicationFactory();
-        localFactory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-                .Returns(true));
-
         localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
         SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
 
@@ -432,43 +428,9 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
-    public async Task Post_InviteUsersAfterProvisioningDisabled_WithoutFeatureFlag_InvitesUser()
-    {
-        var localFactory = new ScimApplicationFactory();
-        localFactory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-                .Returns(false));
-
-        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
-        SeedScimConnection(localFactory, inviteUsersAfterProvisioning: false);
-
-        var email = "user5@example.com";
-        var inputModel = new ScimUserRequestModel
-        {
-            DisplayName = "Test User 5",
-            Emails = new List<BaseScimUserModel.EmailModel> { new BaseScimUserModel.EmailModel(email) },
-            ExternalId = "UE",
-            Active = true,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
-        };
-
-        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
-
-        Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
-
-        var databaseContext = localFactory.GetDatabaseContext();
-        var newUser = databaseContext.OrganizationUsers.Single(ou => ou.Email == email);
-        Assert.Equal(OrganizationUserStatusType.Invited, newUser.Status);
-    }
-
-    [Fact]
     public async Task Post_InviteUsersAfterProvisioningEnabled_InvitesUser()
     {
         var localFactory = new ScimApplicationFactory();
-        localFactory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus)
-                .Returns(true));
-
         localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
         SeedScimConnection(localFactory, inviteUsersAfterProvisioning: true);
 
