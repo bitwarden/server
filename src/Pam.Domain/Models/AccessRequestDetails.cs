@@ -42,10 +42,10 @@ public class AccessRequestDetails
     public DateTime CreationDate { get; set; }
 
     /// <summary>
-    /// When a party resolved the request (<see cref="Entities.AccessRequest.ActionDate"/>); null while no action is
-    /// recorded, including for derived-Expired rows. Keeps the wire's <c>resolvedAt</c> name and meaning.
+    /// When a party last acted on the request (<see cref="Entities.AccessRequest.ActionDate"/>); null while no action
+    /// is recorded, including for derived-Expired rows.
     /// </summary>
-    public DateTime? ResolvedDate { get; set; }
+    public DateTime? ActionDate { get; set; }
 
     /// <summary>The lease this request produced once activated, or null if it has not produced a lease.</summary>
     public Guid? ProducedLeaseId { get; set; }
@@ -100,7 +100,7 @@ public class AccessRequestDetails
             NotAfter = request.NotAfter,
             Reason = request.Reason,
             CreationDate = request.CreationDate,
-            ResolvedDate = request.ActionDate,
+            ActionDate = request.ActionDate,
         };
         details.StampDerivedStatuses(request.Action, producedLease: null, now);
         return details;
