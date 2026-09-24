@@ -237,6 +237,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
@@ -259,6 +262,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Plan")
                         .IsRequired()

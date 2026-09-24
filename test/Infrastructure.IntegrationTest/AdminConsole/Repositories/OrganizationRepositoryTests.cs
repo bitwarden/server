@@ -43,6 +43,27 @@ public class OrganizationRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task CreateAsync_WithPamSeats_RoundTripsPamSeatColumns(
+        IOrganizationRepository organizationRepository)
+    {
+        var created = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org PAM",
+            BillingEmail = "test@email.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+            PamSeats = 5,
+            MaxAutoscalePamSeats = 10,
+        });
+
+        var read = await organizationRepository.GetByIdAsync(created.Id);
+
+        Assert.NotNull(read);
+        Assert.Equal(5, read.PamSeats);
+        Assert.Equal(10, read.MaxAutoscalePamSeats);
+    }
+
+    [Theory, DatabaseData]
     public async Task GetOccupiedSeatCountByOrganizationIdAsync_WithUsersAndSponsorships_ReturnsCorrectCounts(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
