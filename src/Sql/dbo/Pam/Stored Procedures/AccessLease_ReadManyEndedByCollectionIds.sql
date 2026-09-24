@@ -1,13 +1,10 @@
 CREATE PROCEDURE [dbo].[AccessLease_ReadManyEndedByCollectionIds]
     @CollectionIds [dbo].[GuidIdArray] READONLY,
     @Since DATETIME2(7),
-    @Now DATETIME2(7) = NULL
+    @Now DATETIME2(7)
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- Leases ended on/after @Since; "ended" derives from [Action] recording an early end.
     SELECT
