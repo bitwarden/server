@@ -256,7 +256,7 @@ public class CollectionAuthorizationServiceTests
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId)
     {
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(organizationId, []);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, []);
 
         Assert.Empty(result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
@@ -271,7 +271,7 @@ public class CollectionAuthorizationServiceTests
     {
         SetupCollections(sutProvider);
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(organizationId, [collectionId]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]);
 
         Assert.Empty(result);
     }
@@ -296,7 +296,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
             .Returns(new List<CollectionDetails> { new() { Id = authorizedCollection.Id, Manage = true } });
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(
             authorizedCollection.OrganizationId, [authorizedCollection.Id, unauthorizedCollection.Id]);
 
         Assert.Equal(new HashSet<Guid> { authorizedCollection.Id }, result);
@@ -320,8 +320,8 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
 
-        var firstResult = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
-        var secondResult = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var firstResult = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
+        var secondResult = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, firstResult);
         Assert.Equal(new HashSet<Guid> { collection.Id }, secondResult);
@@ -344,7 +344,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByUserIdAsync(Arg.Any<Guid>());
@@ -361,7 +361,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns((CurrentContextOrganization?)null);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(collection.OrganizationId).Returns(true);
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -382,7 +382,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -405,7 +405,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(collection.OrganizationId)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -427,7 +427,7 @@ public class CollectionAuthorizationServiceTests
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
-        var result = await sutProvider.Sut.AuthorizeModifyUserAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Empty(result);
     }
@@ -440,7 +440,7 @@ public class CollectionAuthorizationServiceTests
     {
         SetupCollections(sutProvider);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(organizationId, [collectionId]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]);
 
         Assert.Empty(result);
     }
@@ -457,7 +457,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive().GetManyByUserIdAsync(Arg.Any<Guid>());
@@ -474,7 +474,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns((CurrentContextOrganization?)null);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(collection.OrganizationId).Returns(true);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -495,7 +495,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -519,7 +519,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(collection.OrganizationId).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Empty(result);
     }
@@ -542,7 +542,7 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(collection.OrganizationId)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Equal(new HashSet<Guid> { collection.Id }, result);
     }
@@ -564,7 +564,7 @@ public class CollectionAuthorizationServiceTests
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
 
-        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessManyAsync(collection.OrganizationId, [collection.Id]);
+        var result = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(collection.OrganizationId, [collection.Id]);
 
         Assert.Empty(result);
     }

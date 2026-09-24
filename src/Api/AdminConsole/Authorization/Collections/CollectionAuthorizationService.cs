@@ -17,10 +17,10 @@ public class CollectionAuthorizationService(
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
         (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate)).Contains(collectionId);
 
-    public Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
+    public Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
         AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess);
 
-    public Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
+    public Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
         AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess);
 
     /// <summary>

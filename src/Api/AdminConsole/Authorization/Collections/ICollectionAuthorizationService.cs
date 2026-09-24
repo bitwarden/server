@@ -25,7 +25,7 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with user access that the caller can modify.</returns>
-    Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
+    Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 
     /// <summary>
     /// Determines which of the requested collections have group access that the caller can modify.
@@ -33,5 +33,5 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with group access that the caller can modify.</returns>
-    Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessManyAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
+    Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 }
