@@ -110,7 +110,7 @@ public class AccessRequestExtensionRepositoryTests
         Assert.Equal(AccessRequestStatus.Denied, denied!.Status);
         Assert.Equal(lease.Id, denied.ExtensionOfLeaseId);
         Assert.Equal(newNotAfter, denied.NotAfter, LaxDateTimeComparer.Default);
-        Assert.NotNull(denied.ResolvedDate);
+        Assert.NotNull(denied.ActionDate);
         var decision = Assert.Single(denied.Decisions);
         Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
         Assert.Equal(AccessDecisionVerdict.Deny, decision.Verdict);
