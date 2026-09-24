@@ -1,13 +1,10 @@
 CREATE PROCEDURE [dbo].[AccessRequest_ReadManyByRequesterId]
     @RequesterId UNIQUEIDENTIFIER,
-    @Now DATETIME2(7) = NULL,
+    @Now DATETIME2(7),
     @Since DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
-
-    -- Lets older callers omit @Now and @Since during rolling deployment.
-    SET @Now = COALESCE(@Now, GETUTCDATE())
 
     -- @Since matches the approver-side retention window.
     -- Ids are materialized first so both result sets share the same rows.
