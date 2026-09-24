@@ -79,6 +79,16 @@ public class UserSubscriptionEndpointsTests
     }
 
     [Fact]
+    public void MapUserSubscriptionEndpoints_MapsPostOrganizationPurchasePreview()
+    {
+        var endpoint = MapAndFindEndpoint("GetAccountOrganizationPurchasePreview");
+
+        Assert.Equal(["POST"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("/purchase/organization/preview", endpoint.RoutePattern.RawText);
+        AssertInheritsTheGroupChain(endpoint);
+    }
+
+    [Fact]
     public void MapUserSubscriptionEndpoints_MapsThePreviewRoute()
     {
         var app = WebApplication.CreateBuilder().Build();

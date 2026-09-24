@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Services;
 using Bit.Subscriptions.User.Handlers;
 using Bit.Subscriptions.User.Queries;
@@ -19,6 +20,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IPricingClient>());
         services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
+        services.AddSingleton(Substitute.For<ITaxService>());
         services.AddSingleton(Substitute.For<IUserService>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
@@ -31,5 +33,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPreviewHandler>());
         Assert.IsType<GetPremiumPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetPremiumPurchasePreviewQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountPremiumPurchasePreviewHandler>());
+        Assert.IsType<GetOrganizationPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetOrganizationPurchasePreviewQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountOrganizationPurchasePreviewHandler>());
     }
 }
