@@ -26,6 +26,7 @@ public class TeamsService(
     private readonly string _clientId = globalSettings.Teams.ClientId;
     private readonly string _clientSecret = globalSettings.Teams.ClientSecret;
     private readonly string _scopes = globalSettings.Teams.Scopes;
+    private readonly string _tenantId = globalSettings.Teams.TenantId;
     private readonly string _graphBaseUrl = globalSettings.Teams.GraphBaseUrl;
     private readonly string _loginBaseUrl = globalSettings.Teams.LoginBaseUrl;
 
@@ -113,7 +114,7 @@ public class TeamsService(
 
     public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
-        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret);
+        var credentials = CreateAppCredentials();
         using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient, disposeHttpClient: false);
 
         var activity = new Activity
@@ -123,6 +124,18 @@ public class TeamsService(
         };
 
         await connectorClient.Conversations.SendToConversationAsync(channelId, activity);
+    }
+
+    /// <summary>
+    /// Single-tenant bots must obtain tokens from their home tenant; the Bot Connector rejects tokens from the
+    /// default Bot Framework tenant with 401 Unauthorized. An empty tenant keeps the multi-tenant default.
+    /// </summary>
+    internal MicrosoftAppCredentials CreateAppCredentials()
+    {
+        return new MicrosoftAppCredentials(
+            _clientId,
+            _clientSecret,
+            string.IsNullOrWhiteSpace(_tenantId) ? null : _tenantId);
     }
 
     protected override async Task OnInstallationUpdateAddAsync(ITurnContext<IInstallationUpdateActivity> turnContext,

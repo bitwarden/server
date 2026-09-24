@@ -11,6 +11,7 @@ using Bit.Core.Dirt.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
 using NSubstitute;
 using Xunit;
@@ -30,7 +31,7 @@ public class TeamsServiceTests
         _httpClient = _handler.ToHttpClient();
     }
 
-    private SutProvider<TeamsService> GetSutProvider()
+    private SutProvider<TeamsService> GetSutProvider(string? tenantId = null)
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
         clientFactory.CreateClient(TeamsService.HttpClientName).Returns(_httpClient);
@@ -38,6 +39,7 @@ public class TeamsServiceTests
         var globalSettings = Substitute.For<GlobalSettings>();
         globalSettings.Teams.LoginBaseUrl.Returns("https://login.example.com");
         globalSettings.Teams.GraphBaseUrl.Returns("https://graph.example.com");
+        globalSettings.Teams.TenantId.Returns(tenantId);
 
         return new SutProvider<TeamsService>()
             .SetDependency(clientFactory)
@@ -215,6 +217,30 @@ public class TeamsServiceTests
 
         // Disposing the ConnectorClient must not dispose the shared, factory-provided HttpClient.
         Assert.Equal(2, _handler.CapturedRequests.Count);
+    }
+
+    [Fact]
+    public void CreateAppCredentials_TenantIdConfigured_UsesTenant()
+    {
+        var tenantId = Guid.NewGuid().ToString();
+        var sutProvider = GetSutProvider(tenantId);
+
+        var credentials = sutProvider.Sut.CreateAppCredentials();
+
+        Assert.Equal(tenantId, credentials.ChannelAuthTenant);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void CreateAppCredentials_TenantIdNotConfigured_UsesDefaultBotFrameworkTenant(string? tenantId)
+    {
+        var sutProvider = GetSutProvider(tenantId);
+
+        var credentials = sutProvider.Sut.CreateAppCredentials();
+
+        Assert.Equal(AuthenticationConstants.DefaultChannelAuthTenant, credentials.ChannelAuthTenant);
     }
 
     [Fact]
