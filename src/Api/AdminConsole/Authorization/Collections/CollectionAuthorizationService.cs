@@ -10,8 +10,11 @@ public class CollectionAuthorizationService(
     ICollectionRepository collectionRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService) : ICollectionAuthorizationService
 {
+    // Collection ID mapped to its organization ID, or null if unresolved
     private readonly Dictionary<Guid, Guid?> _organizationIdByCollectionId = new();
+    // Orphaned collection IDs per organization; only fetched for Owner/Admin callers
     private readonly Dictionary<Guid, HashSet<Guid>> _orphanedCollectionIdsByOrganizationId = new();
+    // Collections the caller manages, across organizations; null until first fetched
     private HashSet<Guid>? _callerManagedCollectionIds;
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
