@@ -71,8 +71,9 @@ public class CollectionAuthorizationService(
         var authorizedCollectionIds = requestedCollectionIds
             .Where(id => CollectionRules.CollectionAssignment.CanManage(
                 organization,
-                callerManagesCollection: callerManagedCollectionIds.Contains(id),
-                isCollectionOrphaned: orphanedCollectionIds.Contains(id)))
+                new CollectionRules.CollectionAssignment.ManagementFacts(
+                    CallerManagesCollection: callerManagedCollectionIds.Contains(id),
+                    IsOrphaned: orphanedCollectionIds.Contains(id))))
             .ToHashSet();
 
         if (authorizedCollectionIds.Count < requestedCollectionIds.Count &&

@@ -255,7 +255,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: true, isCollectionOrphaned: false);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: true, IsOrphaned: false));
 
         Assert.True(result);
     }
@@ -267,7 +267,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
 
         Assert.True(result);
     }
@@ -279,7 +279,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: false);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: false));
 
         Assert.False(result);
     }
@@ -293,7 +293,7 @@ public class CollectionRulesTests
         // collection does not authorize the operation.
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
 
         Assert.False(result);
     }
@@ -301,7 +301,7 @@ public class CollectionRulesTests
     [Fact]
     public void CanManage_WhenMissingOrgAccess_OrphanedDoesNotGrantAccess()
     {
-        var result = CollectionRules.CollectionAssignment.CanManage(null, callerManagesCollection: false, isCollectionOrphaned: true);
+        var result = CollectionRules.CollectionAssignment.CanManage(null, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
 
         Assert.False(result);
     }

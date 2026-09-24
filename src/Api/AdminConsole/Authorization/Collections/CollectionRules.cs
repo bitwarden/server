@@ -21,17 +21,17 @@ public static class CollectionRules
     /// </summary>
     public static class CollectionAssignment
     {
+        /// <summary>Facts needed by <see cref="CanManage"/>, bundled instead of passed as two bools.</summary>
+        public readonly record struct ManagementFacts(bool CallerManagesCollection, bool IsOrphaned);
+
         /// <summary>
         /// Returns true if the caller can manage one collection without an organization-wide permission.
         /// This is true if the caller is assigned to manage the collection, or if the caller is an Owner or
         /// Admin and the collection is orphaned.
         /// </summary>
-        public static bool CanManage(
-            CurrentContextOrganization? organizationClaims,
-            bool callerManagesCollection,
-            bool isCollectionOrphaned) =>
-            callerManagesCollection ||
-            (isCollectionOrphaned && CanManageOrphanedCollections(organizationClaims));
+        public static bool CanManage(CurrentContextOrganization? organizationClaims, ManagementFacts facts) =>
+            facts.CallerManagesCollection ||
+            (facts.IsOrphaned && CanManageOrphanedCollections(organizationClaims));
 
         /// <summary>
         /// Returns true if the caller can manage orphaned collections. Callers can check this first and skip
