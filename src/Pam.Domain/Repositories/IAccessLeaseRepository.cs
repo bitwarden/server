@@ -60,7 +60,8 @@ public interface IAccessLeaseRepository
 
     /// <summary>
     /// Atomically ends a running lease with <paramref name="endAction"/> (Revoked or Cancelled) and records
-    /// <paramref name="auditDecision"/> against the lease's originating request.
+    /// <paramref name="auditDecision"/> against the lease's originating request. Guarded so a lease that has
+    /// already ended or whose window has lapsed is left untouched.
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
 }

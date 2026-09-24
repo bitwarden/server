@@ -18,7 +18,9 @@ BEGIN
     UPDATE [dbo].[AccessRequest]
     SET [Action] = @Action,
         [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId AND [Action] = 0 -- None (open)
+    WHERE [Id] = @AccessRequestId
+        AND [Action] = 0 -- None (open)
+        AND [NotAfter] > @Now
 
     IF @@ROWCOUNT > 0
     BEGIN

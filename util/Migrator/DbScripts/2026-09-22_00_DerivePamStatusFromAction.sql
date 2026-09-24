@@ -94,24 +94,17 @@ BEGIN
     EXEC sp_rename '[dbo].[AccessLease].[IX_AccessLease_CollectionId_Status]', 'IX_AccessLease_CollectionId_Action', 'INDEX';
 END
 GO
--- Renamed and reshaped: [NotAfter] DESC lets AccessLease_ReadActiveByCipherId seek in-window rows
--- without a sort.
-IF EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Status' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
-    AND NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Action' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
+-- Replaced rather than renamed: [NotAfter] DESC lets AccessLease_ReadActiveByCipherId seek in-window rows
+-- without a sort. Created before the old index is dropped, so the singleton guard is never left without one.
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Action_NotAfter' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
 BEGIN
-    EXEC sp_rename '[dbo].[AccessLease].[IX_AccessLease_CipherId_Status]', 'IX_AccessLease_CipherId_Action', 'INDEX';
+    CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action_NotAfter]
+        ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
 END
 GO
-IF EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Action' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Status' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
 BEGIN
-    CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
-        ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC)
-        WITH (DROP_EXISTING = ON);
-END
-ELSE
-BEGIN
-    CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
-        ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
+    DROP INDEX [IX_AccessLease_CipherId_Status] ON [dbo].[AccessLease];
 END
 GO
 
@@ -340,7 +333,9 @@ BEGIN
     UPDATE [dbo].[AccessRequest]
     SET [Action] = @Action,
         [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId AND [Action] = 0 -- None (open)
+    WHERE [Id] = @AccessRequestId
+        AND [Action] = 0 -- None (open)
+        AND [NotAfter] > @Now
 
     IF @@ROWCOUNT > 0
     BEGIN
@@ -793,7 +788,9 @@ BEGIN
         [RevokedDate] = @Now,
         [RevokedBy] = @RevokedBy
     OUTPUT INSERTED.[AccessRequestId] INTO @Ended
-    WHERE [Id] = @AccessLeaseId AND [Action] = 0 -- None (no early end)
+    WHERE [Id] = @AccessLeaseId
+        AND [Action] = 0 -- None (no early end)
+        AND [NotAfter] > @Now
 
     INSERT INTO [dbo].[AccessDecision]
     (

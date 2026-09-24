@@ -2502,11 +2502,12 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Action");
-
                     b.HasIndex("CollectionId", "Action");
 
                     b.HasIndex("NotAfter", "Action");
+
+                    b.HasIndex("CipherId", "Action", "NotAfter")
+                        .IsDescending(false, false, true);
 
                     b.HasIndex("RequesterId", "CipherId", "Action");
 

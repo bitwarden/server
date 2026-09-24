@@ -262,7 +262,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         // The decision is recorded only when the transition actually happened, so a repeat or losing revoke never
         // appends a Deny verdict for a lease it did not end.
         var rowsAffected = await dbContext.AccessLeases
-            .Where(l => l.Id == lease.Id && l.Action == AccessLeaseAction.None)
+            .Where(l => l.Id == lease.Id && l.Action == AccessLeaseAction.None && l.NotAfter > now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(l => l.Action, endAction)
                 .SetProperty(l => l.RevokedDate, now)

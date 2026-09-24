@@ -221,7 +221,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var rowsAffected = await dbContext.AccessRequests
-            .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None)
+            .Where(r => r.Id == request.Id && r.Action == AccessRequestAction.None && r.NotAfter > now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, action)
                 .SetProperty(r => r.ActionDate, now));

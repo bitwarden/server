@@ -14,6 +14,10 @@ public partial class DerivePamStatusFromAction : Migration
             name: "IX_AccessRequest_CollectionId_Status",
             table: "AccessRequest");
 
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_CipherId_Status",
+            table: "AccessLease");
+
         migrationBuilder.RenameColumn(
             name: "Status",
             table: "AccessRequest",
@@ -54,10 +58,11 @@ public partial class DerivePamStatusFromAction : Migration
             table: "AccessLease",
             newName: "IX_AccessLease_CollectionId_Action");
 
-        migrationBuilder.RenameIndex(
-            name: "IX_AccessLease_CipherId_Status",
+        migrationBuilder.CreateIndex(
+            name: "IX_AccessLease_CipherId_Action_NotAfter",
             table: "AccessLease",
-            newName: "IX_AccessLease_CipherId_Action");
+            columns: new[] { "CipherId", "Action", "NotAfter" },
+            descending: new[] { false, false, true });
 
         migrationBuilder.CreateIndex(
             name: "IX_AccessRequest_CollectionId_Action_NotAfter",
@@ -78,6 +83,10 @@ public partial class DerivePamStatusFromAction : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropIndex(
+            name: "IX_AccessLease_CipherId_Action_NotAfter",
+            table: "AccessLease");
+
         migrationBuilder.DropIndex(
             name: "IX_AccessRequest_CollectionId_Action_NotAfter",
             table: "AccessRequest");
@@ -130,10 +139,10 @@ public partial class DerivePamStatusFromAction : Migration
             table: "AccessLease",
             newName: "IX_AccessLease_CollectionId_Status");
 
-        migrationBuilder.RenameIndex(
-            name: "IX_AccessLease_CipherId_Action",
+        migrationBuilder.CreateIndex(
+            name: "IX_AccessLease_CipherId_Status",
             table: "AccessLease",
-            newName: "IX_AccessLease_CipherId_Status");
+            columns: new[] { "CipherId", "Status" });
 
         migrationBuilder.CreateIndex(
             name: "IX_AccessRequest_CollectionId_Status",

@@ -581,6 +581,36 @@ public class LeaseRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task RevokeAsync_LapsedLease_EndsNothingAndAppendsNoDecision(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        // A lapsed lease reads Expired; a late revoke must not restamp it Revoked or move its reported end.
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var revokerId = Guid.NewGuid();
+
+        var (request, decision, lease) = BuildAutoApproved(
+            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-3), now.AddHours(-1));
+        await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, request, decision, lease, now.AddHours(-2));
+
+        var auditDecision = BuildAuditDecision(lease, now);
+        auditDecision.ApproverId = revokerId;
+        await accessLeaseRepository.RevokeAsync(lease, AccessLeaseAction.Revoked, auditDecision, now);
+
+        var persisted = await accessLeaseRepository.GetByIdAsync(lease.Id);
+        Assert.Equal(AccessLeaseAction.None, persisted!.Action);
+        Assert.Null(persisted.RevokedDate);
+        Assert.Null(persisted.RevokedBy);
+
+        var details = await accessRequestRepository.GetDetailsByIdAsync(request.Id, now);
+        Assert.Single(details!.Decisions);
+        Assert.DoesNotContain(details.Decisions, d => d.ApproverId == revokerId);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task RevokeAsync_StaleCallerRequestId_RecordsDecisionAgainstTheLeasesOwnRequest(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,

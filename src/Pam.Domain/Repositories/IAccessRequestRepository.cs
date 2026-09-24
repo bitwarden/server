@@ -64,7 +64,8 @@ public interface IAccessRequestRepository
     /// Atomically records <paramref name="action"/> on a request that has none yet, plus the approver's human
     /// <paramref name="decision"/>. The guarded UPDATE is the concurrency token: a losing approver's verdict never
     /// enters the log. No lease is created here; the requester activates later via
-    /// <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>.
+    /// <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>. A request whose window has lapsed is
+    /// left untouched.
     /// </summary>
     Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now);
 
