@@ -32,7 +32,7 @@ GO
 
 -- Supports the per-cipher singleton guard, which locks by CipherId alone.
 -- NotAfter DESC lets AccessLease_ReadActiveByCipherId seek in-window rows without a sort.
-CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action]
+CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action_NotAfter]
     ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
 GO
 
