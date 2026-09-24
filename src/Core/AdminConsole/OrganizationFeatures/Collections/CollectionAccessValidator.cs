@@ -13,6 +13,12 @@ public class CollectionAccessValidator(
     public async Task<ValidationResult<CollectionAccessValidationRequest>> ValidateAsync(
         CollectionAccessValidationRequest request)
     {
+        if ((request.Groups?.Any(groupCas => !groupCas.Valid()) ?? false) ||
+            (request.Users?.Any(userCas => !userCas.Valid()) ?? false))
+        {
+            return Invalid(request, new ManageMutuallyExclusive());
+        }
+
         if (request.Groups is { Count: > 0 })
         {
             var groupIds = request.Groups.Select(g => g.Id).Distinct().ToList();
