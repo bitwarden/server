@@ -92,22 +92,28 @@ public class CollectionAuthorizationService(
         Guid organizationId,
         IReadOnlyCollection<Guid> collectionIds)
     {
-        var unresolvedIds = collectionIds.Where(id => !_organizationIdByCollectionId.ContainsKey(id)).ToList();
-        if (unresolvedIds.Count != 0)
-        {
-            var collections = await collectionRepository.GetManyByManyIdsAsync(unresolvedIds);
-            foreach (var id in unresolvedIds)
-            {
-                _organizationIdByCollectionId[id] = null;
-            }
+        await EnsureCollectionOrganizationsCachedAsync(collectionIds);
 
-            foreach (var collection in collections)
-            {
-                _organizationIdByCollectionId[collection.Id] = collection.OrganizationId;
-            }
+        bool BelongsToRequestedOrganization(Guid id) => _organizationIdByCollectionId[id] == organizationId;
+
+        return collectionIds.Where(BelongsToRequestedOrganization).ToHashSet();
+    }
+
+    private async Task EnsureCollectionOrganizationsCachedAsync(IReadOnlyCollection<Guid> collectionIds)
+    {
+        var uncachedIds = collectionIds.Where(id => !_organizationIdByCollectionId.ContainsKey(id)).ToList();
+        if (uncachedIds.Count == 0)
+        {
+            return;
         }
 
-        return collectionIds.Where(id => _organizationIdByCollectionId[id] == organizationId).ToHashSet();
+        var collections = await collectionRepository.GetManyByManyIdsAsync(uncachedIds);
+        var organizationIdsByCollectionId = collections.ToDictionary(c => c.Id, c => (Guid?)c.OrganizationId);
+
+        foreach (var id in uncachedIds)
+        {
+            _organizationIdByCollectionId[id] = organizationIdsByCollectionId.GetValueOrDefault(id);
+        }
     }
 
     private async Task<HashSet<Guid>> GetCallerManagedCollectionIdsAsync(Guid userId)
