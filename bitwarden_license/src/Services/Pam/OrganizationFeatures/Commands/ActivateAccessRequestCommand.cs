@@ -72,8 +72,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new ConflictException("This request's access has already been used and is no longer active.");
         }
 
-        // Deliberately below the idempotency and extension guards: a live lease survives de-licensing, but minting
-        // a new one still requires a valid license.
+        // After the idempotency guard: a live lease survives de-licensing, but minting a new one needs a license.
         _currentContext.RequireLicense(request.OrganizationId);
 
         if (request.Action != AccessRequestAction.Approved)
@@ -128,8 +127,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Final check before minting: automated conditions (e.g. an IP allowlist) must still hold now, not just at
-        // submit time, since CipherLeaseGate only checks that a lease exists.
+        // Automated conditions (e.g. an IP allowlist) must still hold at activation, not just at submit.
         var denial = await FindConditionDenialAsync(userId, request, now);
         if (denial is not null)
         {
@@ -208,7 +206,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         return evaluation.Outcome switch
         {
             AccessEvaluationOutcome.Allow => null,
-            // No condition kind asks for approval here; the request is already approved with no second approver to route to.
+            // Already approved; there is no second approver to route to.
             AccessEvaluationOutcome.RequiresApproval => AccessEvaluation.Deny(DenyReason.UnsupportedCondition),
             _ => evaluation,
         };

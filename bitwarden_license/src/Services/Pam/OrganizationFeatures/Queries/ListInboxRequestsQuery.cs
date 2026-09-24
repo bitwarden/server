@@ -26,8 +26,6 @@ public class ListInboxRequestsQuery : IListInboxRequestsQuery
             return new List<AccessRequestDetails>();
         }
 
-        // `now` is the caller's read clock: a lapsed unanswered request is derived Expired and leaves this inbox,
-        // and the returned statuses derive against the same instant.
         return await _accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync(manageableCollectionIds, now);
     }
 }

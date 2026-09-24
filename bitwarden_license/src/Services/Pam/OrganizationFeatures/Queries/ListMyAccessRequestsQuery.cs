@@ -16,9 +16,7 @@ public class ListMyAccessRequestsQuery : IListMyAccessRequestsQuery
 
     public async Task<ICollection<AccessRequestDetails>> GetMineAsync(Guid userId, DateTime now)
     {
-        // No collection-manageability check here, unlike the approver reads: being the requester is the whole
-        // authorization story. `now` bounds the history window, gates unlapsed approved requests, and projects
-        // each row's derived statuses.
+        // Being the requester is the whole authorization; no collection check.
         return await _accessRequestRepository.GetManyByRequesterIdAsync(
             userId, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

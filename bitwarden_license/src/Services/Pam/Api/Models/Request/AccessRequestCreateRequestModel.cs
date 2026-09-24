@@ -11,22 +11,19 @@ public class AccessRequestCreateRequestModel
     public int? DurationSeconds { get; set; }
 
     /// <summary>
-    /// The start of the requested window. Send an instant — either <c>Z</c>-suffixed or with an explicit offset; a
-    /// timestamp carrying neither is read as UTC. Normalised to UTC by <see cref="ToSubmission"/>, since the window
-    /// is stored and compared as a UTC instant.
+    /// The start of the requested window. A timestamp with neither <c>Z</c> nor an offset is read as UTC.
     /// </summary>
     public DateTime? Start { get; set; }
 
     /// <summary>
-    /// The end of the requested window, under the same UTC contract as <see cref="Start"/>.
+    /// The end of the requested window, read like <see cref="Start"/>.
     /// </summary>
     public DateTime? End { get; set; }
 
     public string? Reason { get; set; }
 
     /// <summary>
-    /// Projects the wire model onto the submission the command consumes, pinning the window to UTC on the way — see
-    /// <see cref="PamRequestDateTimeExtensions"/> for why the serializer's own answer cannot be persisted directly.
+    /// Projects the wire model onto the command's submission, normalising the window to UTC.
     /// </summary>
     public AccessRequestSubmission ToSubmission() => new()
     {

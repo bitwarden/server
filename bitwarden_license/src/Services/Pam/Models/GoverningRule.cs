@@ -35,31 +35,26 @@ public sealed record GoverningRule(
     public int? MaxExtensionDurationSeconds { get; init; }
 
     /// <summary>
-    /// The rule's pre-fill duration for a request opened under it, in seconds. Null means the rule stores no default
-    /// and the global one applies. Resolve through <see cref="LeaseDurationBounds"/> rather than reading it raw — a
-    /// rule may store a default that exceeds its own <see cref="MaxLeaseDurationSeconds"/>.
+    /// The rule's default lease duration in seconds, or null for the global default. Read it through
+    /// <see cref="LeaseDurationBounds"/>.
     /// </summary>
     public int? DefaultLeaseDurationSeconds { get; init; }
 
     /// <summary>
-    /// The rule's own ceiling on a single lease, in seconds. Null means no per-rule cap, leaving only the global one.
-    /// Resolve through <see cref="LeaseDurationBounds"/> rather than reading it raw, so the global ceiling is applied
-    /// alongside it.
+    /// The rule's cap on a single lease in seconds, or null for the global cap alone. Read it through
+    /// <see cref="LeaseDurationBounds"/>.
     /// </summary>
     public int? MaxLeaseDurationSeconds { get; init; }
 
     /// <summary>
-    /// The rule's conditions minus its human-approval gate: the ones a machine can decide on its own. The gate is a
-    /// submit-time routing decision an approver's verdict already settled, with no second approver to route to.
+    /// The rule's conditions minus its human-approval gate.
     /// </summary>
     public IReadOnlyList<AccessCondition> AutomatedConditions =>
         Conditions.Where(condition => condition is not HumanApprovalCondition).ToList();
 
     /// <summary>
-    /// True if the stored conditions document could not be parsed, so <see cref="Conditions"/> holds the resolver's
-    /// fail-safe stand-in rather than what the admin configured. A caller evaluating
-    /// <see cref="AutomatedConditions"/> must refuse outright here, since the stand-in's empty list would otherwise
-    /// be vacuously satisfied.
+    /// True if the stored conditions could not be parsed and <see cref="Conditions"/> holds the resolver's
+    /// fail-safe stand-in. A caller evaluating <see cref="AutomatedConditions"/> must refuse.
     /// </summary>
     public bool ConditionsUnreadable { get; init; }
 }

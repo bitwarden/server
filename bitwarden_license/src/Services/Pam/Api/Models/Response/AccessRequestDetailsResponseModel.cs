@@ -5,9 +5,7 @@ using Bit.Pam.Models;
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// An access request with its denormalized requester identity, serving the approver inbox, the caller's own request
-/// list, and the cipher access-state snapshot. <see cref="RuleId"/> is the rule pinned at submit (null for requests
-/// created before pinning existed).
+/// An access request with its denormalized requester identity.
 /// </summary>
 public class AccessRequestDetailsResponseModel : ResponseModel
 {
@@ -33,8 +31,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
         Reason = details.Reason;
         SubmittedAt = details.CreationDate.AsUtc();
         ResolvedAt = details.ActionDate.AsUtc();
-        // The request's full decision log, oldest first: one element per recorded decision (human or automatic).
-        // Empty only while pending (no decision recorded yet).
+        // Oldest first; empty while pending.
         Decisions = details.Decisions
             .Select(d => new AccessRequestDecisionResponseModel
             {
@@ -71,15 +68,13 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public Guid RequesterId { get; set; }
 
     /// <summary>
-    /// The access rule that gated the cipher and that this request is evaluated against, resolved once at submit
-    /// (oldest wins) and pinned on the request. Null for requests created before pinning existed.
+    /// The access rule pinned on the request at submit, if any.
     /// </summary>
     public Guid? RuleId { get; set; }
 
     /// <summary>
-    /// The request's lifecycle state as of the read clock. Expired has two origins behind this one value — nobody
-    /// answered, or an approval was never activated; consumers distinguish them via <see cref="Decisions"/> (empty =
-    /// unanswered, contains an approval = unactivated). An expired row's end time is <see cref="LeaseNotAfter"/>.
+    /// The request's lifecycle state as of the read clock. An expired request whose <see cref="Decisions"/> hold an
+    /// approval was approved but never activated.
     /// </summary>
     public AccessRequestStatus Status { get; set; }
 
@@ -101,8 +96,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public DateTime SubmittedAt { get; set; }
 
     /// <summary>
-    /// When a party approved, denied, or cancelled the request (UTC). Null while pending, and null for
-    /// expired rows, whose end time is <see cref="LeaseNotAfter"/> instead.
+    /// When a party approved, denied, or cancelled the request (UTC). Null while pending or expired.
     /// </summary>
     public DateTime? ResolvedAt { get; set; }
 
@@ -123,8 +117,7 @@ public class AccessRequestDetailsResponseModel : ResponseModel
     public AccessLeaseStatus? ProducedLeaseStatus { get; set; }
 
     /// <summary>
-    /// The produced lease's own end (UTC), or null when no lease exists. The authority for "how long is left" —
-    /// <see cref="LeaseNotAfter"/> is the submit-time activation window, which an extension never restamps.
+    /// The produced lease's end (UTC), including any extension, or null when no lease exists.
     /// </summary>
     public DateTime? ProducedLeaseNotAfter { get; set; }
 

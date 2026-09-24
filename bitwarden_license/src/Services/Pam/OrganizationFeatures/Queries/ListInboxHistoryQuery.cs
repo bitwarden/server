@@ -26,8 +26,6 @@ public class ListInboxHistoryQuery : IListInboxHistoryQuery
             return new List<AccessRequestDetails>();
         }
 
-        // One clock (the caller's), two jobs: `now` bounds the history window through `since`, and separately
-        // projects each row's derived statuses (see AccessRequestDetails.ProducedLeaseStatus).
         return await _accessRequestRepository.GetManyInboxHistoryByCollectionIdsAsync(
             manageableCollectionIds, now.AddDays(-AccessHistoryWindow.RetentionDays), now);
     }

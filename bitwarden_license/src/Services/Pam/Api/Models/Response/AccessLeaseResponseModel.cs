@@ -5,10 +5,8 @@ using Bit.Pam.Enums;
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// An access lease as its requester sees it: the originating request, its lifecycle <see cref="Status"/> (derived
-/// against the read clock — the stored fact is never exposed), and revocation fields. Powers the request-submission
-/// envelope, the caller-scoped "my active leases" surface, and the cipher access-state snapshot. Fields without a
-/// backing store in v1 (<see cref="RuleId"/>, <see cref="RevocationReason"/>) are null.
+/// An access lease as its requester sees it, with <see cref="Status"/> derived against the read clock. Fields
+/// without a backing store in v1 (<see cref="RuleId"/>, <see cref="RevocationReason"/>) are null.
 /// </summary>
 public class AccessLeaseResponseModel : ResponseModel
 {

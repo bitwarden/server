@@ -86,8 +86,7 @@ internal sealed class ExceptionHandlerEndpointFilter : IEndpointFilter
 
         var errorModel = validationModel ?? new ErrorResponseModel(message);
 
-        // Development diagnostics ride only on the unhandled branch; a modelled outcome's throw site is never
-        // the answer, so attaching a stack trace to it would only put internals on the wire.
+        // Development diagnostics go on unhandled exceptions only, never on a modelled response.
         if (unhandled && _environment.IsDevelopment())
         {
             errorModel.ExceptionMessage = exception.Message;

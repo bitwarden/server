@@ -14,9 +14,8 @@ public interface IGoverningRuleResolver
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
 
     /// <summary>
-    /// Loads the rule a request pinned at submit (<c>AccessRequest.RuleId</c>) rather than re-deriving it, and so
-    /// does not look for an escape path. Use it for any operation on an existing request: re-resolving would let a
-    /// rule created or re-pointed since submit silently take over.
+    /// Loads the rule a request pinned at submit (<c>AccessRequest.RuleId</c>) instead of re-resolving, so a rule
+    /// created or re-pointed since cannot take over.
     /// </summary>
     /// <param name="ruleId">The pinned rule.</param>
     /// <param name="collectionId">The collection the request was made through, carried on the request.</param>

@@ -16,8 +16,7 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands;
 public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 {
     /// <summary>
-    /// The global maximum lease window length. A rule's <c>MaxLeaseDurationSeconds</c> only narrows it; see
-    /// <see cref="LeaseDurationBounds"/>.
+    /// The global maximum lease duration; see <see cref="LeaseDurationBounds"/>.
     /// </summary>
     public const int MaxDurationSeconds = LeaseDurationBounds.GlobalMaxSeconds;
 
@@ -87,15 +86,13 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("You already have active access to this item.");
         }
 
-        // Lapsed unanswered requests don't match here (derived Expired), so they correctly don't block a fresh
-        // request.
+        // A lapsed unanswered request reads as Expired and doesn't block a fresh one.
         if (await _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
             throw new BadRequestException("You already have a pending request for this item.");
         }
 
-        // An approved-but-not-yet-activated request already grants startable access; a second request would let the
-        // caller stack grants. Lapsed approvals don't match here, so they correctly don't block a fresh request.
+        // An approved, unactivated request already grants access; a second would stack grants.
         if (await _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
             throw new BadRequestException("You already have an approved request for this item.");
@@ -120,14 +117,14 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             throw new BadRequestException("A positive duration is required.");
         }
 
-        // The rule's own cap, narrowed by the global ceiling; enforced here since activation mints exactly this window.
+        // Activation mints exactly this window, so the cap is enforced here.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if (durationSeconds > maxDurationSeconds)
         {
             throw new BadRequestException($"The requested duration exceeds the maximum of {maxDurationSeconds} seconds.");
         }
 
-        // The resolver only routes rules with no human-approval gate here, so any non-allow outcome is a denial.
+        // No human-approval gate on this path, so anything but Allow is a denial.
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
@@ -176,7 +173,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // No lease minted here; the requester activates separately, which is where the single-active-lease guard runs.
+        // No lease here; the requester activates separately.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
@@ -222,13 +219,12 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Refused here, where the requester can fix the dates, rather than born derived-Expired.
+        // Refused rather than created already expired.
         if (end <= now)
         {
             throw new BadRequestException("The end date must be in the future.");
         }
 
-        // Same per-rule cap as the automatic path, enforced at submit rather than left for the approver to notice.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule.MaxLeaseDurationSeconds);
         if ((end - start).TotalSeconds > maxDurationSeconds)
         {

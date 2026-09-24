@@ -38,9 +38,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
 
         var paths = collections.Where(c => collectionIds.Contains(c.Id)).ToList();
 
-        // Gating is a union: every path the caller can reach the cipher through must gate. A path carrying no rule,
-        // a disabled one, or one that no longer loads is an escape releasing the credential in full, so nothing
-        // governs — matching CipherLeaseGate's bulk read and SingleActiveLeaseEvaluator (PM-42916).
+        // Every path to the cipher must gate. A path with no rule, a disabled rule, or a deleted one is an escape,
+        // so nothing governs.
         var candidates = new List<(Collection Collection, AccessRule Rule)>();
         foreach (var collection in paths)
         {
@@ -78,23 +77,18 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     {
         var rule = await _accessRuleRepository.GetByIdAsync(ruleId);
 
-        // Dropped as ResolveAsync drops an escape path: a disabled or deleted rule leaves the pin governing
-        // nothing, so the caller is left ungated rather than held to a rule the admin took out of service.
+        // A disabled or deleted rule governs nothing, as in ResolveAsync.
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
     }
 
     /// <summary>
-    /// Projects a stored rule onto the shape its callers evaluate. Shared by both resolution paths so a rule reached
-    /// through the caller's collections and the same rule reached through a request's pin are always described
-    /// identically.
+    /// Projects a stored rule onto a <see cref="GoverningRule"/>, identically for both resolution paths.
     /// </summary>
     private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
     {
         var (conditions, unreadable) = Parse(rule.Conditions);
 
-        // Whether the rule routes to a human is structural: carried by a HumanApprovalCondition among the rule's
-        // conditions, not by how those conditions evaluate for these signals (Combine gives deny precedence over
-        // requires-approval, which would fold a human-gated rule to an outright Deny).
+        // Read from the conditions, not from evaluating them: Combine gives Deny precedence and would hide the gate.
         var requiresHumanApproval = conditions.Any(c => c is HumanApprovalCondition);
 
         return new GoverningRule(
@@ -113,9 +107,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     }
 
     /// <summary>
-    /// Parses the stored conditions JSON into a flat list of <see cref="AccessCondition"/>, reporting whether it had
-    /// to fall back. A malformed or unparseable document fails safe to a single human-approval condition, since the
-    /// flag is needed to tell that stand-in apart from a genuine <c>[human_approval]</c> rule.
+    /// Parses the stored conditions JSON. A malformed document fails safe to a single human-approval condition,
+    /// flagged as unreadable.
     /// </summary>
     private static (IReadOnlyList<AccessCondition> Conditions, bool Unreadable) Parse(string conditionsJson)
     {

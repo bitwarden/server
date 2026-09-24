@@ -21,12 +21,9 @@ public class GetAccessRequestDetailsQuery : IGetAccessRequestDetailsQuery
 
     public async Task<AccessRequestDetails> GetDetailsAsync(Guid userId, Guid requestId, DateTime now)
     {
-        // `now` is the caller's read clock, which the row's derived statuses are stamped against; see
-        // AccessRequestDetails.ProducedLeaseStatus.
         var details = await _accessRequestRepository.GetDetailsByIdAsync(requestId, now);
 
-        // 404 when the request is missing or the caller is neither its requester nor a managing approver. Unlike
-        // decide, this does not block the requester from viewing their own request.
+        // 404 unless the caller is the requester or a managing approver.
         if (details is null)
         {
             throw new NotFoundException();

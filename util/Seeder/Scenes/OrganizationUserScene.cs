@@ -40,10 +40,7 @@ public class OrganizationUserScene(
         public bool AccessSecretsManager { get; set; }
 
         /// <summary>
-        /// Overrides the member's Privileged Access Manager license. Unset leaves the factory's default in place,
-        /// which follows the organization's subscription — so a member seeded into a <c>UsePam</c> organization is
-        /// licensed and scenes that predate licensing keep working. Set it explicitly to <c>false</c> to seed the
-        /// unlicensed member the block is written for.
+        /// Overrides the member's PAM license. Unset follows the organization's <c>UsePam</c>.
         /// </summary>
         public bool? AccessPam { get; set; }
     }

@@ -4,24 +4,16 @@ using Bit.Core.Exceptions;
 namespace Bit.Services.Pam.Utilities;
 
 /// <summary>
-/// The per-seat license check on the leasing paths that acquire access. A member of a PAM-subscribed
-/// organization still needs a license of their own (<c>OrganizationUser.AccessPam</c>) before holding a
-/// credential.
+/// The per-seat PAM license check (<c>OrganizationUser.AccessPam</c>) on the leasing paths that acquire access.
 /// </summary>
 /// <remarks>
-/// Guards the acquiring paths only — submit, activate, extend. The terminating paths (revoke, cancel) and the
-/// read paths (pre-check, access state) stay open, so a de-licensed member can still give back a held lease,
-/// and the client can still explain the licensing block instead of rendering an empty item.
-///
-/// Reads the claim rather than the row (<see cref="ICurrentContext.AccessPam"/> resolves from the token), so a
-/// license granted mid-session takes effect on the next token refresh.
+/// Guards submit, activate and extend only; revoke, cancel and reads stay open. Reads the token claim, so a
+/// new license applies from the next token refresh.
 /// </remarks>
 public static class PamLicenseGuard
 {
     /// <summary>
-    /// The refusal, as the client's error catalog spells it. Deliberately says nothing about the governing rule, the
-    /// collection, or who may approve: an unlicensed caller is refused before any of that is consulted, and the copy
-    /// must not become a channel for policy configuration.
+    /// The refusal message. It says nothing about the rule, the collection, or who may approve.
     /// </summary>
     public const string UnlicensedMessage =
         "A Privileged Controls license is required to access this item. Ask your admin to activate your license.";

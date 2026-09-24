@@ -47,8 +47,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
             throw new NotFoundException();
         }
 
-        // An extension is decided at creation (RequestLeaseExtensionCommand), so no approver route reaches one; this
-        // guard is a deliberate backstop against reopening the second-lease hole that ordering closes.
+        // An extension is decided when it is requested, never by an approver.
         if (request.ExtensionOfLeaseId is not null)
         {
             throw new BadRequestException("An extension is approved when it is requested and cannot be decided.");
@@ -61,8 +60,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A lapsed window is derived Expired everywhere it's read; neither verdict may restamp it, so this is 409
-        // like already-resolved.
+        // A lapsed window reads as Expired; neither verdict may restamp it.
         if (!request.IsWindowOpen(now))
         {
             throw new ConflictException("This request's window has already ended.");
@@ -76,7 +74,6 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         var approved = submission.Verdict == AccessDecisionVerdict.Approve;
 
-        // A denial's reason feeds the requester notification and the audit record, and there's no later chance to add it.
         if (!approved && string.IsNullOrWhiteSpace(submission.Comment))
         {
             throw new BadRequestException("A reason is required when denying a request.");
@@ -127,8 +124,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         // and the approver is the actor here rather than an audience.
         await _requesterMailNotifier.NotifyDecisionAsync(request, approved);
 
-        // The repository stamped Action/ActionDate in the guarded UPDATE; bring the entity to match before projecting
-        // rather than re-reading.
+        // Mirror what the repository stamped rather than re-reading.
         request.Action = action;
         request.ActionDate = now;
         var details = AccessRequestDetails.From(request, now);
