@@ -19,7 +19,8 @@ public class SavePolicyCommand(
     IEnumerable<IPolicyUpdateEvent> policyUpdateEventHandlers,
     TimeProvider timeProvider,
     IPolicyEventHandlerFactory policyEventHandlerFactory,
-    IPushNotificationService pushNotificationService)
+    IPushNotificationService pushNotificationService,
+    IFeatureService featureService)
     : ISavePolicyCommand
 {
 
@@ -128,12 +129,18 @@ public class SavePolicyCommand(
                                       savedPolicy.Enabled)
             .ToList();
 
+        if (dependentPolicyTypes.Count == 0)
+        {
+            return;
+        }
+
+        var useVfo1Terminology = featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
         switch (dependentPolicyTypes)
         {
             case { Count: 1 }:
-                throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {policyType.GetName()} policy.");
+                throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName(useVfo1Terminology)} policy because it requires the {policyType.GetName(useVfo1Terminology)} policy.");
             case { Count: > 1 }:
-                throw new BadRequestException($"Turn off all of the policies that require the {policyType.GetName()} policy.");
+                throw new BadRequestException($"Turn off all of the policies that require the {policyType.GetName(useVfo1Terminology)} policy.");
         }
     }
 
@@ -152,7 +159,8 @@ public class SavePolicyCommand(
 
                 if (missingRequiredPolicyTypes.Count != 0)
                 {
-                    throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {policyType.GetName()} policy.");
+                    var useVfo1Terminology = featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation);
+                    throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName(useVfo1Terminology)} policy because it is required for the {policyType.GetName(useVfo1Terminology)} policy.");
                 }
             },
             _ => { /* Policy has no required dependencies */ });

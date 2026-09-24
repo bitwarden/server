@@ -53,13 +53,6 @@ public class CreateCollectionCommand : ICreateCollectionCommand
 
         var groupsToSave = org.UseGroups ? groupsList : null;
 
-        // Cannot use Manage with ReadOnly/HidePasswords permissions
-        var invalidAssociations = groupsList?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-        if (invalidAssociations?.Any() ?? false)
-        {
-            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-        }
-
         var accessValidation = await _collectionAccessValidator.ValidateAsync(
             new CollectionAccessValidationRequest(collection.OrganizationId, groupsToSave, usersList));
         if (accessValidation.IsError)

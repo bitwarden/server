@@ -325,6 +325,9 @@ public class GlobalSettings : IGlobalSettings
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
 
+            public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
             public virtual string SlackIntegrationSubscriptionName { get; set; } = "integration-slack-subscription";
@@ -366,6 +369,9 @@ public class GlobalSettings : IGlobalSettings
 
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
+
+            public TimeSpan DeadLetterTimeToLive { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
@@ -492,6 +498,7 @@ public class GlobalSettings : IGlobalSettings
             }
         }
         public string ReplyToEmail { get; set; }
+        public string SupportReplyToEmail { get; set; }
         public string AmazonConfigSetName { get; set; }
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
@@ -548,6 +555,14 @@ public class GlobalSettings : IGlobalSettings
         ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
+        /// <summary>
+        /// Access token lifetime override in seconds, applied to the interactive static
+        /// clients (web, mobile, browser, desktop, cli). The directory connector is
+        /// deliberately excluded because its headless-service model relies on a longer
+        /// lifetime. API-key providers and the Send client are unaffected. When null,
+        /// each client keeps its built-in default. Must be greater than 0 if set.
+        /// </summary>
+        public int? AccessTokenLifetimeSeconds { get; set; }
     }
 
 #nullable enable

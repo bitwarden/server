@@ -312,7 +312,7 @@ public class CipherRequestModelTests
         var request = new CipherRequestModel
         {
             Type = CipherType.Login,
-            Name = "2.aGVsbG8=|aGVsbG8=|aGVsbG8=",
+            Name = "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
         };
 
         var results = ValidateModel(request);

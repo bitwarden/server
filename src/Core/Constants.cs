@@ -245,6 +245,7 @@ public static partial class FeatureFlagKeys
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
+    public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
 
     /* Tools Team */
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
@@ -305,10 +306,7 @@ public static partial class FeatureFlagKeys
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
-
-    /* UIF Team */
-    public const string RouterFocusManagement = "router-focus-management";
-
+    public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
