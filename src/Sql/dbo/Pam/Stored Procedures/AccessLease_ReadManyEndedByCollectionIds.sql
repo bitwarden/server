@@ -29,7 +29,7 @@ BEGIN
     WHERE
         -- Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
         (L.[Action] IN (2, 3) AND L.[RevokedDate] >= @Since)
-        -- Window closed on its own (end = NotAfter); byte 1 (retired stored Expired) is never matched.
+        -- Window closed on its own: its end is NotAfter.
         OR (L.[Action] = 0 AND L.[NotAfter] <= @Now AND L.[NotAfter] >= @Since)
     ORDER BY
         CASE WHEN L.[Action] IN (2, 3) THEN L.[RevokedDate] ELSE L.[NotAfter] END DESC
