@@ -69,12 +69,12 @@ public class UserSubscriptionEndpointsTests
     }
 
     [Fact]
-    public void MapUserSubscriptionEndpoints_MapsGetPremiumPurchasePreview()
+    public void MapUserSubscriptionEndpoints_MapsGetSubscriptionPurchasePreview()
     {
-        var endpoint = MapAndFindEndpoint("GetAccountPremiumPurchasePreview");
+        var endpoint = MapAndFindEndpoint("GetAccountSubscriptionPurchasePreview");
 
         Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
-        Assert.Equal("/purchase/premium/preview", endpoint.RoutePattern.RawText);
+        Assert.Equal("/purchase/preview", endpoint.RoutePattern.RawText);
         AssertInheritsTheGroupChain(endpoint);
     }
 

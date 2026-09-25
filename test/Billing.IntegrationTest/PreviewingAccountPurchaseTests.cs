@@ -19,7 +19,7 @@ namespace Bit.Billing.IntegrationTest;
 public class PreviewingAccountPurchaseTests(PreviewDrivenCartFixture fixture)
     : IClassFixture<PreviewDrivenCartFixture>
 {
-    private const string PremiumRoute = "/account/billing/subscription/purchase/premium/preview";
+    private const string PremiumRoute = "/account/billing/subscription/purchase/preview";
     private const string OrganizationRoute = "/account/billing/subscription/purchase/organization/preview";
 
     [BillingFact]

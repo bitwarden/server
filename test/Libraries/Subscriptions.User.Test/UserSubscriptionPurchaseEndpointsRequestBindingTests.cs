@@ -27,9 +27,9 @@ public class UserSubscriptionPurchaseEndpointsRequestBindingTests
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(_user);
 
     [Fact]
-    public async Task GetPremiumPurchasePreview_BindsQueryParamsIncludingRepeatedCoupons()
+    public async Task GetSubscriptionPurchasePreview_BindsQueryParamsIncludingRepeatedCoupons()
     {
-        var query = new FakeGetPremiumPurchasePreviewQuery { Result = SamplePreview() };
+        var query = new FakeGetSubscriptionPurchasePreviewQuery { Result = SamplePreview() };
 
         var context = await InvokePremiumAsync(query, "additionalStorage=2&coupons=A&coupons=B&country=US&postalCode=12345");
 
@@ -43,9 +43,9 @@ public class UserSubscriptionPurchaseEndpointsRequestBindingTests
     }
 
     [Fact]
-    public async Task GetPremiumPurchasePreview_WithOnlyTheAddress_BindsNullOptionalParams()
+    public async Task GetSubscriptionPurchasePreview_WithOnlyTheAddress_BindsNullOptionalParams()
     {
-        var query = new FakeGetPremiumPurchasePreviewQuery { Result = SamplePreview() };
+        var query = new FakeGetSubscriptionPurchasePreviewQuery { Result = SamplePreview() };
 
         var context = await InvokePremiumAsync(query, "country=US&postalCode=12345");
 
@@ -55,9 +55,9 @@ public class UserSubscriptionPurchaseEndpointsRequestBindingTests
     }
 
     [Fact]
-    public async Task GetPremiumPurchasePreview_WhenQueryThrowsBadRequest_Returns400()
+    public async Task GetSubscriptionPurchasePreview_WhenQueryThrowsBadRequest_Returns400()
     {
-        var query = new FakeGetPremiumPurchasePreviewQuery
+        var query = new FakeGetSubscriptionPurchasePreviewQuery
         {
             Exception = new Core.Exceptions.BadRequestException("PostalCode", "The PostalCode field is required.")
         };
@@ -176,14 +176,14 @@ public class UserSubscriptionPurchaseEndpointsRequestBindingTests
                 context.Features.Set<IHttpRequestBodyDetectionFeature>(new RequestBodyDetection(bytes.Length > 0));
             });
 
-    private Task<HttpContext> InvokePremiumAsync(FakeGetPremiumPurchasePreviewQuery query, string queryString) =>
+    private Task<HttpContext> InvokePremiumAsync(FakeGetSubscriptionPurchasePreviewQuery query, string queryString) =>
         InvokeAsync(
             services =>
             {
-                services.AddSingleton<IGetPremiumPurchasePreviewQuery>(query);
-                services.AddScoped<GetAccountPremiumPurchasePreviewHandler>();
+                services.AddSingleton<IGetSubscriptionPurchasePreviewQuery>(query);
+                services.AddScoped<GetAccountSubscriptionPurchasePreviewHandler>();
             },
-            "GetAccountPremiumPurchasePreview",
+            "GetAccountSubscriptionPurchasePreview",
             context =>
             {
                 context.Request.Method = HttpMethods.Get;

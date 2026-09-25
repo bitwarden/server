@@ -10,7 +10,7 @@ using UserEntity = Bit.Core.Entities.User;
 
 namespace Bit.Subscriptions.User.Test.Handlers;
 
-public class GetAccountPremiumPurchasePreviewHandlerTests
+public class GetAccountSubscriptionPurchasePreviewHandlerTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly ClaimsPrincipal _principal = new();
@@ -19,8 +19,8 @@ public class GetAccountPremiumPurchasePreviewHandlerTests
     public async Task HandleAsync_WhenPrincipalDoesNotResolveToUser_ThrowsUnauthorized()
     {
         _userService.GetUserByPrincipalAsync(_principal).Returns((UserEntity?)null);
-        var query = new FakeGetPremiumPurchasePreviewQuery();
-        var sut = new GetAccountPremiumPurchasePreviewHandler(_userService, query);
+        var query = new FakeGetSubscriptionPurchasePreviewQuery();
+        var sut = new GetAccountSubscriptionPurchasePreviewHandler(_userService, query);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.HandleAsync(_principal, Request()));
         Assert.Equal(0, query.Calls);
@@ -33,8 +33,8 @@ public class GetAccountPremiumPurchasePreviewHandlerTests
         var request = Request();
         var preview = SamplePreview();
         _userService.GetUserByPrincipalAsync(_principal).Returns(user);
-        var query = new FakeGetPremiumPurchasePreviewQuery { Result = preview };
-        var sut = new GetAccountPremiumPurchasePreviewHandler(_userService, query);
+        var query = new FakeGetSubscriptionPurchasePreviewQuery { Result = preview };
+        var sut = new GetAccountSubscriptionPurchasePreviewHandler(_userService, query);
 
         var result = await sut.HandleAsync(_principal, request);
 
@@ -43,7 +43,7 @@ public class GetAccountPremiumPurchasePreviewHandlerTests
         Assert.Same(request, query.ReceivedRequest);
     }
 
-    private static GetPremiumPurchasePreviewRequest Request() => new(0, null, "US", "12345");
+    private static GetSubscriptionPurchasePreviewRequest Request() => new(0, null, "US", "12345");
 
     private static InvoicePreview SamplePreview() => new()
     {

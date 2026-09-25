@@ -1,6 +1,6 @@
 ﻿namespace Bit.Subscriptions.User.Models.Requests;
 
-internal record GetPremiumPurchasePreviewRequest(
+internal record GetSubscriptionPurchasePreviewRequest(
     short? AdditionalStorage,
     string[]? Coupons,
     string? Country,

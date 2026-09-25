@@ -31,8 +31,8 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         Assert.IsType<GetSubscriptionUpgradePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionUpgradePreviewQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionUpgradePreviewHandler>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPreviewHandler>());
-        Assert.IsType<GetPremiumPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetPremiumPurchasePreviewQuery>());
-        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountPremiumPurchasePreviewHandler>());
+        Assert.IsType<GetSubscriptionPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionPurchasePreviewQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPurchasePreviewHandler>());
         Assert.IsType<GetOrganizationPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetOrganizationPurchasePreviewQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountOrganizationPurchasePreviewHandler>());
     }

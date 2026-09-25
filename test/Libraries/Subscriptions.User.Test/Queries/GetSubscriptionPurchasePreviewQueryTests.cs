@@ -15,20 +15,20 @@ using UserEntity = Bit.Core.Entities.User;
 
 namespace Bit.Subscriptions.User.Test.Queries;
 
-public class GetPremiumPurchasePreviewQueryTests
+public class GetSubscriptionPurchasePreviewQueryTests
 {
     private const string PremiumSeatPriceId = "premium-annually-2026";
     private const string PremiumStoragePriceId = "personal-storage-gb-annually";
 
-    private readonly RecordingLogger<GetPremiumPurchasePreviewQuery> _logger = new();
+    private readonly RecordingLogger<GetSubscriptionPurchasePreviewQuery> _logger = new();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
-    private readonly GetPremiumPurchasePreviewQuery _sut;
+    private readonly GetSubscriptionPurchasePreviewQuery _sut;
 
-    public GetPremiumPurchasePreviewQueryTests()
+    public GetSubscriptionPurchasePreviewQueryTests()
     {
-        _sut = new GetPremiumPurchasePreviewQuery(_logger, _pricingClient, _subscriptionDiscountService, _invoicePreviewService);
+        _sut = new GetSubscriptionPurchasePreviewQuery(_logger, _pricingClient, _subscriptionDiscountService, _invoicePreviewService);
         _pricingClient.GetAvailablePremiumPlan().Returns(new PremiumPlan
         {
             Seat = new PremiumPurchasable { StripePriceId = PremiumSeatPriceId },
@@ -44,22 +44,22 @@ public class GetPremiumPurchasePreviewQueryTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.Run(User(), Request(additionalStorage: additionalStorage)));
 
-        Assert.True(exception.ModelState!.ContainsKey(nameof(GetPremiumPurchasePreviewRequest.AdditionalStorage)));
+        Assert.True(exception.ModelState!.ContainsKey(nameof(GetSubscriptionPurchasePreviewRequest.AdditionalStorage)));
         await AssertNoIoAsync();
     }
 
     [Theory]
-    [InlineData(null, "12345", nameof(GetPremiumPurchasePreviewRequest.Country))]
-    [InlineData("", "12345", nameof(GetPremiumPurchasePreviewRequest.Country))]
-    [InlineData("  ", "12345", nameof(GetPremiumPurchasePreviewRequest.Country))]
-    [InlineData("USA", "12345", nameof(GetPremiumPurchasePreviewRequest.Country))]
-    [InlineData("US", null, nameof(GetPremiumPurchasePreviewRequest.PostalCode))]
-    [InlineData("US", "", nameof(GetPremiumPurchasePreviewRequest.PostalCode))]
-    [InlineData("US", "   ", nameof(GetPremiumPurchasePreviewRequest.PostalCode))]
+    [InlineData(null, "12345", nameof(GetSubscriptionPurchasePreviewRequest.Country))]
+    [InlineData("", "12345", nameof(GetSubscriptionPurchasePreviewRequest.Country))]
+    [InlineData("  ", "12345", nameof(GetSubscriptionPurchasePreviewRequest.Country))]
+    [InlineData("USA", "12345", nameof(GetSubscriptionPurchasePreviewRequest.Country))]
+    [InlineData("US", null, nameof(GetSubscriptionPurchasePreviewRequest.PostalCode))]
+    [InlineData("US", "", nameof(GetSubscriptionPurchasePreviewRequest.PostalCode))]
+    [InlineData("US", "   ", nameof(GetSubscriptionPurchasePreviewRequest.PostalCode))]
     public async Task Run_WhenBillingAddressIsMalformed_ThrowsBadRequestWithModelState(
         string? country, string? postalCode, string expectedKey)
     {
-        var request = new GetPremiumPurchasePreviewRequest(0, null, country, postalCode);
+        var request = new GetSubscriptionPurchasePreviewRequest(0, null, country, postalCode);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
@@ -214,7 +214,7 @@ public class GetPremiumPurchasePreviewQueryTests
 
     private static UserEntity User() => new() { Id = Guid.NewGuid() };
 
-    private static GetPremiumPurchasePreviewRequest Request(short? additionalStorage = 0, string[]? coupons = null) =>
+    private static GetSubscriptionPurchasePreviewRequest Request(short? additionalStorage = 0, string[]? coupons = null) =>
         new(additionalStorage, coupons, "US", "12345");
 
     private async Task AssertNoIoAsync()

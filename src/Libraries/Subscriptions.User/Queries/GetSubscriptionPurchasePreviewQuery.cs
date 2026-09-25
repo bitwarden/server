@@ -12,24 +12,24 @@ using UserEntity = Bit.Core.Entities.User;
 
 namespace Bit.Subscriptions.User.Queries;
 
-internal interface IGetPremiumPurchasePreviewQuery
+internal interface IGetSubscriptionPurchasePreviewQuery
 {
-    Task<InvoicePreview> Run(UserEntity user, GetPremiumPurchasePreviewRequest request);
+    Task<InvoicePreview> Run(UserEntity user, GetSubscriptionPurchasePreviewRequest request);
 }
 
-internal sealed class GetPremiumPurchasePreviewQuery(
-    ILogger<GetPremiumPurchasePreviewQuery> logger,
+internal sealed class GetSubscriptionPurchasePreviewQuery(
+    ILogger<GetSubscriptionPurchasePreviewQuery> logger,
     IPricingClient pricingClient,
     ISubscriptionDiscountService subscriptionDiscountService,
-    IInvoicePreviewService invoicePreviewService) : IGetPremiumPurchasePreviewQuery
+    IInvoicePreviewService invoicePreviewService) : IGetSubscriptionPurchasePreviewQuery
 {
-    public async Task<InvoicePreview> Run(UserEntity user, GetPremiumPurchasePreviewRequest request)
+    public async Task<InvoicePreview> Run(UserEntity user, GetSubscriptionPurchasePreviewRequest request)
     {
         var additionalStorage = request.AdditionalStorage ?? 0;
         if (additionalStorage is < 0 or > 99)
         {
             throw new BadRequestException(
-                nameof(GetPremiumPurchasePreviewRequest.AdditionalStorage), "Additional storage must be between 0 and 99 GB.");
+                nameof(GetSubscriptionPurchasePreviewRequest.AdditionalStorage), "Additional storage must be between 0 and 99 GB.");
         }
 
         var billingAddress = ResolveBillingAddress(request.Country, request.PostalCode);
@@ -104,13 +104,13 @@ internal sealed class GetPremiumPurchasePreviewQuery(
         if (string.IsNullOrWhiteSpace(country) || country.Length != 2)
         {
             throw new BadRequestException(
-                nameof(GetPremiumPurchasePreviewRequest.Country), "Country code must be 2 characters long.");
+                nameof(GetSubscriptionPurchasePreviewRequest.Country), "Country code must be 2 characters long.");
         }
 
         if (string.IsNullOrWhiteSpace(postalCode))
         {
             throw new BadRequestException(
-                nameof(GetPremiumPurchasePreviewRequest.PostalCode), "The PostalCode field is required.");
+                nameof(GetSubscriptionPurchasePreviewRequest.PostalCode), "The PostalCode field is required.");
         }
 
         return new AddressOptions { Country = country, PostalCode = postalCode };

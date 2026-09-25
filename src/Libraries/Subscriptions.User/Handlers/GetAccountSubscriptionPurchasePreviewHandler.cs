@@ -6,15 +6,15 @@ using Bit.Subscriptions.User.Queries;
 
 namespace Bit.Subscriptions.User.Handlers;
 
-internal sealed class GetAccountPremiumPurchasePreviewHandler(
+internal sealed class GetAccountSubscriptionPurchasePreviewHandler(
     IUserService userService,
-    IGetPremiumPurchasePreviewQuery getPremiumPurchasePreviewQuery)
+    IGetSubscriptionPurchasePreviewQuery getSubscriptionPurchasePreviewQuery)
 {
-    public async Task<InvoicePreview> HandleAsync(ClaimsPrincipal principal, GetPremiumPurchasePreviewRequest request)
+    public async Task<InvoicePreview> HandleAsync(ClaimsPrincipal principal, GetSubscriptionPurchasePreviewRequest request)
     {
         var user = await userService.GetUserByPrincipalAsync(principal)
             ?? throw new UnauthorizedAccessException();
 
-        return await getPremiumPurchasePreviewQuery.Run(user, request);
+        return await getSubscriptionPurchasePreviewQuery.Run(user, request);
     }
 }

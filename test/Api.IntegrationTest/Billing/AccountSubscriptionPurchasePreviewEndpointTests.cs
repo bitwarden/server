@@ -9,7 +9,7 @@ namespace Bit.Api.IntegrationTest.Billing;
 internal static class AccountSubscriptionPurchasePreviewRequests
 {
     public const string PremiumRoute =
-        "/account/billing/subscription/purchase/premium/preview?additionalStorage=0&country=US&postalCode=12345";
+        "/account/billing/subscription/purchase/preview?additionalStorage=0&country=US&postalCode=12345";
 
     public const string OrganizationRoute = "/account/billing/subscription/purchase/organization/preview";
 

@@ -5,15 +5,15 @@ using UserEntity = Bit.Core.Entities.User;
 
 namespace Bit.Subscriptions.User.Test;
 
-internal sealed class FakeGetPremiumPurchasePreviewQuery : IGetPremiumPurchasePreviewQuery
+internal sealed class FakeGetSubscriptionPurchasePreviewQuery : IGetSubscriptionPurchasePreviewQuery
 {
     public InvoicePreview? Result { get; init; }
     public Exception? Exception { get; init; }
     public UserEntity? ReceivedUser { get; private set; }
-    public GetPremiumPurchasePreviewRequest? ReceivedRequest { get; private set; }
+    public GetSubscriptionPurchasePreviewRequest? ReceivedRequest { get; private set; }
     public int Calls { get; private set; }
 
-    public Task<InvoicePreview> Run(UserEntity user, GetPremiumPurchasePreviewRequest request)
+    public Task<InvoicePreview> Run(UserEntity user, GetSubscriptionPurchasePreviewRequest request)
     {
         Calls++;
         ReceivedUser = user;
