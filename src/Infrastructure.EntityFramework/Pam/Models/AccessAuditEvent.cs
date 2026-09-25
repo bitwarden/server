@@ -58,10 +58,10 @@ public class AccessAuditEvent
     [MaxLength(200)]
     public string? TargetSystemName { get; set; }
 
-    public Guid? DaemonId { get; set; }
+    public Guid? AccessConnectorId { get; set; }
 
     [MaxLength(200)]
-    public string? DaemonName { get; set; }
+    public string? AccessConnectorName { get; set; }
 
     public Guid? RotationConfigId { get; set; }
     public Guid? RotationJobId { get; set; }

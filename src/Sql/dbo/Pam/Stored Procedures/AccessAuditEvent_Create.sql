@@ -18,8 +18,8 @@ CREATE PROCEDURE [dbo].[AccessAuditEvent_Create]
     @LeaseNotAfter DATETIME2(7) = NULL,
     @TargetSystemId UNIQUEIDENTIFIER = NULL,
     @TargetSystemName NVARCHAR(200) = NULL,
-    @DaemonId UNIQUEIDENTIFIER = NULL,
-    @DaemonName NVARCHAR(200) = NULL,
+    @AccessConnectorId UNIQUEIDENTIFIER = NULL,
+    @AccessConnectorName NVARCHAR(200) = NULL,
     @RotationConfigId UNIQUEIDENTIFIER = NULL,
     @RotationJobId UNIQUEIDENTIFIER = NULL,
     @RotationSource TINYINT = NULL,
@@ -30,9 +30,10 @@ BEGIN
 
     -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
     -- rename cannot change what this event says. Actor and requester names are resolved by id from [User] here and
-    -- frozen, staying NULL where the id is NULL or the row is gone. The rule, target system, and daemon names come from
-    -- the caller instead of a JOIN, because those entities can be deleted or renamed in the same action. The subject
-    -- cipher and collection are recorded by id alone; their names are vault data, which this store never holds.
+    -- frozen, staying NULL where the id is NULL or the row is gone. The rule, target system, and access connector
+    -- names come from the caller instead of a JOIN, because those entities can be deleted or renamed in the same
+    -- action. The subject cipher and collection are recorded by id alone; their names are vault data, which this
+    -- store never holds.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
@@ -58,8 +59,8 @@ BEGIN
         [RuleName],
         [TargetSystemId],
         [TargetSystemName],
-        [DaemonId],
-        [DaemonName],
+        [AccessConnectorId],
+        [AccessConnectorName],
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],
@@ -89,8 +90,8 @@ BEGIN
         @RuleName,
         @TargetSystemId,
         @TargetSystemName,
-        @DaemonId,
-        @DaemonName,
+        @AccessConnectorId,
+        @AccessConnectorName,
         @RotationConfigId,
         @RotationJobId,
         @RotationSource,

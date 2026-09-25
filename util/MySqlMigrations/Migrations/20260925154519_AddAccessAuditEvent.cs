@@ -44,8 +44,8 @@ public partial class AddAccessAuditEvent : Migration
                 TargetSystemId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 TargetSystemName = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
-                DaemonId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                DaemonName = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: true)
+                AccessConnectorId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                AccessConnectorName = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: true)
                     .Annotation("MySql:CharSet", "utf8mb4"),
                 RotationConfigId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                 RotationJobId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),

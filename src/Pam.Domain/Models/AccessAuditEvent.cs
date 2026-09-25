@@ -31,7 +31,7 @@ public class AccessAuditEvent
     public Guid? AccessLeaseId { get; set; }
     public Guid? AccessRuleId { get; set; }
     public Guid? TargetSystemId { get; set; }
-    public Guid? DaemonId { get; set; }
+    public Guid? AccessConnectorId { get; set; }
     public Guid? RotationConfigId { get; set; }
     public Guid? RotationJobId { get; set; }
     public PamRotationSource? RotationSource { get; set; }
@@ -51,7 +51,7 @@ public class AccessAuditEvent
     public string? RequesterEmail { get; set; }
     public string? RuleName { get; set; }
     public string? TargetSystemName { get; set; }
-    public string? DaemonName { get; set; }
+    public string? AccessConnectorName { get; set; }
 
     public bool Automated => ActorId is null;
 }
