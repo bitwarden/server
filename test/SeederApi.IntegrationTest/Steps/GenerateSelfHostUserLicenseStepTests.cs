@@ -54,17 +54,4 @@ public class GenerateSelfHostUserLicenseStepTests
 
         Assert.Empty(licensing.WrittenLicenses);
     }
-
-    [Fact]
-    public async Task ExecuteAsync_PremiumOwner_SignerSkips_DoesNotResolveLicensingService()
-    {
-        var signer = new StubSeederLicenseSigner(
-            _ => Task.FromResult(LicenseSigningResult.Skipped("Configured licensing certificate file was not found.")));
-        var context = NewContext(new SeederSettings());
-        context.Owner = NewPremiumOwner();
-
-        await new GenerateSelfHostUserLicenseStep(
-            () => throw new Exception("Invalid licensing certificate."), signer,
-            NullLogger<GenerateSelfHostUserLicenseStep>.Instance).ExecuteAsync(context);
-    }
 }

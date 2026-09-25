@@ -125,8 +125,8 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         // Regression guard for the DI wiring: the self-hosted individual path builds its own
         // ServiceCollection, and GenerateSelfHostUserLicenseStep resolves ILogger<T> from it. Without
         // AddLogging() in ExecuteAsync(IndividualUserOptions) this throws during step resolution before
-        // the license step ever runs, so signerCalled stays false. Stubs stand in for the license
-        // services so no certificate is required.
+        // the license step ever runs, so signerCalled stays false. The throwing licensing factory also
+        // guards lazy resolution: resolving it eagerly would fail before the signer runs.
         var mapper = _provider.GetRequiredService<IMapper>();
         var signerCalled = false;
         var signer = new LicenseTestHelpers.StubSeederLicenseSigner(_ =>
@@ -134,10 +134,10 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
             signerCalled = true;
             return Task.FromResult(LicenseSigningResult.Skipped("no signing certificate configured"));
         });
-        var licensing = new LicenseTestHelpers.StubLicensingService((_, _) => Task.CompletedTask);
 
         var deps = new SeederDependencies(
-            _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(), () => licensing,
+            _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(),
+            () => throw new Exception("Invalid licensing certificate."),
             new NoopAttachmentStorageService(), signer, NullLoggerFactory.Instance);
         var orchestrator = new RecipeOrchestrator(deps);
 

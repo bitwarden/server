@@ -25,30 +25,16 @@ public class SelfHostLicenseServiceTests
     }
 
     [Fact]
-    public async Task WriteLicenseAsync_SignerNotConfigured_ReportsSignerWarningAndWritesNothing()
+    public async Task WriteLicenseAsync_SignerNotConfigured_ReportsSignerWarningWithoutResolvingLicensingService()
     {
-        var licensing = new StubLicensingService((_, _) => Task.CompletedTask);
         var signer = new StubSeederLicenseSigner(
             _ => Task.FromResult(LicenseSigningResult.Skipped("No signing certificate configured.")));
-
-        var outcome = await SelfHostLicenseService.WriteLicenseAsync(() => licensing, signer, NewPremiumOwner(), NullLogger.Instance);
-
-        Assert.False(outcome.Written);
-        Assert.Equal("No signing certificate configured.", outcome.Warning);
-        Assert.Empty(licensing.WrittenLicenses);
-    }
-
-    [Fact]
-    public async Task WriteLicenseAsync_SignerNotConfigured_NeverResolvesLicensingService()
-    {
-        var signer = new StubSeederLicenseSigner(
-            _ => Task.FromResult(LicenseSigningResult.Skipped("Configured licensing certificate file was not found.")));
 
         var outcome = await SelfHostLicenseService.WriteLicenseAsync(
             () => throw new Exception("Invalid licensing certificate."), signer, NewPremiumOwner(), NullLogger.Instance);
 
         Assert.False(outcome.Written);
-        Assert.Equal("Configured licensing certificate file was not found.", outcome.Warning);
+        Assert.Equal("No signing certificate configured.", outcome.Warning);
     }
 
     public static TheoryData<Exception> ExpectedWriteExceptions() => new()
