@@ -1805,12 +1805,21 @@ public class CiphersController : Controller
 
     private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
     {
-        if (cipher.Type == Core.Vault.Enums.CipherType.Login && !cipher.IsDataBlobEncrypted())
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login
+            && !cipher.IsDataBlobEncrypted()
+            && !string.IsNullOrEmpty(cipher.Data))
         {
-            var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-            if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+            try
             {
-                throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+                var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+                if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+                {
+                    throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+                }
+            }
+            catch (JsonException)
+            {
+                // Existing stored data is corrupt — skip Fido2 check so a valid PUT can overwrite it.
             }
         }
     }
