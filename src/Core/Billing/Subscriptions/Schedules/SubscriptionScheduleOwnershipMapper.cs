@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Stripe;
 
-namespace Bit.Core.Billing.Organizations.Schedules;
+namespace Bit.Core.Billing.Subscriptions.Schedules;
 
 using static StripeConstants;
 
 /// <summary>
-/// Classifies the Stripe subscription schedule attached to an organization's subscription, from the
-/// metadata our code stamps onto the phases of every organization schedule it creates.
+/// Classifies the Stripe subscription schedule attached to a subscription, from the
+/// metadata our code stamps onto the phases of every schedule it creates.
 /// </summary>
 public static class SubscriptionScheduleOwnershipMapper
 {
@@ -16,16 +16,16 @@ public static class SubscriptionScheduleOwnershipMapper
     /// Classifies the schedule attached to <paramref name="subscription"/>, which must have been
     /// loaded with <c>schedule</c> expanded.
     /// </summary>
-    public static OrganizationSubscriptionScheduleOwnership Map(Subscription subscription)
+    public static SubscriptionScheduleOwnership Map(Subscription subscription)
     {
         if (string.IsNullOrEmpty(subscription.ScheduleId))
         {
-            return OrganizationSubscriptionScheduleOwnership.None;
+            return SubscriptionScheduleOwnership.None;
         }
 
         var schedule = subscription.Schedule;
         return schedule is null
-            ? OrganizationSubscriptionScheduleOwnership.Unexpanded
+            ? SubscriptionScheduleOwnership.Unexpanded
             : MapSchedule(schedule);
     }
 
@@ -33,21 +33,21 @@ public static class SubscriptionScheduleOwnershipMapper
     /// Classifies a schedule that the caller already loaded. Use this when the schedule was fetched
     /// directly rather than expanded onto its subscription.
     /// </summary>
-    public static OrganizationSubscriptionScheduleOwnership MapSchedule(SubscriptionSchedule schedule)
+    public static SubscriptionScheduleOwnership MapSchedule(SubscriptionSchedule schedule)
     {
         if (schedule.Status != SubscriptionScheduleStatus.Active)
         {
-            return OrganizationSubscriptionScheduleOwnership.None;
+            return SubscriptionScheduleOwnership.None;
         }
 
         if (AnyPhaseCarries(schedule, MetadataKeys.AnnualUpgrade))
         {
-            return OrganizationSubscriptionScheduleOwnership.AnnualUpgrade;
+            return SubscriptionScheduleOwnership.AnnualUpgrade;
         }
 
         return AnyPhaseCarries(schedule, MetadataKeys.MigrationCohortId)
-            ? OrganizationSubscriptionScheduleOwnership.PriceMigration
-            : OrganizationSubscriptionScheduleOwnership.Foreign;
+            ? SubscriptionScheduleOwnership.BusinessPriceIncrease
+            : SubscriptionScheduleOwnership.Foreign;
     }
 
     private static bool AnyPhaseCarries(SubscriptionSchedule schedule, string metadataKey) =>

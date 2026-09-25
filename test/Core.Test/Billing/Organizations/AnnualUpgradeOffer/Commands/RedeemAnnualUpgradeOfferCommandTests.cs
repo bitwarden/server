@@ -5,10 +5,10 @@ using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -893,7 +893,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         };
 
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnership.AnnualUpgrade,
             SubscriptionScheduleOwnershipMapper.Map(new Subscription
             {
                 Id = "sub_1",

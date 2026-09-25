@@ -8,9 +8,10 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -246,7 +247,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Organization organization, Subscription subscription)
     {
         if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            SubscriptionScheduleOwnership.AnnualUpgrade)
         {
             return null;
         }
@@ -266,7 +267,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Organization organization, Subscription subscription)
     {
         if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
-            OrganizationSubscriptionScheduleOwnership.PriceMigration)
+            SubscriptionScheduleOwnership.BusinessPriceIncrease)
         {
             return null;
         }

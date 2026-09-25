@@ -1,12 +1,12 @@
-﻿namespace Bit.Core.Billing.Organizations.Schedules.Enums;
+﻿namespace Bit.Core.Billing.Subscriptions.Schedules.Enums;
 
 /// <summary>
-/// Who created the Stripe subscription schedule attached to an organization's subscription.
+/// Who created the Stripe subscription schedule attached to a subscription.
 /// Operations that release or rewrite a schedule must not act on one our code did not create:
 /// negotiated renewals are authored by hand in the Stripe Dashboard, and releasing one destroys
 /// terms the billing team owns.
 /// </summary>
-public enum OrganizationSubscriptionScheduleOwnership
+public enum SubscriptionScheduleOwnership
 {
     /// <summary>No active schedule is attached to the subscription.</summary>
     None,
@@ -14,8 +14,8 @@ public enum OrganizationSubscriptionScheduleOwnership
     /// <summary>A schedule created by redeeming the annual upgrade offer.</summary>
     AnnualUpgrade,
 
-    /// <summary>A schedule created by the business plan price migration program.</summary>
-    PriceMigration,
+    /// <summary>A schedule created by the business plan price increase program.</summary>
+    BusinessPriceIncrease,
 
     /// <summary>A schedule our code did not create. Leave it alone.</summary>
     Foreign,

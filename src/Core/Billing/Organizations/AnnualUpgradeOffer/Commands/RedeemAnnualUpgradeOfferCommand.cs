@@ -4,10 +4,10 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -81,7 +81,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             })
             .ToList();
 
-        // MapOrNull above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and PriceMigration remain.
+        // MapOrNull above already excluded Unexpanded, Foreign, and AnnualUpgrade ownership; only None and BusinessPriceIncrease remain.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
 
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
@@ -89,11 +89,11 @@ public class RedeemAnnualUpgradeOfferCommand(
         // required even when no schedule exists, because assignment precedes scheduling.
         SubscriptionSchedule? scheduleToRelease = ownership switch
         {
-            OrganizationSubscriptionScheduleOwnership.None or
-                OrganizationSubscriptionScheduleOwnership.Foreign or
-                OrganizationSubscriptionScheduleOwnership.Unexpanded => null,
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade or
-                OrganizationSubscriptionScheduleOwnership.PriceMigration => subscription.Schedule
+            SubscriptionScheduleOwnership.None or
+                SubscriptionScheduleOwnership.Foreign or
+                SubscriptionScheduleOwnership.Unexpanded => null,
+            SubscriptionScheduleOwnership.AnnualUpgrade or
+                SubscriptionScheduleOwnership.BusinessPriceIncrease => subscription.Schedule
         };
 
         // Stripe permits one active schedule per subscription, so the prior schedule has to go
