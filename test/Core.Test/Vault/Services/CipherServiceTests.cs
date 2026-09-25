@@ -17,8 +17,10 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
@@ -2588,5 +2590,105 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IAttachmentStorageService>()
             .Received(1)
             .DeleteAttachmentsForCipherAsync(sharedOnlyCipher.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAsync_CallsDeleteSendsByCiphersAsync(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.UserId = deletingUserId;
+        cipherDetails.OrganizationId = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(new User { Id = deletingUserId });
+
+        await sutProvider.Sut.DeleteAsync(cipherDetails, deletingUserId);
+
+        await sutProvider.GetDependency<INonAnonymousSendCommand>().Received(1)
+            .DeleteSendsByCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 1 && ids.First() == cipherDetails.Id));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyAsync_WithUserCiphers_CallsDeleteSendsByCiphersAsync(
+        Guid deletingUserId, SutProvider<CipherService> sutProvider)
+    {
+        var cipherId1 = Guid.NewGuid();
+        var cipherId2 = Guid.NewGuid();
+        var cipherIds = new[] { cipherId1, cipherId2 };
+
+        var ciphers = new List<CipherDetails>
+        {
+            new() { Id = cipherId1, UserId = deletingUserId, Type = CipherType.Login },
+            new() { Id = cipherId2, UserId = deletingUserId, Type = CipherType.SecureNote }
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(deletingUserId)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId);
+
+        await sutProvider.GetDependency<INonAnonymousSendCommand>().Received(1)
+            .DeleteSendsByCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 2 && ids.Contains(cipherId1) && ids.Contains(cipherId2)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyAsync_WithOrgAdminCiphers_CallsDeleteSendsByCiphersAsync(
+        Guid deletingUserId, Guid organizationId, SutProvider<CipherService> sutProvider)
+    {
+        var cipherId1 = Guid.NewGuid();
+        var cipherId2 = Guid.NewGuid();
+        var cipherIds = new[] { cipherId1, cipherId2 };
+
+        var ciphers = new List<Cipher>
+        {
+            new() { Id = cipherId1, OrganizationId = organizationId, Type = CipherType.Login },
+            new() { Id = cipherId2, OrganizationId = organizationId, Type = CipherType.SecureNote }
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.DeleteManyAsync(cipherIds, deletingUserId, organizationId, orgAdmin: true);
+
+        await sutProvider.GetDependency<INonAnonymousSendCommand>().Received(1)
+            .DeleteSendsByCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 2 && ids.Contains(cipherId1) && ids.Contains(cipherId2)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeAsync_CallsDeleteSendsByCiphersAsync(
+        Organization organization, SutProvider<CipherService> sutProvider)
+    {
+        var cipherId1 = Guid.NewGuid();
+        var cipherId2 = Guid.NewGuid();
+
+        var ciphers = new List<Cipher>
+        {
+            new() { Id = cipherId1, OrganizationId = organization.Id, Type = CipherType.Login },
+            new() { Id = cipherId2, OrganizationId = organization.Id, Type = CipherType.SecureNote }
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(ciphers);
+
+        await sutProvider.Sut.PurgeAsync(organization.Id);
+
+        await sutProvider.GetDependency<INonAnonymousSendCommand>().Received(1)
+            .DeleteSendsByCiphersAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Count() == 2 && ids.Contains(cipherId1) && ids.Contains(cipherId2)));
     }
 }

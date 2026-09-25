@@ -250,4 +250,126 @@ public class SendRequestModelTests
         Assert.Null(updatedSend.Emails);
         Assert.Null(updatedSend.Password);
     }
+
+    [Fact]
+    public void ToSend_Item_SetsCipherId()
+    {
+        var userId = Guid.NewGuid();
+        var cipherId = Guid.NewGuid();
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            CipherId = cipherId,
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+            },
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        var send = sendRequest.ToSend(userId, sendAuthorizationService);
+
+        Assert.Equal(cipherId, send.CipherId);
+        Assert.Equal(userId, send.UserId);
+    }
+
+    [Fact]
+    public void ToSend_Text_CipherIdNull()
+    {
+        var cipherId = Guid.NewGuid();
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Password,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            CipherId = cipherId,
+            Password = "Password",
+            Text = new SendTextModel
+            {
+                Hidden = false,
+                Text = "encrypted_text"
+            },
+            Type = SendType.Text,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+        sendAuthorizationService.HashPassword(Arg.Any<string>())
+            .Returns((info) => $"hashed_{(string)info[0]}");
+
+        var send = sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService);
+
+        // CipherId should be null for Text-type sends, even if provided
+        Assert.Null(send.CipherId);
+    }
+
+    // TODO: This test cannot be added until we require the field
+    // [Fact]
+    // public void ToSend_Item_MissingCipherId_Throws()
+    // {
+    //     var deletionDate = DateTime.UtcNow.AddDays(5);
+    //     var sendRequest = new SendRequestModel
+    //     {
+    //         AuthType = AuthType.Email,
+    //         DeletionDate = deletionDate,
+    //         Disabled = false,
+    //         Key = "encrypted_key",
+    //         CipherId = null,
+    //         Emails = "owner@bitwarden.com",
+    //         Data = new SendDataModel
+    //         {
+    //             EncryptionVersion = SendEncryptionType.V1,
+    //             Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+    //         },
+    //         Type = SendType.Item,
+    //     };
+
+    //     var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+    //     Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
+    // }
+
+    [Fact]
+    public void UpdateSend_Item_PreservesCipherId()
+    {
+        var cipherId = Guid.NewGuid();
+        var deletionDate = DateTime.UtcNow.AddDays(5);
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = deletionDate,
+            Disabled = false,
+            Key = "encrypted_key",
+            CipherId = cipherId,
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+            },
+            Type = SendType.Item,
+        };
+
+        var existingSend = new Send
+        {
+            Type = SendType.Item,
+            CipherId = cipherId,
+            AuthType = AuthType.Email,
+            Emails = "old@example.com"
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        var updatedSend = sendRequest.UpdateSend(existingSend, sendAuthorizationService);
+
+        Assert.Equal(cipherId, updatedSend.CipherId);
+    }
 }

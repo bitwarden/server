@@ -95,4 +95,18 @@ public interface INonAnonymousSendCommand
 
         return true;
     }
+
+    /// <summary>
+    /// Deletes all item-type <see cref="Send" />s linked to the specified Ciphers from the database and file storage.
+    /// </summary>
+    /// <param name="cipherIds">The IDs of the ciphers to delete Sends for</param>
+    /// <returns>Task completes once <see cref="Send" />s have been deleted from database and file storage.</returns>
+    Task DeleteSendsByCiphersAsync(IEnumerable<Guid> cipherIds);
+
+    /// <summary>
+    /// Deletes all item-type <see cref="Send" />s linked to the specified UserId from the database and file storage.
+    /// </summary>
+    /// <param name="userId">The ID of the user to delete Sends for</param>
+    /// <returns>Task completes once <see cref="Send" />s have been deleted from database and file storage.</returns>
+    Task DeleteItemSendsByUserAsync(Guid userId);
 }

@@ -21,6 +21,7 @@ using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization;
 using Bit.Core.Vault.Authorization.Permissions;
@@ -55,6 +56,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -70,7 +72,8 @@ public class CiphersController : Controller
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        ICipherLeaseGate cipherLeaseGate)
+        ICipherLeaseGate cipherLeaseGate,
+        INonAnonymousSendCommand nonAnonymousSendCommand)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -86,6 +89,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _nonAnonymousSendCommand = nonAnonymousSendCommand;
     }
 
     /// <summary>
@@ -1439,6 +1443,7 @@ public class CiphersController : Controller
             {
                 throw new BadRequestException(new CannotPurgeClaimedAccountError().Message);
             }
+            await _nonAnonymousSendCommand.DeleteItemSendsByUserAsync(user.Id);
             await _cipherRepository.DeleteByUserIdAsync(user.Id);
         }
         else

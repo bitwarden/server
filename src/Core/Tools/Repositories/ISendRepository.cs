@@ -97,4 +97,11 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
     /// <returns></returns>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Load <see cref="Send"/>s linked to Ciphers by Cipher IDs
+    /// </summary>
+    /// <param name="cipherIds">The Cipher IDs to find linked Sends for</param>
+    /// <returns>A task that completes once the linked <see cref="Send"/>s have been loaded</returns>
+    Task<ICollection<Send>> GetManyByCipherIdsAsync(IEnumerable<Guid> cipherIds);
 }
