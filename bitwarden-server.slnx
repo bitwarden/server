@@ -92,6 +92,7 @@
     <Project Path="test/IntegrationTestCommon/IntegrationTestCommon.csproj" />
     <Project Path="test/Migrator.Test/Migrator.Test.csproj" />
     <Project Path="test/Notifications.Test/Notifications.Test.csproj" />
+    <Project Path="test/RestrictedDependencyBaselines.Test/RestrictedDependencyBaselines.Test.csproj" />
     <Project Path="test/SeederApi.IntegrationTest/SeederApi.IntegrationTest.csproj" />
     <Project Path="test/Server.IntegrationTest/Server.IntegrationTest.csproj" />
     <Project Path="test/Setup.Test/Setup.Test.csproj" />
@@ -102,6 +103,7 @@
     <Project Path="util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj" />
     <Project Path="util/MySqlMigrations/MySqlMigrations.csproj" />
     <Project Path="util/PostgresMigrations/PostgresMigrations.csproj" />
+    <Project Path="util/RestrictedDependencies/RestrictedDependencyBaselines/RestrictedDependencyBaselines.csproj" />
     <Project Path="util/RustSdk/RustSdk.csproj" />
     <Project Path="util/Seeder/Seeder.csproj" />
     <Project Path="util/SeederApi/SeederApi.csproj" />

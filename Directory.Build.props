@@ -15,11 +15,39 @@
         BWA0001: soft-deprecation of the (Bit.Core.Models.Api.ResponseModel and Bit.Api.Models.Response.ListResponseModel)
          in favor Bit.HttpExtensions. Keep it a warning (not an error) so existing consumers build while we migrate them.
         BWA0002: soft-deprecation of the legacy IFeatureService and this exclusion will go way once everyone migrates to the SDK one
+        BW0011: an expired [RestrictedDependencyException] warns rather than failing the build, so a lapsed expiry blocks nobody's unrelated work
     -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001;BWA0002</WarningsNotAsErrors>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);BWA0001;BWA0002;BW0011</WarningsNotAsErrors>
     <NuGetAuditLevel>critical</NuGetAuditLevel>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
+
+  <!--
+      Restricted dependencies. Production projects under src/ compile with the
+      Bitwarden.Server.Sdk.RestrictedDependencies analyzer and the committed baselines in
+      util/RestrictedDependencies/baselines; tests, util, perf, AppHost and the sqlproj do not.
+      util/RestrictedDependencies/RestrictedDependencyBaselines selects projects by the same rule.
+
+      The package's build assets declare which of these properties the compiler may see, and glob
+      the baselines in as marked AdditionalFiles.
+  -->
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <_RestrictedDependencyProjectPath>$([MSBuild]::MakeRelative('$(RepoRoot)', '$(MSBuildProjectFullPath)').Replace('\', '/'))</_RestrictedDependencyProjectPath>
+    <RestrictedDependencyAnalysis Condition="'$(RestrictedDependencyAnalysis)' == '' and '$(MSBuildProjectExtension)' == '.csproj' and $(_RestrictedDependencyProjectPath.StartsWith('src/'))">true</RestrictedDependencyAnalysis>
+    <RestrictedDependencyAnalysis Condition="'$(RestrictedDependencyAnalysis)' == ''">false</RestrictedDependencyAnalysis>
+    <RestrictedDependencyBaselinesPath Condition="'$(RestrictedDependencyAnalysis)' == 'true'">$(RepoRoot)util/RestrictedDependencies/baselines</RestrictedDependencyBaselinesPath>
+    <RestrictedDependencyUpdateCommand Condition="'$(RestrictedDependencyAnalysis)' == 'true'">dotnet run --project util/RestrictedDependencies/RestrictedDependencyBaselines -- update</RestrictedDependencyUpdateCommand>
+    <BitwardenRestrictedDependenciesVersion>0.1.0-demo.2</BitwardenRestrictedDependenciesVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RestrictedDependencyAnalysis)' == 'true'">
+    <!--
+        Build-time only. PrivateAssets keeps it from flowing to dependents, which otherwise records
+        it as a transitive dependency in every test and util project's lock file.
+    -->
+    <PackageReference Include="Bitwarden.Server.Sdk.RestrictedDependencies" Version="$(BitwardenRestrictedDependenciesVersion)" IncludeAssets="analyzers;build" PrivateAssets="all" />
+  </ItemGroup>
 
   <PropertyGroup>
     <BitIncludeAuthentication>false</BitIncludeAuthentication>

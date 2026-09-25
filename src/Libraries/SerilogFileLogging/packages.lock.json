@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "Bitwarden.Server.Sdk.RestrictedDependencies": {
+        "type": "Direct",
+        "requested": "[0.1.0-demo.2, )",
+        "resolved": "0.1.0-demo.2",
+        "contentHash": "BwdWftjCW9BcOnAXwSM6FTntS6avwWYbEf2K7m3XlRRbL+hMR3O7sq4e3Z6rpspkFYrcWzPKDgGqWIDG3yAQdw=="
+      },
       "Serilog.Extensions.Logging.File": {
         "type": "Direct",
         "requested": "[3.0.0, 3.0.0]",

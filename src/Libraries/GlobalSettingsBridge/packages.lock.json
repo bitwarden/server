@@ -7,6 +7,12 @@
         "requested": "[0.1.0, )",
         "resolved": "0.1.0",
         "contentHash": "yLK3ik/+zQ4w41iDObvv4vq2QwWPaVMuyKFpzlgsukClOOuZUxJAivwnnZZDMXbp2wipWgaW4yeEY+yLdLVaVQ=="
+      },
+      "Bitwarden.Server.Sdk.RestrictedDependencies": {
+        "type": "Direct",
+        "requested": "[0.1.0-demo.2, )",
+        "resolved": "0.1.0-demo.2",
+        "contentHash": "BwdWftjCW9BcOnAXwSM6FTntS6avwWYbEf2K7m3XlRRbL+hMR3O7sq4e3Z6rpspkFYrcWzPKDgGqWIDG3yAQdw=="
       }
     }
   }

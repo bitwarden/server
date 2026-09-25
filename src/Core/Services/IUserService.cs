@@ -9,15 +9,21 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
+using Bitwarden.Server.Sdk.RestrictedDependencies;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services;
 
+[RestrictedDependency(AllowExistingUses = true, AllowNewUses = false,
+    Tracking = "PM-43148", Owner = "@bitwarden/tech-leads",
+    SealMembers = true, AllowedPaths = ["src/Core/Services/Implementations/UserService.cs"])]
 public interface IUserService
 {
+    [RestrictedDependency(AllowExistingUses = true, AllowNewUses = true)]
     Guid? GetProperUserId(ClaimsPrincipal principal);
     Task<User> GetUserByIdAsync(string userId);
     Task<User> GetUserByIdAsync(Guid userId);
+    [RestrictedDependency(AllowExistingUses = true, AllowNewUses = true)]
     Task<User> GetUserByPrincipalAsync(ClaimsPrincipal principal);
     Task<DateTime> GetAccountRevisionDateByIdAsync(Guid userId);
     Task SaveUserAsync(User user, bool push = false);
@@ -30,12 +36,16 @@ public interface IUserService
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
     [Obsolete("Use ISelfServicePasswordChangeCommand instead. To be removed in PM-33141.")]
+    [RestrictedDependency(Replacement = "ISelfServicePasswordChangeCommand")]
     Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
     // TODO removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use ISetKeyConnectorKeyCommand instead. This method will be removed in a future version.")]
+    [RestrictedDependency(Replacement = "ISetKeyConnectorKeyCommand")]
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
+    [RestrictedDependency(AllowExistingUses = false, AllowNewUses = false)]
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
     [Obsolete("Use IReplaceAdminSetTemporaryPasswordCommand instead. To be removed in PM-33141.")]
+    [RestrictedDependency(Replacement = "IReplaceAdminSetTemporaryPasswordCommand")]
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
@@ -65,6 +75,7 @@ public interface IUserService
     /// </summary>
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium; false otherwise.</returns>
+    [RestrictedDependency(Replacement = "IHasPremiumAccessQuery.HasPremiumAccessAsync")]
     Task<bool> CanAccessPremium(User user);
 
     /// <summary>
@@ -76,6 +87,7 @@ public interface IUserService
     /// <param name="user">user being acted on</param>
     /// <returns>true if they can access premium because of organization membership; false otherwise.</returns>
     [Obsolete("Use IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync instead. This method will be removed in a future version.")]
+    [RestrictedDependency(Replacement = "IHasPremiumAccessQuery.HasPremiumFromOrganizationAsync")]
     Task<bool> HasPremiumFromOrganization(User user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
 
@@ -84,6 +96,7 @@ public interface IUserService
     // TODO: Remove this method when the PM37165_RotateUserApiKeyCommand feature flag is cleaned up.
     [Obsolete("Use IRotateUserApiKeyCommand instead. This method will be removed once the PM37165_RotateUserApiKeyCommand feature flag is removed.")]
     Task RotateApiKeyAsync(User user);
+    [RestrictedDependency(AllowExistingUses = false, AllowNewUses = false)]
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
