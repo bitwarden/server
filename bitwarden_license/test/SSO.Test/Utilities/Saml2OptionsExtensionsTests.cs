@@ -1,10 +1,14 @@
 ﻿using System.Diagnostics.Metrics;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Bit.Core;
 using Bit.Sso.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
+using NSubstitute;
 using Sustainsys.Saml2;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
@@ -25,20 +29,125 @@ public class Saml2OptionsExtensionsTests
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
 
-    [Fact]
-    public async Task CouldHandleAsync_NoAssertionAndWantAssertionsSigned_Throws()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CouldHandleAsync_NoAssertionAndWantAssertionsSigned_Throws(bool featureFlagEnabled)
     {
         // An envelope with no <saml:Assertion> element must still cause a throw from the
         // signature check. The algorithm validation try/catch wraps only the validation,
         // so it must not hide this throw.
+        // The throw must occur in both the flag-on and the legacy flag-off signature checks.
         var options = BuildOptions(wantAssertionsSigned: true);
-        using var testContext = BuildPostContext(BuildResponseXml(string.Empty));
+        using var testContext = BuildPostContext(BuildResponseXml(string.Empty), featureFlagEnabled);
         var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
             () => options.CouldHandleAsync(Scheme, context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
         Assert.Empty(collector.GetMeasurementSnapshot());
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_EncryptedAndSignedAssertionAndWantAssertionsSigned_DoesNotThrow()
+    {
+        // The identity provider signs the assertion, then encrypts the whole thing, exactly like a
+        // real round trip. The pre-flight check must decrypt before it can see the signature.
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(signedAssertion.OuterXml, decryptionCertificate);
+
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_EncryptedButUnsignedAssertionAndWantAssertionsSigned_Throws()
+    {
+        // Decryption succeeding is not proof of a valid signature. An assertion that decrypts
+        // cleanly but was never signed must still be rejected.
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
+
+        var unsignedAssertion = Saml2TestXml.BuildAssertionDocument().DocumentElement!;
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(unsignedAssertion.OuterXml, decryptionCertificate);
+
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_MixedPlaintextAndEncryptedAssertionAndWantAssertionsSigned_ChecksPlaintextAssertion()
+    {
+        // A response can carry a plaintext assertion alongside a separate encrypted one (e.g. a
+        // federation proxy). The unsigned plaintext assertion must still be checked and rejected,
+        // regardless of its encrypted sibling.
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
+
+        const string unsignedPlaintextAssertion =
+            "<saml:Assertion ID=\"_plaintext\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>";
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
+            Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(unsignedPlaintextAssertion + encryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SignedPlaintextAssertionWithUnsignedEncryptedSiblingAndWantAssertionsSigned_Throws()
+    {
+        // A response can carry more than one assertion (e.g. a federation proxy). A validly
+        // signed plaintext assertion must not let an unsigned encrypted sibling through unchecked.
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedPlaintextAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
+        var unsignedEncryptedAssertionXml =
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_TwoSignedAssertionsAndWantAssertionsSigned_DoesNotThrow()
+    {
+        // A federation proxy can aggregate a signed plaintext assertion and a signed, encrypted
+        // one. Both must pass the check independently for the response to be accepted.
+        var signingCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test IdP");
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
+
+        var signedPlaintextAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
+        var signedEncryptedAssertionXml =
+            Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml, decryptionCertificate);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(signedPlaintextAssertion.OuterXml + signedEncryptedAssertionXml));
+        var (context, collector) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
     [Fact]
@@ -97,7 +206,8 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
-    private static Saml2Options BuildOptions(bool wantAssertionsSigned)
+    private static Saml2Options BuildOptions(bool wantAssertionsSigned,
+        X509Certificate2? decryptionCertificate = null, X509Certificate2? signingCertificate = null)
     {
         var spOptions = new SPOptions
         {
@@ -105,14 +215,22 @@ public class Saml2OptionsExtensionsTests
             ModulePath = ModulePath,
             WantAssertionsSigned = wantAssertionsSigned,
         };
-        // This test does not configure a signing certificate.
-        // No test case calls XmlHelpers.IsSignedByAny.
-        // If the test sets LoadMetadata to true, IdentityProvider.Validate() then requires a certificate.
+        if (decryptionCertificate != null)
+        {
+            spOptions.ServiceCertificates.Add(decryptionCertificate);
+        }
+        // If a test case does not pass a signing certificate, it must not call
+        // XmlHelpers.IsSignedByAny. If the test sets LoadMetadata to true,
+        // IdentityProvider.Validate() then requires a certificate.
         var idp = new IdentityProvider(new EntityId(IdpEntityId), spOptions)
         {
             Binding = Saml2BindingType.HttpPost,
             SingleSignOnServiceUrl = new Uri("https://idp.example.com/sso"),
         };
+        if (signingCertificate != null)
+        {
+            idp.SigningKeys.AddConfiguredKey(signingCertificate);
+        }
 
         var options = new Saml2Options { SPOptions = spOptions };
         options.IdentityProviders.Add(idp);
@@ -152,14 +270,20 @@ public class Saml2OptionsExtensionsTests
         return context;
     }
 
-    // CouldHandleAsync resolves the inspector metrics from the request services.
-    private static MetricTestContext BuildPostContext(string responseXml)
+    // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
+    // the PM42982_WantAssertionsSigned feature flag, from the request services.
+    private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true)
     {
         var context = BuildRawPostContext(responseXml);
 
         var services = new ServiceCollection();
         services.AddMetrics();
         services.AddSingleton<Saml2AssertionMetrics>();
+
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(featureFlagEnabled);
+        services.AddSingleton(featureService);
+
         var provider = services.BuildServiceProvider();
 
         var collector = new MetricCollector<long>(
