@@ -46,7 +46,7 @@ public class UserSubscriptionEndpointsTests
     }
 
     [Fact]
-    public void MapUserSubscriptionEndpoints_MapsPreviewPremiumUpgrade()
+    public void MapUserSubscriptionEndpoints_MapsGetUpgradePreview()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -55,10 +55,10 @@ public class UserSubscriptionEndpointsTests
         var endpoint = ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
-            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/invoice/preview", StringComparison.Ordinal));
+            .Single(e => e.RoutePattern.RawText!.Contains("upgrade/preview", StringComparison.Ordinal));
 
-        Assert.Equal(["POST"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
-        Assert.Equal("PreviewPremiumUpgrade", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Equal("GetAccountSubscriptionUpgradePreview", endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName);
 
         var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
         Assert.NotNull(authorize);
@@ -66,5 +66,26 @@ public class UserSubscriptionEndpointsTests
         Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
         Assert.Contains("UserSubscriptions", endpoint.Metadata.GetMetadata<ITagsMetadata>()!.Tags);
         Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()!.EndpointGroupName);
+    }
+
+    [Fact]
+    public void MapUserSubscriptionEndpoints_MapsThePreviewRoute()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        app.MapUserSubscriptionEndpoints();
+
+        var endpoint = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == "GetAccountSubscriptionPreview");
+
+        Assert.Equal(["GET"], endpoint.Metadata.GetMetadata<IHttpMethodMetadata>()!.HttpMethods);
+        Assert.Contains("preview", endpoint.RoutePattern.RawText, StringComparison.Ordinal);
+
+        var authorize = endpoint.Metadata.GetMetadata<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(Policies.Application, authorize!.Policy);
+        Assert.NotNull(endpoint.Metadata.GetMetadata<IFeatureMetadata>());
     }
 }

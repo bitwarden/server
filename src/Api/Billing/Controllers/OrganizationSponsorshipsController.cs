@@ -141,15 +141,19 @@ public class OrganizationSponsorshipsController : Controller
     public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
     {
         var isFreeFamilyPolicyEnabled = false;
+        string sponsoringOrganizationName = null;
         var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
         if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
         {
             var policy = await _policyQuery.RunAsync(sponsorship.SponsoringOrganizationId.Value,
                 PolicyType.FreeFamiliesSponsorshipPolicy);
             isFreeFamilyPolicyEnabled = policy.Enabled;
+
+            var sponsoringOrganization = await _organizationRepository.GetByIdAsync(sponsorship.SponsoringOrganizationId.Value);
+            sponsoringOrganizationName = sponsoringOrganization?.DisplayName();
         }
 
-        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled);
+        var response = PreValidateSponsorshipResponseModel.From(isValid, isFreeFamilyPolicyEnabled, sponsoringOrganizationName);
 
         return response;
     }

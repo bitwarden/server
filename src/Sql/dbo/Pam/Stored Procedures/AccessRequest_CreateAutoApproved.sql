@@ -14,22 +14,17 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateAutoApproved]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls the transaction back as a unit if either write fails. Without it a constraint violation aborts
-    -- only the offending statement, execution falls through to the COMMIT, and the request would be persisted without
-    -- the decision that approved it.
+    -- XACT_ABORT rolls both writes back together on any failure.
     SET XACT_ABORT ON
 
-    -- Atomically record an auto-approved request and its automatic verdict. No lease is minted here: the requester
-    -- activates the approved request later via [AccessLease_CreateFromApprovedRequest], exactly like the human path
-    -- after approval. The per-cipher single-active-lease guard therefore lives entirely on that activation path.
+    -- Records an auto-approved request and verdict; no lease minted here, activation happens later.
     BEGIN TRANSACTION AccessRequest_CreateAutoApproved
 
-    -- The request is created already resolved (Approved). ExtensionOfLeaseId stays NULL: it is reserved for extension
-    -- requests; provenance for an original lease flows the other way, via AccessLease.AccessRequestId.
+    -- ExtensionOfLeaseId stays NULL; provenance instead flows via AccessLease.AccessRequestId.
     INSERT INTO [dbo].[AccessRequest]
     (
         [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],
-        [NotBefore], [NotAfter], [Reason], [Status], [CreationDate], [ResolvedDate], [RuleId]
+        [NotBefore], [NotAfter], [Reason], [Action], [CreationDate], [ActionDate], [RuleId]
     )
     VALUES
     (

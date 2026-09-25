@@ -1,5 +1,4 @@
 ﻿using System.Security.Cryptography.X509Certificates;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.Auth.Entities;
@@ -47,7 +46,6 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
-    private Action<SsoApplicationFactory>? _featureFlagConfig;
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -113,12 +111,6 @@ public class SsoTestDataBuilder
         return this;
     }
 
-    public SsoTestDataBuilder WithFeatureFlags(Action<SsoApplicationFactory> configure)
-    {
-        _featureFlagConfig = configure;
-        return this;
-    }
-
     public SsoTestDataBuilder WithFailedAuthentication()
     {
         _successfulAuth = false;
@@ -168,22 +160,6 @@ public class SsoTestDataBuilder
     {
         _isNativeClient = true;
         return this;
-    }
-
-    /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM34423StagedStatus"/> feature flag for the test.
-    /// SSO Staged-row promotion (Scenario 3 in AutoProvisionUserAsync) is gated behind this
-    /// flag, so tests exercising that branch must opt in.
-    /// </summary>
-    public SsoTestDataBuilder WithPM34423StagedStatusFlag(bool enabled = true)
-    {
-        return WithFeatureFlags(factory =>
-        {
-            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
-            {
-                svc.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(enabled);
-            });
-        });
     }
 
     /// <summary>
@@ -278,10 +254,7 @@ public class SsoTestDataBuilder
             globalSettings.SelfHosted.Returns(_isSelfHosted);
         });
 
-        // 1.b configure setting feature flags
-        _featureFlagConfig?.Invoke(factory);
-
-        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
         {
             var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };

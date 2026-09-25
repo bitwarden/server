@@ -11,6 +11,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// The following are validated:
 /// <list type="bullet">
 ///     <item>The invite link exists, its organization is enabled and supports invite links, and the link supports confirmation.</item>
+///     <item>The user has verified their email address.</item>
 ///     <item>The user's email domain is allowed by the link.</item>
 ///     <item>The user is not a provider user.</item>
 ///     <item>Any existing membership is neither revoked nor already confirmed.</item>
