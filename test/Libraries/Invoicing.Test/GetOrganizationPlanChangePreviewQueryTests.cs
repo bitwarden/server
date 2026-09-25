@@ -46,19 +46,25 @@ public class GetOrganizationPlanChangePreviewQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FullSubscription());
 
-        var captured = CaptureOptionsFor(PlanTierType.Enterprise, PlanCadenceType.Annually);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, planChange);
 
-        Assert.NotNull(captured.Value);
-        Assert.Equal("cus_1", captured.Value!.Customer);
-        Assert.Equal("sub_1", captured.Value.Subscription);
-        Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, captured.Value.SubscriptionDetails.ProrationBehavior);
-        Assert.True(captured.Value.AutomaticTax.Enabled);
-        Assert.Equal("US", captured.Value.CustomerDetails.Address.Country);
-        Assert.Equal("90210", captured.Value.CustomerDetails.Address.PostalCode);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+            Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Enterprise, PlanCadenceType.Annually);
+        Assert.NotNull(options);
+        Assert.Equal("cus_1", options!.Customer);
+        Assert.Equal("sub_1", options.Subscription);
+        Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, options.SubscriptionDetails.ProrationBehavior);
+        Assert.True(options.AutomaticTax.Enabled);
+        Assert.Equal("US", options.CustomerDetails.Address.Country);
+        Assert.Equal("90210", options.CustomerDetails.Address.PostalCode);
 
-        var items = captured.Value.SubscriptionDetails.Items;
+        var items = options.SubscriptionDetails.Items;
         AssertSwap(items, id: "si_pm", price: "price_ent_seat", quantity: 5);
         AssertSwap(items, id: "si_storage", price: "price_ent_storage", quantity: 3);
         AssertSwap(items, id: "si_sm", price: "price_ent_sm_seat", quantity: 5);
@@ -82,12 +88,18 @@ public class GetOrganizationPlanChangePreviewQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(FamiliesSubscription());
 
-        var captured = CaptureOptionsFor(PlanTierType.Teams, PlanCadenceType.Annually);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, planChange);
 
-        Assert.NotNull(captured.Value);
-        AssertSwap(captured.Value!.SubscriptionDetails.Items, id: "si_families", price: "price_teams_seat", quantity: 6);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+            Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Teams, PlanCadenceType.Annually);
+        Assert.NotNull(options);
+        AssertSwap(options!.SubscriptionDetails.Items, id: "si_families", price: "price_teams_seat", quantity: 6);
     }
 
     [Fact]
@@ -107,12 +119,18 @@ public class GetOrganizationPlanChangePreviewQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
         _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(Teams2019Subscription());
 
-        var captured = CaptureOptionsFor(PlanTierType.Enterprise, PlanCadenceType.Annually);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, planChange);
 
-        Assert.NotNull(captured.Value);
-        var items = captured.Value!.SubscriptionDetails.Items;
+        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+            Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Enterprise, PlanCadenceType.Annually);
+        Assert.NotNull(options);
+        var items = options!.SubscriptionDetails.Items;
         AssertSwap(items, id: "si_base", price: "price_ent_seat", quantity: 8);
         AssertDeleted(items, id: "si_overage");
     }
@@ -133,16 +151,22 @@ public class GetOrganizationPlanChangePreviewQueryTests
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
 
-        var captured = CaptureOptionsFor(PlanTierType.Teams, PlanCadenceType.Annually);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, planChange);
 
-        Assert.NotNull(captured.Value);
-        Assert.Null(captured.Value!.Customer);
-        Assert.Null(captured.Value.Subscription);
-        Assert.Null(captured.Value.SubscriptionDetails.ProrationBehavior);
-        Assert.Equal("US", captured.Value.CustomerDetails.Address.Country);
-        var item = Assert.Single(captured.Value.SubscriptionDetails.Items);
+        await _invoicePreviewService.Received(1).GetInvoicePreviewAsync(
+            Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Teams, PlanCadenceType.Annually);
+        Assert.NotNull(options);
+        Assert.Null(options!.Customer);
+        Assert.Null(options.Subscription);
+        Assert.Null(options.SubscriptionDetails.ProrationBehavior);
+        Assert.Equal("US", options.CustomerDetails.Address.Country);
+        var item = Assert.Single(options.SubscriptionDetails.Items);
         Assert.Equal("price_teams_seat", item.Price);
         Assert.Equal(7, item.Quantity);
         Assert.Null(item.Id);
@@ -206,16 +230,6 @@ public class GetOrganizationPlanChangePreviewQueryTests
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
-
-    private StrongBox CaptureOptionsFor(PlanTierType planTier, PlanCadenceType cadence)
-    {
-        var box = new StrongBox();
-        _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(options => box.Value = options), planTier, cadence)
-            .Returns(SampleInvoicePreview());
-        return box;
-    }
-
 
     private static void AssertSwap(List<InvoiceSubscriptionDetailsItemOptions> items, string id, string price, long quantity)
     {
@@ -286,11 +300,6 @@ public class GetOrganizationPlanChangePreviewQueryTests
         Total = 100m,
         AmountDue = 100m
     };
-
-    private sealed class StrongBox
-    {
-        public InvoiceCreatePreviewOptions? Value { get; set; }
-    }
 
     private sealed record TestPlan : PlanFeatures
     {
