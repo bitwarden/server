@@ -20,6 +20,9 @@ namespace Bit.Api.IntegrationTest.Vault.Controllers;
 
 public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
+    private const string _mockEncryptedString =
+        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
@@ -130,6 +133,81 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
     [Theory]
     [MemberData(nameof(EditorRoles))]
+    public async Task PostBulkCollections_CanRemoveCipherFromSharedCollection_WhenItIsAlsoInAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        var (editorEmail, cipherId, defaultCollectionId, sharedCollectionId) =
+            await ArrangeCipherInDefaultCollectionAsync(editorType);
+
+        // The cipher is tied to both another member's default ("My Items") collection and a shared
+        // collection the editor manages.
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            _organization.Id, [cipherId], [sharedCollectionId]);
+
+        // Act: the editor removes the cipher from the shared collection only, leaving the default
+        // ("My Items") collection untouched.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PostAsJsonAsync("ciphers/bulk-collections", new CipherBulkUpdateCollectionsRequestModel
+        {
+            OrganizationId = _organization.Id,
+            CipherIds = [cipherId],
+            CollectionIds = [sharedCollectionId],
+            RemoveCollections = true
+        });
+
+        // Assert: the removal succeeds; the shared collection is gone and the default is untouched.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipherId);
+        Assert.DoesNotContain(sharedCollectionId, collectionIds);
+        Assert.Contains(defaultCollectionId, collectionIds);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task PutCollections_CanRemoveCipherFromSharedCollection_WhenItIsAlsoInAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+        var userRepository = _factory.GetService<IUserRepository>();
+        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
+
+        var (editorEmail, cipherId, defaultCollectionId, sharedCollectionId) =
+            await ArrangeCipherInDefaultCollectionAsync(editorType);
+
+        // A second shared collection the editor manages, so the editor keeps access to the cipher
+        // after removing it from the first shared collection.
+        var editorUser = await userRepository.GetByEmailAsync(editorEmail);
+        var editorOrgUser = await organizationUserRepository.GetByOrganizationAsync(_organization.Id, editorUser!.Id);
+        var secondSharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory, _organization.Id, "Second Shared Collection",
+            users: [new CollectionAccessSelection { Id = editorOrgUser!.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
+
+        // The cipher is tied to another member's default ("My Items") collection and both shared collections.
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            _organization.Id, [cipherId], [sharedCollectionId, secondSharedCollection.Id]);
+
+        // Act: the editor saves a collection list that drops the first shared collection. The owner's
+        // default ("My Items") collection is outside their scope and is left untouched.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PutAsJsonAsync($"ciphers/{cipherId}/collections", new CipherCollectionsRequestModel
+        {
+            CollectionIds = [secondSharedCollection.Id.ToString()]
+        });
+
+        // Assert: the removal succeeds; the first shared collection is gone and the default is untouched.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipherId);
+        Assert.DoesNotContain(sharedCollectionId, collectionIds);
+        Assert.Contains(secondSharedCollection.Id, collectionIds);
+        Assert.Contains(defaultCollectionId, collectionIds);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
     public async Task PostBulkCollections_AddsCipherToSharedCollectionWithoutExplicitAccess(OrganizationUserType editorType)
     {
         var collectionRepository = _factory.GetService<ICollectionRepository>();
@@ -182,6 +260,67 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Contains(sharedCollection.Id, collectionIds);
     }
 
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task Put_CanEditCipherContents_WhenItIsAlsoInAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        var (editorEmail, cipherId, defaultCollectionId, sharedCollectionId) =
+            await ArrangeCipherInDefaultCollectionAsync(editorType);
+
+        // The cipher lives in both another member's default ("My Items") collection and a shared collection
+        // the editor can reach. This mirrors an item shared under the Organization Data Ownership policy.
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            _organization.Id, [cipherId], [sharedCollectionId]);
+
+        // Act: the editor saves a content change without touching the cipher's collections.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PutAsJsonAsync($"ciphers/{cipherId}", new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            OrganizationId = _organization.Id.ToString(),
+            Name = _mockEncryptedString,
+            Data = "{}"
+        });
+
+        // Assert: a normal edit succeeds and the collections are unchanged.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipherId);
+        Assert.Contains(defaultCollectionId, collectionIds);
+        Assert.Contains(sharedCollectionId, collectionIds);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
+    public async Task PutCollections_CanReSaveUnchangedCollections_WhenCipherIsAlsoInAnotherUsersDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        var (editorEmail, cipherId, defaultCollectionId, sharedCollectionId) =
+            await ArrangeCipherInDefaultCollectionAsync(editorType);
+
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            _organization.Id, [cipherId], [sharedCollectionId]);
+
+        // Act: the editor re-saves the collection they can already see, making no change.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PutAsJsonAsync($"ciphers/{cipherId}/collections", new CipherCollectionsRequestModel
+        {
+            CollectionIds = [sharedCollectionId.ToString()]
+        });
+
+        // Assert: the no-op collection save succeeds and the collections are unchanged.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipherId);
+        Assert.Contains(defaultCollectionId, collectionIds);
+        Assert.Contains(sharedCollectionId, collectionIds);
+    }
+
     /// <summary>
     /// Creates the acting member with the given role, a second member who owns a default user collection
     /// ("My Items") containing an org-owned cipher, and a shared collection.
@@ -196,7 +335,7 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             ? new Permissions { EditAnyCollection = true }
             : null;
 
-        var (editorEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+        var (editorEmail, editor) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, editorType, permissions);
 
         // A regular member who owns a default user collection ("My Items") with a cipher in it.
@@ -221,8 +360,10 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         };
         await cipherRepository.CreateAsync(cipher, [defaultCollection.Id]);
 
+        // The editor has explicit Manage access to the shared collection only.
         var sharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
-            _factory, _organization.Id, "Shared Collection");
+            _factory, _organization.Id, "Shared Collection",
+            users: [new CollectionAccessSelection { Id = editor.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
 
         return (editorEmail, cipher.Id, defaultCollection.Id, sharedCollection.Id);
     }
