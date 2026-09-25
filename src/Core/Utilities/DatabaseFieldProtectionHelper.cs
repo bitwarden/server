@@ -6,17 +6,16 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Bit.Core.Utilities;
 
 /// <summary>
-/// Shared protect/unprotect logic for the legacy "P|"-prefixed database field protection scheme,
+/// Shared protect/unprotect logic for the "P|"-prefixed database field protection scheme,
 /// used by both the Dapper and EF Core data access implementations.
 /// </summary>
 public static class DatabaseFieldProtectionHelper
 {
     /// <summary>
     /// Protects <paramref name="value"/> unless it is already protected. A value is only treated as
-    /// already-protected when it both carries the prefix and can actually be unprotected by
-    /// <paramref name="dataProtector"/>. A caller-supplied string that merely starts with the prefix
-    /// (but isn't real protector output) is otherwise stored verbatim, unencrypted, and permanently
-    /// unreadable on the next read.
+    /// already-protected when it can actually be unprotected by <paramref name="dataProtector"/>.
+    /// A caller-supplied string that merely starts with the prefix should not be assumed to be data
+    /// protected.
     /// </summary>
     public static string? Protect(IDataProtector dataProtector, string? value)
     {
@@ -33,9 +32,9 @@ public static class DatabaseFieldProtectionHelper
                 dataProtector.Unprotect(payload);
                 return value;
             }
-            catch (CryptographicException)
+            catch (CryptographicException ex)
             {
-                // Not real protector output despite the prefix; fall through and protect it.
+                throw new InvalidOperationException("Value carries the protected-data prefix but could not be unprotected.", ex);
             }
         }
 
