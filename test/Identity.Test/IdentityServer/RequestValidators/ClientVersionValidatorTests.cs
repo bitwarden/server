@@ -25,11 +25,15 @@ public class ClientVersionValidatorTests
         };
     }
 
-    [Fact]
-    public void Allows_When_ClientMeetsMinimumVersion()
+    [Theory]
+    [InlineData("2026.9.1")]
+    [InlineData("2026.9.2")]
+    [InlineData("2026.10.0")]
+    [InlineData("2027.1.0")]
+    public void Allows_When_ClientMeetsMinimumVersion(string clientVersion)
     {
         // Arrange
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var sut = new ClientVersionValidator(MakeContext(new Version(clientVersion)));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
         var user = MakeValidV2User();
 
@@ -40,11 +44,15 @@ public class ClientVersionValidatorTests
         Assert.True(ok);
     }
 
-    [Fact]
-    public void Blocks_When_ClientTooOld()
+    [Theory]
+    [InlineData("2026.9.0")]
+    [InlineData("2026.8.0")]
+    [InlineData("2025.12.0")]
+    [InlineData("2025.9.1")]
+    public void Blocks_When_ClientTooOld(string clientVersion)
     {
         // Arrange
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.10.0")));
+        var sut = new ClientVersionValidator(MakeContext(new Version(clientVersion)));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
         var user = MakeValidV2User();
 
@@ -62,7 +70,7 @@ public class ClientVersionValidatorTests
     public void Blocks_When_NullUser()
     {
         // Arrange
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var sut = new ClientVersionValidator(MakeContext(new Version("2026.9.1")));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
         User? user = null;
 
@@ -80,7 +88,7 @@ public class ClientVersionValidatorTests
     public void Allows_When_NoPrivateKey()
     {
         // Arrange
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var sut = new ClientVersionValidator(MakeContext(new Version("2026.9.1")));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
         var user = MakeValidV2User();
         user.PrivateKey = null;
@@ -96,7 +104,7 @@ public class ClientVersionValidatorTests
     public void Allows_When_NoSecurityVersion()
     {
         // Arrange
-        var sut = new ClientVersionValidator(MakeContext(new Version("2025.11.0")));
+        var sut = new ClientVersionValidator(MakeContext(new Version("2026.9.1")));
         var ctx = new Bit.Identity.IdentityServer.CustomValidatorRequestContext();
 
         var user = MakeValidV2User();
