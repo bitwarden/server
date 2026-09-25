@@ -17,6 +17,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.AddInvoicing();
         services.AddOrganizationAuthorization();
         services.TryAddScoped<GetOrganizationSubscriptionPreviewHandler>();
+        services.TryAddScoped<GetOrganizationPlanChangePreviewHandler>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
         return services;

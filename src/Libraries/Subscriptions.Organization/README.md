@@ -7,16 +7,20 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddOrganizationSubscriptions()` registers the group's services — the scoped
-`OrganizationSubscriptionEndpointsHandler` and the `StandaloneOrganizationOwnerRequirementHandler`
-authorization handler — and the `Bit.Invoicing` library they depend on.
+`AddOrganizationSubscriptions()` registers the group's services — a scoped handler class per endpoint
+(`GetOrganizationSubscriptionPreviewHandler`, `GetOrganizationPlanChangePreviewHandler`), each depending
+only on the query or command it drives — the `StandaloneOrganizationOwnerRequirementHandler`
+authorization handler, and the `Bit.Invoicing` library they depend on. One handler class per endpoint
+keeps each endpoint open for extension without modifying the others (no shared handler accumulating a
+dependency per route).
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
 `/organizations/{organizationId:guid}/billing/subscription`. The chain applies the
 `OrganizationSubscriptions` tag, the `internal` group name (keeps these endpoints out of the public
 API spec), the authenticated `Application` policy, the `OrganizationBillingRequirement`, basic
-exception handling (from `Bit.ExceptionHandling`), and the `PM36631_PreviewDrivenCart` feature gate.
+exception handling (from `Bit.ExceptionHandling`), the `PM36631_PreviewDrivenCart` feature gate, and a
+`Cache-Control: no-store` filter (previews are per-organization billing data, never cached).
 
 ### Authorization
 
@@ -26,8 +30,8 @@ The group authorizes **every** endpoint — the `Application` policy plus
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
 
-Individual endpoints may narrow this baseline further. The `preview` endpoint additionally requires
-`StandaloneOrganizationOwnerRequirement`, so it admits **only** an Owner of a standalone organization:
+Individual endpoints may narrow this baseline further. Both endpoints additionally require
+`StandaloneOrganizationOwnerRequirement`, so they admit **only** an Owner of a standalone organization:
 an owner of a provider-managed (MSP, reseller, or business unit) organization, and a confirmed provider user, are both
 denied. This is deliberately stricter than legacy `ICurrentContext.EditSubscription`, which still admits
 a provider user for a provider-managed organization; provider-managed billing is administered through the
@@ -37,12 +41,21 @@ provider surface, so none of the organization's users reach the preview here.
 
 | Route | Handler | Returns |
 | --- | --- | --- |
-| `GET .../preview` | `OrganizationSubscriptionEndpointsHandler.GetPreviewAsync` | `SubscriptionPreview` |
+| `GET .../preview` | `GetOrganizationSubscriptionPreviewHandler` | `SubscriptionPreview` |
+| `GET .../plan-change/preview` | `GetOrganizationPlanChangePreviewHandler` | `InvoicePreview` |
 
-`GetPreviewAsync` resolves the organization via `IOrganizationRepository` (404 if missing), runs
-`Bit.Invoicing`'s `IGetSubscriptionPreviewQuery` (404 if the organization has no Stripe subscription
-to preview), and returns the resulting `SubscriptionPreview`. The 404s are `NotFoundException`s
-(`Bit.ExceptionHandling`), which the group's exception handling maps to `404 Not Found`.
+Each handler resolves the organization via `IOrganizationRepository` (404 if missing).
+`GetOrganizationSubscriptionPreviewHandler` runs `Bit.Invoicing`'s `IGetSubscriptionPreviewQuery`
+(404 if the organization has no Stripe subscription to preview) and returns the resulting
+`SubscriptionPreview`. `GetOrganizationPlanChangePreviewHandler` runs
+`IGetOrganizationPlanChangePreviewQuery` — which prorates the change against the live subscription, or
+(for an org with no subscription, e.g. upgrading from Free) previews the new plan at full price. Its
+query parameters are `tier` and `cadence` (the target plan, as their `EnumMember` string values, e.g.
+`enterprise`/`annually`) plus `country` and `postalCode`; an unrecognized `tier`/`cadence` is a 400. The
+address is always passed to Stripe via `CustomerDetails` so tax can be estimated without a stored
+customer — a Free org has none until it adds a payment method. It returns the resulting `InvoicePreview`
+cart. The 404s are `NotFoundException`s (`Bit.ExceptionHandling`), which the group's exception handling
+maps to `404 Not Found`.
 
 ## Stripe boundary
 
@@ -61,6 +74,7 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `Organization` (`Bit.Core.AdminConsole.Entities`) | The subscriber passed to the preview query |
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
+| `PlanCadenceType` (`Bit.Core.Billing.Enums`) | The billing cadence on the plan-change request |
 
 Depending on `Core` for these is fine for now; this table exists so they're known, not because
 they're queued up for extraction.
