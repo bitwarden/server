@@ -32,15 +32,15 @@ public record AccessAuditEventData
 
     /// <summary>
     /// Supplied by the rule commands, which hold the entity, rather than resolved by a JOIN at write time: a rule can
-    /// be hard-deleted in the same action, after which a JOIN could no longer resolve it. The target system and daemon
-    /// names below follow the same pattern.
+    /// be hard-deleted in the same action, after which a JOIN could no longer resolve it. The target system and
+    /// access connector names below follow the same pattern.
     /// </summary>
     public string? RuleName { get; init; }
 
     public Guid? TargetSystemId { get; init; }
     public string? TargetSystemName { get; init; }
-    public Guid? DaemonId { get; init; }
-    public string? DaemonName { get; init; }
+    public Guid? AccessConnectorId { get; init; }
+    public string? AccessConnectorName { get; init; }
     public Guid? RotationConfigId { get; init; }
     public Guid? RotationJobId { get; init; }
     public PamRotationSource? RotationSource { get; init; }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260925152104_AddAccessAuditEvent")]
+    [Migration("20260925154530_AddAccessAuditEvent")]
     partial class AddAccessAuditEvent
     {
         /// <inheritdoc />
@@ -2441,6 +2441,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessConnectorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccessConnectorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("uuid");
 
@@ -2469,13 +2476,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uuid");
-
-                    b.Property<Guid?>("DaemonId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("DaemonName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Detail")
                         .HasColumnType("text");

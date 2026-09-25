@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260925152110_AddAccessAuditEvent")]
+    [Migration("20260925154525_AddAccessAuditEvent")]
     partial class AddAccessAuditEvent
     {
         /// <inheritdoc />
@@ -2424,6 +2424,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("AccessConnectorId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AccessConnectorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("TEXT");
 
@@ -2451,13 +2458,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("CorrelationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("DaemonId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DaemonName")
-                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Detail")

@@ -2,9 +2,9 @@
 -- migration (the feature has not shipped), squashing the incremental steps the store went through during development.
 --
 -- The store is append-only and SELF-CONTAINED: AccessAuditEvent_Create snapshots the actor, requester, rule, target
--- system, and daemon display names into the row at write time, so the trail read touches no other table and a later
--- delete or rename cannot erase or rewrite history. Every snapshotted name is plaintext, so the subject cipher and
--- collection are recorded by id only and no vault data lands in the audit store. Subject and rotation ids are
+-- system, and access connector display names into the row at write time, so the trail read touches no other table and a
+-- later delete or rename cannot erase or rewrite history. Every snapshotted name is plaintext, so the subject cipher
+-- and collection are recorded by id only and no vault data lands in the audit store. Subject and rotation ids are
 -- deliberately NOT foreign keyed for the same reason: an event outlives what it references. Only OrganizationId is, so
 -- the rows go when the org does. The rotation columns are NULL for non-rotation events.
 --
@@ -16,35 +16,35 @@
 IF OBJECT_ID('[dbo].[AccessAuditEvent]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[AccessAuditEvent] (
-        [Id]                UNIQUEIDENTIFIER    NOT NULL,
-        [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
-        [Kind]              TINYINT             NOT NULL,
-        [Phase]             TINYINT             NOT NULL,
-        [OccurredDate]      DATETIME2(7)        NOT NULL,
-        [ActorId]           UNIQUEIDENTIFIER    NULL,
-        [RequesterId]       UNIQUEIDENTIFIER    NULL,
-        [CollectionId]      UNIQUEIDENTIFIER    NULL,
-        [CipherId]          UNIQUEIDENTIFIER    NULL,
-        [AccessRequestId]   UNIQUEIDENTIFIER    NULL,
-        [AccessLeaseId]     UNIQUEIDENTIFIER    NULL,
-        [AccessRuleId]      UNIQUEIDENTIFIER    NULL,
-        [Detail]            NVARCHAR(MAX)       NULL,
-        [LeaseNotBefore]    DATETIME2(7)        NULL,
-        [LeaseNotAfter]     DATETIME2(7)        NULL,
-        [ActorName]         NVARCHAR(50)        NULL,
-        [ActorEmail]        NVARCHAR(256)       NULL,
-        [RequesterName]     NVARCHAR(50)        NULL,
-        [RequesterEmail]    NVARCHAR(256)       NULL,
-        [RuleName]          NVARCHAR(256)       NULL,
-        [CorrelationId]     UNIQUEIDENTIFIER    NOT NULL,
-        [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
-        [TargetSystemName]  NVARCHAR(200)       NULL,
-        [DaemonId]          UNIQUEIDENTIFIER    NULL,
-        [DaemonName]        NVARCHAR(200)       NULL,
-        [RotationConfigId]  UNIQUEIDENTIFIER    NULL,
-        [RotationJobId]     UNIQUEIDENTIFIER    NULL,
-        [RotationSource]    TINYINT             NULL,
-        [SyncState]         TINYINT             NULL,
+        [Id]                  UNIQUEIDENTIFIER    NOT NULL,
+        [OrganizationId]      UNIQUEIDENTIFIER    NOT NULL,
+        [Kind]                TINYINT             NOT NULL,
+        [Phase]               TINYINT             NOT NULL,
+        [OccurredDate]        DATETIME2(7)        NOT NULL,
+        [ActorId]             UNIQUEIDENTIFIER    NULL,
+        [RequesterId]         UNIQUEIDENTIFIER    NULL,
+        [CollectionId]        UNIQUEIDENTIFIER    NULL,
+        [CipherId]            UNIQUEIDENTIFIER    NULL,
+        [AccessRequestId]     UNIQUEIDENTIFIER    NULL,
+        [AccessLeaseId]       UNIQUEIDENTIFIER    NULL,
+        [AccessRuleId]        UNIQUEIDENTIFIER    NULL,
+        [Detail]              NVARCHAR(MAX)       NULL,
+        [LeaseNotBefore]      DATETIME2(7)        NULL,
+        [LeaseNotAfter]       DATETIME2(7)        NULL,
+        [ActorName]           NVARCHAR(50)        NULL,
+        [ActorEmail]          NVARCHAR(256)       NULL,
+        [RequesterName]       NVARCHAR(50)        NULL,
+        [RequesterEmail]      NVARCHAR(256)       NULL,
+        [RuleName]            NVARCHAR(256)       NULL,
+        [CorrelationId]       UNIQUEIDENTIFIER    NOT NULL,
+        [TargetSystemId]      UNIQUEIDENTIFIER    NULL,
+        [TargetSystemName]    NVARCHAR(200)       NULL,
+        [AccessConnectorId]   UNIQUEIDENTIFIER    NULL,
+        [AccessConnectorName] NVARCHAR(200)       NULL,
+        [RotationConfigId]    UNIQUEIDENTIFIER    NULL,
+        [RotationJobId]       UNIQUEIDENTIFIER    NULL,
+        [RotationSource]      TINYINT             NULL,
+        [SyncState]           TINYINT             NULL,
         CONSTRAINT [PK_AccessAuditEvent] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_AccessAuditEvent_Organization] FOREIGN KEY ([OrganizationId])
             REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
@@ -57,14 +57,14 @@ GO
 IF COL_LENGTH('[dbo].[AccessAuditEvent]', 'TargetSystemId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[AccessAuditEvent] ADD
-        [TargetSystemId]    UNIQUEIDENTIFIER    NULL,
-        [TargetSystemName]  NVARCHAR(200)       NULL,
-        [DaemonId]          UNIQUEIDENTIFIER    NULL,
-        [DaemonName]        NVARCHAR(200)       NULL,
-        [RotationConfigId]  UNIQUEIDENTIFIER    NULL,
-        [RotationJobId]     UNIQUEIDENTIFIER    NULL,
-        [RotationSource]    TINYINT             NULL,
-        [SyncState]         TINYINT             NULL;
+        [TargetSystemId]      UNIQUEIDENTIFIER    NULL,
+        [TargetSystemName]    NVARCHAR(200)       NULL,
+        [AccessConnectorId]   UNIQUEIDENTIFIER    NULL,
+        [AccessConnectorName] NVARCHAR(200)       NULL,
+        [RotationConfigId]    UNIQUEIDENTIFIER    NULL,
+        [RotationJobId]       UNIQUEIDENTIFIER    NULL,
+        [RotationSource]      TINYINT             NULL,
+        [SyncState]           TINYINT             NULL;
 END
 GO
 
@@ -124,8 +124,8 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_Create]
     @LeaseNotAfter DATETIME2(7) = NULL,
     @TargetSystemId UNIQUEIDENTIFIER = NULL,
     @TargetSystemName NVARCHAR(200) = NULL,
-    @DaemonId UNIQUEIDENTIFIER = NULL,
-    @DaemonName NVARCHAR(200) = NULL,
+    @AccessConnectorId UNIQUEIDENTIFIER = NULL,
+    @AccessConnectorName NVARCHAR(200) = NULL,
     @RotationConfigId UNIQUEIDENTIFIER = NULL,
     @RotationJobId UNIQUEIDENTIFIER = NULL,
     @RotationSource TINYINT = NULL,
@@ -136,9 +136,10 @@ BEGIN
 
     -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
     -- rename cannot change what this event says. Actor and requester names are resolved by id from [User] here and
-    -- frozen, staying NULL where the id is NULL or the row is gone. The rule, target system, and daemon names come from
-    -- the caller instead of a JOIN, because those entities can be deleted or renamed in the same action. The subject
-    -- cipher and collection are recorded by id alone; their names are vault data, which this store never holds.
+    -- frozen, staying NULL where the id is NULL or the row is gone. The rule, target system, and access connector
+    -- names come from the caller instead of a JOIN, because those entities can be deleted or renamed in the same
+    -- action. The subject cipher and collection are recorded by id alone; their names are vault data, which this
+    -- store never holds.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
@@ -164,8 +165,8 @@ BEGIN
         [RuleName],
         [TargetSystemId],
         [TargetSystemName],
-        [DaemonId],
-        [DaemonName],
+        [AccessConnectorId],
+        [AccessConnectorName],
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],
@@ -195,8 +196,8 @@ BEGIN
         @RuleName,
         @TargetSystemId,
         @TargetSystemName,
-        @DaemonId,
-        @DaemonName,
+        @AccessConnectorId,
+        @AccessConnectorName,
         @RotationConfigId,
         @RotationJobId,
         @RotationSource,
@@ -269,8 +270,8 @@ BEGIN
         [RuleName],
         [TargetSystemId],
         [TargetSystemName],
-        [DaemonId],
-        [DaemonName],
+        [AccessConnectorId],
+        [AccessConnectorName],
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],

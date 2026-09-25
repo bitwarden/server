@@ -410,7 +410,7 @@ public class AccessAuditEventRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var targetSystemId = Guid.NewGuid();
-        var daemonId = Guid.NewGuid();
+        var accessConnectorId = Guid.NewGuid();
         var rotationConfigId = Guid.NewGuid();
         var rotationJobId = Guid.NewGuid();
 
@@ -420,8 +420,8 @@ public class AccessAuditEventRepositoryTests
             {
                 TargetSystemId = targetSystemId,
                 TargetSystemName = "target-system-name",
-                DaemonId = daemonId,
-                DaemonName = "daemon-name",
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = "access-connector-name",
                 RotationConfigId = rotationConfigId,
                 RotationJobId = rotationJobId,
                 RotationSource = PamRotationSource.OnDemand,
@@ -433,8 +433,8 @@ public class AccessAuditEventRepositoryTests
         var stored = Assert.Single(events, e => e.RotationJobId == rotationJobId);
         Assert.Equal(targetSystemId, stored.TargetSystemId);
         Assert.Equal("target-system-name", stored.TargetSystemName);
-        Assert.Equal(daemonId, stored.DaemonId);
-        Assert.Equal("daemon-name", stored.DaemonName);
+        Assert.Equal(accessConnectorId, stored.AccessConnectorId);
+        Assert.Equal("access-connector-name", stored.AccessConnectorName);
         Assert.Equal(rotationConfigId, stored.RotationConfigId);
         Assert.Equal(PamRotationSource.OnDemand, stored.RotationSource);
         Assert.Equal(PamRotationSyncState.TargetUpdated, stored.SyncState);
