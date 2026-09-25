@@ -65,7 +65,8 @@ internal static class OrganizationExtensions
             Email = shouldLinkUserId ? null : user.Email,
             Key = shouldIncludeKey ? encryptedOrgKey : null,
             Type = type,
-            Status = status
+            Status = status,
+            AccessPam = organization.UsePam
         };
     }
 }

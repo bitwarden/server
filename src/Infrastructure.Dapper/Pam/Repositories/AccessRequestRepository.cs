@@ -124,11 +124,11 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         return await ReadDetailsWithDecisionsAsync(results, now);
     }
 
-    public async Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now)
+    public async Task<bool> ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[AccessRequest_ResolveWithDecision]",
+        return await connection.ExecuteScalarAsync<bool>(
+            $"[{Schema}].[AccessRequest_UpdateResolvedWithDecision]",
             new
             {
                 AccessRequestId = request.Id,
@@ -142,20 +142,20 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task CancelAsync(Guid id, DateTime now)
+    public async Task<bool> CancelAsync(Guid id, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[AccessRequest_Cancel]",
+        return await connection.ExecuteScalarAsync<bool>(
+            $"[{Schema}].[AccessRequest_UpdateCancelled]",
             new { AccessRequestId = id, Now = now },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now)
+    public async Task<bool> CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[AccessRequest_CancelWithDecision]",
+        return await connection.ExecuteScalarAsync<bool>(
+            $"[{Schema}].[AccessRequest_UpdateCancelledWithDecision]",
             new
             {
                 AccessRequestId = request.Id,
@@ -172,7 +172,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<int>(
-            $"[{Schema}].[AccessRequest_CountExtensionsByLeaseId]",
+            $"[{Schema}].[AccessRequest_ReadExtensionCountByLeaseId]",
             new { LeaseId = leaseId },
             commandType: CommandType.StoredProcedure);
     }
