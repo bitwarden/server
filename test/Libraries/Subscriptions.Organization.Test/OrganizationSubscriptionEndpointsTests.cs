@@ -61,9 +61,32 @@ public class OrganizationSubscriptionEndpointsTests
         var preview = ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
-            .Single(e => e.RoutePattern.RawText!.Contains("preview"));
+            .Single(e => e.RoutePattern.RawText!.EndsWith("/preview")
+                         && !e.RoutePattern.RawText!.Contains("plan-change"));
 
         var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PlanChangePreviewIsGetAndRequiresStandaloneOrganizationOwner()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var planChange = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("plan-change/preview"));
+
+        var methods = planChange.Metadata.GetMetadata<IHttpMethodMetadata>();
+        Assert.NotNull(methods);
+        Assert.Contains("GET", methods!.HttpMethods);
+
+        var authorizeAttributes = planChange.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
     }

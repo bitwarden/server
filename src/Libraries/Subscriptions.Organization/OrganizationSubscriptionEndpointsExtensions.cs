@@ -1,8 +1,9 @@
-﻿using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Requirements;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -30,11 +31,25 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
+        // Previews are per-organization billing data; keep them out of any shared or browser cache.
+        group.AddEndpointFilter(async (context, next) =>
+        {
+            context.HttpContext.Response.Headers.CacheControl = "no-store";
+            return await next(context);
+        });
+
         group.MapGet("preview",
-                async ([FromRoute] Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+                async ([FromRoute] Guid organizationId, [FromServices] GetOrganizationSubscriptionPreviewHandler handler) => await handler.HandleAsync(organizationId))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
+
+        group.MapGet("plan-change/preview",
+                async ([FromRoute] Guid organizationId, [AsParameters] GetOrganizationPlanChangePreviewRequest previewRequest,
+                        [FromServices] GetOrganizationPlanChangePreviewHandler handler) => await handler.HandleAsync(organizationId, previewRequest))
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
+            .WithName("GetOrganizationPlanChangePreview")
+            .WithDescription("Previews the cost of changing the organization's plan.");
 
         return group;
     }
