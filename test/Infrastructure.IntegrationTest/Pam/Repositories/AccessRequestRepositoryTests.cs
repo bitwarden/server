@@ -264,7 +264,7 @@ public class AccessRequestRepositoryTests
             CreationDate = now,
         };
 
-        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestAction.Approved, now);
+        Assert.True(await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestAction.Approved, now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persisted);
@@ -338,7 +338,7 @@ public class AccessRequestRepositoryTests
             CreationDate = now,
         };
 
-        await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestAction.Denied, now);
+        Assert.True(await accessRequestRepository.ResolveWithDecisionAsync(request, decision, AccessRequestAction.Denied, now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestAction.Denied, persisted!.Action);
@@ -632,7 +632,7 @@ public class AccessRequestRepositoryTests
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
 
         var resolvedAt = now.AddMinutes(5);
-        await accessRequestRepository.CancelAsync(request.Id, resolvedAt);
+        Assert.True(await accessRequestRepository.CancelAsync(request.Id, resolvedAt));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.NotNull(persisted);
@@ -656,7 +656,7 @@ public class AccessRequestRepositoryTests
         var denied = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Denied, now));
 
-        await accessRequestRepository.CancelAsync(denied.Id, now.AddMinutes(5));
+        Assert.False(await accessRequestRepository.CancelAsync(denied.Id, now.AddMinutes(5)));
 
         var persisted = await accessRequestRepository.GetByIdAsync(denied.Id);
         Assert.Equal(AccessRequestAction.Denied, persisted!.Action);
@@ -677,7 +677,7 @@ public class AccessRequestRepositoryTests
         var approved = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now));
 
-        await accessRequestRepository.CancelAsync(approved.Id, now.AddMinutes(5));
+        Assert.True(await accessRequestRepository.CancelAsync(approved.Id, now.AddMinutes(5)));
 
         var persisted = await accessRequestRepository.GetByIdAsync(approved.Id);
         Assert.Equal(AccessRequestAction.Cancelled, persisted!.Action);
@@ -700,7 +700,7 @@ public class AccessRequestRepositoryTests
         var (approved, lease) = await CreateActivatedRequestAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
 
-        await accessRequestRepository.CancelAsync(approved.Id, now.AddMinutes(5));
+        Assert.False(await accessRequestRepository.CancelAsync(approved.Id, now.AddMinutes(5)));
 
         var persisted = await accessRequestRepository.GetByIdAsync(approved.Id);
         Assert.Equal(AccessRequestAction.Approved, persisted!.Action);
@@ -772,7 +772,7 @@ public class AccessRequestRepositoryTests
         var lapsed = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now.AddHours(-3)));
 
-        await accessRequestRepository.CancelAsync(lapsed.Id, now);
+        Assert.False(await accessRequestRepository.CancelAsync(lapsed.Id, now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(lapsed.Id);
         Assert.Equal(AccessRequestAction.None, persisted!.Action);
@@ -793,8 +793,8 @@ public class AccessRequestRepositoryTests
         var lapsed = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.Approved, now.AddHours(-3)));
 
-        await accessRequestRepository.CancelWithDecisionAsync(
-            lapsed, BuildHumanDecision(lapsed.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "too late", now), now);
+        Assert.False(await accessRequestRepository.CancelWithDecisionAsync(
+            lapsed, BuildHumanDecision(lapsed.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "too late", now), now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(lapsed.Id);
         Assert.Equal(AccessRequestAction.Approved, persisted!.Action);
@@ -822,14 +822,14 @@ public class AccessRequestRepositoryTests
         var request = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
 
-        await accessRequestRepository.ResolveWithDecisionAsync(
+        Assert.True(await accessRequestRepository.ResolveWithDecisionAsync(
             request, BuildHumanDecision(request.Id, winnerId, AccessDecisionVerdict.Approve, "approved", now),
-            AccessRequestAction.Approved, now);
+            AccessRequestAction.Approved, now));
 
         // The losing approver's write finds the request already resolved.
-        await accessRequestRepository.ResolveWithDecisionAsync(
+        Assert.False(await accessRequestRepository.ResolveWithDecisionAsync(
             request, BuildHumanDecision(request.Id, loserId, AccessDecisionVerdict.Deny, "denied", now.AddMinutes(1)),
-            AccessRequestAction.Denied, now.AddMinutes(1));
+            AccessRequestAction.Denied, now.AddMinutes(1)));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestAction.Approved, persisted!.Action);
@@ -854,9 +854,9 @@ public class AccessRequestRepositoryTests
         var lapsed = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now.AddHours(-3)));
 
-        await accessRequestRepository.ResolveWithDecisionAsync(
+        Assert.False(await accessRequestRepository.ResolveWithDecisionAsync(
             lapsed, BuildHumanDecision(lapsed.Id, Guid.NewGuid(), AccessDecisionVerdict.Deny, "too late", now),
-            AccessRequestAction.Denied, now);
+            AccessRequestAction.Denied, now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(lapsed.Id);
         Assert.Equal(AccessRequestAction.None, persisted!.Action);
@@ -883,8 +883,8 @@ public class AccessRequestRepositoryTests
         var request = await accessRequestRepository.CreateAsync(BuildRequest(
             organization.Id, collection.Id, Guid.NewGuid(), AccessRequestAction.None, now));
 
-        await accessRequestRepository.CancelWithDecisionAsync(
-            request, BuildHumanDecision(request.Id, approverId, AccessDecisionVerdict.Deny, "retracted", now), now);
+        Assert.True(await accessRequestRepository.CancelWithDecisionAsync(
+            request, BuildHumanDecision(request.Id, approverId, AccessDecisionVerdict.Deny, "retracted", now), now));
 
         var persisted = await accessRequestRepository.GetByIdAsync(request.Id);
         Assert.Equal(AccessRequestAction.Denied, persisted!.Action);
@@ -915,10 +915,10 @@ public class AccessRequestRepositoryTests
         var (approved, lease) = await CreateActivatedRequestAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, now);
 
-        await accessRequestRepository.CancelWithDecisionAsync(
+        Assert.False(await accessRequestRepository.CancelWithDecisionAsync(
             approved,
             BuildHumanDecision(approved.Id, approverId, AccessDecisionVerdict.Deny, "too late", now.AddMinutes(5)),
-            now.AddMinutes(5));
+            now.AddMinutes(5)));
 
         var persisted = await accessRequestRepository.GetByIdAsync(approved.Id);
         Assert.Equal(AccessRequestAction.Approved, persisted!.Action);

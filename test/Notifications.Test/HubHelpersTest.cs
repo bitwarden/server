@@ -274,6 +274,33 @@ public class HubHelpersTest
             .Group(Arg.Any<string>());
     }
 
+    [Theory]
+    [BitAutoData(PushType.RefreshSecurityTasks)]
+    [BitAutoData(PushType.RefreshApproverInbox)]
+    [BitAutoData(PushType.RefreshAccessRequest)]
+    public async Task SendNotificationToHubAsync_UserRefreshPushNotification_SentToUser(
+        PushType pushType,
+        SutProvider<HubHelpers> sutProvider,
+        UserPushNotification notification,
+        string contextId,
+        CancellationToken cancellationToken)
+    {
+        var json = ToNotificationJson(notification, pushType, contextId);
+        await sutProvider.Sut.SendNotificationToHubAsync(json, cancellationToken);
+
+        await sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(1)
+            .User(notification.UserId.ToString())
+            .Received(1)
+            .SendCoreAsync("ReceiveMessage", Arg.Is<object?[]>(objects =>
+                    objects.Length == 1 && AssertUserPushNotification(notification, objects[0],
+                        pushType, contextId)),
+                cancellationToken);
+        sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(0).Group(Arg.Any<string>());
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0).User(Arg.Any<string>());
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0)
+            .Group(Arg.Any<string>());
+    }
+
     private static string ToNotificationJson(object payload, PushType type, string contextId)
     {
         var notification = new PushNotificationData<object>(type, payload, contextId);
@@ -311,6 +338,19 @@ public class HubHelpersTest
                expected.Policy.Id == pushNotificationData.Payload.Policy.Id &&
                expected.Policy.Type == pushNotificationData.Payload.Policy.Type &&
                expected.Policy.Enabled == pushNotificationData.Payload.Policy.Enabled;
+    }
+
+    private static bool AssertUserPushNotification(UserPushNotification expected, object? actual,
+        PushType type, string contextId)
+    {
+        if (actual is not PushNotificationData<UserPushNotification> pushNotificationData)
+        {
+            return false;
+        }
+
+        return pushNotificationData.Type == type &&
+               pushNotificationData.ContextId == contextId &&
+               expected.UserId == pushNotificationData.Payload.UserId;
     }
 
     private static bool AssertPremiumStatusPushNotification(PremiumStatusPushNotification expected, object? actual,

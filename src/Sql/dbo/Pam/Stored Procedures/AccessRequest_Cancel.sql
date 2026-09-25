@@ -24,5 +24,10 @@ BEGIN
         AND [NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
+    DECLARE @Rows INT = @@ROWCOUNT
+
     COMMIT TRANSACTION AccessRequest_Cancel
+
+    -- 1 when this call withdrew the request, 0 when it was no longer withdrawable.
+    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
 END

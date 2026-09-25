@@ -1,5 +1,6 @@
 ﻿using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 
 namespace Bit.Pam.Repositories;
 
@@ -64,4 +65,12 @@ public interface IAccessLeaseRepository
     /// already ended or whose window has lapsed is left untouched.
     /// </summary>
     Task RevokeAsync(AccessLease lease, AccessLeaseAction endAction, AccessDecision auditDecision, DateTime now);
+
+    /// <summary>
+    /// Deviation: no ground-truth interface declared the natural-expiry sweep, so it lives here, alongside
+    /// <see cref="RevokeAsync"/>, rather than on the rotation-job-shaped <c>IPamRotationJobRepository</c>. Returns
+    /// one row per lease whose window closed on its own that the sweep has not returned before, for the caller's
+    /// LeaseExpired audit emission / access-end rotation trigger.
+    /// </summary>
+    Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now);
 }

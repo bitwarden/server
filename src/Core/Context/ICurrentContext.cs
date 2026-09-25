@@ -31,6 +31,8 @@ public interface ICurrentContext
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     IdentityClientType IdentityClientType { get; set; }
+    Guid? PamDaemonId { get; set; }
+    Guid? PamDaemonOrganizationId { get; set; }
     string ClientId { get; set; }
     Version? ClientVersion { get; set; }
     bool ClientVersionIsPrerelease { get; set; }
@@ -88,5 +90,11 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+
+    /// <summary>
+    /// Whether the caller holds a PAM license (<c>OrganizationUser.AccessPam</c>) in the given organization.
+    /// </summary>
+    bool AccessPam(Guid organizationId);
+
     CurrentContextOrganization? GetOrganization(Guid orgId);
 }

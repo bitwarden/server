@@ -213,7 +213,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             .ToList();
     }
 
-    public async Task ResolveWithDecisionAsync(CoreEntity request, AccessDecision decision, AccessRequestAction action, DateTime now)
+    public async Task<bool> ResolveWithDecisionAsync(CoreEntity request, AccessDecision decision, AccessRequestAction action, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -243,12 +243,14 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         }
 
         await transaction.CommitAsync();
+
+        return rowsAffected > 0;
     }
 
     /// <remarks>
     /// Runs in a transaction so the claim's row lock holds across both statements, not just its own.
     /// </remarks>
-    public async Task CancelAsync(Guid id, DateTime now)
+    public async Task<bool> CancelAsync(Guid id, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -259,15 +261,17 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         // No AccessDecision is written -- a cancellation is the requester acting on their own request, not an
         // approver verdict.
-        await RetractableRequests(dbContext, id, now)
+        var rowsAffected = await RetractableRequests(dbContext, id, now)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.Action, AccessRequestAction.Cancelled)
                 .SetProperty(r => r.ActionDate, now));
 
         await transaction.CommitAsync();
+
+        return rowsAffected > 0;
     }
 
-    public async Task CancelWithDecisionAsync(CoreEntity request, AccessDecision decision, DateTime now)
+    public async Task<bool> CancelWithDecisionAsync(CoreEntity request, AccessDecision decision, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -298,6 +302,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         }
 
         await transaction.CommitAsync();
+
+        return rowsAffected > 0;
     }
 
     /// <summary>

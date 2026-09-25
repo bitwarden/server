@@ -43,6 +43,8 @@ public class CurrentContext(
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
+    public virtual Guid? PamDaemonId { get; set; }
+    public virtual Guid? PamDaemonOrganizationId { get; set; }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -155,6 +157,12 @@ public class CurrentContext(
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
+        if (IdentityClientType == IdentityClientType.RotationDaemon)
+        {
+            PamDaemonId = subIdGuid;
+            PamDaemonOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
         if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
@@ -175,6 +183,10 @@ public class CurrentContext(
             ? secretsManagerAccessClaim.ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
+        var accessPam = claimsDict.TryGetValue(Claims.PamAccess, out var pamAccessClaim)
+            ? pamAccessClaim.ToDictionary(s => s.Value, _ => true)
+            : new Dictionary<string, bool>();
+
         var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.TryGetValue(Claims.OrganizationOwner, out var organizationOwnerClaim))
         {
@@ -184,6 +196,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -203,6 +216,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -214,6 +228,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -226,6 +241,7 @@ public class CurrentContext(
                     Type = OrganizationUserType.Custom,
                     Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -434,6 +450,13 @@ public class CurrentContext(
         }
 
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
+    }
+
+    public bool AccessPam(Guid orgId)
+    {
+        // No machine-principal escape hatch here: PAM's own machine caller authenticates under
+        // Policies.PamRotationDaemon, not Policies.Application, and never travels the leasing paths this guards.
+        return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
     }
 
     public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
