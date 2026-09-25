@@ -504,7 +504,7 @@ public class EventService : IEventService
                 OrganizationId = secret.OrganizationId,
                 Type = type,
                 SecretId = secret.Id,
-                UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -558,7 +558,7 @@ public class EventService : IEventService
                 OrganizationId = project.OrganizationId,
                 Type = type,
                 ProjectId = project.Id,
-                UserId = userId,
+                ActingUserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -621,7 +621,7 @@ public class EventService : IEventService
                 Type = type,
                 GrantedServiceAccountId = policy.GrantedServiceAccountId,
                 ServiceAccountId = serviceAccountId,
-                UserId = policy.OrganizationUserId,
+                OrganizationUserId = policy.OrganizationUserId,
                 ActingUserId = actingUserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
