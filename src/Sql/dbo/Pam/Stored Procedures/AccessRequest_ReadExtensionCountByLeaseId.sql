@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRequest_CountExtensionsByLeaseId]
+CREATE PROCEDURE [dbo].[AccessRequest_ReadExtensionCountByLeaseId]
     @LeaseId UNIQUEIDENTIFIER
 AS
 BEGIN

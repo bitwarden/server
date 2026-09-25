@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRequest_CancelWithDecision]
+CREATE PROCEDURE [dbo].[AccessRequest_UpdateCancelledWithDecision]
     @AccessRequestId UNIQUEIDENTIFIER,
     @AccessDecisionId UNIQUEIDENTIFIER,
     @ApproverId UNIQUEIDENTIFIER,
@@ -14,7 +14,7 @@ BEGIN
     -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
     BEGIN TRANSACTION AccessRequest_CancelWithDecision
 
-    -- Claims the row first, like [AccessRequest_Cancel], to serialize against a concurrent activation.
+    -- Claims the row first, like [AccessRequest_UpdateCancelled], to serialize against a concurrent activation.
     DECLARE @Claimed TINYINT
     SELECT @Claimed = [Action]
     FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)

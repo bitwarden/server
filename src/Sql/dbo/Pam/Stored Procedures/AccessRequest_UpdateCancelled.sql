@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRequest_Cancel]
+CREATE PROCEDURE [dbo].[AccessRequest_UpdateCancelled]
     @AccessRequestId UNIQUEIDENTIFIER,
     @Now DATETIME2(7)
 AS

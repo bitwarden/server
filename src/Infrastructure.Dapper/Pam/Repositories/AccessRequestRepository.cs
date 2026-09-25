@@ -128,7 +128,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<bool>(
-            $"[{Schema}].[AccessRequest_ResolveWithDecision]",
+            $"[{Schema}].[AccessRequest_UpdateResolvedWithDecision]",
             new
             {
                 AccessRequestId = request.Id,
@@ -146,7 +146,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<bool>(
-            $"[{Schema}].[AccessRequest_Cancel]",
+            $"[{Schema}].[AccessRequest_UpdateCancelled]",
             new { AccessRequestId = id, Now = now },
             commandType: CommandType.StoredProcedure);
     }
@@ -155,7 +155,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<bool>(
-            $"[{Schema}].[AccessRequest_CancelWithDecision]",
+            $"[{Schema}].[AccessRequest_UpdateCancelledWithDecision]",
             new
             {
                 AccessRequestId = request.Id,
@@ -172,7 +172,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
     {
         await using var connection = new SqlConnection(ConnectionString);
         return await connection.ExecuteScalarAsync<int>(
-            $"[{Schema}].[AccessRequest_CountExtensionsByLeaseId]",
+            $"[{Schema}].[AccessRequest_ReadExtensionCountByLeaseId]",
             new { LeaseId = leaseId },
             commandType: CommandType.StoredProcedure);
     }

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessLease_Revoke]
+CREATE PROCEDURE [dbo].[AccessLease_UpdateRevoked]
     @AccessLeaseId UNIQUEIDENTIFIER,
     @Action TINYINT,
     @RevokedBy UNIQUEIDENTIFIER,

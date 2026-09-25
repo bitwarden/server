@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AccessRequest_ResolveWithDecision]
+CREATE PROCEDURE [dbo].[AccessRequest_UpdateResolvedWithDecision]
     @AccessRequestId UNIQUEIDENTIFIER,
     @Action TINYINT,
     @AccessDecisionId UNIQUEIDENTIFIER,
