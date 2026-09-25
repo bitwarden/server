@@ -15,7 +15,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item>The user's email domain is allowed by the link.</item>
 ///     <item>The user is not a provider user.</item>
 ///     <item>Any existing membership is neither revoked nor already confirmed.</item>
-///     <item>The organization has an available seat for a new member.</item>
+///     <item>The organization has an available seat for a new or Staged member.</item>
 ///     <item>The Require Two-Factor Authentication and Single Organization policies.</item>
 /// </list>
 /// </remarks>
