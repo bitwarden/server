@@ -3,14 +3,18 @@
 public interface ICancelAccessRequestCommand
 {
     /// <summary>
-    /// Withdraws the caller's own pending access request: transitions it to
-    /// <see cref="Bit.Pam.Enums.AccessRequestStatus.Cancelled"/> and drops it from any approver's inbox.
+    /// Revokes a request that has not been activated. The requester withdraws their own request, which becomes
+    /// <see cref="Bit.Pam.Enums.AccessRequestStatus.Cancelled"/>; a managing approver retracts it, which records a
+    /// Deny decision carrying <paramref name="reason"/>.
     /// </summary>
     /// <exception cref="Bit.Core.Exceptions.NotFoundException">
-    /// The request does not exist or the caller is not its requester.
+    /// The request does not exist, or the caller is neither its requester nor a managing approver.
     /// </exception>
     /// <exception cref="Bit.Core.Exceptions.ConflictException">
-    /// The request is no longer pending (already approved, denied, cancelled, or expired) and cannot be withdrawn.
+    /// The request is no longer pending or approved, has been activated, or its window has ended.
     /// </exception>
-    Task CancelAsync(Guid userId, Guid requestId);
+    /// <exception cref="Bit.Core.Exceptions.BadRequestException">
+    /// A managing approver revoked without a reason.
+    /// </exception>
+    Task CancelAsync(Guid userId, Guid requestId, string? reason);
 }

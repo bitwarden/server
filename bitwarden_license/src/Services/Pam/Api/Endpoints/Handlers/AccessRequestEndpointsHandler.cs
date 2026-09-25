@@ -69,9 +69,9 @@ public class AccessRequestEndpointsHandler(
         return new AccessLeaseResponseModel(lease, now);
     }
 
-    public async Task Revoke(ClaimsPrincipal user, Guid id)
+    public async Task Revoke(ClaimsPrincipal user, Guid id, AccessRequestRevokeRequestModel? model)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        await cancelAccessRequestCommand.CancelAsync(userId, id);
+        await cancelAccessRequestCommand.CancelAsync(userId, id, model?.Reason);
     }
 }

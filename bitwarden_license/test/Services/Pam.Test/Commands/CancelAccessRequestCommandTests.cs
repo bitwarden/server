@@ -23,7 +23,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(requestId).Returns((AccessRequest?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, requestId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, requestId, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
@@ -37,7 +37,7 @@ public class CancelAccessRequestCommandTests
         // userId is neither the requester nor a manager.
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -54,7 +54,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
@@ -72,7 +72,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
 
         var ex = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         Assert.Contains("already ended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
@@ -91,7 +91,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
         // No lease produced.
 
-        await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id);
+        await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null);
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelAsync(request.Id, _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -111,7 +111,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
 
-        await sutProvider.Sut.CancelAsync(managerId, request.Id);
+        await sutProvider.Sut.CancelAsync(managerId, request.Id, "no longer needed");
 
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelWithDecisionAsync(
             request,
@@ -119,7 +119,8 @@ public class CancelAccessRequestCommandTests
                 d.AccessRequestId == request.Id
                 && d.ApproverId == managerId
                 && d.Verdict == AccessDecisionVerdict.Deny
-                && d.DeciderKind == AccessDeciderKind.Human),
+                && d.DeciderKind == AccessDeciderKind.Human
+                && d.Comment == "no longer needed"),
             _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
@@ -137,7 +138,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         // A live lease is ended through revoke, so the caller is pointed there.
         Assert.Contains("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -160,7 +161,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
@@ -179,13 +180,50 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
 
         Assert.Contains("already been resolved", conflict.Message);
         Assert.DoesNotContain("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
+    [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task CancelAsync_ManagerWithoutReason_ThrowsBadRequestWithoutRetracting(
+        string? reason, Guid managerId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CancelAsync(managerId, request.Id, reason));
+
+        Assert.Equal("A reason is required when revoking a request.", exception.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelWithDecisionAsync(default!, default!, default);
+    }
+
+    [Theory]
+    [BitAutoData((string?)null)]
+    [BitAutoData("")]
+    public async Task CancelAsync_RequesterWithoutReason_Withdraws(string? reason, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+
+        await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, reason);
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelAsync(request.Id, _now);
+    }
+
     [Theory, BitAutoData]
     public async Task CancelAsync_RequesterLosesTheRace_ThrowsConflict(AccessRequest request)
     {
@@ -196,7 +234,7 @@ public class CancelAccessRequestCommandTests
         sutProvider.GetDependency<IAccessRequestRepository>().CancelAsync(default, default).ReturnsForAnyArgs(false);
 
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
     }
@@ -214,7 +252,7 @@ public class CancelAccessRequestCommandTests
             .CancelWithDecisionAsync(default!, default!, default).ReturnsForAnyArgs(false);
 
         var exception = await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.CancelAsync(managerId, request.Id));
+            () => sutProvider.Sut.CancelAsync(managerId, request.Id, "no longer needed"));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
     }
