@@ -52,20 +52,38 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 
     public async Task<bool> CanManageCollectionAsync(Guid userId, Guid collectionId)
     {
-        var manageable = await GetManageableCollectionIdsAsync(userId);
-        return manageable.Contains(collectionId);
+        var assigned = await _collectionRepository.GetManyByUserIdAsync(userId);
+        if (assigned.Any(c => c.Id == collectionId && c.Manage))
+        {
+            return true;
+        }
+
+        var collection = await _collectionRepository.GetByIdAsync(collectionId);
+        if (collection is null)
+        {
+            return false;
+        }
+
+        // A suspended organization is missing from the claims, so fall back to the confirmed membership.
+        var org = _currentContext.GetOrganization(collection.OrganizationId);
+        if (org is null)
+        {
+            var membership = await _organizationUserRepository.GetDetailsByUserAsync(
+                userId, collection.OrganizationId, OrganizationUserStatusType.Confirmed);
+            if (membership is null)
+            {
+                return false;
+            }
+
+            org = new CurrentContextOrganization(membership);
+        }
+
+        return await CanManageAllCollectionsAsync(org);
     }
 
     private async Task FoldInManageAllCollectionsAsync(CurrentContextOrganization org, HashSet<Guid> manageable)
     {
-        var canManageAll = org.Permissions.EditAnyCollection;
-        if (!canManageAll && org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin)
-        {
-            var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(org.Id);
-            canManageAll = ability?.AllowAdminAccessToAllCollectionItems ?? false;
-        }
-
-        if (!canManageAll)
+        if (!await CanManageAllCollectionsAsync(org))
         {
             return;
         }
@@ -75,5 +93,21 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
         {
             manageable.Add(collection.Id);
         }
+    }
+
+    private async Task<bool> CanManageAllCollectionsAsync(CurrentContextOrganization org)
+    {
+        if (org.Permissions.EditAnyCollection)
+        {
+            return true;
+        }
+
+        if (org.Type is not (OrganizationUserType.Owner or OrganizationUserType.Admin))
+        {
+            return false;
+        }
+
+        var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(org.Id);
+        return ability?.AllowAdminAccessToAllCollectionItems ?? false;
     }
 }

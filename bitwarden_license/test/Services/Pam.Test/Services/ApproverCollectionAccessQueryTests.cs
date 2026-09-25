@@ -128,18 +128,136 @@ public class ApproverCollectionAccessQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task CanManageCollectionAsync_DelegatesToManageableSet(
-        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid manageId, Guid otherId)
+    public async Task CanManageCollectionAsync_AssignedWithManage_ReturnsTrueWithoutLookingUpTheCollection(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid collectionId)
     {
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId).Returns(new List<CollectionDetails>
         {
-            new() { Id = manageId, Manage = true },
+            new() { Id = collectionId, Manage = true },
         });
-        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns(new List<CurrentContextOrganization>());
-        NoOtherMemberships(sutProvider, userId);
 
-        Assert.True(await sutProvider.Sut.CanManageCollectionAsync(userId, manageId));
-        Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, otherId));
+        Assert.True(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_AssignedReadOnly_ReturnsFalse(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId).Returns(new List<CollectionDetails>
+        {
+            new() { Id = collectionId, Manage = false },
+        });
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId)
+            .Returns(new CurrentContextOrganization { Id = orgId, Type = OrganizationUserType.User });
+
+        Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_OwnerWithAdminAccess_ReturnsTrueWithoutFetchingOrgCollections(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId)
+            .Returns(new CurrentContextOrganization { Id = orgId, Type = OrganizationUserType.Owner });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { Id = orgId, AllowAdminAccessToAllCollectionItems = true });
+
+        Assert.True(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_OwnerWithoutAdminAccess_ReturnsFalse(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId)
+            .Returns(new CurrentContextOrganization { Id = orgId, Type = OrganizationUserType.Owner });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { Id = orgId, AllowAdminAccessToAllCollectionItems = false });
+
+        Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_EditAnyCollection_ReturnsTrue(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns(new CurrentContextOrganization
+        {
+            Id = orgId,
+            Type = OrganizationUserType.Custom,
+            Permissions = new Permissions { EditAnyCollection = true },
+        });
+
+        Assert.True(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+    }
+
+    // A suspended org is absent from the request context, but its confirmed membership is read from the database.
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_SuspendedOrgDroppedFromContext_FallsBackToMembership(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization?)null);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetDetailsByUserAsync(userId, orgId, OrganizationUserStatusType.Confirmed)
+            .Returns(new OrganizationUserOrganizationDetails
+            {
+                OrganizationId = orgId,
+                Type = OrganizationUserType.Owner,
+                Status = OrganizationUserStatusType.Confirmed,
+                Enabled = false,
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
+            .Returns(new OrganizationAbility { Id = orgId, AllowAdminAccessToAllCollectionItems = true });
+
+        Assert.True(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_NotAMemberOfTheCollectionsOrg_ReturnsFalse(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid orgId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId)
+            .Returns(new Collection { Id = collectionId, OrganizationId = orgId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization?)null);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetDetailsByUserAsync(userId, orgId, OrganizationUserStatusType.Confirmed)
+            .Returns((OrganizationUserOrganizationDetails?)null);
+
+        Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CanManageCollectionAsync_MissingCollection_ReturnsFalse(
+        SutProvider<ApproverCollectionAccessQuery> sutProvider, Guid userId, Guid collectionId)
+    {
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+        sutProvider.GetDependency<ICollectionRepository>().GetByIdAsync(collectionId).Returns((Collection?)null);
+
+        Assert.False(await sutProvider.Sut.CanManageCollectionAsync(userId, collectionId));
     }
 
     // The manage-all path also reads confirmed memberships, to catch suspended orgs the request context drops.
