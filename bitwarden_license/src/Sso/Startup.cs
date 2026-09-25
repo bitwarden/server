@@ -7,6 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityServer.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;

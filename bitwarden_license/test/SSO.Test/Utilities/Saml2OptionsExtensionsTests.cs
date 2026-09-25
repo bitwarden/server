@@ -2,7 +2,7 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core;
-using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
