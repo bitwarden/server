@@ -307,10 +307,6 @@ public class GlobalSettings : IGlobalSettings
         public virtual string ClientId { get; set; }
         public virtual string ClientSecret { get; set; }
         public virtual string Scopes { get; set; }
-        /// <summary>
-        /// Home tenant of the bot's Entra app registration. Required for single-tenant Azure Bot resources;
-        /// when empty, outbound messages authenticate against the shared Bot Framework tenant (multi-tenant bots).
-        /// </summary>
         public virtual string TenantId { get; set; }
     }
 

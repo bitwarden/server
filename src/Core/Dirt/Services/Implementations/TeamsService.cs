@@ -126,10 +126,6 @@ public class TeamsService(
         await connectorClient.Conversations.SendToConversationAsync(channelId, activity);
     }
 
-    /// <summary>
-    /// Single-tenant bots must obtain tokens from their home tenant; the Bot Connector rejects tokens from the
-    /// default Bot Framework tenant with 401 Unauthorized. An empty tenant keeps the multi-tenant default.
-    /// </summary>
     internal MicrosoftAppCredentials CreateAppCredentials()
     {
         return new MicrosoftAppCredentials(
