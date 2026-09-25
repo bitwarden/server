@@ -1003,7 +1003,7 @@ public class CiphersController : Controller
     public async Task PostBulkCollections([FromBody] CipherBulkUpdateCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId);
+        await _cipherService.ValidateBulkCollectionAssignmentAsync(model.CollectionIds, model.CipherIds, userId, model.RemoveCollections);
 
         if (!await CanModifyCipherCollectionsAsync(model.OrganizationId, model.CipherIds) ||
             !await CanEditItemsInCollections(model.OrganizationId, model.CollectionIds))

@@ -872,8 +872,36 @@ public class CipherService : ICipherService
         return restoringCiphers;
     }
 
-    public async Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId)
+    public async Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId, bool removeCollections = false)
     {
+        // A default ("My Items") collection is personal to its owner. Loaded at most once per request,
+        // and only when some default collection is actually implicated.
+        HashSet<Guid>? ownedDefaultCollectionIds = null;
+        async Task<HashSet<Guid>> GetOwnedDefaultCollectionIdsAsync() =>
+            ownedDefaultCollectionIds ??= (await _collectionRepository.GetManyByUserIdAsync(userId))
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+        // The target collection set is identical for every cipher, so resolve it once instead of
+        // re-querying it inside the per-cipher validation.
+        var targetDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(collectionIds))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToList();
+        var targetContainsDefault = targetDefaultCollectionIds.Count > 0;
+
+        if (removeCollections && targetContainsDefault)
+        {
+            // Removal only touches the collections named in the request. Block only when a member is
+            // removing a cipher from another member's default collection.
+            var ownedIds = await GetOwnedDefaultCollectionIdsAsync();
+            if (targetDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
+            {
+                throw new NotFoundException();
+            }
+        }
+
         foreach (var cipherId in cipherIds)
         {
             var cipher = await _cipherRepository.GetByIdAsync(cipherId);
@@ -881,7 +909,28 @@ public class CipherService : ICipherService
             {
                 throw new NotFoundException();
             }
-            await ValidateChangeInCollectionsAsync(cipher, collectionIds, userId);
+
+            // Adding collections shares the cipher. A cipher that lives in another member's default
+            // collection is personal to them and may not be shared into other collections.
+            if (!removeCollections && cipher.OrganizationId.HasValue)
+            {
+                var cipherDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(
+                        await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id)))
+                    .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                    .Select(c => c.Id)
+                    .ToList();
+
+                if (cipherDefaultCollectionIds.Count > 0)
+                {
+                    var ownedIds = await GetOwnedDefaultCollectionIdsAsync();
+                    if (cipherDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
+                    {
+                        throw new NotFoundException();
+                    }
+                }
+            }
+
+            await ValidateChangeInCollectionsAsync(cipher, collectionIds, userId, targetContainsDefault);
         }
     }
 
@@ -1106,10 +1155,12 @@ public class CipherService : ICipherService
         return requirement.IgnoreStorageLimitsOnMigration(organization.Id);
     }
 
-    // Validates that a cipher is not being added to a default collection when it is only currently only in shared collections
-    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId)
+    // Validates collection changes for a cipher:
+    //  - A cipher cannot be added to a default collection when it is only currently in shared collections.
+    // <paramref name="newCollectionsContainDefault"/> lets a bulk caller resolve whether the (shared) target
+    // set contains a default collection once, instead of re-querying it for every cipher.
+    private async Task ValidateChangeInCollectionsAsync(Cipher updatedCipher, IEnumerable<Guid>? newCollectionIds, Guid userId, bool? newCollectionsContainDefault = null)
     {
-
         if (updatedCipher.Id == Guid.Empty || !updatedCipher.OrganizationId.HasValue)
         {
             return;
@@ -1139,10 +1190,10 @@ public class CipherService : ICipherService
             return;
         }
 
-        var newCollections = await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds);
-        var newCollectionsContainDefault = newCollections.Any(c => c.Type == CollectionType.DefaultUserCollection);
+        newCollectionsContainDefault ??= (await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds))
+            .Any(c => c.Type == CollectionType.DefaultUserCollection);
 
-        if (newCollectionsContainDefault)
+        if (newCollectionsContainDefault.Value)
         {
             // User is trying to add the default collection when the cipher is only in shared collections
             throw new BadRequestException("The cipher(s) cannot be assigned to a default collection when only assigned to non-default collections.");
