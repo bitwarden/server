@@ -53,6 +53,10 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to.</param>
     /// <param name="globalSettings">The global settings containing event logging configuration.</param>
+    /// <param name="surfaceWriteFailures">
+    /// Skips the <see cref="NonThrowingEventWriteService"/> wrapper, so a failed write reaches the caller. For hosts
+    /// whose request exists to record the event, where reporting success on a dropped write would lose it.
+    /// </param>
     /// <returns>The service collection for chaining.</returns>
     /// <remarks>
     /// <para>
@@ -76,37 +80,64 @@ public static class EventIntegrationsServiceCollectionExtensions
     /// <para>
     /// 5. Noop - If none of the above are configured, registers NoopEventWriteService (no-op implementation)
     /// </para>
+    /// <para>
+    /// Every implementation except the no-op is wrapped in a <see cref="NonThrowingEventWriteService"/> so that a
+    /// failed write is reported rather than returned to the caller. The keyed "persistent" registration used by the
+    /// listeners is deliberately left unwrapped, because a listener must see a failed write to retry the message.
+    /// </para>
     /// </remarks>
-    public static IServiceCollection AddEventWriteServices(this IServiceCollection services, GlobalSettings globalSettings)
+    public static IServiceCollection AddEventWriteServices(
+        this IServiceCollection services,
+        GlobalSettings globalSettings,
+        bool surfaceWriteFailures = false)
     {
         if (IsAzureServiceBusEnabled(globalSettings))
         {
             services.TryAddSingleton<IEventIntegrationPublisher, AzureServiceBusService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
+            return services.AddEventWriteService<EventIntegrationEventWriteService>(surfaceWriteFailures);
         }
 
         if (IsRabbitMqEnabled(globalSettings))
         {
             services.TryAddSingleton<IEventIntegrationPublisher, RabbitMqService>();
-            services.TryAddSingleton<IEventWriteService, EventIntegrationEventWriteService>();
-            return services;
+            return services.AddEventWriteService<EventIntegrationEventWriteService>(surfaceWriteFailures);
         }
 
         if (CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.Events.QueueName))
         {
-            services.TryAddSingleton<IEventWriteService, AzureQueueEventWriteService>();
-            return services;
+            return services.AddEventWriteService<AzureQueueEventWriteService>(surfaceWriteFailures);
         }
 
         if (globalSettings.SelfHosted)
         {
-            services.TryAddSingleton<IEventWriteService, RepositoryEventWriteService>();
-            return services;
+            return services.AddEventWriteService<RepositoryEventWriteService>(surfaceWriteFailures);
         }
 
         services.TryAddSingleton<IEventWriteService, NoopEventWriteService>();
+        return services;
+    }
+
+    private static IServiceCollection AddEventWriteService<T>(this IServiceCollection services, bool surfaceWriteFailures)
+        where T : class, IEventWriteService
+    {
+        if (surfaceWriteFailures)
+        {
+            services.TryAddSingleton<IEventWriteService, T>();
+            return services;
+        }
+
+        // Idempotent, and keeps IMeterFactory from depending on what the host happens to register
+        services.AddMetrics();
+        services.TryAddSingleton<EventWriteMetrics>();
+
+        // Registered as its own type so the container still owns its lifetime and disposal
+        services.TryAddSingleton<T>();
+        services.TryAddSingleton<IEventWriteService>(provider => new NonThrowingEventWriteService(
+            inner: provider.GetRequiredService<T>(),
+            metrics: provider.GetRequiredService<EventWriteMetrics>(),
+            logger: provider.GetRequiredService<ILogger<NonThrowingEventWriteService>>()));
+
         return services;
     }
 

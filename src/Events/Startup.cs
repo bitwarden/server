@@ -55,7 +55,9 @@ public class Startup
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
-        services.AddEventWriteServices(globalSettings);
+        // Collecting the event is what this host's request is for, so a dropped write has to reach the
+        // client rather than read as success
+        services.AddEventWriteServices(globalSettings, surfaceWriteFailures: true);
         services.AddScoped<IEventService, EventService>();
 
         services.ApplyServerCompatibilityLayer();

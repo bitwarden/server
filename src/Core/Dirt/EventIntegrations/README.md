@@ -22,12 +22,23 @@ configurations](#integrations-and-integration-configurations) below for more det
 
 # Architecture
 
-The entry point for the event integrations is the `IEventWriteService`. By configuring the
-`EventIntegrationEventWriteService` as the `EventWriteService`, all events sent to the
-service are broadcast on the RabbitMQ or Azure Service Bus message exchange. To abstract away
-the specifics of publishing to a specific AMQP provider, an `IEventIntegrationPublisher`
-is injected into `EventIntegrationEventWriteService` to handle the publishing of events to the
-RabbitMQ or Azure Service Bus service.
+The entry point for the event integrations is the `IEventWriteService`. Events sent to the
+service are broadcast on the RabbitMQ or Azure Service Bus message exchange by
+`EventIntegrationEventWriteService`. To abstract away the specifics of publishing to a specific
+AMQP provider, an `IEventIntegrationPublisher` is injected into `EventIntegrationEventWriteService`
+to handle the publishing of events to the RabbitMQ or Azure Service Bus service.
+
+### Publish failures
+
+`IEventWriteService` resolves to a `NonThrowingEventWriteService` wrapping the implementation above.
+A publish failure is counted on `bitwarden.events.write_failures` and `bitwarden.events.dropped`,
+logged, and the event is dropped. It does not reach the caller, because a request must not fail on
+an event it emits as a side effect. Alert on those counters: a dropped event is unrecoverable.
+
+Two registrations deliberately opt out and let a failure through. The keyed `"persistent"`
+registration the listeners use has to see a failure so the message is redelivered. The Events host
+passes `surfaceWriteFailures: true`, because recording the event is what a request to its collect
+endpoint is for, so reporting success on a dropped write would lose it.
 
 ## Two-tier exchange
 
@@ -38,6 +49,7 @@ approach to handling messages. Each tier is represented in the AMQP stack by a s
 ```mermaid
 flowchart TD
     B1[EventService]
+    B11[NonThrowingEventWriteService]
     B2[EventIntegrationEventWriteService]
     B3[Event Exchange / Topic]
     B4[EventRepositoryHandler]
@@ -49,7 +61,7 @@ flowchart TD
     B10[EventIntegrationHandler]
     B12[Integration Exchange / Topic]
 
-    B1 -->|IEventWriteService| B2 --> B3
+    B1 -->|IEventWriteService| B11 --> B2 --> B3
     B3-->|EventListenerService| B4 --> B6
     B3-->|EventListenerService| B10
     B3-->|EventListenerService| B10
