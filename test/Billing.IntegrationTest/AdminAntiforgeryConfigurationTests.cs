@@ -1,8 +1,6 @@
-﻿using Bit.Admin.Jobs;
+﻿using System.Net;
 using Bit.IntegrationTestCommon;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -11,39 +9,43 @@ namespace Bit.Billing.IntegrationTest;
 /// <summary>
 /// Guards the fix for VULN-826: the Admin MVC pipeline must register a global
 /// <see cref="AutoValidateAntiforgeryTokenAttribute"/> so antiforgery protection
-/// is default-on and a newly added Admin action inherits it without opting in.
+/// is default-on, and an unsafe request without a token must actually be rejected.
 /// </summary>
 public class AdminAntiforgeryConfigurationTests
 {
     [Fact]
-    public void AdminPipeline_RegistersGlobalAntiforgeryFilter()
+    public async Task AdminPipeline_RegistersGlobalAntiforgeryFilter()
     {
         ITestDatabase testDatabase = new SqliteTestDatabase();
         try
         {
-            using var factory = new WebApplicationFactory<Admin.Program>().WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureAppConfiguration((_, config) =>
-                {
-                    var configValues = new Dictionary<string, string?>
-                    {
-                        ["globalSettings:databaseProvider"] = "sqlite",
-                    };
-                    testDatabase.ModifyGlobalSettings(configValues);
-                    config.AddInMemoryCollection(configValues);
-                });
-
-                builder.ConfigureServices(services =>
-                {
-                    var jobHostedServiceDescriptor = services.Single(sd => sd.ImplementationType == typeof(JobsHostedService));
-                    services.Remove(jobHostedServiceDescriptor);
-                    testDatabase.AddDatabase(services);
-                });
-            });
+            await using var factory = new AdminApplicationFactory(testDatabase);
 
             var mvcOptions = factory.Services.GetRequiredService<IOptions<MvcOptions>>().Value;
 
             Assert.Contains(mvcOptions.Filters, filter => filter is AutoValidateAntiforgeryTokenAttribute);
+        }
+        finally
+        {
+            testDatabase.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task AdminPipeline_RejectsUnsafePostWithoutAntiforgeryToken()
+    {
+        ITestDatabase testDatabase = new SqliteTestDatabase();
+        try
+        {
+            await using var factory = new AdminApplicationFactory(testDatabase, disableAntiforgery: false);
+            var client = factory.CreateClient();
+
+            var response = await client.PostAsync("/login", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "Email", "admin@localhost" },
+            }));
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
         finally
         {

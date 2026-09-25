@@ -23,7 +23,7 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
 {
     private readonly WebApplicationFactory<Admin.Program> _factory;
 
-    public AdminApplicationFactory(ITestDatabase testDatabase)
+    public AdminApplicationFactory(ITestDatabase testDatabase, bool disableAntiforgery = true)
     {
         _factory = new WebApplicationFactory<Admin.Program>().WithWebHostBuilder(builder =>
         {
@@ -49,16 +49,32 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
                 services.Remove(jobHostedServiceDescriptor);
 
                 // Turn off antiforgery application-wide so tests don't have to
-                // mint or thread CSRF tokens through every form post.
-                services.PostConfigure<MvcOptions>(options =>
+                // mint or thread CSRF tokens through every form post. Tests that
+                // assert antiforgery is enforced opt out via disableAntiforgery: false.
+                if (disableAntiforgery)
                 {
-                    options.Filters.Add(new IgnoreAntiforgeryTokenAttribute { Order = 1001 });
-                });
+                    services.PostConfigure<MvcOptions>(options =>
+                    {
+                        options.Filters.Add(new IgnoreAntiforgeryTokenAttribute { Order = 1001 });
+                    });
+                }
 
                 testDatabase.AddDatabase(services);
             });
         });
     }
+
+    /// <summary>
+    /// The service provider of the running Admin host, for tests that inspect
+    /// how the pipeline was configured (e.g. registered MVC filters).
+    /// </summary>
+    public IServiceProvider Services => _factory.Services;
+
+    /// <summary>
+    /// Creates an <see cref="HttpClient"/> against the Admin host with no
+    /// authenticated session.
+    /// </summary>
+    public HttpClient CreateClient() => _factory.CreateClient();
 
     /// <summary>
     /// Signs into the Admin Portal using the passwordless flow and returns a
