@@ -114,7 +114,7 @@ public class TeamsService(
 
     public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
-        var credentials = CreateAppCredentials();
+        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret, _tenantId);
         using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient, disposeHttpClient: false);
 
         var activity = new Activity
@@ -124,14 +124,6 @@ public class TeamsService(
         };
 
         await connectorClient.Conversations.SendToConversationAsync(channelId, activity);
-    }
-
-    internal MicrosoftAppCredentials CreateAppCredentials()
-    {
-        return new MicrosoftAppCredentials(
-            _clientId,
-            _clientSecret,
-            string.IsNullOrWhiteSpace(_tenantId) ? null : _tenantId);
     }
 
     protected override async Task OnInstallationUpdateAddAsync(ITurnContext<IInstallationUpdateActivity> turnContext,
