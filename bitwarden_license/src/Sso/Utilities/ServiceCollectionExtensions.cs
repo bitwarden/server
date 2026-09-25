@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationSchemeProvider,
             DynamicAuthenticationSchemeProvider>();
         // Oidc
+        services.AddOidcBackchannelHttpClient(globalSettings);
         services.AddSingleton<Microsoft.Extensions.Options.IPostConfigureOptions<OpenIdConnectOptions>,
             OpenIdConnectPostConfigureOptions>();
         services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitorCache<OpenIdConnectOptions>,
@@ -39,6 +40,40 @@ public static class ServiceCollectionExtensions
             PostConfigureSaml2Options>();
         services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitorCache<Saml2Options>,
             ExtendedOptionsMonitorCache<Saml2Options>>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the HTTP client that every OpenID Connect scheme uses for its backchannel requests
+    /// (discovery metadata, JWKS, token and userinfo).
+    /// </summary>
+    /// <remarks>
+    /// Those destinations come from the organization's own SSO configuration (Authority /
+    /// MetadataAddress), and the discovery fetch is reachable without authentication via
+    /// /sso/prevalidate, so on cloud the backchannel is an SSRF sink and is wrapped in the same
+    /// SSRF protection applied to the other organization-controlled clients (webhooks, Icons).
+    /// Self-hosted installations are excluded: they routinely run their IdP on an internal address,
+    /// and the operator configuring it already owns that network, so there is no tenant boundary
+    /// for the guard to protect.
+    /// </remarks>
+    private static IServiceCollection AddOidcBackchannelHttpClient(this IServiceCollection services,
+        GlobalSettings globalSettings)
+    {
+        var builder = services.AddHttpClient(
+            DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName, client =>
+        {
+            // Supplying our own Backchannel skips the client OpenIdConnectPostConfigureOptions would
+            // otherwise build, so reproduce the defaults it would have applied.
+            client.Timeout = TimeSpan.FromMinutes(1);
+            client.MaxResponseContentBufferSize = 1024 * 1024 * 10; // 10 MB
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Microsoft ASP.NET Core OpenIdConnect handler");
+        });
+
+        if (!globalSettings.SelfHosted)
+        {
+            builder.AddSsrfProtection();
+        }
 
         return services;
     }
