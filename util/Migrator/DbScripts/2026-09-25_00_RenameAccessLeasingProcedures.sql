@@ -13,39 +13,46 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_UpdateResolvedWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls back both writes together on any failure.
+    -- XACT_ABORT rolls back errors that skip CATCH (batch-aborting errors, client timeouts).
     SET XACT_ABORT ON
 
-    -- Records an approver's decision; WHERE guard makes it idempotent (first CAS wins).
-    BEGIN TRANSACTION AccessRequest_Resolve
+    BEGIN TRY
+        -- Records an approver's decision; WHERE guard makes it idempotent (first CAS wins).
+        BEGIN TRANSACTION
 
-    UPDATE [dbo].[AccessRequest]
-    SET [Action] = @Action,
-        [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId
-        AND [Action] = 0 -- None (open)
-        AND [NotAfter] > @Now
+        UPDATE [dbo].[AccessRequest]
+        SET [Action] = @Action,
+            [ActionDate] = @Now
+        WHERE [Id] = @AccessRequestId
+            AND [Action] = 0 -- None (open)
+            AND [NotAfter] > @Now
 
-    DECLARE @Rows INT = @@ROWCOUNT
+        DECLARE @Rows INT = @@ROWCOUNT
 
-    IF @Rows > 0
-    BEGIN
-        INSERT INTO [dbo].[AccessDecision]
-        (
-            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-            [Verdict], [Comment], [EvaluationContext], [CreationDate]
-        )
-        VALUES
-        (
-            @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
-            @Verdict, @Comment, NULL, @Now
-        )
-    END
+        IF @Rows > 0
+        BEGIN
+            INSERT INTO [dbo].[AccessDecision]
+            (
+                [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+                [Verdict], [Comment], [EvaluationContext], [CreationDate]
+            )
+            VALUES
+            (
+                @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+                @Verdict, @Comment, NULL, @Now
+            )
+        END
 
-    COMMIT TRANSACTION AccessRequest_Resolve
+        COMMIT TRANSACTION
 
-    -- 1 when this call resolved the request, 0 when it was no longer open.
-    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+        -- 1 when this call resolved the request, 0 when it was no longer open.
+        SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -55,32 +62,40 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_UpdateCancelled]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Explicit transaction needed; autocommit would release the claim's lock before the check.
+    -- XACT_ABORT rolls back errors that skip CATCH (batch-aborting errors, client timeouts).
     SET XACT_ABORT ON
 
-    BEGIN TRANSACTION AccessRequest_Cancel
+    BEGIN TRY
+        -- Explicit transaction needed; autocommit would release the claim's lock before the check.
+        BEGIN TRANSACTION
 
-    -- Claims the row before the lease probe so a concurrent activation can't mint meanwhile.
-    DECLARE @Claimed TINYINT
-    SELECT @Claimed = [Action]
-    FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
-    WHERE [Id] = @AccessRequestId
+        -- Claims the row before the lease probe so a concurrent activation can't mint meanwhile.
+        DECLARE @Claimed TINYINT
+        SELECT @Claimed = [Action]
+        FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
+        WHERE [Id] = @AccessRequestId
 
-    -- Requester withdrawal of a not-yet-activated request; no AccessDecision, since it isn't an approver verdict.
-    UPDATE [dbo].[AccessRequest]
-    SET [Action] = 3, -- Cancelled
-        [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId
-        AND [Action] IN (0, 1) -- None (open) or Approved
-        AND [NotAfter] > @Now
-        AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
+        -- Requester withdrawal of a not-yet-activated request; no AccessDecision, since it isn't an approver verdict.
+        UPDATE [dbo].[AccessRequest]
+        SET [Action] = 3, -- Cancelled
+            [ActionDate] = @Now
+        WHERE [Id] = @AccessRequestId
+            AND [Action] IN (0, 1) -- None (open) or Approved
+            AND [NotAfter] > @Now
+            AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
-    DECLARE @Rows INT = @@ROWCOUNT
+        DECLARE @Rows INT = @@ROWCOUNT
 
-    COMMIT TRANSACTION AccessRequest_Cancel
+        COMMIT TRANSACTION
 
-    -- 1 when this call withdrew the request, 0 when it was no longer withdrawable.
-    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+        -- 1 when this call withdrew the request, 0 when it was no longer withdrawable.
+        SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -94,46 +109,53 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessRequest_UpdateCancelledWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Both writes commit or roll back together (XACT_ABORT).
+    -- XACT_ABORT rolls back errors that skip CATCH (batch-aborting errors, client timeouts).
     SET XACT_ABORT ON
 
-    -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
-    BEGIN TRANSACTION AccessRequest_CancelWithDecision
+    BEGIN TRY
+        -- Approver retraction of a not-yet-activated request; AccessDecision is inserted only on an actual transition.
+        BEGIN TRANSACTION
 
-    -- Claims the row first, like [AccessRequest_UpdateCancelled], to serialize against a concurrent activation.
-    DECLARE @Claimed TINYINT
-    SELECT @Claimed = [Action]
-    FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
-    WHERE [Id] = @AccessRequestId
+        -- Claims the row first, like [AccessRequest_UpdateCancelled], to serialize against a concurrent activation.
+        DECLARE @Claimed TINYINT
+        SELECT @Claimed = [Action]
+        FROM [dbo].[AccessRequest] WITH (UPDLOCK, ROWLOCK)
+        WHERE [Id] = @AccessRequestId
 
-    UPDATE [dbo].[AccessRequest]
-    SET [Action] = 2, -- Denied
-        [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId
-        AND [Action] IN (0, 1) -- None (open) or Approved
-        AND [NotAfter] > @Now
-        AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
+        UPDATE [dbo].[AccessRequest]
+        SET [Action] = 2, -- Denied
+            [ActionDate] = @Now
+        WHERE [Id] = @AccessRequestId
+            AND [Action] IN (0, 1) -- None (open) or Approved
+            AND [NotAfter] > @Now
+            AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
-    DECLARE @Rows INT = @@ROWCOUNT
+        DECLARE @Rows INT = @@ROWCOUNT
 
-    IF @Rows > 0
-    BEGIN
-        INSERT INTO [dbo].[AccessDecision]
-        (
-            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-            [Verdict], [Comment], [EvaluationContext], [CreationDate]
-        )
-        VALUES
-        (
-            @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
-            @Verdict, @Comment, NULL, @Now
-        )
-    END
+        IF @Rows > 0
+        BEGIN
+            INSERT INTO [dbo].[AccessDecision]
+            (
+                [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+                [Verdict], [Comment], [EvaluationContext], [CreationDate]
+            )
+            VALUES
+            (
+                @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+                @Verdict, @Comment, NULL, @Now
+            )
+        END
 
-    COMMIT TRANSACTION AccessRequest_CancelWithDecision
+        COMMIT TRANSACTION
 
-    -- 1 when this call retracted the request, 0 when it was no longer retractable.
-    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+        -- 1 when this call retracted the request, 0 when it was no longer retractable.
+        SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
@@ -147,34 +169,41 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessLease_UpdateRevoked]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls back both writes together on any failure.
+    -- XACT_ABORT rolls back errors that skip CATCH (batch-aborting errors, client timeouts).
     SET XACT_ABORT ON
 
     -- Ends a running lease (2 Revoked or 3 Cancelled), idempotently; feeds a Deny AccessDecision.
     DECLARE @Ended TABLE ([AccessRequestId] UNIQUEIDENTIFIER)
 
-    BEGIN TRANSACTION AccessLease_Revoke
+    BEGIN TRY
+        BEGIN TRANSACTION
 
-    UPDATE [dbo].[AccessLease]
-    SET [Action] = @Action,
-        [RevokedDate] = @Now,
-        [RevokedBy] = @RevokedBy
-    OUTPUT INSERTED.[AccessRequestId] INTO @Ended
-    WHERE [Id] = @AccessLeaseId
-        AND [Action] = 0 -- None (no early end)
-        AND [NotAfter] > @Now
+        UPDATE [dbo].[AccessLease]
+        SET [Action] = @Action,
+            [RevokedDate] = @Now,
+            [RevokedBy] = @RevokedBy
+        OUTPUT INSERTED.[AccessRequestId] INTO @Ended
+        WHERE [Id] = @AccessLeaseId
+            AND [Action] = 0 -- None (no early end)
+            AND [NotAfter] > @Now
 
-    INSERT INTO [dbo].[AccessDecision]
-    (
-        [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-        [Verdict], [Comment], [EvaluationContext], [CreationDate]
-    )
-    SELECT
-        @AccessDecisionId, E.[AccessRequestId], 1 /* Human */, @RevokedBy, NULL,
-        0 /* Deny */, @Reason, NULL, @Now
-    FROM @Ended E
+        INSERT INTO [dbo].[AccessDecision]
+        (
+            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+            [Verdict], [Comment], [EvaluationContext], [CreationDate]
+        )
+        SELECT
+            @AccessDecisionId, E.[AccessRequestId], 1 /* Human */, @RevokedBy, NULL,
+            0 /* Deny */, @Reason, NULL, @Now
+        FROM @Ended E
 
-    COMMIT TRANSACTION AccessLease_Revoke
+        COMMIT TRANSACTION
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 

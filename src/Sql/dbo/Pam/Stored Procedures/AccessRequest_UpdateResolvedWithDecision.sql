@@ -9,37 +9,44 @@ CREATE PROCEDURE [dbo].[AccessRequest_UpdateResolvedWithDecision]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- XACT_ABORT rolls back both writes together on any failure.
+    -- XACT_ABORT rolls back errors that skip CATCH (batch-aborting errors, client timeouts).
     SET XACT_ABORT ON
 
-    -- Records an approver's decision; WHERE guard makes it idempotent (first CAS wins).
-    BEGIN TRANSACTION AccessRequest_Resolve
+    BEGIN TRY
+        -- Records an approver's decision; WHERE guard makes it idempotent (first CAS wins).
+        BEGIN TRANSACTION
 
-    UPDATE [dbo].[AccessRequest]
-    SET [Action] = @Action,
-        [ActionDate] = @Now
-    WHERE [Id] = @AccessRequestId
-        AND [Action] = 0 -- None (open)
-        AND [NotAfter] > @Now
+        UPDATE [dbo].[AccessRequest]
+        SET [Action] = @Action,
+            [ActionDate] = @Now
+        WHERE [Id] = @AccessRequestId
+            AND [Action] = 0 -- None (open)
+            AND [NotAfter] > @Now
 
-    DECLARE @Rows INT = @@ROWCOUNT
+        DECLARE @Rows INT = @@ROWCOUNT
 
-    IF @Rows > 0
-    BEGIN
-        INSERT INTO [dbo].[AccessDecision]
-        (
-            [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
-            [Verdict], [Comment], [EvaluationContext], [CreationDate]
-        )
-        VALUES
-        (
-            @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
-            @Verdict, @Comment, NULL, @Now
-        )
-    END
+        IF @Rows > 0
+        BEGIN
+            INSERT INTO [dbo].[AccessDecision]
+            (
+                [Id], [AccessRequestId], [DeciderKind], [ApproverId], [ConditionKind],
+                [Verdict], [Comment], [EvaluationContext], [CreationDate]
+            )
+            VALUES
+            (
+                @AccessDecisionId, @AccessRequestId, 1 /* Human */, @ApproverId, NULL,
+                @Verdict, @Comment, NULL, @Now
+            )
+        END
 
-    COMMIT TRANSACTION AccessRequest_Resolve
+        COMMIT TRANSACTION
 
-    -- 1 when this call resolved the request, 0 when it was no longer open.
-    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+        -- 1 when this call resolved the request, 0 when it was no longer open.
+        SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
