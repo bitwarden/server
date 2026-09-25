@@ -56,7 +56,6 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
         return manageable.Contains(collectionId);
     }
 
-    // Folds in every collection in the organization, for a user who can manage all of them.
     private async Task FoldInManageAllCollectionsAsync(CurrentContextOrganization org, HashSet<Guid> manageable)
     {
         var canManageAll = org.Permissions.EditAnyCollection;
