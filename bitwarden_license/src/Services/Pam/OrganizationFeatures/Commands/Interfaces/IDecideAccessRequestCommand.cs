@@ -13,7 +13,7 @@ public interface IDecideAccessRequestCommand
     /// The request does not exist or the caller cannot Manage its collection.
     /// </exception>
     /// <exception cref="Bit.Core.Exceptions.ConflictException">
-    /// The request is no longer pending, or its window has ended.
+    /// The request is no longer pending, including when a concurrent decision lands first, or its window has ended.
     /// </exception>
     /// <exception cref="Bit.Core.Exceptions.BadRequestException">
     /// Self-decision, a denial without a reason, or an extension request.

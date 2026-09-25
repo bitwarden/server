@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
 using Bit.Services.Pam.Services;
@@ -196,6 +197,50 @@ public class CancelAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
+    [Theory, BitAutoData]
+    public async Task CancelAsync_RequesterLosesTheRace_ThrowsConflict(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().CancelAsync(default, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+        await AssertNothingReportedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelAsync_ManagerLosesTheRace_ThrowsConflict(Guid managerId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CancelWithDecisionAsync(default!, default!, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(managerId, request.Id));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+        await AssertNothingReportedAsync(sutProvider);
+    }
+
+    private static async Task AssertNothingReportedAsync(SutProvider<CancelAccessRequestCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+    }
 
     // Pins a window containing _now so the lapsed-window guard doesn't trip in unrelated tests.
     private static void SetOpenWindow(AccessRequest request)
@@ -208,6 +253,10 @@ public class CancelAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<CancelAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        // The guarded writes land unless a test says otherwise.
+        var accessRequestRepository = sutProvider.GetDependency<IAccessRequestRepository>();
+        accessRequestRepository.CancelAsync(default, default).ReturnsForAnyArgs(true);
+        accessRequestRepository.CancelWithDecisionAsync(default!, default!, default).ReturnsForAnyArgs(true);
         return sutProvider;
     }
 }

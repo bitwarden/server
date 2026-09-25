@@ -109,7 +109,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         // Approval records the verdict only; the lease is minted separately when the requester activates it.
-        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now);
+        if (!await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now))
+        {
+            throw new ConflictException("This request has already been resolved.");
+        }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 

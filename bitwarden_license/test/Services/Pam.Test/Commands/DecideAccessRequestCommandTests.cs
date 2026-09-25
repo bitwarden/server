@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -235,6 +236,28 @@ public class DecideAccessRequestCommandTests
             .NotifyDecisionAsync(request, false);
     }
 
+    [Theory, BitAutoData]
+    public async Task DecideAsync_LosesTheRace_ThrowsConflictWithoutReportingTheVerdict(Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        SetupManageableRequest(sutProvider, userId, request);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .ResolveWithDecisionAsync(default!, default!, default, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny("not needed")));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
+    }
+
     private static AccessDecisionSubmission Approve(string? comment = null) =>
         new() { Verdict = AccessDecisionVerdict.Approve, Comment = comment };
 
@@ -245,6 +268,9 @@ public class DecideAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<DecideAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        // The guarded write lands unless a test says otherwise.
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .ResolveWithDecisionAsync(default!, default!, default, default).ReturnsForAnyArgs(true);
         return sutProvider;
     }
 

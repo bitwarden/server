@@ -93,10 +93,11 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
+        bool cancelled;
         if (isRequester)
         {
             // The requester withdraws their own request: Cancelled, no decision recorded.
-            await _accessRequestRepository.CancelAsync(request.Id, now);
+            cancelled = await _accessRequestRepository.CancelAsync(request.Id, now);
         }
         else
         {
@@ -111,7 +112,12 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 CreationDate = now,
             };
             decision.SetNewId();
-            await _accessRequestRepository.CancelWithDecisionAsync(request, decision, now);
+            cancelled = await _accessRequestRepository.CancelWithDecisionAsync(request, decision, now);
+        }
+
+        if (!cancelled)
+        {
+            throw new ConflictException("This request has already been resolved.");
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
