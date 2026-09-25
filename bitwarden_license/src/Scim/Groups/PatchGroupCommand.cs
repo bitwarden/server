@@ -226,13 +226,13 @@ public class PatchGroupCommand : IPatchGroupCommand
         var ids = new HashSet<Guid>();
         foreach (var obj in objArray.EnumerateArray())
         {
-            if (obj.TryGetProperty("value", out var valueProperty))
+            if (!obj.TryGetProperty("value", out var valueProperty) ||
+                valueProperty.ValueKind != JsonValueKind.String ||
+                !Guid.TryParse(valueProperty.GetString(), out var guid))
             {
-                if (valueProperty.TryGetGuid(out var guid))
-                {
-                    ids.Add(guid);
-                }
+                throw new BadRequestException("Invalid member value in SCIM patch operation.");
             }
+            ids.Add(guid);
         }
         return ids;
     }
