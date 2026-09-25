@@ -54,6 +54,7 @@ public class DatabaseContext : DbContext
     public DbSet<Event> Events { get; set; }
     public DbSet<Folder> Folders { get; set; }
     public DbSet<Grant> Grants { get; set; }
+    public DbSet<TwoFactorRememberToken> TwoFactorRememberTokens { get; set; }
     public DbSet<Group> Groups { get; set; }
     public DbSet<GroupUser> GroupUsers { get; set; }
     public DbSet<Installation> Installations { get; set; }

@@ -67,6 +67,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
+        services.AddSingleton<ITwoFactorRememberTokenRepository, TwoFactorRememberTokenRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
         services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
