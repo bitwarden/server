@@ -925,25 +925,27 @@ public class UserRepositoryTests
         Assert.Equal("wrapped-user-key", updatedUser.Key);
     }
 
-    // A caller-supplied value that starts with the database field protection sentinel ("P|")
-    // but is not real protector output must never suppress encryption. If it did, the value
-    // would be stored verbatim and every later read of the row would throw
+    // A value that starts with the database field protection sentinel ("P|") but cannot be
+    // unprotected is ambiguous: it may be caller-supplied data that merely starts with the
+    // sentinel, or genuine protector output whose key is no longer available. Silently
+    // re-protecting it either way would wrap it a second time, and a later read would
+    // unprotect only the outer layer and return the still-protected inner value as if it were
+    // plaintext. The write must be rejected instead of guessing.
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_DoesNotStoreVerbatim(
+    public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_ThrowsAndDoesNotStore(
         IUserRepository userRepository)
     {
         var user = await userRepository.CreateTestUserAsync();
 
         var poisonedKey = "P|poisoned-key";
         user.Key = poisonedKey;
-        await userRepository.ReplaceAsync(user);
 
-        // Reading the row back must not throw, and the recovered value must match the original
-        // input exactly
+        await Assert.ThrowsAnyAsync<Exception>(() => userRepository.ReplaceAsync(user));
+
         var readBack = await userRepository.GetByIdAsync(user.Id);
 
         Assert.NotNull(readBack);
-        Assert.Equal(poisonedKey, readBack.Key);
+        Assert.NotEqual(poisonedKey, readBack.Key);
     }
 
     [DatabaseTheory, DatabaseData]
