@@ -81,7 +81,10 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         decision.SetNewId();
 
         // Approval records the verdict only; the lease is minted separately when the requester activates it.
-        await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now);
+        if (!await _accessRequestRepository.ResolveWithDecisionAsync(request, decision, action, now))
+        {
+            throw new ConflictException("This request has already been resolved.");
+        }
 
         // Mirror what the repository stamped rather than re-reading.
         request.Action = action;

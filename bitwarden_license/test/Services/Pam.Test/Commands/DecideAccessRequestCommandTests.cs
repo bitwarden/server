@@ -203,6 +203,22 @@ public class DecideAccessRequestCommandTests
             _now);
     }
 
+    [Theory, BitAutoData]
+    public async Task DecideAsync_LosesTheRace_ThrowsConflictWithoutReportingTheVerdict(Guid userId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        SetupManageableRequest(sutProvider, userId, request);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .ResolveWithDecisionAsync(default!, default!, default, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny("not needed")));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+    }
+
     private static AccessDecisionSubmission Approve(string? comment = null) =>
         new() { Verdict = AccessDecisionVerdict.Approve, Comment = comment };
 
@@ -213,6 +229,9 @@ public class DecideAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<DecideAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        // The guarded write lands unless a test says otherwise.
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .ResolveWithDecisionAsync(default!, default!, default, default).ReturnsForAnyArgs(true);
         return sutProvider;
     }
 

@@ -186,6 +186,38 @@ public class CancelAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
+    [Theory, BitAutoData]
+    public async Task CancelAsync_RequesterLosesTheRace_ThrowsConflict(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().CancelAsync(default, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelAsync_ManagerLosesTheRace_ThrowsConflict(Guid managerId, AccessRequest request)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.None;
+        SetOpenWindow(request);
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CancelWithDecisionAsync(default!, default!, default).ReturnsForAnyArgs(false);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.CancelAsync(managerId, request.Id));
+
+        Assert.Equal("This request has already been resolved.", exception.Message);
+    }
 
     // Pins a window containing _now so the lapsed-window guard doesn't trip in unrelated tests.
     private static void SetOpenWindow(AccessRequest request)
@@ -198,6 +230,10 @@ public class CancelAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<CancelAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        // The guarded writes land unless a test says otherwise.
+        var accessRequestRepository = sutProvider.GetDependency<IAccessRequestRepository>();
+        accessRequestRepository.CancelAsync(default, default).ReturnsForAnyArgs(true);
+        accessRequestRepository.CancelWithDecisionAsync(default!, default!, default).ReturnsForAnyArgs(true);
         return sutProvider;
     }
 }

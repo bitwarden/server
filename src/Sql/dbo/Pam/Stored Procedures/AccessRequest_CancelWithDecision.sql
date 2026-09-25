@@ -28,7 +28,9 @@ BEGIN
         AND [NotAfter] > @Now
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] L WHERE L.[AccessRequestId] = @AccessRequestId)
 
-    IF @@ROWCOUNT > 0
+    DECLARE @Rows INT = @@ROWCOUNT
+
+    IF @Rows > 0
     BEGIN
         INSERT INTO [dbo].[AccessDecision]
         (
@@ -43,4 +45,7 @@ BEGIN
     END
 
     COMMIT TRANSACTION AccessRequest_CancelWithDecision
+
+    -- 1 when this call retracted the request, 0 when it was no longer retractable.
+    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
 END

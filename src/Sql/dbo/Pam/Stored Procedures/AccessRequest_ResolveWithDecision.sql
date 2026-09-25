@@ -22,7 +22,9 @@ BEGIN
         AND [Action] = 0 -- None (open)
         AND [NotAfter] > @Now
 
-    IF @@ROWCOUNT > 0
+    DECLARE @Rows INT = @@ROWCOUNT
+
+    IF @Rows > 0
     BEGIN
         INSERT INTO [dbo].[AccessDecision]
         (
@@ -37,4 +39,7 @@ BEGIN
     END
 
     COMMIT TRANSACTION AccessRequest_Resolve
+
+    -- 1 when this call resolved the request, 0 when it was no longer open.
+    SELECT CAST(CASE WHEN @Rows > 0 THEN 1 ELSE 0 END AS BIT)
 END
