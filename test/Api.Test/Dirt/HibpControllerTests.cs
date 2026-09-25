@@ -1,11 +1,12 @@
 ﻿using System.Net;
 using System.Reflection;
+using System.Security.Claims;
 using Bit.Api.Dirt.Controllers;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.MockedHttpClient;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
@@ -15,278 +16,336 @@ namespace Bit.Api.Test.Dirt;
 
 [ControllerCustomize(typeof(HibpController))]
 [SutProviderCustomize]
-public class HibpControllerTests : IDisposable
+public class HibpControllerTests
 {
-    private readonly HttpClient _originalHttpClient;
-    private readonly FieldInfo _httpClientField;
+    private const string _hashPrefix = "5BAA6";
+    private const string _rangeUrl = $"https://api.pwnedpasswords.com/range/{_hashPrefix}";
+    private const string _apiKey = "test-api-key";
+    private const string _rangeData = "0018A45C4D1DEF81644B54AB7F969B88D65:1\r\n00D4F6E8FA6EECAD2A3AA415EEC418D38EC:2";
+
+    private readonly MockedHttpMessageHandler _handler;
+    private readonly HttpClient _httpClient;
 
     public HibpControllerTests()
     {
-        // Store original HttpClient for restoration
-        _httpClientField = typeof(HibpController).GetField("_httpClient", BindingFlags.Static | BindingFlags.NonPublic);
-        _originalHttpClient = (HttpClient)_httpClientField?.GetValue(null);
-    }
+        _handler = new MockedHttpMessageHandler();
 
-    public void Dispose()
-    {
-        // Restore original HttpClient after tests
-        _httpClientField?.SetValue(null, _originalHttpClient);
+        // Every mocked response must carry content; the builder copies the content stream unconditionally.
+        _handler.Fallback
+            .WithStatusCode(HttpStatusCode.NotFound)
+            .WithContent(new StringContent(string.Empty));
+
+        _httpClient = _handler.ToHttpClient();
     }
 
     [Theory, BitAutoData]
-    public async Task Get_WithMissingApiKey_ThrowsBadRequestException(
+    public async Task GetRangeAsync_WithSuccessfulResponse_ReturnsPlainTextPassthrough(
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider);
+
+        var result = await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(_rangeData, contentResult.Content);
+        Assert.Equal("text/plain", contentResult.ContentType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetRangeAsync_ForwardsHashPrefixToPwnedPasswordsApi(
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider);
+
+        await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal(new Uri(_rangeUrl), request.RequestUri);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetRangeAsync_RequestsResponsePadding(
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider);
+
+        await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal("true", Assert.Single(request.Headers.GetValues("Add-Padding")));
+    }
+
+    /// <summary>
+    /// The pwned passwords range API is anonymous by design. Forwarding the API key or the
+    /// per-user client id would let HaveIBeenPwned correlate password lookups back to a user.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task GetRangeAsync_DoesNotSendUserIdentifyingHeaders(
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider);
+
+        await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.False(request.Headers.Contains("hibp-api-key"));
+        Assert.False(request.Headers.Contains("hibp-client-id"));
+        sutProvider.GetDependency<IUserService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetProperUserId(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetRangeAsync_WithoutHibpApiKey_StillSucceeds(
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider, apiKey: null);
+
+        var result = await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        Assert.IsType<ContentResult>(result);
+    }
+
+    [Theory]
+    [BitAutoData(false, "Bitwarden")]
+    [BitAutoData(true, "Bitwarden Self-Hosted")]
+    public async Task GetRangeAsync_SetsUserAgentFromSelfHostedSetting(
+        bool selfHosted,
+        string expectedUserAgent,
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(HttpStatusCode.OK, _rangeData);
+        ConfigureSut(sutProvider, selfHosted: selfHosted);
+
+        await sutProvider.Sut.GetRangeAsync(_hashPrefix);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(expectedUserAgent, request.Headers.UserAgent.ToString());
+    }
+
+    [Theory]
+    [BitAutoData(HttpStatusCode.NotFound)]
+    [BitAutoData(HttpStatusCode.BadRequest)]
+    [BitAutoData(HttpStatusCode.TooManyRequests)]
+    [BitAutoData(HttpStatusCode.InternalServerError)]
+    public async Task GetRangeAsync_WithUnsuccessfulResponse_ThrowsBadRequestException(
+        HttpStatusCode statusCode,
+        SutProvider<HibpController> sutProvider)
+    {
+        RespondToRangeRequestWith(statusCode);
+        ConfigureSut(sutProvider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.GetRangeAsync(_hashPrefix));
+        Assert.Equal($"Request failed. Status code: {statusCode}", exception.Message);
+
+        // The range endpoint has no retry behavior, so a 429 must not be retried either.
+        Assert.Single(_handler.CapturedRequests);
+    }
+
+    /// <summary>
+    /// k-anonymity depends on only the first five characters of the SHA-1 hash leaving the server.
+    /// The route constraint is what enforces that, so guard it against accidental removal.
+    /// </summary>
+    [Fact]
+    public void GetRangeAsync_RouteConstrainsHashToFiveCharacters()
+    {
+        var attribute = typeof(HibpController)
+            .GetMethod(nameof(HibpController.GetRangeAsync))
+            .GetCustomAttribute<HttpGetAttribute>();
+
+        Assert.NotNull(attribute);
+        Assert.Equal("range/{hash:length(5)}", attribute.Template);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetBreachAsync_WithMissingApiKey_ThrowsBadRequestException(
         SutProvider<HibpController> sutProvider,
         string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = null;
+        ConfigureSut(sutProvider, apiKey: null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.Get(username));
+            () => sutProvider.Sut.GetBreachAsync(username));
         Assert.Equal("HaveIBeenPwned API key not set.", exception.Message);
+        Assert.Empty(_handler.CapturedRequests);
     }
 
     [Theory, BitAutoData]
-    public async Task Get_WithValidApiKeyAndNoBreaches_Returns200WithEmptyArray(
+    public async Task GetBreachAsync_WithNoBreaches_Returns200WithEmptyArray(
         SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
+        string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        var user = new User { Id = userId };
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        // The fallback responds 404, which HIBP uses to mean "account not pwned".
+        ConfigureSut(sutProvider);
 
-        // Mock HttpClient to return 404 (no breaches found)
-        var mockHttpClient = CreateMockHttpClient(HttpStatusCode.NotFound, "");
-        _httpClientField.SetValue(null, mockHttpClient);
+        var result = await sutProvider.Sut.GetBreachAsync(username);
 
-        // Act
-        var result = await sutProvider.Sut.Get(username);
-
-        // Assert
         var contentResult = Assert.IsType<ContentResult>(result);
         Assert.Equal("[]", contentResult.Content);
         Assert.Equal("application/json", contentResult.ContentType);
     }
 
     [Theory, BitAutoData]
-    public async Task Get_WithValidApiKeyAndBreachesFound_Returns200WithBreachData(
+    public async Task GetBreachAsync_WithBreachesFound_Returns200WithBreachData(
         SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
+        string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
-
         var breachData = "[{\"Name\":\"Adobe\",\"Title\":\"Adobe\",\"Domain\":\"adobe.com\"}]";
-        var mockHttpClient = CreateMockHttpClient(HttpStatusCode.OK, breachData);
-        _httpClientField.SetValue(null, mockHttpClient);
+        _handler.When(BreachUrl(username))
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent("application/json", breachData);
+        ConfigureSut(sutProvider);
 
-        // Act
-        var result = await sutProvider.Sut.Get(username);
+        var result = await sutProvider.Sut.GetBreachAsync(username);
 
-        // Assert
         var contentResult = Assert.IsType<ContentResult>(result);
         Assert.Equal(breachData, contentResult.Content);
         Assert.Equal("application/json", contentResult.ContentType);
     }
 
     [Theory, BitAutoData]
-    public async Task Get_WithRateLimiting_RetriesWithDelay(
+    public async Task GetBreachAsync_WhenRateLimited_RetriesOnce(
         SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
+        string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        // CapturedRequests is appended to before matching, so this only matches the first request.
+        _handler.When(_ => _handler.CapturedRequests.Count == 1)
+            .RespondWith(HttpStatusCode.TooManyRequests)
+            .WithHeader("retry-after", "0")
+            .WithContent("application/json", string.Empty);
+        ConfigureSut(sutProvider);
 
-        // First response is rate limited, second is success
-        var requestCount = 0;
-        var mockHandler = new MockHttpMessageHandler((request, cancellationToken) =>
-        {
-            requestCount++;
-            if (requestCount == 1)
-            {
-                var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
-                response.Headers.Add("retry-after", "1");
-                return Task.FromResult(response);
-            }
-            else
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-                {
-                    Content = new StringContent("")
-                });
-            }
-        });
+        var result = await sutProvider.Sut.GetBreachAsync(username);
 
-        var mockHttpClient = new HttpClient(mockHandler);
-        _httpClientField.SetValue(null, mockHttpClient);
-
-        // Act
-        var result = await sutProvider.Sut.Get(username);
-
-        // Assert
-        Assert.Equal(2, requestCount); // Verify retry happened
+        Assert.Equal(2, _handler.CapturedRequests.Count);
         var contentResult = Assert.IsType<ContentResult>(result);
         Assert.Equal("[]", contentResult.Content);
     }
 
     [Theory, BitAutoData]
-    public async Task Get_WithServerError_ThrowsBadRequestException(
+    public async Task GetBreachAsync_WhenRateLimitedTwice_ThrowsBadRequestException(
         SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
+        string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        _handler.When(BreachUrl(username))
+            .RespondWith(HttpStatusCode.TooManyRequests)
+            .WithHeader("retry-after", "0")
+            .WithContent("application/json", string.Empty);
+        ConfigureSut(sutProvider);
 
-        var mockHttpClient = CreateMockHttpClient(HttpStatusCode.InternalServerError, "");
-        _httpClientField.SetValue(null, mockHttpClient);
-
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.Get(username));
-        Assert.Contains("Request failed. Status code:", exception.Message);
+            () => sutProvider.Sut.GetBreachAsync(username));
+        Assert.Equal($"Request failed. Status code: {HttpStatusCode.TooManyRequests}", exception.Message);
+        Assert.Equal(2, _handler.CapturedRequests.Count);
     }
 
-    [Theory, BitAutoData]
-    public async Task Get_WithBadRequest_ThrowsBadRequestException(
+    [Theory]
+    [BitAutoData(HttpStatusCode.BadRequest)]
+    [BitAutoData(HttpStatusCode.Unauthorized)]
+    [BitAutoData(HttpStatusCode.InternalServerError)]
+    public async Task GetBreachAsync_WithUnsuccessfulResponse_ThrowsBadRequestException(
+        HttpStatusCode statusCode,
         SutProvider<HibpController> sutProvider,
-        string username,
-        Guid userId)
+        string username)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        _handler.When(BreachUrl(username))
+            .RespondWith(statusCode)
+            .WithContent("application/json", string.Empty);
+        ConfigureSut(sutProvider);
 
-        var mockHttpClient = CreateMockHttpClient(HttpStatusCode.BadRequest, "");
-        _httpClientField.SetValue(null, mockHttpClient);
-
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.Get(username));
-        Assert.Contains("Request failed. Status code:", exception.Message);
+            () => sutProvider.Sut.GetBreachAsync(username));
+        Assert.Equal($"Request failed. Status code: {statusCode}", exception.Message);
+        Assert.Single(_handler.CapturedRequests);
     }
 
     [Theory, BitAutoData]
-    public async Task Get_EncodesUsernameCorrectly(
-        SutProvider<HibpController> sutProvider,
-        Guid userId)
+    public async Task GetBreachAsync_EncodesUsername(
+        SutProvider<HibpController> sutProvider)
     {
-        // Arrange
-        var usernameWithSpecialChars = "test+user@example.com";
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        ConfigureSut(sutProvider);
 
-        string capturedUrl = null;
-        var mockHandler = new MockHttpMessageHandler((request, cancellationToken) =>
-        {
-            capturedUrl = request.RequestUri.ToString();
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                Content = new StringContent("")
-            });
-        });
+        await sutProvider.Sut.GetBreachAsync("test+user@example.com");
 
-        var mockHttpClient = new HttpClient(mockHandler);
-        _httpClientField.SetValue(null, mockHttpClient);
-
-        // Act
-        await sutProvider.Sut.Get(usernameWithSpecialChars);
-
-        // Assert
-        Assert.NotNull(capturedUrl);
-        // Username should be URL encoded (+ becomes %2B, @ becomes %40)
-        Assert.Contains("test%2Buser%40example.com", capturedUrl);
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Contains("test%2Buser%40example.com", request.RequestUri.ToString());
     }
 
     [Theory, BitAutoData]
-    public async Task SendAsync_IncludesRequiredHeaders(
+    public async Task GetBreachAsync_IncludesRequiredHeaders(
         SutProvider<HibpController> sutProvider,
         string username,
         Guid userId)
     {
-        // Arrange
-        sutProvider.GetDependency<GlobalSettings>().HibpApiKey = "test-api-key";
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-        sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>())
-            .Returns(userId);
+        ConfigureSut(sutProvider, userId: userId);
 
-        HttpRequestMessage capturedRequest = null;
-        var mockHandler = new MockHttpMessageHandler((request, cancellationToken) =>
-        {
-            capturedRequest = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
-            {
-                Content = new StringContent("")
-            });
-        });
+        await sutProvider.Sut.GetBreachAsync(username);
 
-        var mockHttpClient = new HttpClient(mockHandler);
-        _httpClientField.SetValue(null, mockHttpClient);
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(_apiKey, Assert.Single(request.Headers.GetValues("hibp-api-key")));
+        Assert.Equal("Bitwarden", request.Headers.UserAgent.ToString());
 
-        // Act
-        await sutProvider.Sut.Get(username);
-
-        // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.True(capturedRequest.Headers.Contains("hibp-api-key"));
-        Assert.True(capturedRequest.Headers.Contains("hibp-client-id"));
-        Assert.True(capturedRequest.Headers.Contains("User-Agent"));
-        Assert.Equal("Bitwarden", capturedRequest.Headers.GetValues("User-Agent").First());
+        // The client id is a SHA-256 of the user id so HIBP can rate limit per user without learning who they are.
+        var expectedClientId = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(userId.ToByteArray()));
+        Assert.Equal(expectedClientId, Assert.Single(request.Headers.GetValues("hibp-client-id")));
     }
+
+    [Theory]
+    [BitAutoData(false, "Bitwarden")]
+    [BitAutoData(true, "Bitwarden Self-Hosted")]
+    public async Task GetBreachAsync_SetsUserAgentFromSelfHostedSetting(
+        bool selfHosted,
+        string expectedUserAgent,
+        SutProvider<HibpController> sutProvider,
+        string username)
+    {
+        ConfigureSut(sutProvider, selfHosted: selfHosted);
+
+        await sutProvider.Sut.GetBreachAsync(username);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(expectedUserAgent, request.Headers.UserAgent.ToString());
+    }
+
+    private void RespondToRangeRequestWith(HttpStatusCode statusCode, string content = "") =>
+        _handler.When(_rangeUrl)
+            .RespondWith(statusCode)
+            .WithContent("text/plain", content);
+
+    private static string BreachUrl(string username) =>
+        $"https://haveibeenpwned.com/api/v3/breachedaccount/{WebUtility.UrlEncode(username)}" +
+        "?truncateResponse=false&includeUnverified=false";
 
     /// <summary>
-    /// Helper to create a mock HttpClient that returns a specific status code and content
+    /// Points the sut's <see cref="IHttpClientFactory"/> at <see cref="_handler"/> and applies the
+    /// settings the controller reads. Call after configuring <see cref="_handler"/>.
     /// </summary>
-    private HttpClient CreateMockHttpClient(HttpStatusCode statusCode, string content)
+    private SutProvider<HibpController> ConfigureSut(
+        SutProvider<HibpController> sutProvider,
+        string apiKey = _apiKey,
+        bool selfHosted = false,
+        Guid? userId = null)
     {
-        var mockHandler = new MockHttpMessageHandler((request, cancellationToken) =>
-        {
-            return Task.FromResult(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent(content)
-            });
-        });
+        // The controller uses the unnamed client, i.e. CreateClient(string.Empty).
+        sutProvider.GetDependency<IHttpClientFactory>()
+            .CreateClient(Arg.Any<string>())
+            .Returns(_httpClient);
 
-        return new HttpClient(mockHandler);
+        var globalSettings = sutProvider.GetDependency<GlobalSettings>();
+        globalSettings.HibpApiKey = apiKey;
+        globalSettings.SelfHosted = selfHosted;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId ?? Guid.NewGuid());
+
+        return sutProvider;
     }
 }
-
-/// <summary>
-/// Mock HttpMessageHandler for testing HttpClient behavior
-/// </summary>
-public class MockHttpMessageHandler : HttpMessageHandler
-{
-    private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _sendAsync;
-
-    public MockHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> sendAsync)
-    {
-        _sendAsync = sendAsync;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        return _sendAsync(request, cancellationToken);
-    }
-}
-
