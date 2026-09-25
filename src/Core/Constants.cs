@@ -286,6 +286,7 @@ public static partial class FeatureFlagKeys
 
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
+    public const string Sm2093MachineAccountTokenPrefix = "sm-2093-machine-account-token-prefix";
 
     /* Innovation Team */
 
