@@ -14,7 +14,7 @@ public interface ICancelAccessRequestCommand
     /// The request is no longer pending or approved, has been activated, or its window has ended.
     /// </exception>
     /// <exception cref="Bit.Core.Exceptions.BadRequestException">
-    /// A managing approver revoked without a reason.
+    /// The request is an extension, or a managing approver revoked without a reason.
     /// </exception>
     Task CancelAsync(Guid userId, Guid requestId, string? reason);
 }
