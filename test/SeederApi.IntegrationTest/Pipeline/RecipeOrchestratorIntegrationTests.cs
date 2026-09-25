@@ -137,7 +137,7 @@ public sealed class RecipeOrchestratorIntegrationTests : IDisposable
         var licensing = new LicenseTestHelpers.StubLicensingService((_, _) => Task.CompletedTask);
 
         var deps = new SeederDependencies(
-            _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(), licensing,
+            _db, mapper, new PasswordHasher<User>(), new NoOpManglerService(), () => licensing,
             new NoopAttachmentStorageService(), signer, NullLoggerFactory.Instance);
         var orchestrator = new RecipeOrchestrator(deps);
 

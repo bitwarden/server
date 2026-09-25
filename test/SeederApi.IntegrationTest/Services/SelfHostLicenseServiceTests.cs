@@ -17,7 +17,7 @@ public class SelfHostLicenseServiceTests
         var licensing = new StubLicensingService((_, _) => Task.CompletedTask);
         var signer = new StubSeederLicenseSigner(_ => Task.FromResult(LicenseSigningResult.Signed("signed.jwt.token")));
 
-        var outcome = await SelfHostLicenseService.WriteLicenseAsync(licensing, signer, NewPremiumOwner(), NullLogger.Instance);
+        var outcome = await SelfHostLicenseService.WriteLicenseAsync(() => licensing, signer, NewPremiumOwner(), NullLogger.Instance);
 
         Assert.True(outcome.Written);
         Assert.Null(outcome.Warning);
@@ -31,11 +31,24 @@ public class SelfHostLicenseServiceTests
         var signer = new StubSeederLicenseSigner(
             _ => Task.FromResult(LicenseSigningResult.Skipped("No signing certificate configured.")));
 
-        var outcome = await SelfHostLicenseService.WriteLicenseAsync(licensing, signer, NewPremiumOwner(), NullLogger.Instance);
+        var outcome = await SelfHostLicenseService.WriteLicenseAsync(() => licensing, signer, NewPremiumOwner(), NullLogger.Instance);
 
         Assert.False(outcome.Written);
         Assert.Equal("No signing certificate configured.", outcome.Warning);
         Assert.Empty(licensing.WrittenLicenses);
+    }
+
+    [Fact]
+    public async Task WriteLicenseAsync_SignerNotConfigured_NeverResolvesLicensingService()
+    {
+        var signer = new StubSeederLicenseSigner(
+            _ => Task.FromResult(LicenseSigningResult.Skipped("Configured licensing certificate file was not found.")));
+
+        var outcome = await SelfHostLicenseService.WriteLicenseAsync(
+            () => throw new Exception("Invalid licensing certificate."), signer, NewPremiumOwner(), NullLogger.Instance);
+
+        Assert.False(outcome.Written);
+        Assert.Equal("Configured licensing certificate file was not found.", outcome.Warning);
     }
 
     public static TheoryData<Exception> ExpectedWriteExceptions() => new()
@@ -53,7 +66,7 @@ public class SelfHostLicenseServiceTests
         var licensing = new StubLicensingService((_, _) => throw thrown);
         var signer = new StubSeederLicenseSigner(_ => Task.FromResult(LicenseSigningResult.Signed("signed.jwt.token")));
 
-        var outcome = await SelfHostLicenseService.WriteLicenseAsync(licensing, signer, NewPremiumOwner(), NullLogger.Instance);
+        var outcome = await SelfHostLicenseService.WriteLicenseAsync(() => licensing, signer, NewPremiumOwner(), NullLogger.Instance);
 
         Assert.False(outcome.Written);
         Assert.False(string.IsNullOrEmpty(outcome.Warning));
@@ -67,6 +80,6 @@ public class SelfHostLicenseServiceTests
         var signer = new StubSeederLicenseSigner(_ => Task.FromResult(LicenseSigningResult.Signed("signed.jwt.token")));
 
         await Assert.ThrowsAsync<NotSupportedException>(
-            () => SelfHostLicenseService.WriteLicenseAsync(licensing, signer, NewPremiumOwner(), NullLogger.Instance));
+            () => SelfHostLicenseService.WriteLicenseAsync(() => licensing, signer, NewPremiumOwner(), NullLogger.Instance));
     }
 }

@@ -12,13 +12,15 @@ namespace Bit.Seeder.Options;
 
 /// <summary>
 /// Bundles the infrastructure services that all recipes require.
+/// <see cref="LicensingService"/> is a factory because <c>LicensingService</c> throws on construction when
+/// the configured licensing certificate cannot be loaded; only a signed self-hosted license resolves it.
 /// </summary>
 public sealed record SeederDependencies(
     DatabaseContext Db,
     IMapper Mapper,
     IPasswordHasher<User> PasswordHasher,
     IManglerService ManglerService,
-    ILicensingService LicensingService,
+    Func<ILicensingService> LicensingService,
     IAttachmentStorageService AttachmentStorageService,
     ISeederLicenseSigner LicenseSigner,
     ILoggerFactory LoggerFactory)

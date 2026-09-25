@@ -176,7 +176,7 @@ public static class RecipeBuilderExtensions
         if (selfHosted)
         {
             builder.AddAsyncStep(sp => new GenerateSelfHostUserLicenseStep(
-                sp.GetRequiredService<ILicensingService>(),
+                sp.GetRequiredService<ILicensingService>,
                 sp.GetRequiredService<ISeederLicenseSigner>(),
                 sp.GetRequiredService<ILogger<GenerateSelfHostUserLicenseStep>>()));
         }
