@@ -20,6 +20,7 @@ public class GetPremiumPurchasePreviewQueryTests
     private const string PremiumSeatPriceId = "premium-annually-2026";
     private const string PremiumStoragePriceId = "personal-storage-gb-annually";
 
+    private readonly RecordingLogger<GetPremiumPurchasePreviewQuery> _logger = new();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
@@ -27,7 +28,7 @@ public class GetPremiumPurchasePreviewQueryTests
 
     public GetPremiumPurchasePreviewQueryTests()
     {
-        _sut = new GetPremiumPurchasePreviewQuery(_pricingClient, _subscriptionDiscountService, _invoicePreviewService);
+        _sut = new GetPremiumPurchasePreviewQuery(_logger, _pricingClient, _subscriptionDiscountService, _invoicePreviewService);
         _pricingClient.GetAvailablePremiumPlan().Returns(new PremiumPlan
         {
             Seat = new PremiumPurchasable { StripePriceId = PremiumSeatPriceId },
@@ -186,6 +187,30 @@ public class GetPremiumPurchasePreviewQueryTests
 
         await Assert.ThrowsAsync<StripeException>(() => _sut.Run(User(), Request()));
     }
+
+    [Fact]
+    public async Task Run_WhenThePreviewResolvesNoSeatLine_ThrowsConflictAndLogsTheFault()
+    {
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(PreviewWithoutSeats());
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(additionalStorage: 2)));
+
+        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains(PremiumSeatPriceId, error);
+    }
+
+    private static InvoicePreview PreviewWithoutSeats() => new()
+    {
+        PlanTier = PlanTierType.Premium,
+        Cadence = PlanCadenceType.Annually,
+        PasswordManager = new PasswordManagerInvoiceItems(),
+        EstimatedTax = 1.76m,
+        Total = 21.56m,
+        AmountDue = 21.56m
+    };
 
     private static UserEntity User() => new() { Id = Guid.NewGuid() };
 

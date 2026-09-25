@@ -216,11 +216,15 @@ public class GetOrganizationPurchasePreviewQueryTests
     }
 
     [Fact]
-    public async Task Run_WhenThePricingServiceHasNoPlan_ThrowsInvalidOperationRatherThanNotFound()
+    public async Task Run_WhenThePricingServiceHasNoPlan_ThrowsConflictAndLogsRatherThanNotFound()
     {
         _pricingClient.GetPlan(PlanType.TeamsAnnually).Returns((Bit.Core.Models.StaticStore.Plan?)null);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
+
+        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains("TeamsAnnually", error);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
             .GetInvoicePreviewAsync(default(InvoiceCreatePreviewOptions)!, default, default);
     }
@@ -390,25 +394,14 @@ public class GetOrganizationPurchasePreviewQueryTests
     [Fact]
     public async Task Run_ForSponsoredFamilies_SendsOnlyTheSponsoredPriceAndReturnsTheServiceResultUnchanged()
     {
-        var sponsoredPreview = new InvoicePreview
-        {
-            PlanTier = PlanTierType.Families,
-            Cadence = PlanCadenceType.Annually,
-            PasswordManager = new PasswordManagerInvoiceItems
-            {
-                Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 0m }
-            },
-            EstimatedTax = 0m,
-            Total = 0m,
-            AmountDue = 0m
-        };
+        var sponsoredPreview = SponsoredPreview();
         _invoicePreviewService
             .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
             .Returns(sponsoredPreview);
 
         var result = await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
         {
-            PasswordManager = new PasswordManagerSelections(6, 5, true),
+            PasswordManager = new PasswordManagerSelections(6, 0, true),
             Coupons = ["A"]
         }));
 
@@ -422,6 +415,47 @@ public class GetOrganizationPurchasePreviewQueryTests
             .ValidateDiscountEligibilityForUserAsync(default!, default!, default);
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlan(default);
     }
+
+    [Fact]
+    public async Task Run_ForSponsoredFamiliesWithStorage_AddsTheFamiliesStorageItem()
+    {
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), PlanTierType.Families, PlanCadenceType.Annually)
+            .Returns(SponsoredPreview());
+
+        await _sut.Run(User(), Request(Purchase(ProductTierType.Families) with
+        {
+            PasswordManager = new PasswordManagerSelections(1, 5, true)
+        }));
+
+        var options = CapturedOptions();
+        Assert.Collection(options.SubscriptionDetails.Items,
+            item =>
+            {
+                Assert.Equal("2021-family-for-enterprise-annually", item.Price);
+                Assert.Equal(1, item.Quantity);
+            },
+            item =>
+            {
+                Assert.Equal("personal-storage-gb-annually", item.Price);
+                Assert.Equal(5, item.Quantity);
+            });
+        Assert.Null(options.Discounts);
+        await _pricingClient.Received(1).GetPlan(PlanType.FamiliesAnnually);
+    }
+
+    private static InvoicePreview SponsoredPreview() => new()
+    {
+        PlanTier = PlanTierType.Families,
+        Cadence = PlanCadenceType.Annually,
+        PasswordManager = new PasswordManagerInvoiceItems
+        {
+            Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 0m }
+        },
+        EstimatedTax = 0m,
+        Total = 0m,
+        AmountDue = 0m
+    };
 
     [Fact]
     public async Task Run_WithATaxIdWhoseTypeCanBeDerived_SendsTheDerivedType()
@@ -500,6 +534,47 @@ public class GetOrganizationPurchasePreviewQueryTests
 
         await Assert.ThrowsAsync<StripeException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
     }
+
+    [Fact]
+    public async Task Run_WhenThePreviewResolvesNoSeatLine_ThrowsConflictAndLogsTheFaultWithoutTheTaxId()
+    {
+        _taxService.GetStripeTaxCode("DE", TaxIdValue).Returns("eu_vat");
+        ArrangePreviewWithoutSeats(PlanTierType.Enterprise);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(
+            Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(5, 0, false)),
+            new BillingAddressSelections("DE", "10115", new TaxIdSelection("eu_vat", TaxIdValue)))));
+
+        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains("enterprise-seat-annually", error);
+        Assert.DoesNotContain(TaxIdValue, error);
+    }
+
+    [Fact]
+    public async Task Run_WhenTheSponsoredPreviewResolvesNoSeatLine_ThrowsConflictAndLogsTheFault()
+    {
+        ArrangePreviewWithoutSeats(PlanTierType.Families);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(
+            Purchase(ProductTierType.Families, passwordManager: new PasswordManagerSelections(1, 0, true)))));
+
+        var error = Assert.Single(_logger.Errors);
+        Assert.Contains("2021-family-for-enterprise-annually", error);
+    }
+
+    private void ArrangePreviewWithoutSeats(PlanTierType planTier) =>
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), planTier, Arg.Any<PlanCadenceType>())
+            .Returns(new InvoicePreview
+            {
+                PlanTier = planTier,
+                Cadence = PlanCadenceType.Annually,
+                PasswordManager = new PasswordManagerInvoiceItems(),
+                EstimatedTax = 0m,
+                Total = 0m,
+                AmountDue = 0m
+            });
 
     private static UserEntity User() => new() { Id = Guid.NewGuid() };
 

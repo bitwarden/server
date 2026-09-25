@@ -67,10 +67,9 @@ or customer discount, and `Bit.Invoicing` owns expansion. A Stripe
 exception handling turns it into a logged 500.
 
 Every amount comes from Stripe through `Bit.Invoicing`. Neither query adds, removes, or rewrites
-lines or discounts in the projection. If a price the preview sends has no `purchasable_reference`
-metadata, `Bit.Invoicing` skips that line and logs an error. In that case the matching item (for
-example `PasswordManager.Seats`) is null, while `EstimatedTax`, `Total`, and `AmountDue` still
-reflect Stripe's full invoice.
+lines or discounts in the projection. `PasswordManager.Seats` is always present on both purchase
+previews. A missing seats line or a plan the pricing service does not have is a catalog fault:
+logged with the user id and the price ids or plan type, and surfaced as a 409.
 
 #### Premium purchase preview
 
@@ -106,13 +105,14 @@ rejected by the framework with a 400 before the query runs.
     code and a value.
 - **Plan:** Families maps to `FamiliesAnnually`. Teams and Enterprise map to their annual or monthly
   plan. The plan comes from `IPricingClient.GetPlan`. If the catalog has no plan for that type, the
-  query throws `InvalidOperationException`, which is a 500 rather than a 404, because the catalog
-  missing a plan is a server fault.
-- **Sponsored Families** (`passwordManager.sponsored`): the query sends only the
-  Families-for-Enterprise sponsored price at quantity 1. It sends no storage and no coupons, and it
-  does not look up the catalog plan. Stripe is authoritative here, as everywhere else. The response
-  is Stripe's projection of that price, so the `pm-seat` line carries the sponsored unit cost
-  (normally $0) and there is no synthetic sponsorship discount.
+  query logs an error and throws `ConflictException` (409, not 404), because the catalog missing a
+  plan is a server fault the user cannot fix.
+- **Sponsored Families** (`passwordManager.sponsored`): the query sends the Families-for-Enterprise
+  sponsored price at quantity 1, plus the Families storage price at `additionalStorage` when above 0
+  (redemption keeps the storage add-on, so it is billed and taxed). It sends no coupons. Stripe is
+  authoritative here, as everywhere else: the `pm-seat` line carries the sponsored unit cost
+  (normally $0), `additionalStorage` carries the storage line, and there is no synthetic
+  sponsorship discount. This replaces the client's two-call storage-tax workaround (PM-27585).
 - **Standalone Secrets Manager** (`secretsManager.standalone`): the query sends the Password Manager
   seats and the Secrets Manager seats. Storage and service-account items are added when above 0,
   matching what subscription creation bills (legacy dropped them). The `sm-standalone` coupon is

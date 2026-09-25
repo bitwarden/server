@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.User.Models.Requests;
+using Microsoft.Extensions.Logging;
 using Stripe;
 using UserEntity = Bit.Core.Entities.User;
 
@@ -17,6 +18,7 @@ internal interface IGetPremiumPurchasePreviewQuery
 }
 
 internal sealed class GetPremiumPurchasePreviewQuery(
+    ILogger<GetPremiumPurchasePreviewQuery> logger,
     IPricingClient pricingClient,
     ISubscriptionDiscountService subscriptionDiscountService,
     IInvoicePreviewService invoicePreviewService) : IGetPremiumPurchasePreviewQuery
@@ -61,9 +63,10 @@ internal sealed class GetPremiumPurchasePreviewQuery(
             Discounts = await ResolveEligibleDiscountsAsync(user, request.Coupons)
         };
 
+        InvoicePreview preview;
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, PlanTierType.Premium, PlanCadenceType.Annually);
+            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, PlanTierType.Premium, PlanCadenceType.Annually);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -71,6 +74,8 @@ internal sealed class GetPremiumPurchasePreviewQuery(
             throw new BadRequestException(
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
+
+        return PurchasePreviewGuard.RequireSeats(preview, logger, user.Id, items.Select(item => item.Price));
     }
 
     // All-or-nothing: an ineligible coupon drops every coupon rather than failing the preview.

@@ -156,6 +156,24 @@ public class PreviewingAccountPurchaseTests(PreviewDrivenCartFixture fixture)
     }
 
     [BillingFact]
+    public async Task OrganizationPurchase_ForSponsoredFamiliesWithStorage_CarriesTheStorageLine()
+    {
+        var client = await CreateClientAsync("sponsored-families-storage-purchase-preview");
+
+        var response = await client.PostAsJsonAsync(OrganizationRoute,
+            Body("Families", "Annually", seats: 1, sponsored: true, additionalStorage: 2));
+
+        await Assert.SuccessResponseAsync(response);
+        var preview = await ReadAsync(response);
+        Assert.Equal(StripeConstants.PurchasableReferences.PasswordManagerSeat,
+            preview["passwordManager"]!["seats"]!["reference"]!.GetValue<string>());
+        var storage = preview["passwordManager"]!["additionalStorage"]!;
+        Assert.Equal(StripeConstants.PurchasableReferences.PasswordManagerStorage, storage["reference"]!.GetValue<string>());
+        Assert.Equal(2, storage["quantity"]!.GetValue<long>());
+        Assert.True(Decimal(preview, "total") > 0m);
+    }
+
+    [BillingFact]
     public async Task SponsoredFamiliesPrice_CarriesThePasswordManagerSeatReference()
     {
         var metadata = await fixture.GetPriceMetadataAsync(
@@ -226,13 +244,14 @@ public class PreviewingAccountPurchaseTests(PreviewDrivenCartFixture fixture)
     }
 
     private static object Body(
-        string tier, string cadence, int seats, bool sponsored = false, object? secretsManager = null, string[]? coupons = null) => new
+        string tier, string cadence, int seats, bool sponsored = false, object? secretsManager = null, string[]? coupons = null,
+        int additionalStorage = 0) => new
         {
             purchase = new
             {
                 tier,
                 cadence,
-                passwordManager = new { seats, additionalStorage = 0, sponsored },
+                passwordManager = new { seats, additionalStorage, sponsored },
                 secretsManager,
                 coupons
             },

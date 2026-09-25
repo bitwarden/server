@@ -38,19 +38,32 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
 
         if (passwordManager.Sponsored)
         {
-            options.SubscriptionDetails.Items =
-            [
-                new InvoiceSubscriptionDetailsItemOptions
+            var items = new List<InvoiceSubscriptionDetailsItemOptions>
+            {
+                new()
                 {
                     Price = SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise).StripePlanId,
                     Quantity = 1
                 }
-            ];
+            };
+
+            // Redemption swaps the Families package for the sponsored price but keeps the storage add-on, so
+            // storage still bills (and is taxed) at the Families storage price.
+            if (passwordManager.AdditionalStorage > 0)
+            {
+                var familiesPlan = await GetPlanAsync(user, planType);
+                items.Add(new InvoiceSubscriptionDetailsItemOptions
+                {
+                    Price = familiesPlan.PasswordManager.StripeStoragePlanId,
+                    Quantity = passwordManager.AdditionalStorage
+                });
+            }
+
+            options.SubscriptionDetails.Items = items;
         }
         else
         {
-            var plan = await pricingClient.GetPlan(planType)
-                ?? throw new InvalidOperationException($"The pricing service has no plan for {planType}.");
+            var plan = await GetPlanAsync(user, planType);
 
             options.SubscriptionDetails.Items = BuildItems(plan, passwordManager, purchase.SecretsManager);
 
@@ -65,9 +78,10 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
             }
         }
 
+        InvoicePreview preview;
         try
         {
-            return await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, purchase.Cadence);
+            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, purchase.Cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -81,6 +95,9 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
             throw new BadRequestException(
                 "The tax ID number you provided was invalid. Please try again or contact support for assistance.");
         }
+
+        return PurchasePreviewGuard.RequireSeats(
+            preview, logger, user.Id, options.SubscriptionDetails.Items.Select(item => item.Price));
     }
 
     private static (PurchaseSelections Purchase, PasswordManagerSelections PasswordManager, BillingAddressSelections BillingAddress)
@@ -169,6 +186,20 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
         }
 
         return (purchase, passwordManager, billingAddress);
+    }
+
+    private async Task<OrganizationPlan> GetPlanAsync(UserEntity user, PlanType planType)
+    {
+        var plan = await pricingClient.GetPlan(planType);
+        if (plan is null)
+        {
+            logger.LogError(
+                "Organization purchase preview for user ({UserId}) found no {PlanType} plan in the pricing service",
+                user.Id, planType);
+            throw new ConflictException(PurchasePreviewGuard.CatalogFaultMessage);
+        }
+
+        return plan;
     }
 
     private static (PlanType PlanType, PlanTierType PlanTier) ResolvePlan(ProductTierType tier, PlanCadenceType cadence) =>
