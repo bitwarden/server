@@ -38,14 +38,13 @@ public class GetOrganizationPlanChangePreviewQuery(
     /// <inheritdoc />
     public async Task<InvoicePreview> Run(Organization organization, OrganizationPlanChange planChange)
     {
+        var billingAddress = ResolveBillingAddress(planChange.Country, planChange.PostalCode);
         var newPlan = await pricingClient.GetPlanOrThrow(ResolvePlanType(planChange));
 
         if (organization.UseSecretsManager && !newPlan.SupportsSecretsManager)
         {
             throw new BadRequestException("The selected plan does not support Secrets Manager.");
         }
-
-        var billingAddress = ResolveBillingAddress(planChange.Country, planChange.PostalCode);
 
         var options = (
                 HasSubscription: !string.IsNullOrEmpty(organization.GatewaySubscriptionId),
@@ -59,41 +58,11 @@ public class GetOrganizationPlanChangePreviewQuery(
             };
 
         options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-        options.CustomerDetails = new InvoiceCustomerDetailsOptions
-        {
-            Address = billingAddress
-        };
+        options.CustomerDetails = new InvoiceCustomerDetailsOptions { Address = billingAddress };
 
         return await invoicePreviewService.GetInvoicePreviewAsync(options, planChange.Tier, planChange.Cadence);
     }
 
-    private static PlanType ResolvePlanType(OrganizationPlanChange planChange) =>
-        planChange.Tier switch
-        {
-            PlanTierType.Families => PlanType.FamiliesAnnually,
-            PlanTierType.Teams => planChange.Cadence == PlanCadenceType.Monthly
-                ? PlanType.TeamsMonthly
-                : PlanType.TeamsAnnually,
-            PlanTierType.Enterprise => planChange.Cadence == PlanCadenceType.Monthly
-                ? PlanType.EnterpriseMonthly
-                : PlanType.EnterpriseAnnually,
-            _ => throw new BadRequestException($"Cannot change an organization to the {planChange.Tier} tier.")
-        };
-
-    private static AddressOptions ResolveBillingAddress(string? country, string? postalCode)
-    {
-        if (string.IsNullOrWhiteSpace(country) || country.Length != 2)
-        {
-            throw new BadRequestException(nameof(country), "Country code must be 2 characters long.");
-        }
-
-        if (string.IsNullOrWhiteSpace(postalCode))
-        {
-            throw new BadRequestException(nameof(postalCode), "The PostalCode field is required.");
-        }
-
-        return new AddressOptions { Country = country, PostalCode = postalCode };
-    }
 
     /// <summary>
     /// Builds the preview options for an organization that has a live subscription and is changing to a new plan.
@@ -127,21 +96,6 @@ public class GetOrganizationPlanChangePreviewQuery(
                 Items = items, ProrationBehavior = ProrationBehavior.AlwaysInvoice
             }
         };
-    }
-
-    private async Task<Subscription> GetSubscriptionOrThrowAsync(Organization organization)
-    {
-        try
-        {
-            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-                new SubscriptionGetOptions { Expand = ["items.data.price"] });
-        }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
-        {
-            logger.LogError("Subscription ({SubscriptionId}) for organization ({OrganizationId}) was not found",
-                organization.GatewaySubscriptionId, organization.Id);
-            throw new NotFoundException();
-        }
     }
 
     /// <summary>
@@ -214,7 +168,13 @@ public class GetOrganizationPlanChangePreviewQuery(
         return builder.Build();
     }
 
-    // Resolves a change against the live subscription (matching by price to its item Id) into a preview line item.
+    /// <summary>
+    /// Converts an organization subscription change into a preview line item.
+    /// </summary>
+    /// <param name="change">The subscription change to convert.</param>
+    /// <param name="itemsByPriceId">A dictionary mapping price IDs to subscription items.</param>
+    /// <param name="organization">The organization for which the preview is being generated.</param>
+    /// <returns>The preview line item representing the subscription change.</returns>
     private InvoiceSubscriptionDetailsItemOptions ToPreviewItem(
         OrganizationSubscriptionChange change,
         IReadOnlyDictionary<string, SubscriptionItem> itemsByPriceId,
@@ -242,6 +202,15 @@ public class GetOrganizationPlanChangePreviewQuery(
                 return new InvoiceSubscriptionDetailsItemOptions { Id = item.Id, Quantity = updateQuantity.Quantity };
             });
 
+    /// <summary>
+    /// Resolves a subscription item by its price ID from existing subscription items.
+    /// If the item is not found, logs an error and throws a BadRequestException.
+    /// </summary>
+    /// <param name="priceId">The price ID of the subscription item to resolve.</param>
+    /// <param name="itemsByPriceId">A dictionary mapping price IDs to subscription items.</param>
+    /// <param name="organization">The organization for which the subscription item is being resolved.</param>
+    /// <returns>The subscription item matching the given price ID.</returns>
+    /// <exception cref="BadRequestException">Thrown when the subscription item with the given price ID is not found.</exception>
     private SubscriptionItem ResolveItem(
         string priceId, IReadOnlyDictionary<string, SubscriptionItem> itemsByPriceId, Organization organization)
     {
@@ -256,5 +225,48 @@ public class GetOrganizationPlanChangePreviewQuery(
 
         throw new BadRequestException(
             "Your organization's subscription does not match its current plan. Please contact support for assistance.");
+    }
+
+    private async Task<Subscription> GetSubscriptionOrThrowAsync(Organization organization)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
+                new SubscriptionGetOptions { Expand = ["items.data.price"] });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionId}) for organization ({OrganizationId}) was not found",
+                organization.GatewaySubscriptionId, organization.Id);
+            throw new NotFoundException();
+        }
+    }
+
+    private static PlanType ResolvePlanType(OrganizationPlanChange planChange) =>
+        planChange.Tier switch
+        {
+            PlanTierType.Families => PlanType.FamiliesAnnually,
+            PlanTierType.Teams => planChange.Cadence == PlanCadenceType.Monthly
+                ? PlanType.TeamsMonthly
+                : PlanType.TeamsAnnually,
+            PlanTierType.Enterprise => planChange.Cadence == PlanCadenceType.Monthly
+                ? PlanType.EnterpriseMonthly
+                : PlanType.EnterpriseAnnually,
+            _ => throw new BadRequestException($"Cannot change an organization to the {planChange.Tier} tier.")
+        };
+
+    private static AddressOptions ResolveBillingAddress(string? country, string? postalCode)
+    {
+        if (string.IsNullOrWhiteSpace(country) || country.Length != 2)
+        {
+            throw new BadRequestException(nameof(country), "Country code must be 2 characters long.");
+        }
+
+        if (string.IsNullOrWhiteSpace(postalCode))
+        {
+            throw new BadRequestException(nameof(postalCode), "The PostalCode field is required.");
+        }
+
+        return new AddressOptions { Country = country, PostalCode = postalCode };
     }
 }

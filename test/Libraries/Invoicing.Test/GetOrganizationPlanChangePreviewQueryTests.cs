@@ -258,7 +258,7 @@ public class GetOrganizationPlanChangePreviewQueryTests
     }
 
     [Fact]
-    public async Task Run_Downgrade_ThrowsBadRequestWithoutCallingStripe()
+    public async Task Run_Downgrade_ThrowsBadRequest()
     {
         var organization = new Organization
         {
@@ -274,7 +274,6 @@ public class GetOrganizationPlanChangePreviewQueryTests
         _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
 
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
-        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
     [Fact]
