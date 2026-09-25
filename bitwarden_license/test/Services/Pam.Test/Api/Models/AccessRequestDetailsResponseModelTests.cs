@@ -49,9 +49,11 @@ public class AccessRequestDetailsResponseModelTests
 
         var model = new AccessRequestDetailsResponseModel(details);
 
-        Assert.Equal(DateTimeKind.Utc, model.ProducedLeaseNotAfter!.Value.Kind);
+        Assert.NotNull(model.ProducedLeaseNotAfter);
+        var producedLeaseNotAfter = model.ProducedLeaseNotAfter.Value;
+        Assert.Equal(DateTimeKind.Utc, producedLeaseNotAfter.Kind);
         // Relabelled, not converted: the clock reading must be untouched.
-        Assert.Equal(leaseEnd.TimeOfDay, model.ProducedLeaseNotAfter.Value.TimeOfDay);
+        Assert.Equal(leaseEnd.TimeOfDay, producedLeaseNotAfter.TimeOfDay);
     }
 
     [Fact]
