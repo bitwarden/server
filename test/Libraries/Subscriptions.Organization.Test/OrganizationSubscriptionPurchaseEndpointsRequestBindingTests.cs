@@ -2,7 +2,11 @@
 using System.Security.Claims;
 using System.Text;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Services;
+using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
@@ -27,9 +31,11 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(_user);
 
     [Theory]
-    [InlineData("\"Families\"")]
-    [InlineData("1")]
-    public async Task PreviewOrganizationSubscriptionPurchase_BindsTheTierByNameOrNumber(string tierJson)
+    [InlineData("\"Families\"", ProductTierType.Families)]
+    [InlineData("1", ProductTierType.Families)]
+    [InlineData("\"Teams\"", ProductTierType.Teams)]
+    [InlineData("2", ProductTierType.Teams)]
+    public async Task PreviewOrganizationSubscriptionPurchase_BindsTheTierByNameOrNumber(string tierJson, ProductTierType expectedTier)
     {
         var query = new FakePreviewOrganizationSubscriptionPurchaseQuery { Result = SamplePreview() };
         var body = $$"""
@@ -48,11 +54,77 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
         Assert.Equal((int)HttpStatusCode.OK, context.Response.StatusCode);
         Assert.Same(_user, query.ReceivedUser);
         var purchase = query.ReceivedRequest!.Purchase!;
-        Assert.Equal(ProductTierType.Families, purchase.Tier);
+        Assert.Equal(expectedTier, purchase.Tier);
         Assert.Equal(PlanCadenceType.Annually, purchase.Cadence);
         Assert.True(purchase.PasswordManager!.Sponsored);
         Assert.Null(purchase.SecretsManager);
         Assert.Null(query.ReceivedRequest.BillingAddress!.TaxId);
+    }
+
+    [Theory]
+    [InlineData("\"annually\"", PlanCadenceType.Annually)]
+    [InlineData("\"Monthly\"", PlanCadenceType.Monthly)]
+    [InlineData("1", PlanCadenceType.Monthly)]
+    public async Task PreviewOrganizationSubscriptionPurchase_BindsTheCadenceByNameOrNumber(string cadenceJson, PlanCadenceType expectedCadence)
+    {
+        var query = new FakePreviewOrganizationSubscriptionPurchaseQuery { Result = SamplePreview() };
+        var body = $$"""
+            {
+              "purchase": {
+                "tier": "Teams",
+                "cadence": {{cadenceJson}},
+                "passwordManager": { "seats": 1, "additionalStorage": 0, "sponsored": false }
+              },
+              "billingAddress": { "country": "US", "postalCode": "12345" }
+            }
+            """;
+
+        var context = await InvokeAsync(query, body);
+
+        Assert.Equal((int)HttpStatusCode.OK, context.Response.StatusCode);
+        Assert.Equal(expectedCadence, query.ReceivedRequest!.Purchase!.Cadence);
+    }
+
+    [Fact]
+    public async Task PreviewOrganizationSubscriptionPurchase_WithoutTierOrCadence_BindsThemAsNull()
+    {
+        var query = new FakePreviewOrganizationSubscriptionPurchaseQuery { Result = SamplePreview() };
+        const string body = """
+            {
+              "purchase": { "passwordManager": { "seats": 1, "additionalStorage": 0, "sponsored": false } },
+              "billingAddress": { "country": "US", "postalCode": "12345" }
+            }
+            """;
+
+        await InvokeAsync(query, body);
+
+        Assert.Null(query.ReceivedRequest!.Purchase!.Tier);
+        Assert.Null(query.ReceivedRequest.Purchase.Cadence);
+    }
+
+    [Theory]
+    [InlineData("\"tier\": \"Families\",", "Purchase.Cadence", "The Cadence field is required.")]
+    [InlineData("\"cadence\": \"annually\",", "Purchase.Tier", "The Tier field is required.")]
+    public async Task PreviewOrganizationSubscriptionPurchase_WithAMissingTierOrCadence_Returns400KeyedOnTheField(
+        string presentField, string expectedKey, string expectedMessage)
+    {
+        var body = $$"""
+            {
+              "purchase": {
+                {{presentField}}
+                "passwordManager": { "seats": 1, "additionalStorage": 0, "sponsored": false }
+              },
+              "billingAddress": { "country": "US", "postalCode": "12345" }
+            }
+            """;
+
+        var context = await InvokeAsync(
+            services => services.AddSingleton<IPreviewOrganizationSubscriptionPurchaseQuery>(RealQuery()), body);
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        var responseBody = await ReadBodyAsync(context);
+        Assert.Contains($"\"{expectedKey}\"", responseBody);
+        Assert.Contains(expectedMessage, responseBody);
     }
 
     [Fact]
@@ -136,11 +208,14 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
         Assert.Equal(0, query.Calls);
     }
 
-    private async Task<HttpContext> InvokeAsync(FakePreviewOrganizationSubscriptionPurchaseQuery query, string body)
+    private Task<HttpContext> InvokeAsync(FakePreviewOrganizationSubscriptionPurchaseQuery query, string body) =>
+        InvokeAsync(services => services.AddSingleton<IPreviewOrganizationSubscriptionPurchaseQuery>(query), body);
+
+    private async Task<HttpContext> InvokeAsync(Action<IServiceCollection> registerQuery, string body)
     {
         var builder = WebApplication.CreateBuilder();
         builder.Services.AddSingleton(_userService);
-        builder.Services.AddSingleton<IPreviewOrganizationSubscriptionPurchaseQuery>(query);
+        registerQuery(builder.Services);
         builder.Services.AddScoped<PreviewOrganizationSubscriptionPurchaseHandler>();
         var app = builder.Build();
         app.MapOrganizationSubscriptionPurchaseEndpoints();
@@ -164,6 +239,20 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
 
         await endpoint.RequestDelegate!(context);
         return context;
+    }
+
+    private static PreviewOrganizationSubscriptionPurchaseQuery RealQuery() => new(
+        new RecordingLogger<PreviewOrganizationSubscriptionPurchaseQuery>(),
+        Substitute.For<IPricingClient>(),
+        Substitute.For<ISubscriptionDiscountService>(),
+        Substitute.For<ITaxService>(),
+        Substitute.For<IInvoicePreviewService>());
+
+    private static async Task<string> ReadBodyAsync(HttpContext context)
+    {
+        context.Response.Body.Position = 0;
+        using var reader = new StreamReader(context.Response.Body);
+        return await reader.ReadToEndAsync();
     }
 
     private static InvoicePreview SamplePreview() => new()

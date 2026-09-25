@@ -32,10 +32,11 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
     public async Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
-        var (purchase, passwordManager, billingAddress) = Validate(request);
-        var (planType, planTier) = ResolvePlan(purchase.Tier, purchase.Cadence);
+        var (purchase, tier, cadence, passwordManager) = ValidatePurchase(request.Purchase);
+        var customerDetails = ResolveBillingAddress(request.BillingAddress);
+        var (planType, planTier) = ResolvePlan(tier, cadence);
 
-        var options = BuildBaseOptions(billingAddress);
+        var options = BuildBaseOptions(customerDetails);
 
         if (passwordManager.Sponsored)
         {
@@ -70,11 +71,11 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
 
             if (purchase.SecretsManager is { Standalone: true })
             {
-                // The system coupon takes precedence; user coupons are ignored for standalone Secrets Manager.
                 options.Discounts = [new InvoiceDiscountOptions { Coupon = StripeConstants.CouponIDs.SecretsManagerStandalone }];
             }
-            else if (purchase.Tier == ProductTierType.Families)
+            else if (tier == ProductTierType.Families)
             {
+                // Only Families supports coupons; Teams and Enterprise ignore them.
                 options.Discounts = await ResolveEligibleFamiliesDiscountsAsync(user, purchase.Coupons);
             }
         }
@@ -82,7 +83,7 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         InvoicePreview preview;
         try
         {
-            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, purchase.Cadence);
+            preview = await invoicePreviewService.GetInvoicePreviewAsync(options, planTier, cadence);
         }
         catch (StripeException stripeException)
             when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
@@ -100,119 +101,180 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         return RequireSeats(preview, user, options.SubscriptionDetails.Items);
     }
 
-    private InvoicePreview RequireSeats(InvoicePreview preview, UserEntity user, IEnumerable<InvoiceSubscriptionDetailsItemOptions> items)
+    private static (PurchaseSelections Purchase, ProductTierType Tier, PlanCadenceType Cadence, PasswordManagerSelections PasswordManager)
+        ValidatePurchase(PurchaseSelections? purchase)
     {
-        if (preview.PasswordManager.Seats is not null)
+        if (purchase is null)
         {
-            return preview;
+            throw new BadRequestException(
+                nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase),
+                "The Purchase field is required.");
         }
 
-        logger.LogError(
-            "Organization purchase preview for user ({UserId}) resolved no Password Manager seats line. Prices={PriceIds}",
-            user.Id, string.Join(",", items.Select(item => item.Price)));
-        throw new ConflictException(CatalogFaultMessage);
-    }
-
-    private static (PurchaseSelections Purchase, PasswordManagerSelections PasswordManager, BillingAddressSelections BillingAddress)
-        Validate(PreviewOrganizationSubscriptionPurchaseRequest request)
-    {
-        var purchase = request.Purchase
-            ?? throw new BadRequestException("Purchase", "The Purchase field is required.");
-        var passwordManager = purchase.PasswordManager
-            ?? throw new BadRequestException("Purchase.PasswordManager", "The PasswordManager field is required.");
-
-        if (purchase.Tier is not (ProductTierType.Families or ProductTierType.Teams or ProductTierType.Enterprise))
+        if (purchase.PasswordManager is not { } passwordManager)
         {
-            throw new BadRequestException("Purchase.Tier", $"Cannot purchase the {purchase.Tier} plan.");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}",
+                "The PasswordManager field is required.");
         }
 
-        if (!Enum.IsDefined(purchase.Cadence))
+        if (purchase.Tier is not { } tier)
         {
-            throw new BadRequestException("Purchase.Cadence", $"Cadence {purchase.Cadence} is not supported.");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.Tier)}",
+                "The Tier field is required.");
         }
 
-        if (purchase.Tier == ProductTierType.Families)
+        if (tier is not (ProductTierType.Families or ProductTierType.Teams or ProductTierType.Enterprise))
         {
-            if (purchase.Cadence == PlanCadenceType.Monthly)
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.Tier)}",
+                $"Cannot purchase the {tier} plan.");
+        }
+
+        if (purchase.Cadence is not { } cadence)
+        {
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.Cadence)}",
+                "The Cadence field is required.");
+        }
+
+        if (!Enum.IsDefined(cadence))
+        {
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.Cadence)}",
+                $"Cadence {cadence} is not supported.");
+        }
+
+        if (tier == ProductTierType.Families)
+        {
+            if (cadence == PlanCadenceType.Monthly)
             {
-                throw new BadRequestException("Purchase.Cadence", "Monthly cadence is not available on the Families plan.");
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.Cadence)}",
+                    "Monthly cadence is not available on the Families plan.");
             }
 
             if (purchase.SecretsManager != null)
             {
-                throw new BadRequestException("Purchase.SecretsManager", "Secrets Manager is not available on the Families plan.");
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}",
+                    "Secrets Manager is not available on the Families plan.");
             }
         }
         else if (passwordManager.Sponsored)
         {
-            throw new BadRequestException("Purchase.PasswordManager.Sponsored", "Sponsorship is only available on the Families plan.");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.Sponsored)}",
+                "Sponsorship is only available on the Families plan.");
         }
 
         if (passwordManager.Seats is < 1 or > 100000)
         {
-            throw new BadRequestException("Purchase.PasswordManager.Seats", "Password Manager seats must be between 1 and 100,000");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.Seats)}",
+                "Password Manager seats must be between 1 and 100,000.");
         }
 
         if (passwordManager.AdditionalStorage is < 0 or > 99)
         {
-            throw new BadRequestException("Purchase.PasswordManager.AdditionalStorage", "Additional storage must be between 0 and 99 GB");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.PasswordManager)}.{nameof(PasswordManagerSelections.AdditionalStorage)}",
+                "Additional storage must be between 0 and 99 GB.");
         }
 
         if (purchase.SecretsManager is { } secretsManager)
         {
             if (secretsManager.Seats is < 1 or > 100000)
             {
-                throw new BadRequestException("Purchase.SecretsManager.Seats", "Secrets Manager seats must be between 1 and 100,000");
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.Seats)}",
+                    "Secrets Manager seats must be between 1 and 100,000.");
             }
 
             if (secretsManager.AdditionalServiceAccounts is < 0 or > 100000)
             {
-                throw new BadRequestException("Purchase.SecretsManager.AdditionalServiceAccounts",
-                    "Additional service accounts must be between 0 and 100,000");
+                throw new BadRequestException(
+                    $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.Purchase)}.{nameof(PurchaseSelections.SecretsManager)}.{nameof(SecretsManagerSelections.AdditionalServiceAccounts)}",
+                    "Additional service accounts must be between 0 and 100,000.");
             }
         }
 
-        var billingAddress = request.BillingAddress
-            ?? throw new BadRequestException("BillingAddress", "The BillingAddress field is required.");
+        return (purchase, tier, cadence, passwordManager);
+    }
+
+    private InvoiceCustomerDetailsOptions ResolveBillingAddress(BillingAddressSelections? billingAddress)
+    {
+        if (billingAddress is null)
+        {
+            throw new BadRequestException(
+                nameof(PreviewOrganizationSubscriptionPurchaseRequest.BillingAddress),
+                "The BillingAddress field is required.");
+        }
 
         if (string.IsNullOrWhiteSpace(billingAddress.Country) || billingAddress.Country.Length != 2)
         {
-            throw new BadRequestException("BillingAddress.Country", "Country code must be 2 characters long.");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.BillingAddress)}.{nameof(BillingAddressSelections.Country)}",
+                "Country code must be 2 characters long.");
         }
 
         if (string.IsNullOrWhiteSpace(billingAddress.PostalCode))
         {
-            throw new BadRequestException("BillingAddress.PostalCode", "The PostalCode field is required.");
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.BillingAddress)}.{nameof(BillingAddressSelections.PostalCode)}",
+                "The PostalCode field is required.");
         }
 
-        if (billingAddress.TaxId is { } taxId)
+        var customerDetails = new InvoiceCustomerDetailsOptions
         {
-            if (string.IsNullOrWhiteSpace(taxId.Code))
-            {
-                throw new BadRequestException("BillingAddress.TaxId.Code", "The Code field is required.");
-            }
+            Address = new AddressOptions { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode }
+        };
 
-            if (string.IsNullOrWhiteSpace(taxId.Value))
-            {
-                throw new BadRequestException("BillingAddress.TaxId.Value", "The Value field is required.");
-            }
-        }
-
-        return (purchase, passwordManager, billingAddress);
-    }
-
-    private async Task<OrganizationPlan> GetPlanAsync(UserEntity user, PlanType planType)
-    {
-        var plan = await pricingClient.GetPlan(planType);
-        if (plan is null)
+        if (billingAddress.TaxId is not { } taxId)
         {
-            logger.LogError(
-                "Organization purchase preview for user ({UserId}) found no {PlanType} plan in the pricing service",
-                user.Id, planType);
-            throw new ConflictException(CatalogFaultMessage);
+            return customerDetails;
         }
 
-        return plan;
+        if (string.IsNullOrWhiteSpace(taxId.Code))
+        {
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.BillingAddress)}.{nameof(BillingAddressSelections.TaxId)}.{nameof(TaxIdSelection.Code)}",
+                "The Code field is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(taxId.Value))
+        {
+            throw new BadRequestException(
+                $"{nameof(PreviewOrganizationSubscriptionPurchaseRequest.BillingAddress)}.{nameof(BillingAddressSelections.TaxId)}.{nameof(TaxIdSelection.Value)}",
+                "The Value field is required.");
+        }
+
+        var derivedCode = taxService.GetStripeTaxCode(billingAddress.Country, taxId.Value);
+        if (derivedCode == null)
+        {
+            // Never log the tax ID value itself; it can be personal data.
+            logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                billingAddress.Country, taxId.Code);
+        }
+
+        var taxIdType = derivedCode ?? taxId.Code;
+        customerDetails.TaxIds =
+        [
+            new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = taxId.Value }
+        ];
+
+        if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            customerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
+            {
+                Type = StripeConstants.TaxIdType.EUVAT,
+                Value = $"ES{taxId.Value}"
+            });
+        }
+
+        return customerDetails;
     }
 
     private static (PlanType PlanType, PlanTierType PlanTier) ResolvePlan(ProductTierType tier, PlanCadenceType cadence) =>
@@ -226,52 +288,29 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
             _ => throw new InvalidOperationException($"No plan maps to {tier} {cadence}.")
         };
 
-    private InvoiceCreatePreviewOptions BuildBaseOptions(BillingAddressSelections billingAddress)
+    private static InvoiceCreatePreviewOptions BuildBaseOptions(InvoiceCustomerDetailsOptions customerDetails) => new()
     {
-        var options = new InvoiceCreatePreviewOptions
+        AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
+        Currency = "usd",
+        CustomerDetails = customerDetails,
+        SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
         {
-            AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true },
-            Currency = "usd",
-            CustomerDetails = new InvoiceCustomerDetailsOptions
-            {
-                Address = new AddressOptions { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode }
-            },
-            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
-            {
-                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic }
-            }
-        };
+            BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic }
+        }
+    };
 
-        if (billingAddress.TaxId is not { Code: { } clientCode, Value: { } taxIdValue })
+    private async Task<OrganizationPlan> GetPlanAsync(UserEntity user, PlanType planType)
+    {
+        var plan = await pricingClient.GetPlan(planType);
+        if (plan is null)
         {
-            return options;
+            logger.LogError(
+                "Organization purchase preview for user ({UserId}) found no {PlanType} plan in the pricing service",
+                user.Id, planType);
+            throw new ConflictException(CatalogFaultMessage);
         }
 
-        string? derivedCode = taxService.GetStripeTaxCode(billingAddress.Country!, taxIdValue);
-        if (derivedCode == null)
-        {
-            // Never log the tax ID value itself; it can be personal data.
-            logger.LogWarning(
-                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
-                billingAddress.Country, clientCode);
-        }
-
-        var taxIdType = derivedCode ?? clientCode;
-        options.CustomerDetails.TaxIds =
-        [
-            new InvoiceCustomerDetailsTaxIdOptions { Type = taxIdType, Value = taxIdValue }
-        ];
-
-        if (taxIdType == StripeConstants.TaxIdType.SpanishNIF)
-        {
-            options.CustomerDetails.TaxIds.Add(new InvoiceCustomerDetailsTaxIdOptions
-            {
-                Type = StripeConstants.TaxIdType.EUVAT,
-                Value = $"ES{taxIdValue}"
-            });
-        }
-
-        return options;
+        return plan;
     }
 
     private static List<InvoiceSubscriptionDetailsItemOptions> BuildItems(
@@ -334,5 +373,18 @@ internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
         return allEligible
             ? trimmedCoupons.Select(coupon => new InvoiceDiscountOptions { Coupon = coupon }).ToList()
             : null;
+    }
+
+    private InvoicePreview RequireSeats(InvoicePreview preview, UserEntity user, IEnumerable<InvoiceSubscriptionDetailsItemOptions> items)
+    {
+        if (preview.PasswordManager.Seats is not null)
+        {
+            return preview;
+        }
+
+        logger.LogError(
+            "Organization purchase preview for user ({UserId}) resolved no Password Manager seats line. Prices={PriceIds}",
+            user.Id, string.Join(",", items.Select(item => item.Price)));
+        throw new ConflictException(CatalogFaultMessage);
     }
 }

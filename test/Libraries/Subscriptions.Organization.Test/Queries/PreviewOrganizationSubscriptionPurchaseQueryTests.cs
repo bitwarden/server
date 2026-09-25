@@ -72,6 +72,34 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
         await AssertNoIoAsync();
     }
 
+    [Theory]
+    [InlineData(ProductTierType.Families)]
+    [InlineData(ProductTierType.Teams)]
+    [InlineData(ProductTierType.Enterprise)]
+    public async Task Run_WhenTierIsMissing_ThrowsBadRequest(ProductTierType tier)
+    {
+        var request = Request(Purchase(tier) with { Tier = null });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal("The Tier field is required.", ErrorFor(exception, "Purchase.Tier"));
+        await AssertNoIoAsync();
+    }
+
+    [Theory]
+    [InlineData(ProductTierType.Families)]
+    [InlineData(ProductTierType.Teams)]
+    [InlineData(ProductTierType.Enterprise)]
+    public async Task Run_WhenCadenceIsMissing_ThrowsBadRequestForEveryTier(ProductTierType tier)
+    {
+        var request = Request(Purchase(tier) with { Cadence = null });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
+
+        Assert.Equal("The Cadence field is required.", ErrorFor(exception, "Purchase.Cadence"));
+        await AssertNoIoAsync();
+    }
+
     [Fact]
     public async Task Run_WhenCadenceIsUndefined_ThrowsBadRequest()
     {
@@ -119,10 +147,10 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Theory]
-    [InlineData(0, 0, "Purchase.PasswordManager.Seats", "Password Manager seats must be between 1 and 100,000")]
-    [InlineData(100001, 0, "Purchase.PasswordManager.Seats", "Password Manager seats must be between 1 and 100,000")]
-    [InlineData(1, -1, "Purchase.PasswordManager.AdditionalStorage", "Additional storage must be between 0 and 99 GB")]
-    [InlineData(1, 100, "Purchase.PasswordManager.AdditionalStorage", "Additional storage must be between 0 and 99 GB")]
+    [InlineData(0, 0, "Purchase.PasswordManager.Seats", "Password Manager seats must be between 1 and 100,000.")]
+    [InlineData(100001, 0, "Purchase.PasswordManager.Seats", "Password Manager seats must be between 1 and 100,000.")]
+    [InlineData(1, -1, "Purchase.PasswordManager.AdditionalStorage", "Additional storage must be between 0 and 99 GB.")]
+    [InlineData(1, 100, "Purchase.PasswordManager.AdditionalStorage", "Additional storage must be between 0 and 99 GB.")]
     public async Task Run_WhenPasswordManagerSelectionsAreOutOfRange_ThrowsBadRequest(
         int seats, int additionalStorage, string expectedKey, string expectedMessage)
     {
@@ -135,12 +163,12 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Theory]
-    [InlineData(0, 0, "Purchase.SecretsManager.Seats")]
-    [InlineData(100001, 0, "Purchase.SecretsManager.Seats")]
-    [InlineData(1, -1, "Purchase.SecretsManager.AdditionalServiceAccounts")]
-    [InlineData(1, 100001, "Purchase.SecretsManager.AdditionalServiceAccounts")]
+    [InlineData(0, 0, "Purchase.SecretsManager.Seats", "Secrets Manager seats must be between 1 and 100,000.")]
+    [InlineData(100001, 0, "Purchase.SecretsManager.Seats", "Secrets Manager seats must be between 1 and 100,000.")]
+    [InlineData(1, -1, "Purchase.SecretsManager.AdditionalServiceAccounts", "Additional service accounts must be between 0 and 100,000.")]
+    [InlineData(1, 100001, "Purchase.SecretsManager.AdditionalServiceAccounts", "Additional service accounts must be between 0 and 100,000.")]
     public async Task Run_WhenSecretsManagerSelectionsAreOutOfRange_ThrowsBadRequest(
-        int seats, int additionalServiceAccounts, string expectedKey)
+        int seats, int additionalServiceAccounts, string expectedKey, string expectedMessage)
     {
         var request = Request(Purchase(ProductTierType.Enterprise) with
         {
@@ -149,7 +177,7 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
-        Assert.True(exception.ModelState!.ContainsKey(expectedKey));
+        Assert.Equal(expectedMessage, ErrorFor(exception, expectedKey));
         await AssertNoIoAsync();
     }
 
@@ -538,14 +566,16 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     {
         _taxService.GetStripeTaxCode("DE", TaxIdValue).Returns("eu_vat");
         ArrangePreviewWithoutSeats(PlanTierType.Enterprise);
+        var user = User();
 
-        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(
+        var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(user, Request(
             Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(5, 0, false)),
             new BillingAddressSelections("DE", "10115", new TaxIdSelection("eu_vat", TaxIdValue)))));
 
         Assert.Equal(CatalogFaultMessage, exception.Message);
         var error = Assert.Single(_logger.Errors);
         Assert.Contains("enterprise-seat-annually", error);
+        Assert.Contains(user.Id.ToString(), error);
         Assert.DoesNotContain(TaxIdValue, error);
     }
 
