@@ -103,10 +103,14 @@ public class GetOrganizationPlanChangePreviewQuery(
     /// <returns>The preview options for the plan change.</returns>
     private async Task<InvoiceCreatePreviewOptions> BuildPlanChangeOptionsAsync(Organization organization, Plan newPlan)
     {
-        var subscription = await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["items.data.price"] });
-
         var currentPlan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        if (currentPlan.UpgradeSortOrder > newPlan.UpgradeSortOrder)
+        {
+            throw new BadRequestException("You can't downgrade your organization's plan.");
+        }
+
+        var subscription = await GetSubscriptionOrThrowAsync(organization);
         var itemsByPriceId = subscription.Items.ToDictionary(item => item.Price.Id);
 
         var changeSet = BuildPlanChangeSet(organization, currentPlan, newPlan);
@@ -123,6 +127,21 @@ public class GetOrganizationPlanChangePreviewQuery(
                 Items = items, ProrationBehavior = ProrationBehavior.AlwaysInvoice
             }
         };
+    }
+
+    private async Task<Subscription> GetSubscriptionOrThrowAsync(Organization organization)
+    {
+        try
+        {
+            return await stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId,
+                new SubscriptionGetOptions { Expand = ["items.data.price"] });
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == ErrorCodes.ResourceMissing)
+        {
+            logger.LogError("Subscription ({SubscriptionId}) for organization ({OrganizationId}) was not found",
+                organization.GatewaySubscriptionId, organization.Id);
+            throw new NotFoundException();
+        }
     }
 
     /// <summary>

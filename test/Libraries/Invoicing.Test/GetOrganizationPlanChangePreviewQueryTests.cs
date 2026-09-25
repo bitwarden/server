@@ -257,6 +257,47 @@ public class GetOrganizationPlanChangePreviewQueryTests
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
     }
 
+    [Fact]
+    public async Task Run_Downgrade_ThrowsBadRequestWithoutCallingStripe()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+        var planChange = new OrganizationPlanChange { Tier = PlanTierType.Families, Cadence = PlanCadenceType.Annually, Country = "US", PostalCode = "90210" };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
+
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
+    public async Task Run_SubscriptionMissingInStripe_ThrowsNotFound()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+        var planChange = new OrganizationPlanChange { Tier = PlanTierType.Enterprise, Cadence = PlanCadenceType.Annually, Country = "US", PostalCode = "90210" };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>())
+            .Returns<Subscription>(_ => throw new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing } });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.Run(organization, planChange));
+    }
+
     private static void AssertSwap(List<InvoiceSubscriptionDetailsItemOptions> items, string id, string price, long quantity)
     {
         var item = Assert.Single(items, candidate => candidate.Id == id);
@@ -336,6 +377,15 @@ public class GetOrganizationPlanChangePreviewQueryTests
             IsAnnual = isAnnual;
             PasswordManager = passwordManager;
             SecretsManager = secretsManager;
+            UpgradeSortOrder = productTier switch
+            {
+                ProductTierType.Free => -1,
+                ProductTierType.Families => 1,
+                ProductTierType.TeamsStarter => 2,
+                ProductTierType.Teams => 3,
+                ProductTierType.Enterprise => 4,
+                _ => 0
+            };
         }
     }
 }
