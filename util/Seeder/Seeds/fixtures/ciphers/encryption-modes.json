@@ -1,0 +1,594 @@
+{
+  "$schema": "../../schemas/cipher.schema.json",
+  "items": [
+    {
+      "type": "login",
+      "name": "v0 — legacy attachment (no attachment key)",
+      "notes": "User-key cipher with a v0 attachment: file bytes and filename encrypted directly with the user key, no attachment key. Exercises the oldest attachment decrypt path.",
+      "login": {
+        "username": "v0@example.com",
+        "password": "fakeV0Password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-recovery-codes-1.txt",
+          "fileName": "recovery-codes.txt",
+          "attachmentVersion": "v0"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "v1 — attachment key wrapped by user key",
+      "notes": "User-key cipher with a v1 attachment whose per-attachment key is wrapped by the user key; file bytes encrypted with the attachment key.",
+      "login": {
+        "username": "v1@example.com",
+        "password": "fakeV1Password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-expense-report-3.pdf",
+          "fileName": "expense-report.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "v2 — attachment key wrapped by cipher key",
+      "notes": "Cipher-key cipher with a v2 attachment whose per-attachment key is wrapped by the cipher key (modern scheme).",
+      "cipherEncryption": "cipherKey",
+      "login": {
+        "username": "v2@example.com",
+        "password": "fakeV2Password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Multi — v0 + v1 attachments on one cipher",
+      "notes": "A single user-key cipher carrying two attachments in different legacy schemes (v0 no-key and v1 user-key-wrapped).",
+      "login": {
+        "username": "multi@example.com",
+        "password": "fakeMultiPassword"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-international-note-3.txt",
+          "fileName": "notes.txt",
+          "attachmentVersion": "v0"
+        },
+        {
+          "file": "mock-seeder-data-todo-4.txt",
+          "fileName": "todo.txt",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "card",
+      "name": "Card — user-key with a statement attachment",
+      "notes": "User-key card cipher carrying a v1 statement attachment — proves attachment schemes work on non-login cipher types.",
+      "card": {
+        "cardholderName": "Test Cardholder",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "12",
+        "expYear": "2030",
+        "code": "123"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "statement.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "identity",
+      "name": "Identity — cipher-key with ID document attachments",
+      "notes": "Cipher-key identity cipher carrying v2 attachments (passport, insurance card, contract), each with a per-attachment key wrapped by the cipher key.",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Test",
+        "lastName": "Identity",
+        "address1": "123 Example St",
+        "city": "Testville",
+        "state": "CA",
+        "postalCode": "90210",
+        "country": "US",
+        "email": "identity@example.com"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-passport-scan-2.pdf",
+          "fileName": "passport.pdf",
+          "attachmentVersion": "v2"
+        },
+        {
+          "file": "mock-seeder-data-insurance-card-4.pdf",
+          "fileName": "insurance-card.pdf",
+          "attachmentVersion": "v2"
+        },
+        {
+          "file": "mock-seeder-data-contract-5.pdf",
+          "fileName": "contract.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "Secure note — user-key with policy + wifi attachments",
+      "notes": "User-key secure note carrying a v0 policy and a v1 Wi-Fi note attachment.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-security-policy-5.txt",
+          "fileName": "policy.txt",
+          "attachmentVersion": "v0"
+        },
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "wifi.txt",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "sshKey",
+      "name": "SSH key — cipher-key with a public-key attachment",
+      "notes": "Cipher-key SSH key cipher carrying a v2 public-key attachment, covering the fifth cipher type.",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly seeder@example.com",
+        "keyFingerprint": "SHA256:ExampleFakeFingerprintForSeedingOnly"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-ssh-public-key-6.txt",
+          "fileName": "id_ed25519.pub",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Control — user-key cipher, no attachment",
+      "notes": "Baseline user-key cipher with no attachment.",
+      "login": {
+        "username": "control1@example.com",
+        "password": "fakeControl1Password"
+      }
+    },
+    {
+      "type": "login",
+      "name": "Control — cipher-key cipher, no attachment",
+      "notes": "Baseline cipher-key cipher with no attachment — cipher-key encryption is independent of attachments.",
+      "cipherEncryption": "cipherKey",
+      "login": {
+        "username": "control2@example.com",
+        "password": "fakeControl2Password"
+      }
+    },
+    {
+      "type": "bankAccount",
+      "name": "Bank account — user-key, no attachment",
+      "notes": "User-key bank account cipher (type 6). Exercises the sixth cipher type with no cipher key.",
+      "bankAccount": {
+        "bankName": "Example Bank",
+        "nameOnAccount": "Example Person",
+        "accountType": "checking",
+        "accountNumber": "000000000",
+        "routingNumber": "110000000",
+        "branchNumber": "001",
+        "pin": "0000",
+        "swiftCode": "EXAMPUS00",
+        "iban": "GB00EXAM00000000000000",
+        "bankContactPhone": "555-0100"
+      }
+    },
+    {
+      "type": "bankAccount",
+      "name": "Bank account — cipher-key with a v2 statement",
+      "notes": "Cipher-key bank account cipher carrying a v2 statement attachment.",
+      "cipherEncryption": "cipherKey",
+      "bankAccount": {
+        "bankName": "Example Savings & Loan",
+        "nameOnAccount": "Example Person",
+        "accountType": "savings",
+        "accountNumber": "000000001",
+        "routingNumber": "110000000",
+        "swiftCode": "EXAMPUS01"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "driversLicense",
+      "name": "Driver's license — user-key with a v1 scan",
+      "notes": "User-key driver's license cipher (type 7) carrying a v1 scanned-license attachment.",
+      "driversLicense": {
+        "firstName": "Example",
+        "middleName": "Q",
+        "lastName": "Person",
+        "dateOfBirth": "1990-01-01",
+        "licenseNumber": "D0000000",
+        "issuingCountry": "United States",
+        "issuingState": "CA",
+        "issueDate": "2020-01-01",
+        "issuingAuthority": "Example DMV",
+        "expirationDate": "2030-01-01",
+        "licenseClass": "C"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-insurance-card-4.pdf",
+          "fileName": "license-scan.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "driversLicense",
+      "name": "Driver's license — cipher-key, no attachment",
+      "notes": "Cipher-key driver's license cipher with no attachment.",
+      "cipherEncryption": "cipherKey",
+      "driversLicense": {
+        "firstName": "Example",
+        "lastName": "Person",
+        "dateOfBirth": "1985-06-15",
+        "licenseNumber": "D0000001",
+        "issuingCountry": "United States",
+        "issuingState": "NY",
+        "issueDate": "2021-03-01",
+        "expirationDate": "2029-03-01",
+        "licenseClass": "C"
+      }
+    },
+    {
+      "type": "passport",
+      "name": "Passport — user-key, no attachment",
+      "notes": "User-key passport cipher (type 8) with no cipher key.",
+      "passport": {
+        "surname": "Person",
+        "givenName": "Example",
+        "dateOfBirth": "1990-01-01",
+        "sex": "X",
+        "birthPlace": "Exampleville",
+        "nationality": "Exampleland",
+        "passportNumber": "X0000000",
+        "passportType": "P",
+        "issuingCountry": "Exampleland",
+        "issuingAuthority": "Example Passport Office",
+        "issueDate": "2020-01-01",
+        "expirationDate": "2030-01-01",
+        "nationalIdentificationNumber": "NID-000000"
+      }
+    },
+    {
+      "type": "passport",
+      "name": "Passport — cipher-key with a v2 scan",
+      "notes": "Cipher-key passport cipher carrying a v2 scanned-passport attachment.",
+      "cipherEncryption": "cipherKey",
+      "passport": {
+        "surname": "Person",
+        "givenName": "Example",
+        "dateOfBirth": "1990-01-01",
+        "sex": "X",
+        "nationality": "Exampleland",
+        "passportNumber": "X0000001",
+        "passportType": "P",
+        "issuingCountry": "Exampleland",
+        "issueDate": "2020-01-01",
+        "expirationDate": "2030-01-01"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-passport-scan-2.pdf",
+          "fileName": "passport.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Company bank portal",
+      "login": {
+        "username": "user-1@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "statement.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Shared email account",
+      "login": {
+        "username": "user-2@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-recovery-codes-1.txt",
+          "fileName": "mfa-backup-codes.txt",
+          "attachmentVersion": "v0"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "Office Wi-Fi",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "wifi.txt",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "Company security policy",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-security-policy-5.txt",
+          "fileName": "policy.txt",
+          "attachmentVersion": "v0"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Expense portal",
+      "login": {
+        "username": "user-5@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-expense-report-3.pdf",
+          "fileName": "expense-report.pdf",
+          "attachmentVersion": "v1"
+        }
+      ]
+    },
+    {
+      "type": "identity",
+      "name": "Acme Supplies (vendor)",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Example",
+        "lastName": "Person 6",
+        "city": "Testville",
+        "country": "US",
+        "email": "person-6@papertrail.example"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-vendor-w9-7.txt",
+          "fileName": "w9.txt",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "card",
+      "name": "Corporate card",
+      "cipherEncryption": "cipherKey",
+      "card": {
+        "cardholderName": "Example Holder 7",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "01",
+        "expYear": "2032",
+        "code": "000"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "card-statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "secureNote",
+      "name": "Signed vendor contract",
+      "cipherEncryption": "cipherKey",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-contract-5.pdf",
+          "fileName": "contract.pdf",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "sshKey",
+      "name": "Production deploy key",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly seeder@example.com",
+        "keyFingerprint": "SHA256:ExampleFakeFingerprintForSeedingOnly"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-ssh-public-key-6.txt",
+          "fileName": "id_ed25519.pub",
+          "attachmentVersion": "v2"
+        }
+      ]
+    },
+    {
+      "type": "login",
+      "name": "Old company bank portal (archived)",
+      "login": {
+        "username": "user-10@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "old-statement.pdf",
+          "attachmentVersion": "v1"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "identity",
+      "name": "Former vendor W-9 (archived)",
+      "cipherEncryption": "cipherKey",
+      "identity": {
+        "firstName": "Example",
+        "lastName": "Person 11",
+        "city": "Testville",
+        "country": "US",
+        "email": "person-11@papertrail.example"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-vendor-w9-7.txt",
+          "fileName": "w9.txt",
+          "attachmentVersion": "v2"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "login",
+      "name": "Deprecated shared email (archived)",
+      "login": {
+        "username": "user-12@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-recovery-codes-1.txt",
+          "fileName": "mfa-backup-codes.txt",
+          "attachmentVersion": "v0"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "sshKey",
+      "name": "Retired deploy key (archived)",
+      "cipherEncryption": "cipherKey",
+      "sshKey": {
+        "privateKey": "-----BEGIN OPENSSH PRIVATE KEY-----\nFAKE-EXAMPLE-NOT-A-REAL-KEY\n-----END OPENSSH PRIVATE KEY-----",
+        "publicKey": "ssh-ed25519 AAAAExampleFakeKeyNotRealForSeedingOnly seeder@example.com",
+        "keyFingerprint": "SHA256:ExampleFakeFingerprintForSeedingOnly"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-ssh-public-key-6.txt",
+          "fileName": "id_ed25519.pub",
+          "attachmentVersion": "v2"
+        }
+      ],
+      "archived": true
+    },
+    {
+      "type": "login",
+      "name": "Cancelled expense portal (deleted)",
+      "login": {
+        "username": "user-14@papertrail.example",
+        "password": "fake-example-password"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-expense-report-3.pdf",
+          "fileName": "expense-report.pdf",
+          "attachmentVersion": "v1"
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "type": "secureNote",
+      "name": "Old office Wi-Fi (deleted)",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-wifi-credentials-2.txt",
+          "fileName": "wifi.txt",
+          "attachmentVersion": "v0"
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "type": "secureNote",
+      "name": "Terminated vendor contract (deleted)",
+      "cipherEncryption": "cipherKey",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-contract-5.pdf",
+          "fileName": "contract.pdf",
+          "attachmentVersion": "v2"
+        }
+      ],
+      "deleted": true
+    },
+    {
+      "type": "secureNote",
+      "name": "Superseded security policy (archived+deleted)",
+      "notes": "EXAMPLE secure note - fake seeder test data.",
+      "attachments": [
+        {
+          "file": "mock-seeder-data-security-policy-5.txt",
+          "fileName": "policy.txt",
+          "attachmentVersion": "v1"
+        }
+      ],
+      "archived": true,
+      "deleted": true
+    },
+    {
+      "type": "card",
+      "name": "Cancelled corporate card (archived+deleted)",
+      "cipherEncryption": "cipherKey",
+      "card": {
+        "cardholderName": "Example Holder 18",
+        "brand": "Visa",
+        "number": "4111111111111111",
+        "expMonth": "01",
+        "expYear": "2032",
+        "code": "000"
+      },
+      "attachments": [
+        {
+          "file": "mock-seeder-data-bank-statement-1.pdf",
+          "fileName": "card-statement.pdf",
+          "attachmentVersion": "v2"
+        }
+      ],
+      "archived": true,
+      "deleted": true
+    }
+  ]
+}

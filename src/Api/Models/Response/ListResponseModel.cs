@@ -5,6 +5,15 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Api.Models.Response;
 
+/// <summary>
+/// A paginated list response wrapper.
+/// </summary>
+/// <remarks>
+/// Deprecated in favor of <c>Bit.HttpExtensions.ListResponseModel</c>.
+/// </remarks>
+[Obsolete(
+    "Use Bit.HttpExtensions.ListResponseModel instead.",
+    DiagnosticId = "BWA0001")]
 public class ListResponseModel<T> : ResponseModel where T : ResponseModel
 {
     public ListResponseModel(IEnumerable<T> data, string continuationToken = null)

@@ -43,4 +43,19 @@ public class ProviderInvoiceItemRepository(
 
         return await query.ToArrayAsync();
     }
+
+    public async Task<ICollection<ProviderInvoiceItem>> GetByProviderIdAndInvoiceId(Guid providerId, string invoiceId)
+    {
+        using var serviceScope = ServiceScopeFactory.CreateScope();
+
+        var databaseContext = GetDatabaseContext(serviceScope);
+
+        var query =
+            from providerInvoiceItem in databaseContext.ProviderInvoiceItems
+            where providerInvoiceItem.ProviderId == providerId &&
+                  providerInvoiceItem.InvoiceId == invoiceId
+            select providerInvoiceItem;
+
+        return await query.ToArrayAsync();
+    }
 }

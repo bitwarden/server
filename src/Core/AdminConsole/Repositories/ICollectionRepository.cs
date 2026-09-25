@@ -1,0 +1,125 @@
+﻿using Bit.Core.Entities;
+using Bit.Core.Models.Data;
+
+#nullable enable
+
+namespace Bit.Core.Repositories;
+
+public interface ICollectionRepository : IRepository<Collection, Guid>
+{
+    Task<int> GetCountByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Returns a collection and fetches group/user associations for the collection.
+    /// </summary>
+    Task<Tuple<Collection?, CollectionAccessDetails>> GetByIdWithAccessAsync(Guid id);
+
+    /// <summary>
+    /// Return all collections that belong to the organization. Does not include any permission details or group/user
+    /// access relationships.
+    /// </summary>
+    Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId);
+
+    /// <inheritdoc cref="GetManyByOrganizationIdAsync"/>
+    /// <remarks>
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
+    /// </remarks>
+    Task<ICollection<Collection>> GetManySharedCollectionsByOrganizationIdAsync(Guid organizationId);
+
+    /// <summary>
+    /// Return all shared collections that belong to the organization. Includes group/user access relationships for each collection.
+    /// </summary>
+    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
+
+    Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
+
+    /// <summary>
+    /// Return all collections a user has access to across all of the organization they're a member of. Includes permission
+    /// details for each collection.
+    /// </summary>
+    Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Returns all shared collections for an organization, including permission info for the specified user.
+    /// This does not perform any authorization checks internally!
+    /// Optionally, you can include access relationships for other Groups/Users and the collections.
+    /// Excludes default collections (My Items collections) - used by Admin Console Collections tab.
+    /// </summary>
+    Task<ICollection<CollectionAdminDetails>> GetManySharedByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
+
+    /// <summary>
+    /// Returns the collection by Id, including permission info for the specified user.
+    /// This does not perform any authorization checks internally!
+    /// Optionally, you can include access relationships for other Groups/Users and the collection.
+    /// </summary>
+    Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
+
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>: a new collection is always created ungoverned, whatever the
+    /// caller set on <paramref name="obj"/>. Use <see cref="SetAccessRuleAssociationsAsync"/> to associate it with an
+    /// access rule.
+    /// </remarks>
+    Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
+    /// <remarks>
+    /// Ignores <see cref="Collection.AccessRuleId"/>, whatever the caller set on <paramref name="obj"/>, so an
+    /// ordinary collection edit can neither erase nor forge a PAM association. Use
+    /// <see cref="SetAccessRuleAssociationsAsync"/> to change it.
+    /// </remarks>
+    Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
+
+    Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
+    Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
+    Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
+
+    /// <summary>
+    /// Returns the distinct user ids of every confirmed member who can Manage the collection: direct Manage
+    /// assignments, Manage via group, org Owners/Admins (when the organization allows admin access to all collection
+    /// items), and Custom users with the EditAnyCollection permission.
+    /// </summary>
+    Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId);
+
+    Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
+
+    /// <summary>
+    /// Creates or updates the access for many collections.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="collectionIds">The Collection IDs to create or update access for.</param>
+    /// <param name="users">The users to grant access to.</param>
+    /// <param name="groups">The groups to grant access to.</param>
+    /// <param name="revisionDate">The revision date to use for the collections.</param>
+    Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups,
+        DateTime revisionDate);
+
+    /// <summary>
+    /// Creates default user collections for the specified organization users.
+    /// Filters internally to only create collections for users who don't already have one.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    Task CreateDefaultCollectionsAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
+    /// <summary>
+    /// Creates default user collections for the specified organization users using bulk insert operations.
+    /// Use this if you need to create collections for > ~1k users.
+    /// Filters internally to only create collections for users who don't already have one.
+    /// </summary>
+    /// <param name="organizationId">The Organization ID.</param>
+    /// <param name="organizationUserIds">The Organization User IDs to create default collections for.</param>
+    /// <param name="defaultCollectionName">The encrypted string to use as the default collection name.</param>
+    Task CreateDefaultCollectionsBulkAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, string defaultCollectionName);
+
+    /// <summary>
+    /// Points the given collections at the access rule and clears the rule from any collections that should no
+    /// longer reference it. Both sets are scoped to the organization.
+    /// </summary>
+    /// <param name="organizationId">The organization that owns the access rule and collections.</param>
+    /// <param name="accessRuleId">The access rule to associate.</param>
+    /// <param name="collectionIdsToAssign">Collections that should reference the access rule.</param>
+    /// <param name="collectionIdsToClear">Collections whose reference to the access rule should be removed.</param>
+    Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear);
+}

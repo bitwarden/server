@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Text.Json;
 using Bit.Core.Dirt.Utilities;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -78,6 +79,16 @@ public class IntegrationTemplateProcessorTests
         var expectedEmpty = "";
 
         Assert.Equal(expectedEmpty, IntegrationTemplateProcessor.ReplaceTokens(emptyTemplate, eventMessage));
+    }
+
+    [Theory, BitAutoData]
+    public void ReplaceTokens_JsonInjection_ReturnsJsonEscapedString(EventMessage eventMessage)
+    {
+        var template = "Event #Type# and UserName #UserId#.";
+        var expected = $"Event {JsonSerializer.Serialize(eventMessage.Type.ToString()).Trim('"')} and UserName {JsonSerializer.Serialize(eventMessage.UserId).Trim('"')}.";
+        var result = IntegrationTemplateProcessor.ReplaceTokens(template, eventMessage);
+
+        Assert.Equal(expected, result);
     }
 
     [Theory]

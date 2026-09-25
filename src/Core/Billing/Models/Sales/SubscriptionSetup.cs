@@ -10,6 +10,7 @@ public class SubscriptionSetup
     public required PasswordManager PasswordManagerOptions { get; set; }
     public SecretsManager? SecretsManagerOptions { get; set; }
     public bool SkipTrial = false;
+    public int? TrialLength { get; set; }
     public string? InitiationPath { get; set; }
 
     public class PasswordManager

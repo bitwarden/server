@@ -15,6 +15,11 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
             serviceCollection.AddSingleton<IPlayIdService, NeverPlayIdServices>();
             serviceCollection.AddHttpContextAccessor();
         });
+
+        // Keep license signing deterministic regardless of a developer's local user secrets: with no
+        // licensing certificate configured, the self-hosted premium path skips signing and warns.
+        UpdateConfiguration("globalSettings:licenseCertificatePath", null);
+        UpdateConfiguration("globalSettings:licenseCertificatePassword", null);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -31,13 +36,20 @@ public class SeederApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
     public void ConfigureAuth(string username, string password)
     {
+        ConfigureAccounts((username, password));
+    }
+
+    public void ConfigureAccounts(params (string Username, string Password)[] accounts)
+    {
         UpdateConfiguration(builder =>
         {
-            builder.AddInMemoryCollection(new Dictionary<string, string>
+            var entries = new Dictionary<string, string>();
+            for (var i = 0; i < accounts.Length; i++)
             {
-                { "seederSettings:Username", username},
-                { "seederSettings:Password", password}
-            });
+                entries[$"seederSettings:Accounts:{i}:Username"] = accounts[i].Username;
+                entries[$"seederSettings:Accounts:{i}:Password"] = accounts[i].Password;
+            }
+            builder.AddInMemoryCollection(entries);
         });
     }
 }

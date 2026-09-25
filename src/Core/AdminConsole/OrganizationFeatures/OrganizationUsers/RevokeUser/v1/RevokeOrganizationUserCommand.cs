@@ -17,20 +17,26 @@ public class RevokeOrganizationUserCommand(
     IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     : IRevokeOrganizationUserCommand
 {
-    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)
+    public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId, RevocationReason reason)
     {
         if (revokingUserId.HasValue && organizationUser.UserId == revokingUserId.Value)
         {
-            throw new BadRequestException("You cannot revoke yourself.");
+            throw new BadRequestException(new CannotRevokeYourself().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && revokingUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException("Only owners can revoke other owners.");
+            throw new BadRequestException(new OnlyOwnersCanRevokeOwners().Message);
         }
 
-        await RepositoryRevokeUserAsync(organizationUser);
+        if (organizationUser.Type == OrganizationUserType.Admin && revokingUserId.HasValue &&
+            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+        {
+            throw new BadRequestException(new CustomUsersCannotRevokeAdmins().Message);
+        }
+
+        await RepositoryRevokeUserAsync(organizationUser, reason);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
 
         if (organizationUser.UserId.HasValue)
@@ -40,9 +46,9 @@ public class RevokeOrganizationUserCommand(
     }
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser,
-        EventSystemUser systemUser)
+        EventSystemUser systemUser, RevocationReason reason)
     {
-        await RepositoryRevokeUserAsync(organizationUser);
+        await RepositoryRevokeUserAsync(organizationUser, reason);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked,
             systemUser);
 
@@ -52,20 +58,21 @@ public class RevokeOrganizationUserCommand(
         }
     }
 
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
+    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, RevocationReason reason)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException("Already revoked.");
+            throw new BadRequestException(new AlreadyRevoked().Message);
         }
 
         if (!await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
                 new[] { organizationUser.Id }, includeProvider: true))
         {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
+            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
         }
 
-        await organizationUserRepository.RevokeAsync(organizationUser.Id);
+        await organizationUserRepository.RevokeAsync(organizationUser.Id, reason);
         organizationUser.Status = OrganizationUserStatusType.Revoked;
+        organizationUser.RevocationReason = reason;
     }
 }

@@ -13,12 +13,26 @@ public class ExtendedProviderAbilityCacheService(
 {
     public const string CacheName = "ProviderAbilities";
 
-    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId)
+    public async Task<ProviderAbility?> GetProviderAbilityAsync(Guid providerId, CancellationToken cancellationToken = default)
     {
         return await cache.GetOrSetAsync<ProviderAbility?>(
             $"{providerId}",
-            async _ => await providerRepository.GetAbilityAsync(providerId)
+            async (_, _) => await providerRepository.GetAbilityAsync(providerId),
+            token: cancellationToken
         );
+    }
+
+    public async Task<Dictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync(IEnumerable<Guid> providerIds, CancellationToken cancellationToken = default)
+    {
+        var tasks = providerIds
+            .Distinct()
+            .Select(providerId => GetProviderAbilityAsync(providerId, cancellationToken));
+
+        var results = await Task.WhenAll(tasks);
+
+        return results
+            .Where(ability => ability != null)
+            .ToDictionary(ability => ability!.Id, ability => ability!);
     }
 
     public async Task UpsertProviderAbilityAsync(Provider provider)

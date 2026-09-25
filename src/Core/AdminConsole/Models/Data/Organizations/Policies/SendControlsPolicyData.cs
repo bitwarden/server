@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Tools.Enums;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
@@ -8,4 +9,13 @@ public class SendControlsPolicyData : IPolicyDataModel
     public bool DisableSend { get; set; }
     [Display(Name = "DisableHideEmail")]
     public bool DisableHideEmail { get; set; }
+    [Display(Name = "AllowedAccessControl")]
+    public SendWhoCanAccessType? WhoCanAccess { get; set; }
+    [Display(Name = "AllowedDomains")]
+    [StringLength(1000)]
+    public string? AllowedDomains { get; set; }
+    [Display(Name = "DeletionHours")]
+    public int? DeletionHours { get; set; }
+    [Display(Name = "AllowedSendTypes")]
+    public SendType[]? AllowedSendTypes { get; set; }
 }

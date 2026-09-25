@@ -18,14 +18,23 @@ public class DbMigrator
     private readonly ILogger<DbMigrator> _logger;
     private readonly bool _skipDatabasePreparation;
     private readonly bool _noTransactionMigration;
+    private readonly int? _executionTimeoutSeconds;
 
     public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-       bool skipDatabasePreparation = false, bool noTransactionMigration = false)
+       bool skipDatabasePreparation = false, bool noTransactionMigration = false,
+       int? executionTimeoutSeconds = null)
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
         _skipDatabasePreparation = skipDatabasePreparation;
         _noTransactionMigration = noTransactionMigration;
+        _executionTimeoutSeconds = executionTimeoutSeconds;
+
+        if (executionTimeoutSeconds < 0)
+        {
+            _logger.LogWarning("Ignoring migration execution timeout of {Seconds} seconds because it is negative. " +
+                "Using the default.", executionTimeoutSeconds);
+        }
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
@@ -128,12 +137,14 @@ public class DbMigrator
             .SqlDatabase(_connectionString)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-            .WithExecutionTimeout(TimeSpan.FromMinutes(5));
+            .WithExecutionTimeout(ResolveExecutionTimeout(_executionTimeoutSeconds,
+                MigratorConstants.DefaultExecutionTimeoutMinutes));
 
         if (_noTransactionMigration)
         {
             builder = builder.WithoutTransaction()
-                .WithExecutionTimeout(TimeSpan.FromMinutes(60));
+                .WithExecutionTimeout(ResolveExecutionTimeout(_executionTimeoutSeconds,
+                    MigratorConstants.NoTransactionExecutionTimeoutMinutes));
         }
         else
         {
@@ -186,6 +197,18 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
 
         return result.Successful;
+    }
+
+    // zero is passed through as a command timeout of zero, which means no limit
+    internal static TimeSpan ResolveExecutionTimeout(int? executionTimeoutSeconds, int defaultMinutes)
+    {
+        // a negative command timeout throws when assigned, so fall back to the default
+        if (executionTimeoutSeconds is null or < 0)
+        {
+            return TimeSpan.FromMinutes(defaultMinutes);
+        }
+
+        return TimeSpan.FromSeconds(executionTimeoutSeconds.Value);
     }
 
     private ILogger<DbMigrator> CreateLogger()

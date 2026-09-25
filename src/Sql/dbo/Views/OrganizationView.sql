@@ -65,6 +65,10 @@ SELECT
     [UsePhishingBlocker],
     [UseDisableSmAdsForUsers],
     [UseMyItems],
-    [ExemptFromBillingAutomation]
+    [ExemptFromBillingAutomation],
+    [UseInviteLinks],
+    [UsePam],
+    [PamSeats],
+    [MaxAutoscalePamSeats]
 FROM
     [dbo].[Organization]

@@ -84,6 +84,7 @@ public class EnvironmentFileBuilder
             ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
             ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
             ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
+            ["globalSettings__sqlServer__migrationExecutionTimeoutSeconds"] = string.Empty,
             ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
             ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
                 Helpers.SecureRandomString(64, alpha: true, numeric: true),
@@ -178,13 +179,13 @@ public class EnvironmentFileBuilder
         {
             sw.Write(template(new TemplateModel(_globalValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/docker/global.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/docker/global.env"]);
 
         using (var sw = File.CreateText($"{_context.App.RootDirectory}/docker/mssql.env"))
         {
             sw.Write(template(new TemplateModel(_mssqlValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/docker/mssql.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/docker/mssql.env"]);
 
         Helpers.WriteLine(_context, "Building docker environment override files.");
         Directory.CreateDirectory($"{_context.App.RootDirectory}/env/");
@@ -192,13 +193,13 @@ public class EnvironmentFileBuilder
         {
             sw.Write(template(new TemplateModel(_globalOverrideValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/global.override.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/global.override.env"]);
 
         using (var sw = File.CreateText($"{_context.App.RootDirectory}/env/mssql.override.env"))
         {
             sw.Write(template(new TemplateModel(_mssqlOverrideValues)));
         }
-        Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/mssql.override.env");
+        Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/mssql.override.env"]);
 
         if (_context.Config.EnableKeyConnector)
         {
@@ -207,7 +208,7 @@ public class EnvironmentFileBuilder
                 sw.Write(template(new TemplateModel(_keyConnectorOverrideValues)));
             }
 
-            Helpers.Exec($"chmod 600 {_context.App.RootDirectory}/env/key-connector.override.env");
+            Helpers.Exec("chmod", ["600", $"{_context.App.RootDirectory}/env/key-connector.override.env"]);
         }
 
         // Empty uid env file. Only used on Linux hosts.

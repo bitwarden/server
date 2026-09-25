@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Api.Tools.Utilities;
-using Bit.Core.Models.Api;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -12,7 +11,7 @@ namespace Bit.Api.Tools.Models.Response;
 /// A response issued to a Bitwarden client in response to ownership operations.
 /// </summary>
 /// <seealso cref="SendAccessResponseModel" />
-public class SendResponseModel : ResponseModel
+public class SendResponseModel : HttpExtensions.ResponseModel
 {
     /// <summary>
     /// Instantiates a send response model
@@ -47,7 +46,6 @@ public class SendResponseModel : ResponseModel
         Disabled = send.Disabled;
         HideEmail = send.HideEmail.GetValueOrDefault();
 
-        SendData sendData;
         switch (send.Type)
         {
             case SendType.File:
@@ -56,7 +54,8 @@ public class SendResponseModel : ResponseModel
                                                              throw new NullReferenceException(
                                                                  "Send Data is required")) ??
                     throw new JsonException("Failed to deserialize send file data.");
-                sendData = fileData;
+                Name = fileData.Name;
+                Notes = fileData.Notes;
                 File = new SendFileModel(fileData);
                 break;
             case SendType.Text:
@@ -65,15 +64,23 @@ public class SendResponseModel : ResponseModel
                                                              throw new NullReferenceException(
                                                                  "Send Data is required")) ??
                     throw new JsonException("Failed to deserialize send text data.");
-                sendData = textData;
+                Name = textData.Name;
+                Notes = textData.Notes;
                 Text = new SendTextModel(textData);
+                break;
+            case SendType.Item:
+                var itemData =
+                    JsonSerializer.Deserialize<SendItemData>(send.Data ??
+                                                             throw new NullReferenceException(
+                                                                 "Send Data is required")) ??
+                    throw new JsonException("Failed to deserialize send item data.");
+                Name = itemData.Name;
+                Notes = itemData.Notes;
+                Data = new SendDataModel(itemData);
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
-
-        Name = sendData.Name;
-        Notes = sendData.Notes;
     }
 
     /// <summary>
@@ -125,6 +132,11 @@ public class SendResponseModel : ResponseModel
     /// Contains text data uploaded with the send.
     /// </summary>
     public SendTextModel? Text { get; set; }
+
+    /// <summary>
+    /// Encrypted string containing secret Send data
+    /// </summary>
+    public SendDataModel? Data { get; set; }
 
     /// <summary>
     /// A base64-encoded byte array containing the Send's encryption key.

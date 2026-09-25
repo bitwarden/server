@@ -56,23 +56,31 @@ public class ProgramTests
                 .Returns(mockHandler.ToHttpClient());
 
             Program.MainCore([
-                "-install", "1",
-                "-domain", "example.com",
-                "-letsencrypt", "n",
-                "-os", "lin",
-                "-corev", "test-version-does-not-exist",
-                "-webv", "test-version-does-not-exist",
-                "-dbname", "test-db",
-                "-keyconnectorv", "test-version-does-not-exist",
+                "-install",
+                "1",
+                "-domain",
+                "example.com",
+                "-letsencrypt",
+                "n",
+                "-os",
+                "lin",
+                "-corev",
+                "test-version-does-not-exist",
+                "-webv",
+                "test-version-does-not-exist",
+                "-dbname",
+                "test-db",
+                "-keyconnectorv",
+                "test-version-does-not-exist",
             ], testApp);
 
             // Assert SSL certificate details
             var baseDir = Path.Join(tempDir.FullName, "ssl", "self", "example.com");
             var certFile = new FileInfo(Path.Join(baseDir, "certificate.crt"));
             Assert.True(certFile.Exists);
-            var cert = new X509Certificate2(certFile.FullName);
+            var cert = X509CertificateLoader.LoadCertificateFromFile(certFile.FullName);
 
-            var hundredYearsFromNow = DateTime.UtcNow.AddDays(36500);
+            var hundredYearsFromNow = DateTime.Now.AddDays(36500);
 
             Assert.InRange(cert.NotAfter, hundredYearsFromNow.AddMinutes(-1), hundredYearsFromNow.AddMinutes(1));
 

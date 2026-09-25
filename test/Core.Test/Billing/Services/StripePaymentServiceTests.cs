@@ -34,11 +34,14 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 20m,
-                AmountOff = 1400
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 20m,
+                    AmountOff = 1400
+                }
             },
             End = null
         };
@@ -70,6 +73,7 @@ public class StripePaymentServiceTests
         Assert.Equal(StripeConstants.CouponIDs.Milestone2SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(20m, result.CustomerDiscount.PercentOff);
         Assert.Equal(14.00m, result.CustomerDiscount.AmountOff); // Converted from cents
+        Assert.False(result.CustomerDiscount.IsFromSchedule); // Genuine customer discount, not schedule-derived
     }
 
     [Theory]
@@ -85,11 +89,14 @@ public class StripePaymentServiceTests
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 15m,
-                AmountOff = null
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 15m,
+                    AmountOff = null
+                }
             },
             End = null
         };
@@ -135,20 +142,26 @@ public class StripePaymentServiceTests
 
         var customerDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
-                PercentOff = 25m
+                Coupon = new Coupon
+                {
+                    Id = StripeConstants.CouponIDs.Milestone2SubscriptionDiscount,
+                    PercentOff = 25m
+                }
             },
             End = null
         };
 
         var subscriptionDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "different-coupon-id",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "different-coupon-id",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
@@ -231,20 +244,26 @@ public class StripePaymentServiceTests
 
         var firstDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-10-percent",
-                PercentOff = 10m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-10-percent",
+                    PercentOff = 10m
+                }
             },
             End = null
         };
 
         var secondDiscount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "coupon-20-percent",
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = "coupon-20-percent",
+                    PercentOff = 20m
+                }
             },
             End = null
         };
@@ -387,9 +406,35 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).GetSubscriptionAsync(
             subscriber.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("customer.discount.coupon.applies_to") &&
-                o.Expand.Contains("discounts.coupon.applies_to") &&
+                // customer.discount.source.coupon stops at 4 levels — appending .applies_to would
+                // exceed Stripe's cap, so it's overlaid via a separate Coupon refetch instead.
+                o.Expand.Contains("customer.discount.source.coupon") &&
+                o.Expand.Contains("discounts.source.coupon.applies_to") &&
                 o.Expand.Contains("test_clock")));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task HasSecretsManagerStandalone_FetchesCustomerWithDiscountSourceCouponExpanded(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization organization)
+    {
+        // Arrange
+        organization.GatewayCustomerId = "cus_123";
+        organization.UseSecretsManager = true;
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
+            .Returns(new Customer { Id = "cus_123" });
+
+        // Act
+        await sutProvider.Sut.HasSecretsManagerStandalone(organization);
+
+        // Assert — the 2025-09-30.clover refactor moved Coupon under Discount.Source, so without
+        // this expand Customer.Discount.Source is null and SM-standalone detection silently fails.
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetCustomerAsync(
+            "cus_123",
+            Arg.Is<CustomerGetOptions>(o => o.Expand.Contains("discount.source.coupon")));
     }
 
     [Theory]
@@ -466,6 +511,8 @@ public class StripePaymentServiceTests
                     ],
                     Discounts =
                     [
+                        // Schedule phase discounts expose Coupon directly (no Source wrapper),
+                        // unlike a subscription/customer Discount.
                         new SubscriptionSchedulePhaseDiscount
                         {
                             Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
@@ -495,6 +542,14 @@ public class StripePaymentServiceTests
         Assert.Equal(CouponIDs.Milestone3SubscriptionDiscount, result.CustomerDiscount.Id);
         Assert.Equal(25m, result.CustomerDiscount.PercentOff);
         Assert.True(result.CustomerDiscount.Active);
+        Assert.True(result.CustomerDiscount.IsFromSchedule);
+
+        // Assert — schedule was fetched with the phase coupon expand path. Coupon is direct on the
+        // phase discount (no `.source` segment); `.applies_to` keeps it within Stripe's 4-level cap.
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionScheduleAsync(
+            "sub_sched_test123",
+            Arg.Is<SubscriptionScheduleGetOptions>(o =>
+                o.Expand.Contains("phases.discounts.coupon.applies_to")));
     }
 
     [Theory]
@@ -518,7 +573,7 @@ public class StripePaymentServiceTests
             {
                 Discount = new Discount
                 {
-                    Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m },
+                    Source = new DiscountSource { Coupon = new Coupon { Id = "existing-coupon", PercentOff = 10m } },
                     End = null
                 }
             },
@@ -795,7 +850,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -869,6 +930,8 @@ public class StripePaymentServiceTests
                     ],
                     Discounts =
                     [
+                        // Schedule phase discounts expose Coupon directly (no Source wrapper),
+                        // unlike a subscription/customer Discount.
                         new SubscriptionSchedulePhaseDiscount
                         {
                             Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
@@ -962,7 +1025,13 @@ public class StripePaymentServiceTests
                     [
                         new SubscriptionSchedulePhaseDiscount
                         {
-                            Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                            Discount = new Discount
+                            {
+                                Source = new DiscountSource
+                                {
+                                    Coupon = new Coupon { Id = CouponIDs.Milestone3SubscriptionDiscount, PercentOff = 25m }
+                                }
+                            }
                         }
                     ]
                 }
@@ -1018,9 +1087,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     },
                     new SubscriptionItem
                     {
@@ -1101,9 +1170,9 @@ public class StripePaymentServiceTests
                 [
                     new SubscriptionItem
                     {
+                        Price = new Price { Metadata = new Dictionary<string, string> { { "isAddOn", "true" } } },
                         Plan = new Plan { ProductId = "prod_premium_access", Nickname = "Premium Access", Amount = 0, Interval = "year" },
-                        Quantity = 1,
-                        Metadata = new Dictionary<string, string> { { "isAddOn", "true" } }
+                        Quantity = 1
                     }
                 ]
             }
@@ -1148,13 +1217,234 @@ public class StripePaymentServiceTests
         Assert.True(item.AddonSubscriptionItem);
     }
 
-    #region AdjustSubscription — CompleteSubscriptionUpdate tax exempt alignment
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_AnnualUpgradeSchedule_DoesNotOverrideCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — an annual-upgrade schedule (PM-38333) has the same two-phase, future-phase-2
+        // shape as a price-migration schedule, but Phase 2 carries next year's annual amount, not a
+        // same-cadence reprice of the live monthly line. The annual-upgrade surface is
+        // PendingAnnualUpgrade, not this repricing path — a future reader must not "fix" this gate away.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_teams", Nickname = "Teams Monthly", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly2020" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 9600, ProductId = "prod_teams", Nickname = "Teams Annual" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the live monthly amount survives untouched; the schedule's annual amount never
+        // reaches SubscriptionInfo.Subscription.Items via this path.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(8.00m, item.Amount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_ForeignSchedule_StillOverridesCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — a hand-authored (Dashboard) schedule carries neither annual-upgrade nor
+        // migration-cohort metadata. The ownership gate excludes only AnnualUpgrade schedules, so a
+        // Foreign schedule like this one is still repriced here exactly like a price-migration
+        // schedule would be. Regression guard: an earlier version of this gate excluded everything
+        // that was not PriceMigration, which silently stopped repricing Foreign schedules (and, more
+        // importantly, the personal/Families schedules that carry no metadata at all — see
+        // GetSubscriptionAsync_PersonalScheduleWithNoMetadata_StillOverridesCurrentLineItems).
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_teams", Nickname = "Teams Monthly", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { ["negotiated_term"] = "3y" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 9600, ProductId = "prod_teams", Nickname = "Teams Negotiated" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the Phase 2 amount is applied, not the live monthly amount.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(96.00m, item.Amount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_PersonalScheduleWithNoMetadata_StillOverridesCurrentLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — SchedulePersonalPriceIncrease (Premium and Families price increases) calls
+        // CreateAndConfigureScheduleAsync with no phaseMetadata argument at all, so the schedules it
+        // creates carry no phase metadata whatsoever. This is the exact shape PriceIncreaseScheduler
+        // produces for a personal or Families price-increase schedule. It must still be repriced here;
+        // this is the regression guard for the bug where the ownership gate was inverted and every
+        // Premium/Families price-increase schedule (classified Foreign, since it carries no
+        // migration-cohort metadata) silently stopped being repriced on this endpoint.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Plan = new Plan { ProductId = "prod_families", Nickname = "Families 2019", Amount = 1200, Interval = "year" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { UnitAmount = 4788, ProductId = "prod_families", Nickname = "Families" }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the Phase 2 amount is applied.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal(47.88m, item.Amount);
+    }
 
     [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenNonDirectTaxCountry_SetsReverseCharge(
+    public async Task AdjustSubscription_FetchesSubscriptionAndCustomerWithDiscountSourceCouponExpanded(
         SutProvider<StripePaymentService> sutProvider,
         Organization organization)
     {
+        // Arrange
         var plan = new EnterprisePlan(isAnnual: true);
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.GatewaySubscriptionId = "sub_123";
@@ -1166,12 +1456,8 @@ public class StripePaymentServiceTests
         {
             Id = "sub_123",
             Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "DE" },
-                TaxExempt = TaxExempt.None
-            },
+            Customer = new Customer { Id = "cus_123", Address = new Address { Country = "US" } },
+            CustomerId = "cus_123",
             Items = new StripeList<SubscriptionItem>
             {
                 Data =
@@ -1180,7 +1466,9 @@ public class StripePaymentServiceTests
                     {
                         Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
                         Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
+                        // A non-zero current quantity forces UpdateNeeded=true so the flow reaches the
+                        // finally block's customer re-fetch (the coupon-preservation net).
+                        Quantity = 10
                     }
                 ]
             }
@@ -1203,143 +1491,23 @@ public class StripePaymentServiceTests
             .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
             .Returns(new Customer { Id = "cus_123" });
 
+        // Act
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
 
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
+        // Assert — the coupon-preservation net reads Customer.Discount.Source.Coupon on both the
+        // subscription and the re-fetched customer; without these expands both read null and the net
+        // silently no-ops (2025-09-30.clover moved Coupon under Discount.Source).
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetSubscriptionAsync(
+            "sub_123",
+            Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("customer.discount.source.coupon")));
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).GetCustomerAsync(
             "cus_123",
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.Reverse));
+            Arg.Is<CustomerGetOptions>(o => o.Expand.Contains("discount.source.coupon")));
     }
-
-    [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenUSWithManualReverse_CorrectsTaxExemptToNone(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization)
-    {
-        var plan = new EnterprisePlan(isAnnual: true);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.Seats = 0;
-        organization.UseSecretsManager = false;
-        organization.MaxStorageGb = null;
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "US" },
-                TaxExempt = TaxExempt.Reverse
-            },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
-                    }
-                ]
-            }
-        };
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
-            .Returns(plan);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
-            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
-            .Returns(new Customer { Id = "cus_123" });
-
-        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(o => o.TaxExempt == TaxExempt.None));
-    }
-
-    [Theory, BitAutoData]
-    public async Task AdjustSubscription_WhenSwissWithReverse_CorrectsTaxExemptToNone(
-        SutProvider<StripePaymentService> sutProvider,
-        Organization organization)
-    {
-        // CH is a direct-tax country — "reverse" is not preserved; it should be corrected to "none".
-        var plan = new EnterprisePlan(isAnnual: true);
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.GatewaySubscriptionId = "sub_123";
-        organization.Seats = 0;
-        organization.UseSecretsManager = false;
-        organization.MaxStorageGb = null;
-
-        var subscription = new Subscription
-        {
-            Id = "sub_123",
-            Status = "active",
-            Customer = new Customer
-            {
-                Id = "cus_123",
-                Address = new Address { Country = "CH" },
-                TaxExempt = TaxExempt.Reverse
-            },
-            Items = new StripeList<SubscriptionItem>
-            {
-                Data =
-                [
-                    new SubscriptionItem
-                    {
-                        Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Plan = new Stripe.Plan { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 0
-                    }
-                ]
-            }
-        };
-
-        sutProvider.GetDependency<IPricingClient>()
-            .GetPlanOrThrow(PlanType.EnterpriseAnnually)
-            .Returns(plan);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns(subscription);
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .UpdateSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>())
-            .Returns(new Subscription { Id = "sub_123", LatestInvoiceId = "inv_123" });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetInvoiceAsync("inv_123", Arg.Any<InvoiceGetOptions>())
-            .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
-
-        sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
-            .Returns(new Customer { Id = "cus_123" });
-
-        await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
-
-        await sutProvider.GetDependency<IStripeAdapter>().Received(1).UpdateCustomerAsync(
-            "cus_123",
-            Arg.Is<CustomerUpdateOptions>(options => options.TaxExempt == TaxExempt.None));
-    }
-
     [Theory, BitAutoData]
     public async Task AdjustSubscription_WhenCustomerIsExempt_DoesNotUpdateTaxExemption(
         SutProvider<StripePaymentService> sutProvider,
@@ -1393,7 +1561,7 @@ public class StripePaymentServiceTests
             .Returns(new Invoice { Id = "inv_123", AmountDue = 0, Status = InvoiceStatus.Paid });
 
         sutProvider.GetDependency<IStripeAdapter>()
-            .GetCustomerAsync("cus_123")
+            .GetCustomerAsync("cus_123", Arg.Any<CustomerGetOptions>())
             .Returns(new Customer { Id = "cus_123" });
 
         await sutProvider.Sut.AdjustSubscription(organization, plan, 0, false, null, null, 0);
@@ -1403,5 +1571,497 @@ public class StripePaymentServiceTests
             Arg.Any<CustomerUpdateOptions>());
     }
 
-    #endregion
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_PackagedSourceWithSchedule_PreviewCarriesPhase2SeatQuantity(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // A packaged source has one flat base line (qty 1). Its pending migration schedule collapses
+        // that onto a scalable seat line at the migrated quantity (3). The Phase 2 preview must adopt
+        // both the seat price AND that quantity, otherwise the total is shown at the base line's qty 1.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test";
+        subscriber.GatewaySubscriptionId = "sub_test";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Quantity = 1,
+                        Plan = new Plan
+                        {
+                            Id = "teams-org-annually",
+                            ProductId = "prod_teams2019",
+                            Nickname = "2019 Teams Organization",
+                            Amount = 6000, // $60 flat base bundle
+                            Interval = "year"
+                        }
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase(),
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddYears(1), // future -> not yet applied
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Quantity = 3, // migrated seat count (occupied)
+                            Price = new Price
+                            {
+                                Id = "2023-teams-org-seat-annually",
+                                ProductId = "prod_teams_current",
+                                UnitAmount = 4800, // $48 per seat
+                                Nickname = "Teams Organization Seat (Annually)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync(subscription.ScheduleId, Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        var item = Assert.Single(result.Subscription.Items);
+        Assert.Equal("Teams Organization Seat (Annually)", item.Name);
+        Assert.Equal(48m, item.Amount);
+        Assert.Equal(3, item.Quantity); // carried from Phase 2, not the base line's 1
+        Assert.Equal(144m, item.Amount * item.Quantity);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_TeamsStarterWithSchedule_PreviewCarriesPhase2SeatQuantity(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Teams Starter is a flat bundle (base line, qty 1) migrating to the current Teams per-seat
+        // line. Same cross-product collapse as Teams 2019: the preview must show the migrated seat
+        // count, not the base line's qty 1.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test";
+        subscriber.GatewaySubscriptionId = "sub_test";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Quantity = 1,
+                        Plan = new Plan
+                        {
+                            Id = "teams-org-starter",
+                            ProductId = "prod_teams_starter",
+                            Nickname = "Teams (Starter)",
+                            Amount = 2000, // $20 flat bundle
+                            Interval = "month"
+                        }
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase(),
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddMonths(1), // future -> not yet applied
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Quantity = 4, // migrated seat count (occupied)
+                            Price = new Price
+                            {
+                                Id = "2023-teams-org-seat-monthly",
+                                ProductId = "prod_teams_current",
+                                UnitAmount = 400, // $4 per seat / month
+                                Nickname = "Teams Organization Seat (Monthly)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync(subscription.ScheduleId, Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        var item = Assert.Single(result.Subscription.Items);
+        Assert.Equal("Teams Organization Seat (Monthly)", item.Name);
+        Assert.Equal(4m, item.Amount);
+        Assert.Equal(4, item.Quantity); // carried from Phase 2, not the base line's 1
+        Assert.Equal(16m, item.Amount * item.Quantity);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithMigrationGraceMetadata_MapsServiceAccountGrace(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — a migrated subscription carries the free service-account grace in metadata.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem> { Data = [] },
+            Metadata = new Dictionary<string, string>
+            {
+                { MetadataKeys.MigrationGraceServiceAccounts, "30" }
+            }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — grace is read off metadata onto the wrapper using the already-fetched subscription.
+        Assert.Equal(30, result.Subscription!.ServiceAccountGrace);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_WithoutMigrationGraceMetadata_ServiceAccountGraceIsZero(
+        SutProvider<StripePaymentService> sutProvider,
+        User subscriber)
+    {
+        // Arrange — Metadata intentionally left null (non-migrated subscription); the read must not throw.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert
+        Assert.Equal(0, result.Subscription!.ServiceAccountGrace);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_Teams2019BaseAndOverage_CollapsesToSingleSeatLine(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — a Teams 2019 org billed as a base bundle line + a seat-overage add-on line, with a
+        // pending migration schedule whose Phase 2 collapses both into one current-Teams seat line (x7).
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2019;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
+                        Quantity = 2
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-monthly" },
+                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 400, ProductId = "prod_current_teams", Nickname = "Teams Organization Seat" },
+                            Quantity = 7
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly2019)
+            .Returns(new Teams2019Plan(false));
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — a single migrated seat line at the Phase 2 price/quantity; no surviving legacy amount.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal("prod_current_teams", item.ProductId);
+        Assert.Equal("Teams Organization Seat", item.Name);
+        Assert.Equal(4.00m, item.Amount);
+        Assert.Equal(7, item.Quantity);
+        Assert.DoesNotContain(result.Subscription.Items, i => i.PriceId == "teams-org-seat-monthly");
+        Assert.DoesNotContain(result.Subscription.Items, i => i.Amount == 8.00m);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_Teams2019WithStorageAddon_DropsOverageButKeepsStorage(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — same collapse, plus a storage add-on whose product changes across the migration
+        // (cross-product). Only the seat-overage line collapses; the storage line must survive the preview.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2019;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-monthly" },
+                        Plan = new Plan { Id = "teams-org-monthly", ProductId = "prod_2019_teams_org", Nickname = "2019 Teams Org. (Monthly)", Amount = 800, Interval = "month" },
+                        Quantity = 1
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "teams-org-seat-monthly", ProductId = "prod_2019_teams_seat", Nickname = "2019 Teams Seat (Monthly)", Amount = 250, Interval = "month" },
+                        Quantity = 2
+                    },
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "storage-gb-monthly", Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" } },
+                        Plan = new Plan { Id = "storage-gb-monthly", ProductId = "prod_storage_old", Nickname = "Additional Storage GB (Monthly)", Amount = 50, Interval = "month" },
+                        Quantity = 3
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 400, ProductId = "prod_current_teams", Nickname = "Teams Organization Seat" },
+                            Quantity = 7
+                        },
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "storage-new", UnitAmount = 100, ProductId = "prod_storage_new", Nickname = "Additional Storage GB" },
+                            Quantity = 3
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlanOrThrow(PlanType.TeamsMonthly2019)
+            .Returns(new Teams2019Plan(false));
+
+        // Act
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — overage collapsed away, storage line preserved.
+        Assert.Equal(2, result.Subscription!.Items.Count());
+        Assert.DoesNotContain(result.Subscription.Items, i => i.PriceId == "teams-org-seat-monthly");
+        Assert.Contains(result.Subscription.Items, i => i.ProductId == "prod_current_teams" && i.Quantity == 7);
+        var storage = Assert.Single(result.Subscription.Items, i => i.PriceId == "storage-gb-monthly");
+        Assert.Equal(3, storage.Quantity);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetSubscriptionAsync_NonPackagedMigrationSource_PreservesAllLineItems(
+        SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber)
+    {
+        // Arrange — a Preserve-policy migration source (Teams 2020) is not a Packaged source, so the
+        // overage collapse must not apply and every line item is preserved.
+        subscriber.Gateway = GatewayType.Stripe;
+        subscriber.GatewayCustomerId = "cus_test123";
+        subscriber.GatewaySubscriptionId = "sub_test123";
+        subscriber.PlanType = PlanType.TeamsMonthly2020;
+
+        var subscription = new Subscription
+        {
+            Id = "sub_test123",
+            Status = "active",
+            CollectionMethod = "charge_automatically",
+            ScheduleId = "sub_sched_test123",
+            Customer = new Customer { Discount = null },
+            Discounts = new List<Discount>(),
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = "2020-teams-org-seat-monthly" },
+                        Plan = new Plan { Id = "2020-teams-org-seat-monthly", ProductId = "prod_teams_2020", Nickname = "Teams Organization Seat (Monthly)", Amount = 400, Interval = "month" },
+                        Quantity = 10
+                    }
+                ]
+            }
+        };
+
+        var schedule = new SubscriptionSchedule
+        {
+            Status = SubscriptionScheduleStatus.Active,
+            Phases =
+            [
+                new SubscriptionSchedulePhase { StartDate = DateTime.UtcNow.AddDays(-30) },
+                new SubscriptionSchedulePhase
+                {
+                    StartDate = DateTime.UtcNow.AddDays(10),
+                    Metadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" },
+                    Items =
+                    [
+                        new SubscriptionSchedulePhaseItem
+                        {
+                            Price = new Price { Id = "teams-current-seat", UnitAmount = 500, ProductId = "prod_teams_2020", Nickname = "Teams Organization Seat (Monthly)" },
+                            Quantity = 10
+                        }
+                    ]
+                }
+            ]
+        };
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionAsync(subscriber.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        sutProvider.GetDependency<IStripeAdapter>()
+            .GetSubscriptionScheduleAsync("sub_sched_test123", Arg.Any<SubscriptionScheduleGetOptions>())
+            .Returns(schedule);
+
+        // Act — a Preserve migration never triggers a plan fetch (ShouldCollapseSeatOverageLine is false).
+        var result = await sutProvider.Sut.GetSubscriptionAsync(subscriber);
+
+        // Assert — the single seat line is repriced by Phase 2 but not removed.
+        var item = Assert.Single(result.Subscription!.Items);
+        Assert.Equal("prod_teams_2020", item.ProductId);
+        Assert.Equal(5.00m, item.Amount);
+        Assert.Equal(10, item.Quantity);
+    }
 }

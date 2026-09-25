@@ -27,9 +27,18 @@ public interface IEventRepository
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
     Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
         PageOptions pageOptions);
+    Task<PagedResult<IEvent>> GetManyBySendAsync(Guid organizationId, Guid sendId, DateTime startDate,
+        DateTime endDate, PageOptions pageOptions);
 
     Task CreateAsync(IEvent e);
     Task CreateManyAsync(IEnumerable<IEvent> e);
     Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate, PageOptions pageOptions);
+
+    /// <summary>
+    /// Deletes a bounded batch of events for the given organization and returns the number deleted;
+    /// 0 means nothing is left. Callers invoke repeatedly (persisting progress between calls) until
+    /// 0 is returned. Used to purge orphaned event logs when an organization is deleted (GDPR).
+    /// </summary>
+    Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default);
 }

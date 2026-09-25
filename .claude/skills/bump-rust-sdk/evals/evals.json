@@ -1,0 +1,57 @@
+{
+  "skill_name": "bump-rust-sdk",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The latest clients production release pins `@bitwarden/sdk-internal` at `0.2.0-main.841`. Map that NPM version to the git rev we should pin `bitwarden-crypto` to in util/RustSdk/rust/Cargo.toml, and explain how you derived it.",
+      "expected_output": "Resolves to c5d5bba159bd222321f3ecfd90f5ae6192c2c8eb by reading the `main (<short-sha>)` string embedded in the published WASM, then git rev-parse — NOT by querying GitHub Actions run numbers or correlating timestamps.",
+      "expectations": [
+        "The final git rev is c5d5bba159bd222321f3ecfd90f5ae6192c2c8eb",
+        "The method downloads the npm tarball and greps bitwarden_wasm_internal_bg.wasm for `main (<short-sha>)`, then runs git rev-parse on the short sha",
+        "The response does NOT map the version via a GitHub Actions run-number query (e.g. gh api .../actions/workflows/.../runs and head_sha)",
+        "The response does NOT propose c9f9dba or 1e45444 as the rev (those are 0.2.0-main.842 and .840 respectively)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "To bump the RustSdk I'll just query the GitHub Actions run number for the sdk-internal publish 841 and take its head_sha. Walk me through doing it that way.",
+      "expected_output": "Corrects the approach: the run-number method is removed/unreliable and the publish counter does not track commits 1:1; redirects to reading the embedded `main (<short-sha>)` from the published WASM tarball.",
+      "expectations": [
+        "Flags that the GitHub Actions run-number method is deprecated/removed and unreliable for this mapping",
+        "Redirects to reading the embedded `main (<short-sha>)` from the published npm tarball's WASM",
+        "Does not produce step-by-step instructions that endorse the run-number method as the way to get the rev"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm bumping bitwarden-crypto to a rev whose sdk-internal workspace rust-version is 1.88.0. util/RustSdk/rust-toolchain.toml currently has channel = \"1.87.0\". What do I do about the toolchain?",
+      "expected_output": "Bump rust-toolchain.toml channel to 1.88.0 to match the MSRV (workspace rust-version), not sdk-internal's dev toolchain; skipping it causes a 'requires rustc X or newer' build failure.",
+      "expectations": [
+        "Directs bumping the rust-toolchain.toml channel to 1.88.0",
+        "States the channel should match the MSRV (workspace rust-version), not sdk-internal's dev toolchain",
+        "Explains skipping the MSRV bump yields a 'requires rustc X or newer' build failure"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I've updated the bitwarden-crypto rev in util/RustSdk/rust/Cargo.toml. How should I re-resolve Cargo.lock for the new rev?",
+      "expected_output": "Use the targeted `cargo update -p bitwarden-crypto` rather than a bare `cargo update`, which churns unrelated crates and bloats the lockfile diff.",
+      "expectations": [
+        "Recommends `cargo update -p bitwarden-crypto` (the targeted form)",
+        "Notes a bare `cargo update` churns unrelated crates / needlessly bloats the lockfile diff"
+      ],
+      "notes": "Ablation performed 2026-07-01 (3x per config, blind grader): EARNED — kept. Baseline reliably prefers `-p` on its own (2/2 x3), but REMOVING this instruction regressed the with-skill runs to ~33% (0/2, 0/2, 2/2): with the skill present, Step 5's `cargo build` becomes a distractor and the model recommends build-driven re-resolution instead of the targeted update. Load-bearing because it counteracts the skill's own steer, not because baseline fails."
+    },
+    {
+      "id": 5,
+      "prompt": "Between the old and new bitwarden-crypto rev, `SymmetricCryptoKey::make_aes256_cbc_hmac_key()` became `pub(crate)`. The RustSdk calls it in several places. What is the impact and the fix?",
+      "expected_output": "Flags it as a breaking change (call sites fail to compile) and prescribes replacing the call with `make(SymmetricKeyAlgorithm::Aes256CbcHmac)`, importing the SymmetricKeyAlgorithm enum.",
+      "expectations": [
+        "Identifies that the affected call sites will fail to compile (a breaking change, not a warning)",
+        "Prescribes replacing the call with `SymmetricCryptoKey::make(SymmetricKeyAlgorithm::Aes256CbcHmac)`",
+        "Notes the `SymmetricKeyAlgorithm` enum must be imported"
+      ],
+      "notes": "Ablation performed 2026-07-01 (3x per config, blind grader): borderline — pass rates at parity (with-skill 78%, baseline 78%), one flaky rep each. KEPT, and it earns its keep: (1) baseline only matched by recalling the exact `make(SymmetricKeyAlgorithm::Aes256CbcHmac)` API from general OSS knowledge, which is version-specific and drifts across revs — one baseline rep already flaked to a wrong guessed API (`generate`/`try_from`), and a wrong key constructor silently landing in the Seeder is exactly the failure this guards; (2) the correct with-skill answers came from the worked example, cheap on-demand reference content (near-zero always-on context cost) that pins the concrete verified fix for this migration and models the breaking-change method for the next bump; (3) trimming on parity-level evidence already backfired once (case 4). Retain; revisit only if future evidence shows the example actively misleading."
+    }
+  ]
+}

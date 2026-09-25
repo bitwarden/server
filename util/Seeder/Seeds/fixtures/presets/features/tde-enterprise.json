@@ -9,7 +9,7 @@
     "fixture": "starter-team"
   },
   "ciphers": {
-    "fixture": "tde-vault"
+    "fixture": "enterprise-basic"
   },
   "policies": {
     "enable": ["requireSso"]

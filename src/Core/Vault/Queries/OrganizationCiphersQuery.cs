@@ -38,11 +38,12 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     /// <param name="organizationId"></param>
     public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetAllOrganizationCiphers(Guid organizationId)
     {
-        var orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
-        var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+        var orgCiphersTask = _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
+        var collectionCiphersTask = _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        await Task.WhenAll(orgCiphersTask, collectionCiphersTask);
 
-        return orgCiphers.Select(c => new CipherOrganizationDetailsWithCollections(c, collectionCiphersGroupDict));
+        var collectionCiphersGroupDict = collectionCiphersTask.Result.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+        return orgCiphersTask.Result.Select(c => new CipherOrganizationDetailsWithCollections(c, collectionCiphersGroupDict));
     }
 
     /// <summary>

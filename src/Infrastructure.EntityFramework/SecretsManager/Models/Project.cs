@@ -21,6 +21,7 @@ public class ProjectMapperProfile : Profile
     {
         CreateMap<Core.SecretsManager.Entities.Project, Project>()
             .PreserveReferences()
+            .MaxDepth(5)
             .ReverseMap();
     }
 }

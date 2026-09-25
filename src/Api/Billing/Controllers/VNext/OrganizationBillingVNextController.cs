@@ -1,16 +1,21 @@
-﻿using Bit.Api.AdminConsole.Authorization;
-using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.Billing.Attributes;
 using Bit.Api.Billing.Models.Requests.Payment;
 using Bit.Api.Billing.Models.Requests.Subscriptions;
 using Bit.Api.Billing.Models.Requirements;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Commands;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
+using Bit.Core.Billing.Organizations.PlanMigration.Commands;
+using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -23,11 +28,15 @@ namespace Bit.Api.Billing.Controllers.VNext;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class OrganizationBillingVNextController(
     ICreateBitPayInvoiceForCreditCommand createBitPayInvoiceForCreditCommand,
+    IGetAnnualUpgradeOfferQuery getAnnualUpgradeOfferQuery,
     IGetBillingAddressQuery getBillingAddressQuery,
+    IGetChurnMitigationOfferQuery getChurnMitigationOfferQuery,
     IGetCreditQuery getCreditQuery,
     IGetOrganizationMetadataQuery getOrganizationMetadataQuery,
     IGetOrganizationWarningsQuery getOrganizationWarningsQuery,
     IGetPaymentMethodQuery getPaymentMethodQuery,
+    IRedeemAnnualUpgradeOfferCommand redeemAnnualUpgradeOfferCommand,
+    IRedeemChurnMitigationOfferCommand redeemChurnMitigationOfferCommand,
     IRestartSubscriptionCommand restartSubscriptionCommand,
     IUpdateBillingAddressCommand updateBillingAddressCommand,
     IUpdatePaymentMethodCommand updatePaymentMethodCommand) : BaseBillingController
@@ -138,5 +147,47 @@ public class OrganizationBillingVNextController(
     {
         var warnings = await getOrganizationWarningsQuery.Run(organization);
         return TypedResults.Ok(warnings);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("churn-mitigation-offer")]
+    [InjectOrganization]
+    public async Task<IResult> GetChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getChurnMitigationOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("churn-mitigation-offer/redeem")]
+    [InjectOrganization]
+    public async Task<IResult> RedeemChurnMitigationOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemChurnMitigationOfferCommand.Run(organization);
+        return Handle(result);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpGet("annual-upgrade-offer")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [InjectOrganization]
+    public async Task<IResult> GetAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var offer = await getAnnualUpgradeOfferQuery.Run(organization);
+        return TypedResults.Ok(offer);
+    }
+
+    [Authorize<ManageOrganizationBillingRequirement>]
+    [HttpPost("annual-upgrade-offer/redeem")]
+    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [InjectOrganization]
+    public async Task<IResult> RedeemAnnualUpgradeOfferAsync(
+        [BindNever] Organization organization)
+    {
+        var result = await redeemAnnualUpgradeOfferCommand.Run(organization);
+        return Handle(result);
     }
 }

@@ -27,7 +27,7 @@ public class CreateOrganizationIntegrationConfigurationCommand(
         var integration = await integrationRepository.GetByIdAsync(integrationId);
         if (integration == null || integration.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException();
         }
         if (!validator.ValidateConfiguration(integration.Type, configuration))
         {

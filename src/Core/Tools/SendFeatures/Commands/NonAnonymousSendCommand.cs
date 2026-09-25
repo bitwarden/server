@@ -2,8 +2,10 @@
 #nullable disable
 
 using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -22,6 +24,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly IPushNotificationService _pushNotificationService;
     private readonly ISendValidationService _sendValidationService;
     private readonly ISendCoreHelperService _sendCoreHelperService;
+    private readonly IEventService _eventService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
@@ -29,6 +32,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         IPushNotificationService pushNotificationService,
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
+        IEventService eventService,
         ILogger<NonAnonymousSendCommand> logger)
     {
         _sendRepository = sendRepository;
@@ -36,25 +40,117 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _pushNotificationService = pushNotificationService;
         _sendValidationService = sendValidationService;
         _sendCoreHelperService = sendCoreHelperService;
+        _eventService = eventService;
         _logger = logger;
     }
 
-    public async Task SaveSendAsync(Send send)
+    public async Task SaveSendAsync(Send send, bool logEvent = true)
     {
+        // Normalize the email list before persisting so every downstream consumer is correct on
+        // every DB engine. Runs before Data Protection encrypts the emails.
+        send.Emails = NormalizeEmails(send.Emails);
+
         // Make sure user can save Sends
         await _sendValidationService.ValidateUserCanSaveAsync(send.UserId, send);
 
+        // New Send
         if (send.Id == default(Guid))
         {
             await _sendRepository.CreateAsync(send);
             await _pushNotificationService.PushSyncSendCreateAsync(send);
+            if (logEvent)
+            {
+                await LogSendCreatedEventAsync(send);
+            }
         }
+        // Edit existing Send
         else
         {
             send.RevisionDate = DateTime.UtcNow;
             await _sendRepository.UpsertAsync(send);
             await _pushNotificationService.PushSyncSendUpdateAsync(send);
+            if (logEvent)
+            {
+                await LogSendUpdatedEventAsync(send);
+            }
         }
+    }
+
+    private async Task LogSendCreatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, ResolveSendCreatedEventType(send));
+    }
+
+    private async Task LogSendUpdatedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Edited_File);
+        }
+    }
+
+    private async Task LogSendDeletedEventAsync(Send send)
+    {
+        if (!send.UserId.HasValue)
+        {
+            return;
+        }
+
+        if (send.Type == SendType.Text)
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_Text);
+        }
+        else
+        {
+            await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
+        }
+    }
+
+    // Returns the comma-separated email list with each entry trimmed and lowercased, or the
+    // original value when there are no emails (password / no-auth Sends). Idempotent, so re-saving an
+    // already-normalized Send is a no-op.
+    private static string NormalizeEmails(string emails)
+    {
+        if (string.IsNullOrWhiteSpace(emails))
+        {
+            return emails;
+        }
+
+        var normalized = emails
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(email => email.ToLowerInvariant());
+
+        return string.Join(",", normalized);
+    }
+
+    private static EventType ResolveSendCreatedEventType(Send send)
+    {
+        // send.AuthType is populated by SendRequestModel.ToSendBase before SaveSendAsync runs
+        var authType = send.AuthType ?? AuthType.None;
+
+        return (send.Type, authType) switch
+        {
+            (SendType.Text, AuthType.Password) => EventType.Send_Created_Text_WithPasswordProtection,
+            (SendType.Text, AuthType.Email) => EventType.Send_Created_Text_WithEmailVerification,
+            (SendType.Text, _) => EventType.Send_Created_Text,
+            (SendType.File, AuthType.Password) => EventType.Send_Created_File_WithPasswordProtection,
+            (SendType.File, AuthType.Email) => EventType.Send_Created_File_WithEmailVerification,
+            _ => EventType.Send_Created_File,
+        };
     }
 
     public async Task<string> SaveFileSendAsync(Send send, SendFileData data, long fileLength)
@@ -130,7 +226,9 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         await _sendFileStorageService.UploadNewFileAsync(stream, send, data.Id);
 
-        if (!await ConfirmFileSize(send))
+        // This finalizes the upload begun by SaveFileSendAsync, which already logged Send_Created_*;
+        // don't log a second, redundant Send_Edited_* for what the user experiences as one creation.
+        if (!await ConfirmFileSize(send, logEvent: false))
         {
             throw new BadRequestException("File received does not match expected file length.");
         }
@@ -154,9 +252,10 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         }
         await _sendRepository.DeleteAsync(send);
         await _pushNotificationService.PushSyncSendDeleteAsync(send);
+        await LogSendDeletedEventAsync(send);
     }
 
-    public async Task<bool> ConfirmFileSize(Send send)
+    public async Task<bool> ConfirmFileSize(Send send, bool logEvent = true)
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
@@ -177,6 +276,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
                 minimum,
                 maximum
             );
+            // Always logged: an anomaly worth an audit trail, unlike the routine confirmation below.
             await DeleteSendAsync(send);
             return false;
         }
@@ -185,7 +285,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         fileData.Size = size;
         fileData.Validated = true;
         send.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
-        await SaveSendAsync(send);
+        await SaveSendAsync(send, logEvent);
 
         return valid;
     }
@@ -200,6 +300,12 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
         {
             return (null, SendAccessResult.Denied);
+        }
+
+        var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data ?? string.Empty);
+        if (fileData?.Id != fileId)
+        {
+            throw new NotFoundException();
         }
 
         send.AccessCount++;

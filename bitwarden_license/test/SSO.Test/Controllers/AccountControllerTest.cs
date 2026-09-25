@@ -10,8 +10,10 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Sso.Controllers;
+using Bit.Sso.Exceptions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityModel;
@@ -219,6 +221,84 @@ public class AccountControllerTest
             Arg.Any<HttpContext>(),
             AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
             Arg.Any<AuthenticationProperties>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExternalCallback_ExistingUser_OrgUserInvited_NoSsoLink_RedirectsToWebVaultLogin(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange
+        // The distinguishing setup from ExternalCallback_ExistingUser_OrgUserInvited_AllowsLogin
+        // is that GetBySsoUserAsync returns null below — so the flow falls into
+        // CreateUserAndOrgUserConditionallyAsync and trips the invited-status gate that
+        // throws SsoAuthnRequiresInviteAcceptanceException. The catch block in
+        // ExternalCallback must then sign out the external cookie and return a
+        // RedirectResult to the web vault's /login.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "ext-invited-no-sso-link";
+        var email = "invited.user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Acme Corp" };
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = orgId,
+            UserId = existingUser.Id,
+            Status = OrganizationUserStatusType.Invited,
+            Type = OrganizationUserType.User
+        };
+
+        var authResult = BuildSuccessfulExternalAuth(orgId, providerUserId, email);
+        var authService = SetupHttpContextWithAuth(sutProvider, authResult);
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        var ssoConfig = new SsoConfig { OrganizationId = orgId, Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData());
+        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+
+        // No existing SSO link → flow takes the CreateUserAndOrgUserConditionallyAsync branch.
+        sutProvider.GetDependency<IUserRepository>().GetBySsoUserAsync(providerUserId, orgId)
+            .Returns((User?)null);
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns(existingUser);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(existingUser.Id)
+            .Returns([orgUser]);
+
+        // Stub the redirect target so we can assert against a known URL composition.
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.VaultWithHash
+            .Returns("https://vault.bitwarden.com/#");
+
+        // Act
+        var result = await sutProvider.Sut.ExternalCallback();
+
+        // Assert — redirect URL is composed exactly as SsoRedirectUrlBuilder produces it.
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal(
+            "https://vault.bitwarden.com/#/login" +
+            $"?email={Uri.EscapeDataString(email)}" +
+            $"&organizationId={orgId}" +
+            $"&organizationName={Uri.EscapeDataString(organization.Name)}" +
+            "&error=ssoOrgInviteAcceptanceRequired",
+            redirect.Url);
+
+        // External auth cookie is cleared so retry attempts start fresh.
+        await authService.Received(1).SignOutAsync(
+            Arg.Any<HttpContext>(),
+            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme,
+            Arg.Any<AuthenticationProperties>());
+
+        // Security invariant: no local auth session is established for an invited user.
+        await authService.DidNotReceive().SignInAsync(
+            Arg.Any<HttpContext>(),
+            Arg.Any<string?>(),
+            Arg.Any<ClaimsPrincipal>(),
+            Arg.Any<AuthenticationProperties>());
+
+        // Security invariant: no SsoUser row is written before invite acceptance.
+        await sutProvider.GetDependency<ISsoUserRepository>().DidNotReceive()
+            .CreateAsync(Arg.Any<SsoUser>());
     }
 
     [Theory, BitAutoData]
@@ -610,7 +690,7 @@ public class AccountControllerTest
     }
 
     [Theory, BitAutoData]
-    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingInvitedUser_ThrowsAcceptInviteBeforeUsingSSO(
+    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingInvitedUser_ThrowsSsoAuthnRequiresInviteAcceptanceException(
         SutProvider<AccountController> sutProvider)
     {
         // Arrange
@@ -660,8 +740,71 @@ public class AccountControllerTest
             config
         })!;
 
-        var ex = await Assert.ThrowsAsync<Exception>(async () => await task);
-        Assert.Equal("AcceptInviteBeforeUsingSSO", ex.Message);
+        // The invited-status gate now throws a typed exception so ExternalCallback can
+        // catch it and redirect the user back to the web client's /login. The security
+        // gate itself (refusing SSO completion for invited users) is unchanged.
+        var ex = await Assert.ThrowsAsync<SsoAuthnRequiresInviteAcceptanceException>(async () => await task);
+        Assert.Equal(orgId, ex.OrganizationId);
+        Assert.Equal("Org", ex.OrganizationDisplayName);
+        Assert.Equal(email, ex.UserEmail);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateUserAndOrgUserConditionallyAsync_WithExistingUserButNoOrgUserRow_ThrowsSsoAuthnRequiresOrgMembershipException(
+        SutProvider<AccountController> sutProvider)
+    {
+        // Arrange — the existing-user / no-OrganizationUser branch:
+        // existing BW user exists, but no OrganizationUser row in the target org
+        // (neither by UserId+OrgId nor by OrgId+Email). Covers both the user who
+        // clicked an open invite link (client has the invite stashed) and the user
+        // with no pending invite at all — the server cannot tell them apart at this gate.
+        var orgId = Guid.NewGuid();
+        var providerUserId = "provider-user-id";
+        var email = "user@example.com";
+        var existingUser = new User { Id = Guid.NewGuid(), Email = email, UsesKeyConnector = false };
+        var organization = new Organization { Id = orgId, Name = "Org" };
+
+        sutProvider.GetDependency<II18nService>()
+            .T(Arg.Any<string>(), Arg.Any<object?[]>())
+            .Returns(ci => (string)ci[0]!);
+
+        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns(existingUser);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(existingUser.Id)
+            .Returns(new List<OrganizationUser>());
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(orgId, email).Returns((OrganizationUser?)null);
+
+        var claims = new[]
+        {
+            new Claim(JwtClaimTypes.Email, email),
+            new Claim(JwtClaimTypes.Name, "Existing User")
+        } as IEnumerable<Claim>;
+        var config = new SsoConfigurationData();
+
+        var method = typeof(AccountController).GetMethod(
+            "CreateUserAndOrgUserConditionallyAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        // Act + Assert
+        var task = (Task<(User user, Organization organization, OrganizationUser orgUser)>)method.Invoke(sutProvider.Sut, new object[]
+        {
+            orgId.ToString(),
+            providerUserId,
+            claims,
+            null!,
+            config
+        })!;
+
+        // The gate throws a typed exception so ExternalCallback can catch it and
+        // redirect the user back to the web client's /login with the
+        // OrgMembershipRequired errorCode. No SsoUser link is written and no auth
+        // session is established.
+        var ex = await Assert.ThrowsAsync<SsoAuthnRequiresOrgMembershipException>(async () => await task);
+        Assert.Equal(orgId, ex.OrganizationId);
+        Assert.Equal("Org", ex.OrganizationDisplayName);
+        Assert.Equal(email, ex.UserEmail);
     }
 
     [Theory, BitAutoData]

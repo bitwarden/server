@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Bit.Services.Pam.IntegrationTest</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
+    <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
+    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Api.IntegrationTest owns the Api host fixture and the organization/login helpers these tests drive the
+         endpoints through. Billing.IntegrationTest depends on it the same way. -->
+    <ProjectReference Include="..\..\..\..\test\Api.IntegrationTest\Api.IntegrationTest.csproj" />
+    <ProjectReference Include="..\..\..\src\Services\Pam\Pam.csproj" />
+
+    <!-- WebApplicationFactoryBase reads appsettings.json and appsettings.Development.json from the test assembly's
+         directory, so the Api's settings have to land there. Naming them explicitly also settles which project's
+         copy wins: several referenced projects ship a file by that name, and the Api's is the host under test. -->
+    <Content Include="..\..\..\..\src\Api\appsettings.*.json">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

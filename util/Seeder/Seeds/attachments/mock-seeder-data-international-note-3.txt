@@ -1,0 +1,2 @@
+EXAMPLE note with Unicode - fake seeder test data.
+café, naïve, jalapeño, emoji ok.

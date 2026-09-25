@@ -1,5 +1,4 @@
-﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Auth.Models.Request;
+﻿using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Api.Request;
 
@@ -8,7 +7,7 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 public class CommonUnlockDataRequestModel
 {
     public required IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessUnlockData { get; set; }
-    public required IEnumerable<ResetPasswordWithOrgIdRequestModel> OrganizationAccountRecoveryUnlockData { get; set; }
+    public required IEnumerable<OrganizationUserAccountRecoveryRequestModel> OrganizationAccountRecoveryUnlockData { get; set; }
     public required IEnumerable<WebAuthnLoginRotateKeyRequestModel> PasskeyUnlockData { get; set; }
     public required IEnumerable<OtherDeviceKeysUpdateRequestModel> DeviceKeyUnlockData { get; set; }
     public V2UpgradeTokenRequestModel? V2UpgradeToken { get; set; }

@@ -5,4 +5,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUse
 public record UserAlreadyRevoked() : BadRequestError("Already revoked.");
 public record CannotRevokeYourself() : BadRequestError("You cannot revoke yourself.");
 public record OnlyOwnersCanRevokeOwners() : BadRequestError("Only owners can revoke other owners.");
+public record CustomUsersCannotRevokeAdmins() : BadRequestError("Custom users can not revoke admins.");
 public record MustHaveConfirmedOwner() : BadRequestError("Organization must have at least one confirmed owner.");

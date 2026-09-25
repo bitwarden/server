@@ -52,6 +52,32 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        // Bounded per call so the calling job can refresh its claim lease and persist progress
+        // between calls; the caller loops until 0 is returned. The ids are selected first because
+        // ExecuteDelete with a row limit does not translate on every EF provider we support.
+        const int maxRows = 1000;
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var ids = await dbContext.Events
+            .Where(e => e.OrganizationId == organizationId)
+            .Select(e => e.Id)
+            .Take(maxRows)
+            .ToListAsync(cancellationToken);
+
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        return await dbContext.Events
+            .Where(e => ids.Contains(e.Id))
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
     public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate,
         PageOptions pageOptions)
@@ -67,6 +93,30 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         var dbContext = GetDatabaseContext(scope);
         var query = new EventReadPageByOrganizationIdServiceAccountIdQuery(organizationId, serviceAccountId,
             startDate, endDate, beforeDate, pageOptions);
+        var events = await query.Run(dbContext).ToListAsync();
+
+        var result = new PagedResult<IEvent>();
+        if (events.Any() && events.Count >= pageOptions.PageSize)
+        {
+            result.ContinuationToken = events.Last().Date.ToBinary().ToString();
+        }
+        result.Data.AddRange(events);
+        return result;
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyBySendAsync(Guid organizationId, Guid sendId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        DateTime? beforeDate = null;
+        if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
+            long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
+        {
+            beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = new EventReadPageBySendIdQuery(organizationId, sendId, startDate, endDate, beforeDate, pageOptions);
         var events = await query.Run(dbContext).ToListAsync();
 
         var result = new PagedResult<IEvent>();

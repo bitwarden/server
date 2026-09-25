@@ -57,6 +57,14 @@ public class InviteOrganizationUsersValidator(
             InviteOrganizationUsersValidationRequest request,
             PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
+        if (request.InviteOrganization.Plan is null)
+        {
+            return new Invalid<InviteOrganizationUsersValidationRequest>(
+                new Error<InviteOrganizationUsersValidationRequest>(
+                    "Cannot adjust Secrets Manager seats: organization plan is unavailable.",
+                    request));
+        }
+
         try
         {
             var organization = await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId);

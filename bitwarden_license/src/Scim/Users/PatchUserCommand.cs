@@ -107,7 +107,7 @@ public class PatchUserCommand : IPatchUserCommand
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM, RevocationReason.Manual);
             return true;
         }
         return false;

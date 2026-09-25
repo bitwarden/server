@@ -60,6 +60,7 @@ public class CollectController : Controller
 
                 case EventType.Organization_ItemOrganization_Accepted:
                 case EventType.Organization_ItemOrganization_Declined:
+                case EventType.OrganizationUser_NotificationBannerActionClicked:
                     if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
                     {
                         continue;
@@ -89,6 +90,16 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientCopiedBankAccountPin:
                 case EventType.Cipher_ClientToggledBankAccountNumberVisible:
                 case EventType.Cipher_ClientToggledBankAccountPinVisible:
+                case EventType.Cipher_ClientCopiedLicenseNumber:
+                case EventType.Cipher_ClientToggledLicenseNumberVisible:
+                case EventType.Cipher_ClientCopiedPassportNumber:
+                case EventType.Cipher_ClientToggledPassportNumberVisible:
+                case EventType.Cipher_ClientCopiedSwiftCode:
+                case EventType.Cipher_ClientToggledSwiftCodeVisible:
+                case EventType.Cipher_ClientCopiedIban:
+                case EventType.Cipher_ClientToggledIbanVisible:
+                case EventType.Cipher_ClientCopiedNationalIdentificationNumber:
+                case EventType.Cipher_ClientToggledNationalIdentificationNumberVisible:
                 case EventType.Cipher_ClientViewed:
                     if (!eventModel.CipherId.HasValue)
                     {
@@ -137,7 +148,16 @@ public class CollectController : Controller
                 case EventType.Organization_ClientExportedVault:
                 case EventType.Organization_AutoConfirmEnabled_Admin:
                 case EventType.Organization_AutoConfirmDisabled_Admin:
-                    if (!eventModel.OrganizationId.HasValue)
+                case EventType.Organization_InviteLinkClientCopied:
+                    if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    // Drop the event if the caller is not a member of the target organization.
+                    var orgMembership = await _organizationUserRepository.GetByOrganizationAsync(
+                        eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgMembership == null)
                     {
                         continue;
                     }

@@ -14,14 +14,17 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 25.5m,
-                AmountOff = null,
-                AppliesTo = new CouponAppliesTo
+                Coupon = new Coupon
                 {
-                    Products = new List<string> { "product1", "product2" }
+                    Id = couponId,
+                    PercentOff = 25.5m,
+                    AmountOff = null,
+                    AppliesTo = new CouponAppliesTo
+                    {
+                        Products = new List<string> { "product1", "product2" }
+                    }
                 }
             },
             End = null // Active discount
@@ -48,14 +51,17 @@ public class BillingCustomerDiscountTests
         // Arrange - Stripe sends 1400 cents for $14.00
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = null,
-                AmountOff = 1400, // 1400 cents
-                AppliesTo = new CouponAppliesTo
+                Coupon = new Coupon
                 {
-                    Products = new List<string>()
+                    Id = couponId,
+                    PercentOff = null,
+                    AmountOff = 1400, // 1400 cents
+                    AppliesTo = new CouponAppliesTo
+                    {
+                        Products = new List<string>()
+                    }
                 }
             },
             End = null
@@ -80,10 +86,13 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 15m
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 15m
+                }
             },
             End = DateTime.UtcNow.AddDays(-1) // Expired discount
         };
@@ -103,7 +112,7 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = null,
+            Source = null,
             End = null
         };
 
@@ -125,11 +134,14 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 10m,
-                AmountOff = null
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 10m,
+                    AmountOff = null
+                }
             },
             End = null
         };
@@ -148,10 +160,13 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                AmountOff = 0
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    AmountOff = 0
+                }
             },
             End = null
         };
@@ -170,10 +185,13 @@ public class BillingCustomerDiscountTests
         // Arrange - $100.00 discount
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                AmountOff = 10000 // 10000 cents = $100.00
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    AmountOff = 10000 // 10000 cents = $100.00
+                }
             },
             End = null
         };
@@ -192,10 +210,13 @@ public class BillingCustomerDiscountTests
         // Arrange - $0.50 discount
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                AmountOff = 50 // 50 cents = $0.50
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    AmountOff = 50 // 50 cents = $0.50
+                }
             },
             End = null
         };
@@ -214,11 +235,14 @@ public class BillingCustomerDiscountTests
         // Arrange - Coupon with both percentage and amount (edge case)
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 20m,
-                AmountOff = 500 // $5.00
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 20m,
+                    AmountOff = 500 // $5.00
+                }
             },
             End = null
         };
@@ -238,11 +262,14 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 10m,
-                AppliesTo = null
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 10m,
+                    AppliesTo = null
+                }
             },
             End = null
         };
@@ -261,13 +288,16 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 10m,
-                AppliesTo = new CouponAppliesTo
+                Coupon = new Coupon
                 {
-                    Products = null
+                    Id = couponId,
+                    PercentOff = 10m,
+                    AppliesTo = new CouponAppliesTo
+                    {
+                        Products = null
+                    }
                 }
             },
             End = null
@@ -287,10 +317,13 @@ public class BillingCustomerDiscountTests
         // Arrange - 1425 cents = $14.25
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                AmountOff = 1425
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    AmountOff = 1425
+                }
             },
             End = null
         };
@@ -323,10 +356,13 @@ public class BillingCustomerDiscountTests
         // Arrange - Discount expires in the future
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 20m
+                }
             },
             End = DateTime.UtcNow.AddDays(30) // Expires in 30 days
         };
@@ -345,10 +381,13 @@ public class BillingCustomerDiscountTests
         // Arrange - Discount already expired
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = 20m
+                }
             },
             End = DateTime.UtcNow.AddDays(-30) // Expired 30 days ago
         };
@@ -366,10 +405,13 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = null,
-                PercentOff = 20m
+                Coupon = new Coupon
+                {
+                    Id = null,
+                    PercentOff = 20m
+                }
             },
             End = null
         };
@@ -390,11 +432,14 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = null,
-                AmountOff = 1000
+                Coupon = new Coupon
+                {
+                    Id = couponId,
+                    PercentOff = null,
+                    AmountOff = 1000
+                }
             },
             End = null
         };
@@ -413,14 +458,17 @@ public class BillingCustomerDiscountTests
         // Arrange - Comprehensive test with all Stripe Discount properties set
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = "premium_discount_2024",
-                PercentOff = 25m,
-                AmountOff = 1500, // $15.00
-                AppliesTo = new CouponAppliesTo
+                Coupon = new Coupon
                 {
-                    Products = new List<string> { "prod_premium", "prod_family", "prod_teams" }
+                    Id = "premium_discount_2024",
+                    PercentOff = 25m,
+                    AmountOff = 1500, // $15.00
+                    AppliesTo = new CouponAppliesTo
+                    {
+                        Products = new List<string> { "prod_premium", "prod_family", "prod_teams" }
+                    }
                 }
             },
             End = null // Active
@@ -447,12 +495,15 @@ public class BillingCustomerDiscountTests
         // Arrange - Minimal Stripe Discount with most properties null
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = null,
-                PercentOff = null,
-                AmountOff = null,
-                AppliesTo = null
+                Coupon = new Coupon
+                {
+                    Id = null,
+                    PercentOff = null,
+                    AmountOff = null,
+                    AppliesTo = null
+                }
             },
             End = DateTime.UtcNow.AddDays(10) // Has end date
         };
@@ -475,13 +526,16 @@ public class BillingCustomerDiscountTests
         // Arrange
         var discount = new Discount
         {
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                Id = couponId,
-                PercentOff = 10m,
-                AppliesTo = new CouponAppliesTo
+                Coupon = new Coupon
                 {
-                    Products = new List<string>() // Empty but not null
+                    Id = couponId,
+                    PercentOff = 10m,
+                    AppliesTo = new CouponAppliesTo
+                    {
+                        Products = new List<string>() // Empty but not null
+                    }
                 }
             },
             End = null

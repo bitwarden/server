@@ -16,10 +16,11 @@ internal static class SshKeyCipherSeeder
             Notes = options.Notes,
             Type = CipherTypes.SshKey,
             SshKey = options.SshKey,
-            Fields = options.Fields
+            Fields = options.Fields,
+            Reprompt = (int)options.Reprompt
         };
 
-        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!);
+        var encrypted = CipherEncryption.Encrypt(cipherView, options.EncryptionKey!, options.CipherEncryption);
         return CipherEncryption.CreateEntity(encrypted, encrypted.ToSshKeyData(), CipherType.SSHKey, options.OrganizationId, options.UserId);
     }
 

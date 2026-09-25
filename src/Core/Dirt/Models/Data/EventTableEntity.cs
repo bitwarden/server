@@ -38,6 +38,7 @@ public class AzureEvent : ITableEntity
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
+    public Guid? SendId { get; set; }
 
     public EventTableEntity ToEventTableEntity()
     {
@@ -69,7 +70,8 @@ public class AzureEvent : ITableEntity
             SecretId = SecretId,
             ServiceAccountId = ServiceAccountId,
             ProjectId = ProjectId,
-            GrantedServiceAccountId = GrantedServiceAccountId
+            GrantedServiceAccountId = GrantedServiceAccountId,
+            SendId = SendId
         };
     }
 }
@@ -102,6 +104,7 @@ public class EventTableEntity : IEvent
         ProjectId = e.ProjectId;
         ServiceAccountId = e.ServiceAccountId;
         GrantedServiceAccountId = e.GrantedServiceAccountId;
+        SendId = e.SendId;
     }
 
     public string PartitionKey { get; set; }
@@ -131,6 +134,7 @@ public class EventTableEntity : IEvent
     public Guid? ProjectId { get; set; }
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
+    public Guid? SendId { get; set; }
 
     public AzureEvent ToAzureEvent()
     {
@@ -162,7 +166,8 @@ public class EventTableEntity : IEvent
             SecretId = SecretId,
             ProjectId = ProjectId,
             ServiceAccountId = ServiceAccountId,
-            GrantedServiceAccountId = GrantedServiceAccountId
+            GrantedServiceAccountId = GrantedServiceAccountId,
+            SendId = SendId
         };
     }
 
@@ -207,6 +212,15 @@ public class EventTableEntity : IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"CipherId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.SendId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"SendId={e.SendId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 

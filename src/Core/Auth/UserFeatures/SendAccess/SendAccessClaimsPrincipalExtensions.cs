@@ -19,4 +19,14 @@ public static class SendAccessClaimsPrincipalExtensions
 
         return sendGuid;
     }
+
+    /// <summary>
+    /// Returns the accessor's email when the send_access grant was issued by the email-OTP
+    /// validator, or <c>null</c> for password / no-auth grants which do not set the claim.
+    /// </summary>
+    public static string? GetSendAccessEmail(this ClaimsPrincipal user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        return user.FindFirst(Claims.SendAccessClaims.Email)?.Value;
+    }
 }

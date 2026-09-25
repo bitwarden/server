@@ -2,6 +2,7 @@
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Exceptions;
+using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -20,6 +21,7 @@ public class OrganizationExportController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly ICollectionRepository _collectionRepository;
+    private readonly ICipherLeaseGate _cipherLeaseGate;
 
     public OrganizationExportController(
         IUserService userService,
@@ -27,13 +29,14 @@ public class OrganizationExportController : Controller
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         ICollectionRepository collectionRepository,
-        IFeatureService featureService)
+        ICipherLeaseGate cipherLeaseGate)
     {
         _userService = userService;
         _globalSettings = globalSettings;
         _authorizationService = authorizationService;
         _organizationCiphersQuery = organizationCiphersQuery;
         _collectionRepository = collectionRepository;
+        _cipherLeaseGate = cipherLeaseGate;
     }
 
     [HttpGet("export")]
@@ -41,23 +44,23 @@ public class OrganizationExportController : Controller
     {
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportWholeVault);
-        var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
-            VaultExportOperations.ExportManagedCollections);
 
         if (canExportAll.Succeeded)
         {
-            var allOrganizationCiphers =
-                await _organizationCiphersQuery.GetAllOrganizationCiphersExcludingDefaultUserCollections(
-                    organizationId);
+            var ciphersTask = _organizationCiphersQuery
+                .GetAllOrganizationCiphersExcludingDefaultUserCollections(organizationId);
+            var collectionsTask = _collectionRepository
+                .GetManySharedCollectionsByOrganizationIdAsync(organizationId);
+            await Task.WhenAll(ciphersTask, collectionsTask);
 
-            var allCollections = await _collectionRepository
-                .GetManySharedCollectionsByOrganizationIdAsync(
-                    organizationId);
-
-
-            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections,
-                _globalSettings));
+            // Whole-vault export is the one context in which credential leasing is waived, so the export
+            // carries every item in full, leasing-gated ones included.
+            return Ok(new OrganizationExportResponseModel(ciphersTask.Result, collectionsTask.Result,
+                _globalSettings, _cipherLeaseGate.UnrestrictedForWholeVaultExport()));
         }
+
+        var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
+            VaultExportOperations.ExportManagedCollections);
 
         if (canExportManaged.Succeeded)
         {
@@ -70,7 +73,11 @@ public class OrganizationExportController : Controller
             var managedCiphers = await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId,
                 managedOrgCollections.Select(c => c.Id));
 
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings));
+            // Leasing-gated ciphers the exporter holds no valid lease for are left out of the export
+            // entirely: a partially-stripped export is not a usable backup.
+            var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(userId, managedCiphers);
+            var exportableCiphers = managedCiphers.Where(c => fullAccess.Authorizes(c.Id));
+            return Ok(new OrganizationExportResponseModel(exportableCiphers, managedOrgCollections, _globalSettings, fullAccess));
         }
 
         // Unauthorized

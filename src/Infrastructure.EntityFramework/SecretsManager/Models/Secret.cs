@@ -22,6 +22,7 @@ public class SecretMapperProfile : Profile
     {
         CreateMap<Core.SecretsManager.Entities.Secret, Secret>()
             .PreserveReferences()
+            .MaxDepth(5)
             .ReverseMap();
     }
 }

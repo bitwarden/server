@@ -42,4 +42,15 @@ public record IndividualUserOptions
     /// Use 600,000 for production-realistic e2e testing.
     /// </summary>
     public int KdfIterations { get; init; } = 5_000;
+
+    /// <summary>
+    /// When true, writes a user license file to LicenseDirectory after seeding.
+    /// Required for self-hosted instances that validate premium status by reading the license file.
+    /// </summary>
+    public bool SelfHosted { get; init; }
+
+    /// <summary>
+    /// Backdates the account by this many days (CreationDate = now - N). 0 (default) seeds a present-day account.
+    /// </summary>
+    public int AccountAgeDays { get; init; }
 }

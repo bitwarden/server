@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Platform.Mail.Enqueuing;
+
 public class BlockingMailEnqueuingService : IMailEnqueuingService
 {
     public async Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback)

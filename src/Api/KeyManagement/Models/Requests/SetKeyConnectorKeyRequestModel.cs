@@ -30,6 +30,14 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
     public string? KeyConnectorKeyWrappedUserKey { get; set; }
     public AccountKeysRequestModel? AccountKeys { get; set; }
 
+    /// <summary>
+    /// Key id of the user key wrapped by <see cref="KeyConnectorKeyWrappedUserKey"/>, when the client
+    /// supplied it. Absent for clients that predate the field, so it is deliberately not part of
+    /// <see cref="IsV2Request"/>.
+    /// </summary>
+    [KeyId]
+    public string? ContainedKeyId { get; init; }
+
     [Required]
     public required string OrgIdentifier { get; init; }
 
@@ -106,7 +114,8 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
         {
             KeyConnectorKeyWrappedUserKey = KeyConnectorKeyWrappedUserKey,
             AccountKeys = AccountKeys,
-            OrgIdentifier = OrgIdentifier
+            OrgIdentifier = OrgIdentifier,
+            ContainedKeyId = KeyId.FromHexEncodedString(ContainedKeyId)
         };
     }
 }

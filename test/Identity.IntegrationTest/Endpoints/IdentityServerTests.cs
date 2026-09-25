@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Auth.AutoFixture;
@@ -84,7 +84,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
-        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
+        Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
         AssertUserDecryptionOptions(root, user);
     }
 
@@ -214,29 +214,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
         await AssertRequiredSsoAuthenticationResponseAsync(context);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypeRefreshToken_Success(RegisterFinishRequestModel requestModel)
-    {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        var localFactory = new IdentityApplicationFactory();
-
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
-            requestModel.Email, requestModel.MasterPasswordHash);
-
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
-
-        using var body = await AssertDefaultTokenBodyAsync(context);
-        AssertRefreshTokenExists(body.RootElement);
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]

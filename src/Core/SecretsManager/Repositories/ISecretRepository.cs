@@ -18,8 +18,29 @@ public interface ISecretRepository
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyTrashedSecretsByIds(IEnumerable<Guid> ids);
     Task<Secret> GetByIdAsync(Guid id);
-    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
-    Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null);
+    /// <summary>
+    /// Creates a secret and, when <paramref name="initialVersion"/> is supplied, writes it in the
+    /// same transaction so the secret is never persisted without its first snapshot. Pass null
+    /// when versioning is disabled and no history should be recorded.
+    /// </summary>
+    /// <remarks>
+    /// Secrets created without a version (through <see cref="ImportAsync"/>, or while versioning
+    /// was disabled) are what <see cref="UpdateAsync"/>'s backfill exists to recover from.
+    /// </remarks>
+    Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates,
+        SecretVersion initialVersion = null);
+
+    /// <summary>
+    /// Updates a secret, and when <paramref name="newVersion"/> is supplied writes it in the same
+    /// transaction. Pass null when the value did not change and no snapshot is wanted.
+    /// <para>
+    /// When <paramref name="newVersion"/> is supplied and the secret has no version history yet,
+    /// a snapshot of the pre-update value is written first, with no editor attributed. This keeps
+    /// the overwritten value recoverable for secrets stored before versioning existed.
+    /// </para>
+    /// </summary>
+    Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates accessPoliciesUpdates = null,
+        SecretVersion newVersion = null);
     Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task HardDeleteManyByIdAsync(IEnumerable<Guid> ids);
     Task RestoreManyByIdAsync(IEnumerable<Guid> ids);

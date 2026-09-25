@@ -40,8 +40,8 @@ public class InvoiceCreatedHandler(
                     Status: not StripeConstants.InvoiceStatus.Paid,
                     CollectionMethod: "charge_automatically",
                     BillingReason:
-                    "subscription_cycle" or
-                    "automatic_pending_invoice_item_invoice",
+                    StripeConstants.BillingReasons.SubscriptionCycle or
+                    StripeConstants.BillingReasons.AutomaticPendingInvoiceItemInvoice,
                     Parent.SubscriptionDetails.Subscription: not null
                 })
             {

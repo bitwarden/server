@@ -2,11 +2,9 @@
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
-using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
@@ -21,34 +19,10 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
     [Required]
     [StringLength(256)]
     [StrictEmailAddress]
-    public string Email { get; set; }
-
-    public override OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
-    {
-        throw new NotImplementedException();
-    }
-
-    public OrganizationUserInvite ToOrganizationUserInvite()
-    {
-        var invite = new OrganizationUserInvite
-        {
-            Emails = new[] { Email },
-            Type = Type.Value,
-            Collections = Collections?.Select(c => c.ToCollectionAccessSelection())?.ToList() ?? [],
-            Groups = Groups
-        };
-
-        // Permissions property is optional for backwards compatibility with existing usage
-        if (Type is OrganizationUserType.Custom && Permissions is not null)
-        {
-            invite.Permissions = Permissions.ToData();
-        }
-
-        return invite;
-    }
+    public new string Email { get; set; }
 
     public InviteOrganizationUsersRequest ToInviteRequest(
-        InviteOrganization inviteOrganization,
+        Organization organization,
         bool accessSecretsManager,
         Guid performedBy,
         DateTimeOffset performedAt)
@@ -70,7 +44,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
                     externalId: ExternalId,
                     accessSecretsManager: accessSecretsManager)
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: performedBy,
             performedAt: performedAt);
     }

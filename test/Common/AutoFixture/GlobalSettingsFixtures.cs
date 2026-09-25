@@ -10,6 +10,7 @@ public class GlobalSettings : ICustomization
             .Without(s => s.BaseServiceUri)
             .Without(s => s.Attachment)
             .Without(s => s.Send)
+            .Without(s => s.OrganizationReport)
             .Without(s => s.DataProtection));
     }
 }

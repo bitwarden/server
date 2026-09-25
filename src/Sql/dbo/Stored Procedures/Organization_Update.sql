@@ -63,7 +63,11 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UsePhishingBlocker BIT = 0,
     @UseDisableSmAdsForUsers BIT = 0,
     @UseMyItems BIT = 0,
-    @ExemptFromBillingAutomation BIT = 0
+    @ExemptFromBillingAutomation BIT = 0,
+    @UseInviteLinks BIT = 0,
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -135,7 +139,11 @@ BEGIN
         [MaxStorageGbIncreased] = @MaxStorageGb,
         [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
         [UseMyItems] = @UseMyItems,
-        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation
+        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
+        [UseInviteLinks] = @UseInviteLinks,
+        [UsePam] = @UsePam,
+        [PamSeats] = @PamSeats,
+        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats
     WHERE
         [Id] = @Id;
 END

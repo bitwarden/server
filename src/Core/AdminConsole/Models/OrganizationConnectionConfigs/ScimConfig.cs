@@ -10,6 +10,13 @@ public class ScimConfig : IConnectionConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ScimProviderType? ScimProvider { get; set; }
 
+    /// <summary>
+    /// Determines whether newly provisioned users are sent an invitation email. When false, users are created in
+    /// the Staged status without an invitation. Null (or missing from the stored config) is treated as true.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? InviteUsersAfterProvisioning { get; set; }
+
     public bool Validate(out string exception)
     {
         if (!Enabled)

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Data.Test" />
+    <InternalsVisibleTo Include="Core.Test" />
+  </ItemGroup>
+
+</Project>

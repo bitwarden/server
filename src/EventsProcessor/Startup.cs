@@ -35,6 +35,11 @@ public class Startup
         services.AddDistributedCache(globalSettings);
         services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
+
+        if (EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings))
+        {
+            services.AddHostedService<DeadLetterCleanupHostedService>();
+        }
     }
 
     public void Configure(IApplicationBuilder app)
@@ -48,9 +53,7 @@ public class Startup
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
             endpoints.MapGet("/now",
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
-            endpoints.MapGet("/version",
-                async context => await context.Response.WriteAsJsonAsync(AssemblyHelpers.GetVersion()));
-
+            endpoints.MapVersionEndpoint();
         });
     }
 }

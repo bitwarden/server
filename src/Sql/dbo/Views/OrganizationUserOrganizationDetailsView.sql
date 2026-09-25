@@ -59,7 +59,10 @@ SELECT
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
     O.[UseMyItems],
-    OU.[RevocationReason]
+    O.[UseInviteLinks],
+    O.[UsePam],
+    OU.[RevocationReason],
+    OU.[AccessPam]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

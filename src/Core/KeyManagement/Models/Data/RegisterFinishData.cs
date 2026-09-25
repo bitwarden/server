@@ -9,6 +9,11 @@ public class RegisterFinishData
     public required string MasterPasswordAuthenticationHash { get; init; }
     public string? Salt { get; init; }
 
+    /// <summary>
+    /// Key id of the new account's user key, when the client supplied it.
+    /// </summary>
+    public KeyId? UserKeyId { get; init; }
+
     public bool IsV2Encryption()
     {
         return UserAccountKeysData.IsV2Encryption();
@@ -26,11 +31,12 @@ public class RegisterFinishData
                MasterKeyWrappedUserKey == other.MasterKeyWrappedUserKey &&
                MasterPasswordAuthenticationHash == other.MasterPasswordAuthenticationHash &&
                Salt == other.Salt &&
+               Equals(UserKeyId, other.UserKeyId) &&
                IsV2Encryption() == other.IsV2Encryption();
     }
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(UserAccountKeysData, Kdf, MasterKeyWrappedUserKey, MasterPasswordAuthenticationHash, Salt);
+        return HashCode.Combine(UserAccountKeysData, Kdf, MasterKeyWrappedUserKey, MasterPasswordAuthenticationHash, Salt, UserKeyId);
     }
 }

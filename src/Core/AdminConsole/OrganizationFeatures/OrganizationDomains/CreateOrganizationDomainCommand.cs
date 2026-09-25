@@ -32,7 +32,7 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
         if (claimedDomain.Any())
         {
-            throw new ConflictException("The domain is not available to be claimed.");
+            throw new ConflictException(new DomainNotAvailableError().Message);
         }
 
         //check for duplicate domain entry for an organization
@@ -41,14 +41,14 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
                 organizationDomain.DomainName);
         if (duplicateOrgDomain is not null)
         {
-            throw new ConflictException("A domain already exists for this organization.");
+            throw new ConflictException(new DuplicateDomainError().Message);
         }
 
         // Generate and set DNS TXT Record
         // DNS-Based Service Discovery RFC: https://www.ietf.org/rfc/rfc6763.txt; see section 6.1
         // Google uses 43 chars for their TXT record value: https://support.google.com/a/answer/2716802
         // A random 44 character string was used here to keep parity with prior client-side generation of 47 characters
-        organizationDomain.Txt = string.Join("=", "bw", CoreHelpers.RandomString(44));
+        organizationDomain.Txt = string.Join("=", "bw", CoreHelpers.SecureRandomString(44));
         organizationDomain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
 
         var orgDomain = await _organizationDomainRepository.CreateAsync(organizationDomain);

@@ -132,7 +132,7 @@ public class DeviceValidatorTests
         request.Raw["DeviceName"] = deviceName;
 
         // Act
-        var result = DeviceValidator.GetDeviceFromRequest(request);
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
 
         // Assert
         Assert.Null(result);
@@ -144,9 +144,10 @@ public class DeviceValidatorTests
     {
         // Arrange
         AddValidDeviceToRequest(request);
+        var beforeCall = DateTime.UtcNow;
 
         // Act
-        var result = DeviceValidator.GetDeviceFromRequest(request);
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
 
         // Assert
         Assert.NotNull(result);
@@ -154,6 +155,72 @@ public class DeviceValidatorTests
         Assert.Equal("DeviceName", result.Name);
         Assert.Equal(DeviceType.Android, result.Type);
         Assert.Equal("DevicePushToken", result.PushToken);
+        // Device creation counts as first activity — must be stamped at the construction site so
+        // legacy NULL rows still read back as null. 
+        Assert.NotNull(result.LastActivityDate);
+        Assert.InRange(result.LastActivityDate.Value, beforeCall, DateTime.UtcNow);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_DeviceIdentifierTooLong_ReturnsNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+        request.Raw["DeviceIdentifier"] = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_DeviceIdentifierAtMaxLength_ReturnsDevice(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+        var deviceIdentifier = new string('a', Device.MaxIdentifierLength);
+        request.Raw["DeviceIdentifier"] = deviceIdentifier;
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(deviceIdentifier, result.Identifier);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_PopulatesClientVersionFromParameter(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: "2026.5.1");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("2026.5.1", result.ClientVersion);
+    }
+
+    [Theory, BitAutoData]
+    public void GetDeviceFromRequest_NullClientVersion_LeavesClientVersionNull(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        AddValidDeviceToRequest(request);
+
+        // Act
+        var result = DeviceValidator.GetDeviceFromRequest(request, clientVersion: null);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null(result.ClientVersion);
     }
 
     [Theory, BitAutoData]
@@ -556,7 +623,9 @@ public class DeviceValidatorTests
         var newDeviceOtp = "123456";
         request.Raw.Add("NewDeviceOtp", newDeviceOtp);
 
-        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(true);
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp)
+            .Returns(true);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
@@ -586,7 +655,9 @@ public class DeviceValidatorTests
 
         request.Raw.Add("NewDeviceOtp", newDeviceOtp);
 
-        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(false);
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp)
+            .Returns(false);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
@@ -600,6 +671,37 @@ public class DeviceValidatorTests
         var expectedErrorMessage = "invalid new device otp";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async void HandleNewDeviceVerificationAsync_NewDeviceOtpIssuedForAnotherDevice_ReturnsInvalidNewDeviceOtp(
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        _globalSettings.EnableNewDeviceVerification = true;
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
+
+        var newDeviceOtp = "123456";
+        request.Raw.Add("NewDeviceOtp", newDeviceOtp);
+
+        // The OTP is correct, but was issued for a device other than the one now submitting it.
+        _twoFactorEmailService
+            .VerifyNewDeviceVerificationOtpAsync(context.User, "a-different-device-identifier", newDeviceOtp)
+            .Returns(true);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        await _twoFactorEmailService.Received(1)
+            .VerifyNewDeviceVerificationOtpAsync(context.User, context.Device.Identifier, newDeviceOtp);
+        await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
+
+        Assert.False(result);
+        var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+        Assert.Equal("invalid new device otp", actualResponse.Message);
     }
 
     [Theory, BitAutoData]
@@ -617,7 +719,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(0).VerifyOTPAsync(Arg.Any<User>(), Arg.Any<string>());
+        await _twoFactorEmailService.Received(0)
+            .VerifyNewDeviceVerificationOtpAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>());
         await _userService.Received(0).SendOTPAsync(Arg.Any<User>());
         await _deviceService.Received(1).SaveAsync(context.Device);
 
@@ -642,7 +745,8 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(context.User, context.Device.Identifier);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);

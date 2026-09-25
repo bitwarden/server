@@ -15,6 +15,14 @@ $config = array(
             'email' => 'user2@example.com',
             'uid' => array('user2'),
         ),
+        // Default org owner for the `features.local-sso` seeder preset. Matches a no-mangle seed;
+        // a mangled seed (or --owner-email override) prints its own authsources snippet to paste.
+        // The org GUID is no longer fixed -- the Seeder prints it per seed to relay into dev/.env.
+        // Docs (Seeds/docs/presets.md) say to log in as owner/password -- keep this key in sync.
+        'owner:password' => array(
+            'email' => 'dana.whitfield@verdant.example',
+            'uid' => array('dana.whitfield-local-sso-owner'),
+        ),
     ),
 
 );

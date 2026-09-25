@@ -89,7 +89,9 @@ public static class ExtendedCacheServiceCollectionExtensions
                 return services;
             }
 
-            // Using Shared Redis, TryAdd and reuse all pieces (multiplexer, distributed cache and backplane)
+            // Using Shared Redis, TryAdd and reuse the multiplexer and distributed cache.
+            // The multiplexer and distributed cache are safe to share across caches: one Redis
+            // connection serves everyone, and L2 entries are namespaced by WithCacheKeyPrefix.
 
             services.TryAddSingleton<IConnectionMultiplexer>(sp =>
                 CreateConnectionMultiplexer(sp, cacheName, globalSettings.DistributedCache.Redis.ConnectionString));
@@ -103,18 +105,24 @@ public static class ExtendedCacheServiceCollectionExtensions
                 });
             });
 
-            services.TryAddSingleton<IFusionCacheBackplane>(sp =>
-            {
-                var mux = sp.GetRequiredService<IConnectionMultiplexer>();
-                return new RedisBackplane(new RedisBackplaneOptions
+            // The backplane must be keyed per cache name. A RedisBackplane instance is bound to a
+            // single pub/sub channel (set on Subscribe), so sharing one instance across named caches
+            // collapses them onto a single channel and misroutes cross-instance invalidations. Each
+            // cache gets its own backplane while still reusing the shared multiplexer.
+            services.TryAddKeyedSingleton<IFusionCacheBackplane>(
+                cacheName,
+                (sp, _) =>
                 {
-                    ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                    var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+                    return new RedisBackplane(new RedisBackplaneOptions
+                    {
+                        ConnectionMultiplexerFactory = () => Task.FromResult(mux)
+                    });
                 });
-            });
 
             fusionCacheBuilder
                 .WithRegisteredDistributedCache()
-                .WithRegisteredBackplane();
+                .WithRegisteredKeyedBackplaneByCacheName();
 
             return services;
         }

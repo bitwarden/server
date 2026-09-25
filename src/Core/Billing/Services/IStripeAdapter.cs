@@ -28,6 +28,7 @@ public interface IStripeAdapter
     Task<List<Invoice>> ListInvoicesAsync(StripeInvoiceListOptions options);
     Task<Invoice> CreateInvoiceAsync(InvoiceCreateOptions options);
     Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options);
+    Task<List<InvoiceLineItem>> ListInvoiceLineItemsAsync(string invoiceId, InvoiceLineItemListOptions options);
     Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options);
     Task<Invoice> UpdateInvoiceAsync(string id, InvoiceUpdateOptions options);
     Task<Invoice> FinalizeInvoiceAsync(string id, InvoiceFinalizeOptions options = null);
@@ -63,4 +64,5 @@ public interface IStripeAdapter
     Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
     Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null);
     Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null);
+    Task WaitForTestClockToAdvanceAsync(TestClock testClock);
 }

@@ -1,0 +1,2 @@
+EXAMPLE SSH public key - fake seeder test data, not a real key.
+ssh-ed25519 AAAAExampleFakeSeederPublicKeyNotRealForTestingOnly seeder@example.com

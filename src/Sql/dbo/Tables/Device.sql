@@ -12,6 +12,7 @@
     [EncryptedPrivateKey] VARCHAR (MAX)    NULL,
     [Active]              BIT              NOT NULL CONSTRAINT [DF_Device_Active] DEFAULT (1),
     [LastActivityDate]    DATETIME2 (7)    NULL,
+    [ClientVersion]       NVARCHAR (43)    NULL,
     CONSTRAINT [PK_Device] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Device_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );

@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Test.Utilities;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -13,6 +14,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
@@ -42,13 +44,13 @@ public class PoliciesControllerTests
         Guid orgId,
         Policy policy,
         MasterPasswordPolicyData mpPolicyData,
-        Organization organization)
+        OrganizationAbility organizationAbility)
     {
         // Arrange
-        organization.UsePolicies = true;
+        organizationAbility.UsePolicies = true;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         policy.Type = PolicyType.MasterPassword;
         policy.Enabled = true;
@@ -69,15 +71,19 @@ public class PoliciesControllerTests
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
 
-        // Assert that the data is deserialized correctly into a Dictionary<string, object>
-        // for all MasterPasswordPolicyData properties
-        Assert.Equal(mpPolicyData.MinComplexity, ((JsonElement)result.Data["minComplexity"]).GetInt32());
-        Assert.Equal(mpPolicyData.MinLength, ((JsonElement)result.Data["minLength"]).GetInt32());
-        Assert.Equal(mpPolicyData.RequireLower, ((JsonElement)result.Data["requireLower"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireUpper, ((JsonElement)result.Data["requireUpper"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireNumbers, ((JsonElement)result.Data["requireNumbers"]).GetBoolean());
-        Assert.Equal(mpPolicyData.RequireSpecial, ((JsonElement)result.Data["requireSpecial"]).GetBoolean());
-        Assert.Equal(mpPolicyData.EnforceOnLogin, ((JsonElement)result.Data["enforceOnLogin"]).GetBoolean());
+        // Assert that Data is passed through as the raw JSON string, and still contains
+        // all the expected MasterPasswordPolicyData properties.
+        Assert.Equal(policy.Data, result.Data);
+
+        using var dataDocument = JsonDocument.Parse(result.Data);
+        var dataElement = dataDocument.RootElement;
+        Assert.Equal(mpPolicyData.MinComplexity, dataElement.GetProperty("minComplexity").GetInt32());
+        Assert.Equal(mpPolicyData.MinLength, dataElement.GetProperty("minLength").GetInt32());
+        Assert.Equal(mpPolicyData.RequireLower, dataElement.GetProperty("requireLower").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireUpper, dataElement.GetProperty("requireUpper").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireNumbers, dataElement.GetProperty("requireNumbers").GetBoolean());
+        Assert.Equal(mpPolicyData.RequireSpecial, dataElement.GetProperty("requireSpecial").GetBoolean());
+        Assert.Equal(mpPolicyData.EnforceOnLogin, dataElement.GetProperty("enforceOnLogin").GetBoolean());
     }
 
 
@@ -125,8 +131,8 @@ public class PoliciesControllerTests
         Guid orgId)
     {
         // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns((OrganizationAbility)null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
@@ -137,13 +143,13 @@ public class PoliciesControllerTests
     public async Task GetMasterPasswordPolicy_WhenOrgIsNull_ThrowsNotFoundException(
         SutProvider<PoliciesController> sutProvider,
         Guid orgId,
-        Organization organization)
+        OrganizationAbility organizationAbility)
     {
         // Arrange
-        organization.UsePolicies = false;
+        organizationAbility.UsePolicies = false;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
@@ -181,13 +187,13 @@ public class PoliciesControllerTests
     [BitAutoData]
     public async Task GetByToken_WhenOrganizationUseUsePoliciesIsFalse_ThrowsNotFoundException(
         SutProvider<PoliciesController> sutProvider, Guid orgId, Guid organizationUserId, string token, string email,
-        Organization organization)
+        OrganizationAbility organizationAbility)
     {
         // Arrange
-        organization.UsePolicies = false;
+        organizationAbility.UsePolicies = false;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
 
         // Act & Assert
@@ -201,8 +207,8 @@ public class PoliciesControllerTests
         SutProvider<PoliciesController> sutProvider, Guid orgId, Guid organizationUserId, string token, string email)
     {
         // Arrange
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns((OrganizationAbility)null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -217,14 +223,14 @@ public class PoliciesControllerTests
         Guid organizationUserId,
         string token,
         string email,
-        Organization organization
+        OrganizationAbility organizationAbility
     )
     {
         // Arrange
-        organization.UsePolicies = true;
+        organizationAbility.UsePolicies = true;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
         decryptedToken.Valid.Returns(false);
@@ -252,14 +258,14 @@ public class PoliciesControllerTests
         Guid organizationUserId,
         string token,
         string email,
-        Organization organization
+        OrganizationAbility organizationAbility
     )
     {
         // Arrange
-        organization.UsePolicies = true;
+        organizationAbility.UsePolicies = true;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
         decryptedToken.Valid.Returns(true);
@@ -294,14 +300,14 @@ public class PoliciesControllerTests
         string token,
         string email,
         OrganizationUser orgUser,
-        Organization organization
+        OrganizationAbility organizationAbility
     )
     {
         // Arrange
-        organization.UsePolicies = true;
+        organizationAbility.UsePolicies = true;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
         decryptedToken.Valid.Returns(true);
@@ -338,14 +344,14 @@ public class PoliciesControllerTests
         string token,
         string email,
         OrganizationUser orgUser,
-        Organization organization
+        OrganizationAbility organizationAbility
     )
     {
         // Arrange
-        organization.UsePolicies = true;
+        organizationAbility.UsePolicies = true;
 
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+        var organizationAbilityCacheService = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        organizationAbilityCacheService.GetOrganizationAbilityAsync(orgId).Returns(organizationAbility);
 
         var decryptedToken = Substitute.For<OrgUserInviteTokenable>();
         decryptedToken.Valid.Returns(true);
@@ -415,44 +421,6 @@ public class PoliciesControllerTests
 
         // Act
         var result = await sutProvider.Sut.Put(orgId, policy.Type, model);
-
-        // Assert
-        await sutProvider.GetDependency<ISavePolicyCommand>()
-            .Received(1)
-            .SaveAsync(Arg.Is<SavePolicyModel>(m => m.PolicyUpdate.OrganizationId == orgId &&
-                                                    m.PolicyUpdate.Type == policy.Type &&
-                                                    m.PolicyUpdate.Enabled == model.Policy.Enabled &&
-                                                    m.PerformedBy.UserId == userId &&
-                                                    m.PerformedBy.IsOrganizationOwnerOrProvider == true));
-
-        Assert.NotNull(result);
-        Assert.Equal(policy.Id, result.Id);
-        Assert.Equal(policy.Type, result.Type);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task PutVNext_SavesPolicyWithCorrectArguments(
-        SutProvider<PoliciesController> sutProvider, Guid orgId,
-        SavePolicyRequest model, Policy policy, Guid userId)
-    {
-        // Arrange
-        policy.Data = null;
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .OrganizationOwner(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ISavePolicyCommand>()
-            .SaveAsync(Arg.Any<SavePolicyModel>())
-            .Returns(policy);
-
-        // Act
-        var result = await sutProvider.Sut.PutVNext(orgId, policy.Type, model);
 
         // Assert
         await sutProvider.GetDependency<ISavePolicyCommand>()

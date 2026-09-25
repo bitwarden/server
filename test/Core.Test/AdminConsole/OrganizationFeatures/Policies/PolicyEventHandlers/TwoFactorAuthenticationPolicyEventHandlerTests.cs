@@ -256,4 +256,41 @@ public class TwoFactorAuthenticationPolicyEventHandlerTests
             .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(),
                 compliantUser.Email);
     }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePreUpsertSideEffectAsync_StagedUsersAreNotRevoked(
+        Organization organization,
+        [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
+        SutProvider<TwoFactorAuthenticationPolicyEventHandler> sutProvider)
+    {
+        // Arrange
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        // A staged member without two-factor. Staged members are not subject to policy enforcement
+        // and must never be treated as revocable.
+        var stagedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User,
+            Email = "staged@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = true
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([stagedUser]);
+
+        // Act
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
+
+        // Assert - the staged user is excluded from the revocable set, so no revocation occurs.
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceive()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+    }
 }

@@ -6,4 +6,5 @@ public interface IGetOrganizationReportQuery
 {
     Task<OrganizationReport> GetOrganizationReportAsync(Guid organizationId);
     Task<OrganizationReport> GetLatestOrganizationReportAsync(Guid organizationId);
+    Task<OrganizationReport> ReadLatestOrganizationReportAsync(Guid organizationId);
 }

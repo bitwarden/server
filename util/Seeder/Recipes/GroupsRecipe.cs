@@ -33,7 +33,7 @@ public class GroupsRecipe(DatabaseContext db)
         {
             groupList.Add(new Core.AdminConsole.Entities.Group
             {
-                Id = CoreHelpers.GenerateComb(),
+                Id = CombGuid.Generate(),
                 OrganizationId = organizationId,
                 Name = $"Group {i + 1}"
             });

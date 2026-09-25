@@ -2,7 +2,7 @@
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -61,9 +61,9 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
         return affectedRows > 0;
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
+    public DatabaseTransactionAction UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (connection, transaction) =>
         {
             const string sql = @"
                 UPDATE WC

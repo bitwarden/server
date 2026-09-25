@@ -1,20 +1,21 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Services;
 using Bit.Identity;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
+using Core.Auth.Enums;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -37,12 +38,21 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public ConcurrentDictionary<string, string> RegistrationTokens { get; private set; } = new ConcurrentDictionary<string, string>();
 
+    /// <summary>
+    /// Codes captured from the two-factor email, keyed by the account email they were sent for. Populated
+    /// alongside <see cref="RegistrationTokens"/> because the IMailService can only be substituted once;
+    /// a test that substitutes it again would drop the registration token capture that
+    /// <see cref="RegisterNewIdentityFactoryUserAsync"/> depends on. The latest code for an email wins,
+    /// matching the token provider, which overwrites its cache entry on each generate.
+    /// </summary>
+    public ConcurrentDictionary<string, string> TwoFactorEmailCodes { get; private set; } = new ConcurrentDictionary<string, string>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // This allows us to use the official registration flow
         SubstituteService<IMailService>(service =>
         {
-            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            service.SendRegistrationVerificationEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                 .ReturnsForAnyArgs(Task.CompletedTask)
                 .AndDoes(call =>
                 {
@@ -51,6 +61,12 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                         throw new InvalidOperationException("This email was already registered for new user registration.");
                     }
                 });
+
+            service.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TwoFactorEmailPurpose>())
+                .ReturnsForAnyArgs(Task.CompletedTask)
+                .AndDoes(call => TwoFactorEmailCodes[call.ArgAt<string>(1)] = call.ArgAt<string>(2));
         });
 
         if (UseMockClientVersionValidator)
@@ -81,6 +97,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return await Server.PostAsync("/accounts/register/verification-email-clicked", JsonContent.Create(model));
     }
 
+    public async Task<HttpContext> PostPreloginAsync(PasswordPreloginRequestModel model)
+    {
+        return await Server.PostAsync("/accounts/prelogin/password", JsonContent.Create(model));
+    }
+
     public async Task<(string Token, string RefreshToken)> TokenFromPasswordAsync(
         string username,
         string password,
@@ -94,8 +115,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
+        // to satisfy the nullability analysis, we have to assert the presence of these properties
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
 
-        return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
+        Debug.Assert(root.TryGetProperty("refresh_token", out var refreshToken));
+        var refreshTokenString = refreshToken.GetString();
+        Debug.Assert(refreshTokenString != null);
+
+        return (accessTokenString, refreshTokenString);
     }
 
     public async Task<HttpContext> ContextFromPasswordAsync(
@@ -110,7 +139,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             { "scope", "api offline_access" },
             { "client_id", clientId },
-            { "deviceType", ((int)deviceType).ToString() },
+            { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", deviceName },
             { "grant_type", "password" },
@@ -135,7 +164,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         {
             { "scope", "api offline_access" },
             { "client_id", clientId },
-            { "deviceType", ((int)deviceType).ToString() },
+            { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) },
             { "deviceIdentifier", deviceIdentifier },
             { "deviceName", deviceName },
             { "grant_type", "password" },
@@ -157,7 +186,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        return root.GetProperty("access_token").GetString();
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
+
+        return accessTokenString;
     }
 
     public async Task<HttpContext> ContextFromAccessTokenAsync(Guid clientId, string clientSecret,
@@ -170,7 +203,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 { "client_id", clientId.ToString() },
                 { "client_secret", clientSecret },
                 { "grant_type", "client_credentials" },
-                { "deviceType", ((int)deviceType).ToString() }
+                { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) }
             }));
 
         return context;
@@ -183,8 +216,11 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
+        Debug.Assert(root.TryGetProperty("access_token", out var accessToken));
+        var accessTokenString = accessToken.GetString();
+        Debug.Assert(accessTokenString != null);
 
-        return root.GetProperty("access_token").GetString();
+        return accessTokenString;
     }
 
     public async Task<HttpContext> ContextFromOrganizationApiKeyAsync(string clientId, string clientSecret,
@@ -197,7 +233,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                 { "client_id", clientId },
                 { "client_secret", clientSecret },
                 { "grant_type", "client_credentials" },
-                { "deviceType", ((int)deviceType).ToString() }
+                { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) }
             }));
         return context;
     }
@@ -218,7 +254,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         requestModel.MasterPasswordHash ??= DefaultUserPasswordHash;
         // PM-28143 - When KDF is sourced exclusively from MasterPasswordUnlockData, delete the root Kdf defaults below.
         requestModel.Kdf ??= KdfType.PBKDF2_SHA256;
-        requestModel.KdfIterations ??= AuthConstants.PBKDF2_ITERATIONS.Default;
+        requestModel.KdfIterations ??= KdfConstants.PBKDF2_ITERATIONS.Default;
         // Ensure a symmetric key is provided when no unlock data is present
         // PM-28143 - When MasterPasswordUnlockData is required, delete the UserSymmetricKey fallback block below.
         if (requestModel.MasterPasswordUnlock == null && string.IsNullOrWhiteSpace(requestModel.UserSymmetricKey))
@@ -229,16 +265,16 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         // Align unlock/auth data KDF with root KDF so login uses the provided master password hash.
         // PM-28143 - After removing root Kdf fields, build KDF exclusively from MasterPasswordUnlockData.Kdf and delete this alignment section.
         var effectiveKdfType = requestModel.Kdf ?? KdfType.PBKDF2_SHA256;
-        var effectiveIterations = requestModel.KdfIterations ?? AuthConstants.PBKDF2_ITERATIONS.Default;
+        var effectiveIterations = requestModel.KdfIterations ?? KdfConstants.PBKDF2_ITERATIONS.Default;
         int? effectiveMemory = null;
         int? effectiveParallelism = null;
         if (effectiveKdfType == KdfType.Argon2id)
         {
-            effectiveIterations = AuthConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
+            effectiveIterations = KdfConstants.ARGON2_ITERATIONS.InsideRange(effectiveIterations)
                 ? effectiveIterations
-                : AuthConstants.ARGON2_ITERATIONS.Default;
-            effectiveMemory = AuthConstants.ARGON2_MEMORY.Default;
-            effectiveParallelism = AuthConstants.ARGON2_PARALLELISM.Default;
+                : KdfConstants.ARGON2_ITERATIONS.Default;
+            effectiveMemory = KdfConstants.ARGON2_MEMORY.Default;
+            effectiveParallelism = KdfConstants.ARGON2_PARALLELISM.Default;
         }
 
         var alignedKdf = new KdfRequestModel
@@ -292,6 +328,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
             if (encKeyPair != null)
             {
+                Debug.Assert(keys.PublicKeyEncryptionKeyPair != null, "PublicKeyEncryptionKeyPair must be provided when encKeyPair is not null");
                 encKeyPair = new PublicKeyEncryptionKeyPairRequestModel
                 {
                     WrappedPrivateKey = DefaultEncryptedString,
@@ -302,6 +339,7 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
             if (sigKeyPair != null)
             {
+                Debug.Assert(keys.SignatureKeyPair != null, "SignatureKeyPair must be provided when sigKeyPair is not null");
                 sigKeyPair = new SignatureKeyPairRequestModel
                 {
                     SignatureAlgorithm = "ed25519",
@@ -333,7 +371,10 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         Assert.Equal(StatusCodes.Status204NoContent, sendEmailVerificationResponseHttpContext.Response.StatusCode);
         Assert.NotNull(RegistrationTokens[requestModel.Email]);
 
-        // Now we call the finish registration endpoint with the email verification token
+        // Now we call the finish registration endpoint with the email verification token.
+        // SalesAssistedToken must be null: GetTokenType() checks it before EmailVerificationToken,
+        // so an AutoFixture-generated value would shadow the intended token type and cause a 400.
+        requestModel.SalesAssistedToken = null;
         requestModel.EmailVerificationToken = RegistrationTokens[requestModel.Email];
 
         var postRegisterFinishHttpContext = await PostRegisterFinishAsync(requestModel);

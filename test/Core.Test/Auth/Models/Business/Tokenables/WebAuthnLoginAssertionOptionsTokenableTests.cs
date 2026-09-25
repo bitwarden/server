@@ -58,4 +58,26 @@ public class WebAuthnLoginAssertionOptionsTokenableTests
 
         Assert.True(isValid);
     }
+
+    [Theory, BitAutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions createOptions)
+    {
+        var token = new WebAuthnLoginAssertionOptionsTokenable(scope, createOptions)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    [Theory, BitAutoData]
+    public void TokenIsValid_ExpiredToken_ReturnsFalse(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions createOptions)
+    {
+        var token = new WebAuthnLoginAssertionOptionsTokenable(scope, createOptions)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.TokenIsValid(scope));
+    }
 }

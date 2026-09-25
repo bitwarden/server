@@ -144,7 +144,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
-        await organizationUserRepository.RevokeAsync(orgUser.Id);
+        await organizationUserRepository.RevokeAsync(orgUser.Id, RevocationReason.Manual);
 
         var request = new OrganizationUserBulkRequestModel
         {
@@ -205,7 +205,7 @@ public class OrganizationUserControllerBulkRevokeTests : IClassFixture<ApiApplic
 
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
 
-        await organizationUserRepository.RevokeAsync(alreadyRevokedOrgUser.Id);
+        await organizationUserRepository.RevokeAsync(alreadyRevokedOrgUser.Id, RevocationReason.Manual);
 
         var request = new OrganizationUserBulkRequestModel
         {

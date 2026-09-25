@@ -21,42 +21,29 @@ public class GetOrganizationReportApplicationDataQuery : IGetOrganizationReportA
 
     public async Task<OrganizationReportApplicationDataResponse> GetOrganizationReportApplicationDataAsync(Guid organizationId, Guid reportId)
     {
-        try
+        if (organizationId == Guid.Empty)
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report application data for organization {organizationId} and report {reportId}",
-                organizationId, reportId);
-
-            if (organizationId == Guid.Empty)
-            {
-                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportApplicationDataAsync called with empty OrganizationId");
-                throw new BadRequestException("OrganizationId is required.");
-            }
-
-            if (reportId == Guid.Empty)
-            {
-                _logger.LogWarning(Constants.BypassFiltersEventId, "GetOrganizationReportApplicationDataAsync called with empty ReportId");
-                throw new BadRequestException("ReportId is required.");
-            }
-
-            var applicationDataResponse = await _organizationReportRepo.GetApplicationDataAsync(reportId);
-
-            if (applicationDataResponse == null)
-            {
-                _logger.LogWarning(Constants.BypassFiltersEventId, "No application data found for organization {organizationId} and report {reportId}",
-                    organizationId, reportId);
-                throw new NotFoundException("Organization report application data not found.");
-            }
-
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved organization report application data for organization {organizationId} and report {reportId}",
-                organizationId, reportId);
-
-            return applicationDataResponse;
+            throw new BadRequestException("OrganizationId is required.");
         }
-        catch (Exception ex) when (!(ex is BadRequestException || ex is NotFoundException))
+
+        if (reportId == Guid.Empty)
         {
-            _logger.LogError(ex, "Error fetching organization report application data for organization {organizationId} and report {reportId}",
-                organizationId, reportId);
-            throw;
+            throw new BadRequestException("ReportId is required.");
         }
+
+        var report = await _organizationReportRepo.GetByIdAsync(reportId);
+        if (report == null || report.OrganizationId != organizationId)
+        {
+            throw new NotFoundException("Organization report application data not found.");
+        }
+
+        var applicationDataResponse = await _organizationReportRepo.GetApplicationDataAsync(reportId);
+
+        if (applicationDataResponse == null)
+        {
+            throw new NotFoundException("Organization report application data not found.");
+        }
+
+        return applicationDataResponse;
     }
 }

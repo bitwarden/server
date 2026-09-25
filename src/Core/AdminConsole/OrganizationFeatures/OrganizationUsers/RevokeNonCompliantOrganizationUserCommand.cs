@@ -30,33 +30,42 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return validationResult;
         }
 
-        await organizationUserRepository.RevokeManyAsync(request.OrganizationUsers.Select(x => x.Id));
+        await organizationUserRepository.RevokeManyAsync(request.OrganizationUsers.Select(x => x.Id), request.RevocationReason);
 
         var now = timeProvider.GetUtcNow();
+
+        var eventType = MapRevocationReasonToEventType(request.RevocationReason);
 
         switch (request.ActionPerformedBy)
         {
             case StandardUser:
                 await eventService.LogOrganizationUserEventsAsync(
-                    request.OrganizationUsers.Select(x => GetRevokedUserEventTuple(x, now)));
+                    request.OrganizationUsers.Select(x => GetRevokedUserEventTuple(x, eventType, now)));
                 break;
             case SystemUser { SystemUserType: not null } loggableSystem:
                 await eventService.LogOrganizationUserEventsAsync(
                     request.OrganizationUsers.Select(x =>
-                        GetRevokedUserEventBySystemUserTuple(x, loggableSystem.SystemUserType.Value, now)));
+                        GetRevokedUserEventBySystemUserTuple(x, eventType, loggableSystem.SystemUserType.Value, now)));
                 break;
         }
 
         return validationResult;
     }
 
+    private static EventType MapRevocationReasonToEventType(RevocationReason reason) => reason switch
+    {
+        RevocationReason.TwoFactorPolicyNonCompliance => EventType.OrganizationUser_Revoked_TwoFactorNonCompliance,
+        RevocationReason.SingleOrgPolicyNonCompliance => EventType.OrganizationUser_Revoked_SingleOrganizationNonCompliance,
+        _ => EventType.OrganizationUser_Revoked
+    };
+
     private static (OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time) GetRevokedUserEventTuple(
-        OrganizationUserUserDetails organizationUser, DateTimeOffset dateTimeOffset) =>
-        new(organizationUser, EventType.OrganizationUser_Revoked, dateTimeOffset.UtcDateTime);
+        OrganizationUserUserDetails organizationUser, EventType eventType, DateTimeOffset dateTimeOffset) =>
+        new(organizationUser, eventType, dateTimeOffset.UtcDateTime);
 
     private static (OrganizationUserUserDetails organizationUser, EventType eventType, EventSystemUser eventSystemUser, DateTime? time) GetRevokedUserEventBySystemUserTuple(
-        OrganizationUserUserDetails organizationUser, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
-        EventType.OrganizationUser_Revoked, systemUser, dateTimeOffset.UtcDateTime);
+        OrganizationUserUserDetails organizationUser, EventType eventType, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
+        eventType, systemUser, dateTimeOffset.UtcDateTime);
 
     private async Task<CommandResult> ValidateAsync(RevokeOrganizationUsersRequest request)
     {

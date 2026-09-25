@@ -18,9 +18,6 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Wait 20 seconds to allow database to come online
-        await Task.Delay(20000, cancellationToken);
-
         var maxMigrationAttempts = 10;
         for (var i = 1; i <= maxMigrationAttempts; i++)
         {

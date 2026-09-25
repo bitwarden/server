@@ -2,13 +2,11 @@
 using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -25,12 +23,6 @@ public class ProviderAbilityCacheTests : IClassFixture<ApiApplicationFactory>, I
     public ProviderAbilityCacheTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.ProviderAbilityExtendedCache)
-                .Returns(true);
-        });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -87,7 +79,7 @@ public class ProviderAbilityCacheTests : IClassFixture<ApiApplicationFactory>, I
         // Assert - endpoint succeeded and cache was populated
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var cacheService = _factory.GetService<IApplicationCacheService>();
+        var cacheService = _factory.GetService<IProviderAbilityCacheService>();
         var ability = await cacheService.GetProviderAbilityAsync(_provider.Id);
         Assert.NotNull(ability);
         Assert.Equal(_provider.Id, ability.Id);
@@ -97,7 +89,7 @@ public class ProviderAbilityCacheTests : IClassFixture<ApiApplicationFactory>, I
     public async Task Delete_RemovesProvider_CacheReturnsNull()
     {
         // Arrange - populate the cache before deletion
-        var cacheService = _factory.GetService<IApplicationCacheService>();
+        var cacheService = _factory.GetService<IProviderAbilityCacheService>();
         await cacheService.UpsertProviderAbilityAsync(_provider);
 
         var abilityBeforeDelete = await cacheService.GetProviderAbilityAsync(_provider.Id);

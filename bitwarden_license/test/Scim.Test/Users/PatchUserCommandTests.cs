@@ -102,7 +102,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM, RevocationReason.Manual);
     }
 
     [Theory]
@@ -130,7 +130,7 @@ public class PatchUserCommandTests
 
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM, RevocationReason.Manual);
     }
 
     [Theory]
@@ -150,7 +150,7 @@ public class PatchUserCommandTests
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
         await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RestoreUserAsync(default, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM, default);
     }
 
     [Theory]
@@ -380,7 +380,7 @@ public class PatchUserCommandTests
 
         // Verify no restore or revoke operations were called
         await sutProvider.GetDependency<IRestoreOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RestoreUserAsync(default, EventSystemUser.SCIM);
-        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RevokeUserAsync(default, EventSystemUser.SCIM, default);
     }
 
     [Theory]
@@ -415,7 +415,7 @@ public class PatchUserCommandTests
         await sutProvider.Sut.PatchUserAsync(organizationUser.OrganizationId, organizationUser.Id, scimPatchModel);
 
         // Verify both operations were processed
-        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IRevokeOrganizationUserCommand>().Received(1).RevokeUserAsync(organizationUser, EventSystemUser.SCIM, RevocationReason.Manual);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.ExternalId == newExternalId));
     }

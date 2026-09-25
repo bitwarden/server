@@ -37,6 +37,6 @@ if echo "$ALL_CHANGED" | grep -q '^\.claude/skills/bump-rust-sdk/references/api-
   exit 0
 fi
 
-REASON="util/RustSdk/rust/Cargo.toml was modified but the API surface reference was not updated. Read all .rs files in util/RustSdk/rust/src/ and regenerate .claude/skills/bump-rust-sdk/references/api-surface.md to reflect the current imports, types, and traits used from bitwarden-core, bitwarden-crypto, and bitwarden-vault."
+REASON="util/RustSdk/rust/Cargo.toml was modified but the API surface reference was not updated. Read all .rs files in util/RustSdk/rust/src/ and regenerate .claude/skills/bump-rust-sdk/references/api-surface.md to reflect the current imports, types, and traits used from bitwarden-crypto."
 
 jq -n --arg reason "$REASON" '{ "decision": "block", "reason": $reason }'

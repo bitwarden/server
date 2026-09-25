@@ -110,7 +110,7 @@ public class PaymentSucceededHandler(
         }
         else if (userId.HasValue)
         {
-            if (subscription.Items.All(i => i.Price.Id is not IStripeEventUtilityService.PremiumPlanId and not IStripeEventUtilityService.PremiumPlanIdAppStore))
+            if (!await IsPremiumSubscriptionAsync(subscription))
             {
                 return;
             }
@@ -122,5 +122,41 @@ public class PaymentSucceededHandler(
                 await pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user);
             }
         }
+    }
+
+    // Identifies Premium subscriptions by matching the Password Manager seat Stripe price ID
+    // against the set of known Premium plans from the pricing service. Matches on seat only —
+    // storage is an add-on, not an identity signal — so this aligns with UpcomingInvoiceHandler's
+    // convention. Fails safe (returns false) on pricing-service errors or empty plan lists so we
+    // don't 500-retry and incorrectly enable Premium.
+    private async Task<bool> IsPremiumSubscriptionAsync(Stripe.Subscription subscription)
+    {
+        List<Core.Billing.Pricing.Premium.Plan> premiumPlans;
+        try
+        {
+            premiumPlans = await pricingClient.ListPremiumPlans();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to list Premium plans while evaluating subscription ({SubscriptionId}); treating as non-Premium",
+                subscription.Id);
+            return false;
+        }
+
+        var premiumSeatPriceIds = premiumPlans
+            .Select(p => p.Seat?.StripePriceId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet();
+
+        if (premiumSeatPriceIds.Count == 0)
+        {
+            logger.LogError(
+                "Pricing service returned no usable Premium seat price IDs while evaluating subscription ({SubscriptionId}); treating as non-Premium",
+                subscription.Id);
+            return false;
+        }
+
+        return subscription.Items.Any(i => premiumSeatPriceIds.Contains(i.Price.Id));
     }
 }

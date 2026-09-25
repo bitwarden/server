@@ -31,9 +31,6 @@ public class TwoFactorAuthenticatorUserVerificationTokenable : ExpiringTokenable
     public Guid UserId { get; set; }
     public string Key { get; set; }
 
-    public override bool Valid => Identifier == TokenIdentifier &&
-                                  UserId != default;
-
     [JsonConstructor]
     public TwoFactorAuthenticatorUserVerificationTokenable()
     {

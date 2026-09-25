@@ -29,4 +29,30 @@ public class EmergencyAccessInviteTokenableTests
 
         Assert.False(token.Valid);
     }
+
+    [Theory, AutoData]
+    public void Valid_NotExpired_ReturnsTrue(EmergencyAccess emergencyAccess)
+    {
+        var token = new EmergencyAccessInviteTokenable(emergencyAccess, 1);
+
+        Assert.True(token.Valid);
+    }
+
+    [Theory, AutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(EmergencyAccess emergencyAccess)
+    {
+        var token = new EmergencyAccessInviteTokenable(emergencyAccess, -1);
+
+        Assert.False(token.Valid);
+    }
+
+    // IsValid(Guid, string) is a data-only check; expiration is the caller's
+    // responsibility via the Valid property. This documents that contract.
+    [Theory, AutoData]
+    public void IsValid_ExpiredToken_ReturnsTrue(EmergencyAccess emergencyAccess)
+    {
+        var token = new EmergencyAccessInviteTokenable(emergencyAccess, -1);
+
+        Assert.True(token.IsValid(emergencyAccess.Id, emergencyAccess.Email));
+    }
 }

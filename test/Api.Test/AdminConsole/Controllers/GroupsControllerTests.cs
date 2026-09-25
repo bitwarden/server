@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -11,7 +12,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -229,7 +229,7 @@ public class GroupsControllerTests
         GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
         // Enable FC
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -270,7 +270,7 @@ public class GroupsControllerTests
     public async Task Post_NotAuthorizedToGiveAccessToCollections_Throws(Organization organization, GroupRequestModel groupRequestModel, SutProvider<GroupsController> sutProvider)
     {
         // Enable FC
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id).Returns(
             new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);

@@ -4,9 +4,13 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Services;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Quartz;
+using Stripe;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
@@ -21,6 +25,8 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
     private readonly IProviderService _providerService;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IPushNotificationAdapter _pushNotificationAdapter;
+    private readonly IStripeAdapter _stripeAdapter;
+    private readonly ILogger<SubscriptionDeletedHandler> _logger;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
@@ -31,7 +37,9 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         IProviderRepository providerRepository,
         IProviderService providerService,
         ISchedulerFactory schedulerFactory,
-        IPushNotificationAdapter pushNotificationAdapter)
+        IPushNotificationAdapter pushNotificationAdapter,
+        IStripeAdapter stripeAdapter,
+        ILogger<SubscriptionDeletedHandler> logger)
     {
         _stripeEventService = stripeEventService;
         _userService = userService;
@@ -42,6 +50,8 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         _providerService = providerService;
         _schedulerFactory = schedulerFactory;
         _pushNotificationAdapter = pushNotificationAdapter;
+        _stripeAdapter = stripeAdapter;
+        _logger = logger;
     }
 
     /// <summary>
@@ -60,6 +70,14 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         if (!subCanceled)
         {
             return;
+        }
+
+        // Run void before the disable branches so a disable failure doesn't strand
+        // open invoices — on Stripe re-delivery the void is an idempotent no-op while
+        // disable retries.
+        if (CameFromUnpaidLifecycle(subscription))
+        {
+            await VoidOpenInvoicesAsync(subscription.Id, parsedEvent.Id);
         }
 
         if (organizationId.HasValue)
@@ -92,6 +110,69 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
             {
                 await _pushNotificationAdapter.NotifyPremiumStatusChangedAsync(user!);
             }
+        }
+    }
+
+    private static bool CameFromUnpaidLifecycle(Subscription subscription) =>
+        subscription.Metadata != null &&
+        subscription.Metadata.TryGetValue(MetadataKeys.CancellationOrigin, out var origin) &&
+        origin == CancellationOrigins.UnpaidSubscription;
+
+    private async Task VoidOpenInvoicesAsync(string subscriptionId, string eventId)
+    {
+        List<Invoice> openInvoices;
+        try
+        {
+            openInvoices = await _stripeAdapter.ListInvoicesAsync(new StripeInvoiceListOptions
+            {
+                Status = InvoiceStatus.Open,
+                Subscription = subscriptionId,
+                SelectAll = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to list open invoices for canceled unpaid subscription ({SubscriptionID}) [event: {EventID}]; void cleanup skipped",
+                subscriptionId, eventId);
+            return;
+        }
+
+        foreach (var invoice in openInvoices)
+        {
+            await TryVoidInvoiceAsync(invoice.Id, subscriptionId, eventId);
+        }
+
+        _logger.LogInformation(
+            "Void cleanup completed for canceled unpaid subscription ({SubscriptionID}) [event: {EventID}]: attempted {Count} open invoice(s)",
+            subscriptionId, eventId, openInvoices.Count);
+    }
+
+    private async Task TryVoidInvoiceAsync(string invoiceId, string subscriptionId, string eventId)
+    {
+        try
+        {
+            await _stripeAdapter.VoidInvoiceAsync(invoiceId);
+            _logger.LogInformation(
+                "Voided invoice ({InvoiceID}) for canceled unpaid subscription ({SubscriptionID}) [event: {EventID}]",
+                invoiceId, subscriptionId, eventId);
+        }
+        catch (StripeException ex)
+        {
+            // Likely cause: webhook re-delivery hitting an already-voided invoice. Continue
+            // with remaining invoices rather than aborting the cleanup.
+            _logger.LogWarning(ex,
+                "Could not void invoice ({InvoiceID}) for canceled unpaid subscription ({SubscriptionID}) [event: {EventID}]; continuing with remaining invoices",
+                invoiceId, subscriptionId, eventId);
+        }
+        catch (Exception ex)
+        {
+            // Catch transport-level failures (HttpRequestException, TaskCanceledException, etc.)
+            // so the loop never abandons mid-page. Surface as Error since these are unexpected,
+            // unlike the StripeException case above.
+            _logger.LogError(ex,
+                "Unexpected failure voiding invoice ({InvoiceID}) for canceled unpaid subscription ({SubscriptionID}) [event: {EventID}]; continuing with remaining invoices",
+                invoiceId, subscriptionId, eventId);
         }
     }
 

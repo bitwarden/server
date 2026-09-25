@@ -3,8 +3,8 @@
 
 using System.Globalization;
 using System.Net.Http.Json;
+using Bit.Core.Enums;
 using Bit.Migrator;
-using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
@@ -96,6 +96,11 @@ public class Program
         if (_context.Parameters.TryGetValue("domain", out var domain))
         {
             _context.Install.Domain = domain.ToLowerInvariant();
+            if (Uri.CheckHostName(_context.Install.Domain) != UriHostNameType.Dns)
+            {
+                Helpers.WriteError("Domain is invalid. A valid domain name is required (e.g. bitwarden.example.com).");
+                return;
+            }
         }
         if (_context.Parameters.TryGetValue("dbname", out var database))
         {
@@ -155,23 +160,87 @@ public class Program
 
     private static void Update(Application application)
     {
-        // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
-        // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
-        // moving the project to .NET 5.
+        // Rebuilds identity.pfx when it holds more than one certificate or uses RC2-40 encryption,
+        // which OpenSSL 3 can only read with the legacy provider. We read with -legacy and export
+        // without it so the file is rewritten with AES-256. The existing key and certificate are preserved.
         _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(_context.App, "global", "globalSettings__identityServer__certificatePassword");
-        var certCountString = Helpers.Exec($"openssl pkcs12 -nokeys -info -in {application.RootDirectory}/identity/identity.pfx " +
-            $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
-        if (int.TryParse(certCountString, out var certCount) && certCount > 1)
+        var certOutput = Helpers.Exec(
+            "openssl",
+            [
+                "pkcs12",
+                "-nokeys",
+                "-info",
+                "-legacy",
+                "-in",
+                $"{application.RootDirectory}/identity/identity.pfx",
+                "-passin",
+                $"pass:{_context.Install.IdentityCertPassword}",
+            ],
+            returnStdout: true,
+            returnStderr: true);
+
+        var certCount = certOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            .Count(line => line.Contains("-----BEGIN CERTIFICATE-----"));
+
+        // openssl reports the encryption algorithm on stderr, so we check it for the legacy marker.
+        var isLegacyEncrypted = certOutput.Contains("pbeWithSHA1");
+
+        if (certCount > 1 || isLegacyEncrypted)
         {
             // Extract key from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -nocerts -nodes -out identity.key " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-in",
+                    $"{application.RootDirectory}/identity/identity.pfx",
+                    "-legacy",
+                    "-nocerts",
+                    "-nodes",
+                    "-out",
+                    "identity.key",
+                    "-passin",
+                    $"pass:{_context.Install.IdentityCertPassword}",
+                ],
+                returnStdout: false,
+                returnStderr: false);
+
             // Extract certificate from identity.pfx
-            Helpers.Exec($"openssl pkcs12 -in {application.RootDirectory}/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-in",
+                    $"{application.RootDirectory}/identity/identity.pfx",
+                    "-legacy",
+                    "-clcerts",
+                    "-nokeys",
+                    "-out",
+                    "identity.crt",
+                    "-passin",
+                    $"pass:{_context.Install.IdentityCertPassword}",
+                ],
+                returnStdout: false,
+                returnStderr: false);
+
             // Create new PKCS12 bag with certificate and key
-            Helpers.Exec($"openssl pkcs12 -export -out {application.RootDirectory}/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl",
+                [
+                    "pkcs12",
+                    "-export",
+                    "-out",
+                    $"{application.RootDirectory}/identity/identity.pfx",
+                    "-inkey",
+                    "identity.key",
+                    "-in",
+                    $"identity.crt",
+                    "-passout",
+                    $"pass:{_context.Install.IdentityCertPassword}"
+                ],
+                returnStdout: false,
+                returnStderr: false);
         }
 
         if (_context.Parameters.ContainsKey("db"))
@@ -210,7 +279,27 @@ public class Program
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile(_context.App, "global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString);
+
+        // setup runs outside the app host, so read the setting from the env file
+        var timeoutValue = Helpers.GetValueFromEnvFile(_context.App, "global",
+            "globalSettings__sqlServer__migrationExecutionTimeoutSeconds");
+
+        int? executionTimeoutSeconds = null;
+        if (!string.IsNullOrWhiteSpace(timeoutValue))
+        {
+            if (int.TryParse(timeoutValue, out var parsedTimeout))
+            {
+                executionTimeoutSeconds = parsedTimeout;
+                Helpers.WriteLine(_context, "Using a migration execution timeout of {0} seconds.", parsedTimeout);
+            }
+            else
+            {
+                Helpers.WriteLine(_context, "Ignoring migration execution timeout '{0}', which is not a whole " +
+                    "number of seconds. Using the default.", timeoutValue);
+            }
+        }
+
+        var migrator = new DbMigrator(vaultConnectionString, executionTimeoutSeconds: executionTimeoutSeconds);
 
         var enableLogging = false;
 

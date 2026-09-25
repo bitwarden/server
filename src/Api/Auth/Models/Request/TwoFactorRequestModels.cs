@@ -12,15 +12,26 @@ using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request;
 
-public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationRequestModel
+/// <summary>Request model for setting up or updating a user's Authenticator (TOTP) two-factor configuration.</summary>
+public class TwoFactorAuthenticatorUpdateRequestModel
 {
+    /// <summary>Six-digit TOTP code from the authenticator app, proving the user enrolled <see cref="Key"/>.</summary>
     [Required]
     [StringLength(50)]
     public string Token { get; set; }
+
+    /// <summary>TOTP shared secret that the token was minted against; must match the token's bound Key.</summary>
     [Required]
     [StringLength(50)]
     public string Key { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + Key</c>. Minted by <c>GetAuthenticator</c>
+    /// and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
+    [Required]
     public string UserVerificationToken { get; set; }
+
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -43,7 +54,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
     }
 }
 
-public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
+public class TwoFactorDuoUpdateRequestModel : IValidatableObject
 {
     /*
         String lengths based on Duo's documentation
@@ -57,6 +68,13 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     public string ClientSecret { get; set; }
     [Required]
     public string Host { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
+    [Required]
+    public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
     {
@@ -110,7 +128,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         return existingOrg;
     }
 
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var results = new List<ValidationResult>();
         if (string.IsNullOrWhiteSpace(ClientId))
@@ -131,7 +149,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     }
 }
 
-public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestModel, IValidatableObject
+public class TwoFactorYubiKeyUpdateRequestModel : IValidatableObject
 {
     public string Key1 { get; set; }
     public string Key2 { get; set; }
@@ -140,6 +158,13 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     public string Key5 { get; set; }
     [Required]
     public bool? Nfc { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
+    [Required]
+    public string UserVerificationToken { get; set; }
 
     public User ToUser(User existingUser)
     {
@@ -180,7 +205,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         return keyValue.Substring(0, 12);
     }
 
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
             string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
@@ -215,7 +240,11 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     }
 }
 
-public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
+/// <summary>
+/// Request body for the anonymous login-time endpoint that emails a 2FA OTP during sign-in. Authenticated
+/// by master password / OTP, SSO email-2FA session token, or device-auth-request access code.
+/// </summary>
+public class TwoFactorEmailLoginRequestModel : SecretVerificationRequestModel
 {
     [Required]
     [EmailAddress]
@@ -224,6 +253,64 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     public string AuthRequestId { get; set; }
     // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.
     public string SsoEmail2FaSessionToken { get; set; }
+
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrEmpty(Secret)
+            && string.IsNullOrEmpty(AuthRequestAccessCode)
+            && string.IsNullOrEmpty(SsoEmail2FaSessionToken))
+        {
+            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
+        }
+    }
+}
+
+public class TwoFactorWebAuthnUpdateRequestModel : TwoFactorWebAuthnDeleteRequestModel
+{
+    [Required]
+    public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
+    public string Name { get; set; }
+}
+
+public class TwoFactorWebAuthnDeleteRequestModel : IValidatableObject
+{
+    [Required]
+    public int? Id { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
+    [Required]
+    public string UserVerificationToken { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!Id.HasValue)
+        {
+            yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
+        }
+    }
+}
+
+/// <summary>
+/// Request body for the authenticated setup endpoint that sends a verification OTP to the user's chosen
+/// 2FA email address. Authenticated by a user-verification token minted earlier in the setup flow.
+/// </summary>
+public class TwoFactorEmailSetupRequestModel
+{
+    [Required]
+    [EmailAddress]
+    [StringLength(256)]
+    public string Email { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Minted by the matching GET
+    /// endpoint and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
+    [Required]
+    public string UserVerificationToken { get; set; }
+
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -244,66 +331,30 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
         existingUser.SetTwoFactorProviders(providers);
         return existingUser;
     }
-
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (string.IsNullOrEmpty(Secret) && string.IsNullOrEmpty(AuthRequestAccessCode) && string.IsNullOrEmpty((SsoEmail2FaSessionToken)))
-        {
-            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
-        }
-    }
 }
 
-public class TwoFactorWebAuthnRequestModel : TwoFactorWebAuthnDeleteRequestModel
-{
-    [Required]
-    public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
-    public string Name { get; set; }
-}
-
-public class TwoFactorWebAuthnDeleteRequestModel : SecretVerificationRequestModel, IValidatableObject
-{
-    [Required]
-    public int? Id { get; set; }
-
-    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        foreach (var validationResult in base.Validate(validationContext))
-        {
-            yield return validationResult;
-        }
-
-        if (!Id.HasValue)
-        {
-            yield return new ValidationResult("Invalid Key Id", new string[] { nameof(Id) });
-        }
-    }
-}
-
-public class UpdateTwoFactorEmailRequestModel : TwoFactorEmailRequestModel
+/// <summary>
+/// Request body for the authenticated setup endpoint that completes Email 2FA enrollment by replaying the
+/// OTP from the previous setup step. Authenticated by the same user-verification token.
+/// </summary>
+public class TwoFactorEmailUpdateRequestModel : TwoFactorEmailSetupRequestModel
 {
     [Required]
     [StringLength(50)]
     public string Token { get; set; }
 }
 
-public class TwoFactorProviderRequestModel : SecretVerificationRequestModel
+/// <summary>Request model for deleting a user's Authenticator (TOTP) two-factor configuration.</summary>
+public class TwoFactorAuthenticatorDeleteRequestModel
 {
-    [Required]
-    public TwoFactorProviderType? Type { get; set; }
-}
-
-public class TwoFactorRecoveryRequestModel : TwoFactorEmailRequestModel
-{
-    [Required]
-    [StringLength(32)]
-    public string RecoveryCode { get; set; }
-}
-
-public class TwoFactorAuthenticatorDisableRequestModel : TwoFactorProviderRequestModel
-{
+    /// <summary>
+    /// User-verification token bound to <c>UserId + Key</c>. Minted by <c>GetAuthenticator</c>
+    /// and replayed on subsequent management calls so the user does not have to re-verify.
+    /// </summary>
     [Required]
     public string UserVerificationToken { get; set; }
+
+    /// <summary>TOTP shared secret that the token was minted against; must match the token's bound Key.</summary>
     [Required]
     public string Key { get; set; }
 }

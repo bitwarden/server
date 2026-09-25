@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Bit.Core.Dirt.Utilities;
 
@@ -24,7 +25,8 @@ public static partial class IntegrationTemplateProcessor
                 return match.Value;  // Return unknown keys as keys - i.e. #Key#
             }
 
-            return property.GetValue(values)?.ToString() ?? string.Empty;
+            var value = property.GetValue(values)?.ToString() ?? string.Empty;
+            return JsonSerializer.Serialize(value).Trim('"'); // Escape value and remove surrounding quotes
         });
     }
 

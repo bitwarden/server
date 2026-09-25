@@ -23,6 +23,9 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
         // Phase 1: Create users — build emailPrefix → orgUserId lookup
         var userLookup = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
         var emailPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var emails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var ownerEmailOverride = context.GetOwnerEmailOverride();
 
         var rosterIndex = 0;
         foreach (var rosterUser in roster.Users)
@@ -36,13 +39,42 @@ internal sealed class CreateRosterStep(string fixtureName) : IStep
                     "Each user must have a unique FirstName.LastName combination.");
             }
 
-            var email = $"{emailPrefix}@{domain}";
+            var orgUserType = ParseRole(rosterUser.Role);
+
+            // Email precedence: --owner-email CLI override (first owner only) → roster email override → derived.
+            // Roster references (groups, collections) still resolve by FirstName.LastName prefix, so only the
+            // stored email changes; downstream lookups continue to work.
+            var useOwnerOverride = orgUserType == OrganizationUserType.Owner
+                && context.Owner is null
+                && !string.IsNullOrWhiteSpace(ownerEmailOverride);
+            var email = useOwnerOverride
+                ? ownerEmailOverride!
+                : !string.IsNullOrWhiteSpace(rosterUser.Email)
+                    ? rosterUser.Email
+                    : $"{emailPrefix}@{domain}";
+
+            if (!emails.Add(email))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate email '{email}' in roster '{fixtureName}'. " +
+                    "Check the roster's email overrides for collisions.");
+            }
+
             var mangledEmail = context.GetMangler().Mangle(email);
             var password = context.GetPassword();
             var userKeys = RustSdkService.GenerateUserKeys(mangledEmail, password, kdfIterations, (uint)rosterIndex++);
-            var (user, _) = UserSeeder.Create(mangledEmail, context.GetPasswordHasher(), context.GetMangler(), keys: userKeys, password: password, kdfIterations: kdfIterations);
+            var (user, _) = UserSeeder.Create(
+                new UserSeed
+                {
+                    Email = mangledEmail,
+                    Name = $"{rosterUser.FirstName} {rosterUser.LastName}",
+                    Keys = userKeys,
+                    Password = password,
+                    KdfIterations = kdfIterations
+                },
+                context.GetPasswordHasher(),
+                context.GetMangler());
             var userOrgKey = RustSdkService.GenerateUserOrganizationKey(user.PublicKey!, orgKey);
-            var orgUserType = ParseRole(rosterUser.Role);
             var orgUser = org.CreateOrganizationUserWithKey(
                 user, orgUserType, OrganizationUserStatusType.Confirmed, userOrgKey);
 

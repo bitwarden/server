@@ -14,4 +14,6 @@ public class RegisterSendVerificationEmailRequestModel
     public bool ReceiveMarketingEmails { get; set; }
     [MarketingInitiativeValidation]
     public string? FromMarketing { get; set; }
+
+    public RegisterStartOpenOrgInviteRequestModel? OpenOrgInvite { get; set; }
 }

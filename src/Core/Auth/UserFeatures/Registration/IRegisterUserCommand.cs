@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
@@ -47,7 +48,27 @@ public interface IRegisterUserCommand
     /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
     /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, RegisterFinishData registerFinishData, string emailVerificationToken);
+    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, RegisterFinishData registerFinishData,
+        string emailVerificationToken);
+
+    /// <summary>
+    /// Creates a new user via an email-verification token in the presence of a validated
+    /// <see cref="OpenOrgInviteRequestModel"/>. The open org invite's organization is excluded from the claimed-domain
+    /// block check so a user reaching registration via that org's link can finalize registration
+    /// with a domain claimed by that org. This path is separate from
+    /// <see cref="RegisterUserViaEmailVerificationToken"/> because the open-org-invite flow will
+    /// enforce additional org-membership-related obligations that don't apply to vanilla
+    /// email-verification registration. This path also deliberately bypasses the open-registration
+    /// check so that invited users can complete registration in environments where open enrollment
+    /// is disabled (e.g. fedramp). The validated open-org invite is the authorization for this path.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
+    /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
+    /// <param name="openOrgInvite">The open-org-invite payload from the client — {orgId, code}.</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    public Task<IdentityResult> RegisterUserViaEmailVerificationTokenAndOpenOrgInvite(
+        User user, RegisterFinishData registerFinishData, string emailVerificationToken, OpenOrgInviteRequestModel openOrgInvite);
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -84,5 +105,17 @@ public interface IRegisterUserCommand
     /// <param name="providerUserId">The provider user id which is used to validate the invite token</param>
     /// <returns><see cref="IdentityResult"/></returns>
     public Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, RegisterFinishData registerFinishData, string providerInviteToken, Guid providerUserId);
+
+    /// <summary>
+    /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
+    /// This path supports sales-assisted trials: it deliberately bypasses the open-registration check so that prospects
+    /// can complete registration in environments where open enrollment is disabled. The sales-assisted
+    /// registration token is the authorization for this path. If the token is invalid or expired, an error will be thrown.
+    /// </summary>
+    /// <param name="user">The <see cref="User"/> to create</param>
+    /// <param name="registerFinishData">Cryptographic data for finishing user registration</param>
+    /// <param name="salesAssistedToken">The sales-assisted registration token sent to the user via email</param>
+    /// <returns><see cref="IdentityResult"/></returns>
+    public Task<IdentityResult> RegisterUserViaSalesAssistedToken(User user, RegisterFinishData registerFinishData, string salesAssistedToken);
 
 }

@@ -1,9 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -29,20 +27,17 @@ public interface IInitPendingOrganizationValidator
 public class InitPendingOrganizationValidator : IInitPendingOrganizationValidator
 {
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IPolicyService _policyService;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public InitPendingOrganizationValidator(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IPolicyService policyService,
         IPolicyRequirementQuery policyRequirementQuery,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationUserRepository organizationUserRepository)
     {
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _policyService = policyService;
         _policyRequirementQuery = policyRequirementQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationUserRepository = organizationUserRepository;
@@ -145,8 +140,8 @@ public class InitPendingOrganizationValidator : IInitPendingOrganizationValidato
             return new SingleOrgPolicyViolationError();
         }
 
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
+        var singleOrgReq = await _policyRequirementQuery.GetAsyncVNext<SingleOrganizationPolicyRequirement>(user.Id);
+        if (singleOrgReq.CanCreateOrganization() != null)
         {
             return new SingleOrgPolicyViolationError();
         }

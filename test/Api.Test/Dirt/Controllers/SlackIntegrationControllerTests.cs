@@ -8,6 +8,7 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -58,6 +60,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -78,6 +81,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -98,6 +102,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -117,6 +122,7 @@ public class SlackIntegrationControllerTests
     public async Task CreateAsync_StateEmpty_ThrowsNotFound(
         SutProvider<SlackIntegrationController> sutProvider)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -134,6 +140,7 @@ public class SlackIntegrationControllerTests
         OrganizationIntegration integration)
     {
         var timeProvider = new FakeTimeProvider(new DateTime(2024, 4, 3, 2, 1, 0, DateTimeKind.Utc));
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -153,6 +160,7 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -176,6 +184,7 @@ public class SlackIntegrationControllerTests
         wrongOrgIntegration.Type = IntegrationType.Slack;
         wrongOrgIntegration.Configuration = null;
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -199,6 +208,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Slack;
         integration.Configuration = "{}";
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -221,6 +231,7 @@ public class SlackIntegrationControllerTests
     {
         integration.Type = IntegrationType.Hec;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -243,7 +254,10 @@ public class SlackIntegrationControllerTests
     {
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
+        var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -259,7 +273,7 @@ public class SlackIntegrationControllerTests
             .Returns(integration);
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>(), Arg.Any<string>()).Returns(expectedUrl);
 
-        var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+        var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
         var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
 
@@ -279,7 +293,10 @@ public class SlackIntegrationControllerTests
         integration.Configuration = null;
         integration.Type = IntegrationType.Slack;
         var expectedUrl = "https://localhost/";
+        var fakeTime = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        sutProvider.SetDependency<TimeProvider>(fakeTime, "timeProvider").Create();
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -294,7 +311,7 @@ public class SlackIntegrationControllerTests
 
         var requestAction = await sutProvider.Sut.RedirectAsync(organizationId);
 
-        var expectedState = IntegrationOAuthState.FromIntegration(integration, sutProvider.GetDependency<TimeProvider>());
+        var expectedState = IntegrationOAuthState.FromIntegration(integration, fakeTime);
 
         Assert.IsType<RedirectResult>(requestAction);
         sutProvider.GetDependency<ISlackService>().Received(1).GetRedirectUrl(Arg.Any<string>(), expectedState.ToString());
@@ -311,6 +328,7 @@ public class SlackIntegrationControllerTests
         integration.Type = IntegrationType.Slack;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -331,6 +349,7 @@ public class SlackIntegrationControllerTests
         SutProvider<SlackIntegrationController> sutProvider,
         Guid organizationId)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -352,6 +371,7 @@ public class SlackIntegrationControllerTests
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
@@ -379,5 +399,62 @@ public class SlackIntegrationControllerTests
             .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    [Theory]
+    [BitAutoData("https://api.example.com", "https://api.example.com/organizations/integrations/slack/create")]
+    [BitAutoData("https://bitwarden.example.com/api/", "https://bitwarden.example.com/api/organizations/integrations/slack/create")]
+    public async Task RedirectAsync_CallbackUrlUsesConfiguredApiBaseUrl(
+        string apiBaseUrl,
+        string expectedCallbackUrl,
+        SutProvider<SlackIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Configuration = null;
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(apiBaseUrl);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "SlackIntegration_Create"))
+            .Returns("/organizations/integrations/slack/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(integration.OrganizationId)
+            .Returns([]);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(integration);
+        sutProvider.GetDependency<ISlackService>()
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>())
+            .Returns("https://slack.example.com/authorize");
+
+        var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+
+        Assert.IsType<RedirectResult>(requestAction);
+        sutProvider.GetDependency<ISlackService>().Received(1)
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_ApiBaseUriInvalid_ThrowsBadRequest(
+        SutProvider<SlackIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(string.Empty);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Any<UrlRouteContext>())
+            .Returns("/organizations/integrations/slack/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    private static void SetBaseServiceUriApi(SutProvider<SlackIntegrationController> sutProvider)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
     }
 }

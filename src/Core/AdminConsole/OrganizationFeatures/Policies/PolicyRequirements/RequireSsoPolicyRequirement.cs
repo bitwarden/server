@@ -26,37 +26,32 @@ public class RequireSsoPolicyRequirement : IPolicyRequirement
     /// that has the Require SSO policy enabled.
     /// </remarks>
     public bool SsoRequired { get; init; }
+
+    /// <summary>
+    /// Organizations that require SSO login
+    /// </summary>
+    public ICollection<Guid> OrganizationIds { get; init; } = Array.Empty<Guid>();
 }
 
-
-public class RequireSsoPolicyRequirementFactory : BasePolicyRequirementFactory<RequireSsoPolicyRequirement>
+public class RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings)
+    : BasePolicyRequirementFactory<RequireSsoPolicyRequirement>
 {
-    private readonly GlobalSettings _globalSettings;
-
-    public RequireSsoPolicyRequirementFactory(GlobalSettings globalSettings)
-    {
-        _globalSettings = globalSettings;
-    }
-
     public override PolicyType PolicyType => PolicyType.RequireSso;
 
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
-        _globalSettings.Sso.EnforceSsoPolicyForAllUsers
+        globalSettings.Sso.EnforceSsoPolicyForAllUsers
             ? Array.Empty<OrganizationUserType>()
             : [OrganizationUserType.Owner, OrganizationUserType.Admin];
 
     public override RequireSsoPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         policyDetails = policyDetails.ToList();
-        var result = new RequireSsoPolicyRequirement
+
+        return new RequireSsoPolicyRequirement
         {
-            CanUsePasskeyLogin = !policyDetails.Any(p =>
-                p.OrganizationUserStatus is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed),
-
-            SsoRequired = policyDetails.Any(p =>
-                p.OrganizationUserStatus == OrganizationUserStatusType.Confirmed)
+            CanUsePasskeyLogin = !policyDetails.Any(),
+            SsoRequired = policyDetails.Any(),
+            OrganizationIds = [.. policyDetails.Select(x => x.OrganizationId)]
         };
-
-        return result;
     }
 }

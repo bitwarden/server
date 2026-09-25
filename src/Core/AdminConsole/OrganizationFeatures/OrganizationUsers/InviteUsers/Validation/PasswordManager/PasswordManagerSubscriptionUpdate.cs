@@ -53,16 +53,24 @@ public class PasswordManagerSubscriptionUpdate
     /// </summary>
     public bool MaxSeatsExceeded => UpdatedSeatTotal.HasValue && MaxAutoScaleSeats.HasValue && UpdatedSeatTotal.Value > MaxAutoScaleSeats.Value;
 
-    public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
+    public Plan.PasswordManagerPlanFeatures? PasswordManagerPlan { get; }
 
     public InviteOrganization InviteOrganization { get; }
+
+    /// <summary>
+    /// Whether the member performing the invite can manage the organization's billing, and so could raise the seat
+    /// limit themselves. This only selects the wording of the seat limit error, so it defaults to false: callers
+    /// without an authenticated member (SCIM, the Public API) get the "contact your organization owner" wording.
+    /// </summary>
+    public bool CanManageBilling { get; }
 
     private PasswordManagerSubscriptionUpdate(int? organizationSeats,
         int? organizationAutoScaleSeatLimit,
         int currentSeats,
         int newUsersToAdd,
-        Plan.PasswordManagerPlanFeatures plan,
-        InviteOrganization inviteOrganization)
+        Plan.PasswordManagerPlanFeatures? plan,
+        InviteOrganization inviteOrganization,
+        bool canManageBilling)
     {
         Seats = organizationSeats;
         MaxAutoScaleSeats = organizationAutoScaleSeatLimit;
@@ -70,25 +78,30 @@ public class PasswordManagerSubscriptionUpdate
         NewUsersToAdd = newUsersToAdd;
         PasswordManagerPlan = plan;
         InviteOrganization = inviteOrganization;
+        CanManageBilling = canManageBilling;
     }
 
-    public PasswordManagerSubscriptionUpdate(InviteOrganization inviteOrganization, int occupiedSeats, int newUsersToAdd) :
+    public PasswordManagerSubscriptionUpdate(InviteOrganization inviteOrganization, int occupiedSeats, int newUsersToAdd,
+        bool canManageBilling = false) :
         this(
             organizationSeats: inviteOrganization.Seats,
             organizationAutoScaleSeatLimit: inviteOrganization.MaxAutoScaleSeats,
             currentSeats: occupiedSeats,
             newUsersToAdd: newUsersToAdd,
-            plan: inviteOrganization.Plan.PasswordManager,
-            inviteOrganization: inviteOrganization)
+            plan: inviteOrganization.Plan?.PasswordManager,
+            inviteOrganization: inviteOrganization,
+            canManageBilling: canManageBilling)
     { }
 
-    public PasswordManagerSubscriptionUpdate(InviteOrganizationUsersValidationRequest usersValidationRequest) :
+    public PasswordManagerSubscriptionUpdate(InviteOrganizationUsersValidationRequest usersValidationRequest,
+        bool canManageBilling = false) :
         this(
             organizationSeats: usersValidationRequest.InviteOrganization.Seats,
             organizationAutoScaleSeatLimit: usersValidationRequest.InviteOrganization.MaxAutoScaleSeats,
             currentSeats: usersValidationRequest.OccupiedPmSeats,
             newUsersToAdd: usersValidationRequest.Invites.Length,
-            plan: usersValidationRequest.InviteOrganization.Plan.PasswordManager,
-            inviteOrganization: usersValidationRequest.InviteOrganization)
+            plan: usersValidationRequest.InviteOrganization.Plan?.PasswordManager,
+            inviteOrganization: usersValidationRequest.InviteOrganization,
+            canManageBilling: canManageBilling)
     { }
 }
