@@ -1,5 +1,7 @@
-﻿using Bit.Core.Billing.Services;
+﻿using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Invoicing.InvoicePreviews;
+using Bit.Invoicing.InvoicePreviews.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -23,6 +25,22 @@ public class AddInvoicingTests
 
         Assert.NotNull(provider.GetService<IInvoicePreviewService>());
         Assert.NotNull(provider.GetService<InvoicePreviewBuilder>());
+    }
+
+    [Fact]
+    public void AddInvoicing_RegistersThePreviewQueryAndPlanChangeCommand()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddLogging();
+
+        services.AddInvoicing();
+        var provider = services.BuildServiceProvider();
+
+        Assert.NotNull(provider.GetService<IGetSubscriptionPreviewQuery>());
+        Assert.NotNull(provider.GetService<IGetOrganizationPlanChangePreviewQuery>());
     }
 
     [Fact]
