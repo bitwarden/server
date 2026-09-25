@@ -25,5 +25,8 @@ public enum SubscriptionScheduleOwnership
     /// condition, and deliberately not None: a caller told None would release nothing and then
     /// create a second schedule, which Stripe rejects.
     /// </summary>
-    Unexpanded
+    Unexpanded,
+
+    /// <summary>A schedule created by the Premium or Families price increase.</summary>
+    PersonalPriceIncrease
 }

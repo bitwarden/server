@@ -7,8 +7,9 @@ namespace Bit.Core.Billing.Subscriptions.Schedules;
 using static StripeConstants;
 
 /// <summary>
-/// Classifies the Stripe subscription schedule attached to a subscription, from the
-/// metadata our code stamps onto the phases of every schedule it creates.
+/// Classifies the Stripe subscription schedule attached to a subscription by the part of our code that
+/// created it, read from the schedule's <see cref="MetadataKeys.ManagingSystem"/> metadata. Schedules created
+/// before that marker existed are classified from the markers our code stamped onto their phases.
 /// </summary>
 public static class SubscriptionScheduleOwnershipMapper
 {
@@ -40,6 +41,19 @@ public static class SubscriptionScheduleOwnershipMapper
             return SubscriptionScheduleOwnership.None;
         }
 
+        if (schedule.Metadata != null &&
+            schedule.Metadata.TryGetValue(MetadataKeys.ManagingSystem, out var managingSystem))
+        {
+            return managingSystem switch
+            {
+                ManagingSystems.AnnualUpgrade => SubscriptionScheduleOwnership.AnnualUpgrade,
+                ManagingSystems.BusinessPriceIncrease => SubscriptionScheduleOwnership.BusinessPriceIncrease,
+                ManagingSystems.PersonalPriceIncrease => SubscriptionScheduleOwnership.PersonalPriceIncrease,
+                _ => SubscriptionScheduleOwnership.Foreign
+            };
+        }
+
+        // Schedules created before the managing-system marker carry these markers on their phases.
         if (AnyPhaseCarries(schedule, MetadataKeys.AnnualUpgrade))
         {
             return SubscriptionScheduleOwnership.AnnualUpgrade;

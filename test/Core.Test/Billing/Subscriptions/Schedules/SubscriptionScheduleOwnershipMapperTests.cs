@@ -34,6 +34,16 @@ public class SubscriptionScheduleOwnershipMapperTests
         Schedule = schedule
     };
 
+    private static SubscriptionSchedule ManagedSchedule(
+        string managingSystem,
+        Dictionary<string, string>? phaseMetadata = null) => new()
+        {
+            Id = "sub_sched_1",
+            Status = SubscriptionScheduleStatus.Active,
+            Metadata = new Dictionary<string, string> { [MetadataKeys.ManagingSystem] = managingSystem },
+            Phases = [new SubscriptionSchedulePhase { Metadata = phaseMetadata }]
+        };
+
     [Fact]
     public void Map_NoAttachedSchedule_ReturnsNone() =>
         Assert.Equal(
@@ -189,4 +199,51 @@ public class SubscriptionScheduleOwnershipMapperTests
             SubscriptionScheduleOwnership.BusinessPriceIncrease,
             SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
     }
+
+    [Theory]
+    [InlineData(ManagingSystems.AnnualUpgrade, SubscriptionScheduleOwnership.AnnualUpgrade)]
+    [InlineData(ManagingSystems.BusinessPriceIncrease, SubscriptionScheduleOwnership.BusinessPriceIncrease)]
+    [InlineData(ManagingSystems.PersonalPriceIncrease, SubscriptionScheduleOwnership.PersonalPriceIncrease)]
+    public void MapSchedule_ManagingSystem_ReturnsItsOwnership(string managingSystem, SubscriptionScheduleOwnership expected) =>
+        Assert.Equal(expected, SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(managingSystem)));
+
+    [Fact]
+    public void Map_ManagingSystem_ReturnsItsOwnership() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.PersonalPriceIncrease,
+            SubscriptionScheduleOwnershipMapper.Map(WithSchedule(ManagedSchedule(ManagingSystems.PersonalPriceIncrease))));
+
+    [Fact]
+    public void MapSchedule_UnrecognizedManagingSystem_ReturnsForeign() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule("some_future_system")));
+
+    [Fact]
+    public void MapSchedule_ManagingSystemAndConflictingLegacyPhaseMarker_PrefersManagingSystem() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.BusinessPriceIncrease,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(
+                ManagingSystems.BusinessPriceIncrease,
+                new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" })));
+
+    [Fact]
+    public void MapSchedule_ManagingSystemOnInactiveSchedule_ReturnsNone()
+    {
+        var schedule = ManagedSchedule(ManagingSystems.AnnualUpgrade);
+        schedule.Status = SubscriptionScheduleStatus.Released;
+
+        Assert.Equal(SubscriptionScheduleOwnership.None, SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
+    }
+
+    [Fact]
+    public void MapSchedule_EmptyScheduleMetadataAndNoPhaseMarkers_ReturnsForeign() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(new SubscriptionSchedule
+            {
+                Status = SubscriptionScheduleStatus.Active,
+                Metadata = new Dictionary<string, string>(),
+                Phases = [new SubscriptionSchedulePhase { Metadata = null }]
+            }));
 }

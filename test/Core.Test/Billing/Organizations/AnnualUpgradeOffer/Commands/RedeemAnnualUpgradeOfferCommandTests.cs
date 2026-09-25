@@ -520,6 +520,37 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
+    public async Task Run_PersonalPriceIncreaseSchedule_ReturnsBadRequestWithoutMutatingStripe()
+    {
+        var organization = CreateOrganization(PlanType.TeamsMonthly);
+        var monthlyPlan = new TeamsPlan(false);
+        var annualPlan = new TeamsPlan(true);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
+
+        var (subscription, _) = SetupRedeemableSubscription(organization,
+            [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
+        var schedule = new SubscriptionSchedule
+        {
+            Id = "sub_sched_personal",
+            Status = SubscriptionScheduleStatus.Active,
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.PersonalPriceIncrease
+            },
+            Phases = [new SubscriptionSchedulePhase()]
+        };
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT1);
+        await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleAsync(default!);
+    }
+
+    [Fact]
     public async Task Run_UnexpandedSchedule_ReturnsBadRequestWithoutMutatingStripe()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
