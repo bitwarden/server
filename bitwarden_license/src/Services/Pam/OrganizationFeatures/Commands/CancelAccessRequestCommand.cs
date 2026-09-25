@@ -44,6 +44,13 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new NotFoundException();
         }
 
+        // An extension applied itself at approval by extending the parent lease; revoke that lease instead.
+        if (request.ExtensionOfLeaseId is not null)
+        {
+            throw new BadRequestException(
+                "This request extended an existing lease and cannot be revoked; revoke the lease instead.");
+        }
+
         // Only an open request, or an approved one not yet activated, can be cancelled.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {

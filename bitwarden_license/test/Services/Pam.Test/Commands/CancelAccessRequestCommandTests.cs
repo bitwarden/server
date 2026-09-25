@@ -33,7 +33,7 @@ public class CancelAccessRequestCommandTests
     {
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         // userId is neither the requester nor a manager.
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
@@ -51,7 +51,7 @@ public class CancelAccessRequestCommandTests
     {
         var sutProvider = Setup();
         request.Action = action;
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
@@ -69,7 +69,7 @@ public class CancelAccessRequestCommandTests
         request.Action = action;
         request.NotBefore = _now.AddHours(-2);
         request.NotAfter = _now.AddHours(-1);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
 
         var ex = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
@@ -88,7 +88,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = action;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         // No lease produced.
 
         await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null);
@@ -107,7 +107,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = action;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
 
@@ -134,7 +134,7 @@ public class CancelAccessRequestCommandTests
         SetOpenWindow(request);
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddHours(1);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
@@ -157,7 +157,7 @@ public class CancelAccessRequestCommandTests
         request.Action = AccessRequestAction.Approved;
         SetOpenWindow(request);
         lease.Action = leaseAction;
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         await Assert.ThrowsAsync<ConflictException>(
@@ -176,7 +176,7 @@ public class CancelAccessRequestCommandTests
         SetOpenWindow(request);
         lease.Action = AccessLeaseAction.None;
         lease.NotAfter = _now.AddMinutes(-1);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByAccessRequestIdAsync(request.Id).Returns(lease);
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
@@ -187,6 +187,40 @@ public class CancelAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
     }
+    [Theory, BitAutoData]
+    public async Task CancelAsync_RequesterRevokesAnExtension_ThrowsBadRequestWithoutWriting(
+        AccessRequest request, Guid leaseId)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.Approved;
+        SetOpenWindow(request);
+        SetupRequest(sutProvider, request);
+        request.ExtensionOfLeaseId = leaseId;
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
+
+        await AssertNoRetractionAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task CancelAsync_ManagerRevokesAnExtension_ThrowsBadRequestWithoutWriting(
+        Guid managerId, AccessRequest request, Guid leaseId)
+    {
+        var sutProvider = Setup();
+        request.Action = AccessRequestAction.Approved;
+        SetOpenWindow(request);
+        SetupRequest(sutProvider, request);
+        request.ExtensionOfLeaseId = leaseId;
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CancelAsync(managerId, request.Id, "no longer needed"));
+
+        await AssertNoRetractionAsync(sutProvider);
+    }
+
     [Theory]
     [BitAutoData((string?)null)]
     [BitAutoData("")]
@@ -197,7 +231,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
 
@@ -217,7 +251,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
 
         await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, reason);
 
@@ -230,7 +264,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IAccessRequestRepository>().CancelAsync(default, default).ReturnsForAnyArgs(false);
 
         var exception = await Assert.ThrowsAsync<ConflictException>(
@@ -245,7 +279,7 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetOpenWindow(request);
-        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
+        SetupRequest(sutProvider, request);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(managerId, request.CollectionId).Returns(true);
         sutProvider.GetDependency<IAccessRequestRepository>()
@@ -255,6 +289,21 @@ public class CancelAccessRequestCommandTests
             () => sutProvider.Sut.CancelAsync(managerId, request.Id, "no longer needed"));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
+    }
+
+    private static async Task AssertNoRetractionAsync(SutProvider<CancelAccessRequestCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelAsync(default, default);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CancelWithDecisionAsync(default!, default!, default);
+    }
+
+    private static void SetupRequest(SutProvider<CancelAccessRequestCommand> sutProvider, AccessRequest request)
+    {
+        // An extension is never revoked; pin null so this models an ordinary request.
+        request.ExtensionOfLeaseId = null;
+        sutProvider.GetDependency<IAccessRequestRepository>().GetByIdAsync(request.Id).Returns(request);
     }
 
     // Pins a window containing _now so the lapsed-window guard doesn't trip in unrelated tests.
