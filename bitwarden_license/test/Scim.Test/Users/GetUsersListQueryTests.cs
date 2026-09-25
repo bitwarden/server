@@ -126,6 +126,60 @@ public class GetUsersListQueryTests
         AssertHelper.AssertPropertyEqual(expectedTotalResults, result.totalResults);
     }
 
+    [Theory]
+    [BitAutoData("user1@example.com")]
+    public async Task GetUsersList_FilterUserName_Ne_Success(string email, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+        organizationUserUserDetails.First().Email = email;
+        string filter = $"userName ne \"{email}\"";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
+
+        Assert.Equal(organizationUserUserDetails.Count - 1, result.totalResults);
+        Assert.DoesNotContain(result.userList, u => u.Email == email);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetUsersList_FilterUserName_Co_Success(SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+        organizationUserUserDetails.First().Email = "test-contains@example.com";
+        string filter = "userName co \"contains\"";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
+
+        Assert.Single(result.userList);
+        Assert.Equal("test-contains@example.com", result.userList.First().Email);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetUsersList_FilterUserName_Sw_Success(SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+        organizationUserUserDetails.First().Email = "prefix-user@example.com";
+        string filter = "userName sw \"prefix-\"";
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
+
+        Assert.Single(result.userList);
+        Assert.Equal("prefix-user@example.com", result.userList.First().Email);
+    }
+
     private IList<OrganizationUserUserDetails> SetUsersOrganizationId(IList<OrganizationUserUserDetails> organizationUserUserDetails, Guid organizationId)
     {
         return organizationUserUserDetails.Select(ouud =>
