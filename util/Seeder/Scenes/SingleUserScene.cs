@@ -3,10 +3,12 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Scenes;
@@ -32,8 +34,9 @@ public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
     IUserRepository userRepository,
     IManglerService manglerService,
-    ILicensingService licenseService,
+    IServiceProvider serviceProvider,
     ISeederLicenseSigner licenseSigner,
+    IGlobalSettings globalSettings,
     ILogger<SingleUserScene> logger) : IScene<SingleUserScene.Request, SingleUserSceneResult>
 {
     public class Request
@@ -52,6 +55,14 @@ public class SingleUserScene(
 
     public async Task<SceneResult<SingleUserSceneResult>> SeedAsync(Request request)
     {
+        if (request.SelfHosted && request.Premium && !globalSettings.SelfHosted)
+        {
+            throw new InvalidOperationException(
+                "SelfHosted premium was requested, but this Seeder API is running in cloud mode " +
+                "('globalSettings:selfHosted' is false), so no self-hosted license can be written. " +
+                "Target a self-hosted Seeder API or set SelfHosted=false.");
+        }
+
         var (user, keys) = UserSeeder.Create(
             new UserSeed
             {
@@ -72,7 +83,8 @@ public class SingleUserScene(
         var licenseOutcome = default(LicenseWriteOutcome);
         if (request.SelfHosted && user.Premium)
         {
-            licenseOutcome = await SelfHostLicenseService.WriteLicenseAsync(licenseService, licenseSigner, user, logger);
+            licenseOutcome = await SelfHostLicenseService.WriteLicenseAsync(
+                serviceProvider.GetRequiredService<ILicensingService>, licenseSigner, user, logger);
         }
 
         return new SceneResult<SingleUserSceneResult>(

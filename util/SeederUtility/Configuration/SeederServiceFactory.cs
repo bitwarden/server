@@ -38,7 +38,7 @@ internal sealed class SeederServiceScope : IDisposable
 
     internal IManglerService Mangler { get; }
 
-    internal ILicensingService LicensingService { get; }
+    internal Func<ILicensingService> LicensingService { get; }
 
     internal IAttachmentStorageService AttachmentStorageService { get; }
 
@@ -67,7 +67,7 @@ internal sealed class SeederServiceScope : IDisposable
         Mapper = sp.GetRequiredService<IMapper>();
         PasswordHasher = sp.GetRequiredService<IPasswordHasher<User>>();
         Mangler = sp.GetRequiredService<IManglerService>();
-        LicensingService = sp.GetRequiredService<ILicensingService>();
+        LicensingService = sp.GetRequiredService<ILicensingService>;
         AttachmentStorageService = sp.GetRequiredService<IAttachmentStorageService>();
         // Deferred so the billing DI graph (IOrganizationBillingService -> IBraintreeGateway, IStripeAdapter,
         // ISubscriberService -> IPriceIncreaseScheduler -> IFeatureService) is only constructed by commands

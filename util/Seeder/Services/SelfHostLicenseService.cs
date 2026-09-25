@@ -23,12 +23,16 @@ internal static class SelfHostLicenseService
     /// written. Write failures are swallowed and returned as a warning so the write never aborts
     /// the caller.
     /// </summary>
+    /// <param name="licenseServiceFactory">
+    /// Invoked only after a token is signed, so callers that never write a license never construct
+    /// <c>LicensingService</c>, whose constructor throws when its self-host prerequisites are missing.
+    /// </param>
     internal static async Task<LicenseWriteOutcome> WriteLicenseAsync(
-        ILicensingService licenseService, ISeederLicenseSigner signer, User user, ILogger logger)
+        Func<ILicensingService> licenseServiceFactory, ISeederLicenseSigner signer, User user, ILogger logger)
     {
         try
         {
-            return await WriteLicenseCoreAsync(licenseService, signer, user);
+            return await WriteLicenseCoreAsync(licenseServiceFactory, signer, user);
         }
         catch (InvalidOperationException ex)
         {
@@ -49,7 +53,7 @@ internal static class SelfHostLicenseService
     }
 
     private static async Task<LicenseWriteOutcome> WriteLicenseCoreAsync(
-        ILicensingService licenseService, ISeederLicenseSigner signer, User user)
+        Func<ILicensingService> licenseServiceFactory, ISeederLicenseSigner signer, User user)
     {
         var signing = await signer.CreateUserTokenAsync(user);
         if (string.IsNullOrWhiteSpace(signing.Token))
@@ -72,7 +76,7 @@ internal static class SelfHostLicenseService
             Token = signing.Token,
         };
 
-        await licenseService.WriteUserLicenseAsync(user, license);
+        await licenseServiceFactory().WriteUserLicenseAsync(user, license);
 
         return LicenseWriteOutcome.Success;
     }
