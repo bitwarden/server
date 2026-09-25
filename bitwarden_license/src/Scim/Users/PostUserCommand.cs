@@ -35,7 +35,7 @@ public class PostUserCommand(
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
     {
         var inviteUsersAfterProvisioning = scimContext.ScimConfiguration?.InviteUsersAfterProvisioning ?? true;
-        if (!inviteUsersAfterProvisioning && featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+        if (!inviteUsersAfterProvisioning)
         {
             return await StageScimOrganizationUserAsync(model, organizationId, scimContext.RequestScimProvider);
         }
