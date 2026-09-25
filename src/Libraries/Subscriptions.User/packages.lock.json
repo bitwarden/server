@@ -914,7 +914,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.1, )"
+          "HttpExtensions": "[2026.9.2, )"
         }
       },
       "httpextensions": {
@@ -925,7 +925,7 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
-          "Core": "[2026.9.1, )",
+          "Core": "[2026.9.2, )",
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
