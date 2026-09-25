@@ -24,21 +24,20 @@ public static class DatabaseFieldProtectionHelper
             return value;
         }
 
-        if (value.StartsWith(Constants.DatabaseFieldProtectedPrefix))
+        var unprotected = Unprotect(dataProtector, value);
+        if (!ReferenceEquals(unprotected, value))
         {
-            var payload = value.Substring(Constants.DatabaseFieldProtectedPrefix.Length);
-            try
-            {
-                dataProtector.Unprotect(payload);
-                return value;
-            }
-            catch (CryptographicException ex)
-            {
-                throw new InvalidOperationException("Value carries the protected-data prefix but could not be unprotected.", ex);
-            }
+            return value;
         }
 
-        return string.Concat(Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
+        try
+        {
+            return string.Concat(Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
+        }
+        catch (CryptographicException ex)
+        {
+            throw new InvalidOperationException("Value could not be protected.", ex);
+        }
     }
 
     public static string? Unprotect(IDataProtector dataProtector, string? value)
@@ -48,6 +47,13 @@ public static class DatabaseFieldProtectionHelper
             return value;
         }
 
-        return dataProtector.Unprotect(value.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        try
+        {
+            return dataProtector.Unprotect(value.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        }
+        catch (CryptographicException ex)
+        {
+            throw new InvalidOperationException("Value could not be unprotected.", ex);
+        }
     }
 }
