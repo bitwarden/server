@@ -521,8 +521,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Authorization check:
         // You must have authorization to ModifyUserAccess for all collections being saved.
         var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
-        if (postedCollections.Count != 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, postedCollections, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
+        var collectionsToAuthorize = postedCollections
+            .Where(c => c.Type != CollectionType.DefaultUserCollection)
+            .ToList();
+        if (collectionsToAuthorize.Count != 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, collectionsToAuthorize, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
         {
             throw new NotFoundException();
         }
