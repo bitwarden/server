@@ -125,13 +125,24 @@ public class AccessRequestEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Revoke_InvokesCancelCommand(Guid userId, Guid requestId)
+    public async Task Revoke_InvokesCancelCommandWithTheReason(Guid userId, Guid requestId)
     {
         var sutProvider = Setup(userId);
 
-        await sutProvider.Sut.Revoke(_user, requestId);
+        await sutProvider.Sut.Revoke(_user, requestId, new AccessRequestRevokeRequestModel { Reason = "no longer needed" });
 
-        await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId);
+        await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1)
+            .CancelAsync(userId, requestId, "no longer needed");
+    }
+
+    [Theory, BitAutoData]
+    public async Task Revoke_WithoutABody_InvokesCancelCommandWithoutAReason(Guid userId, Guid requestId)
+    {
+        var sutProvider = Setup(userId);
+
+        await sutProvider.Sut.Revoke(_user, requestId, null);
+
+        await sutProvider.GetDependency<ICancelAccessRequestCommand>().Received(1).CancelAsync(userId, requestId, null);
     }
 
     private static SutProvider<AccessRequestEndpointsHandler> Setup(Guid userId)

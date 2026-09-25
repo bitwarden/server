@@ -36,7 +36,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         _timeProvider = timeProvider;
     }
 
-    public async Task CancelAsync(Guid userId, Guid requestId)
+    public async Task CancelAsync(Guid userId, Guid requestId, string? reason)
     {
         var request = await _accessRequestRepository.GetByIdAsync(requestId);
 
@@ -78,6 +78,12 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new ConflictException("This request's window has already ended.");
         }
 
+        var comment = string.IsNullOrWhiteSpace(reason) ? null : reason;
+        if (isManager && comment is null)
+        {
+            throw new BadRequestException("A reason is required when revoking a request.");
+        }
+
         // audit (before/after): both the requester withdrawing and a manager retracting settle to the
         // single RequestCancelled kind.
         var audit = new AccessAuditEventData
@@ -90,6 +96,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             AccessRequestId = request.Id,
+            Detail = comment,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
@@ -108,7 +115,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 DeciderKind = AccessDeciderKind.Human,
                 ApproverId = userId,
                 Verdict = AccessDecisionVerdict.Deny,
-                Comment = null,
+                Comment = comment,
                 CreationDate = now,
             };
             decision.SetNewId();
