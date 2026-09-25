@@ -38,7 +38,14 @@ public class GetOrganizationPlanChangePreviewQuery(
     /// <inheritdoc />
     public async Task<InvoicePreview> Run(Organization organization, OrganizationPlanChange planChange)
     {
-        var newPlan = await pricingClient.GetPlanOrThrow(planChange.PlanType);
+        var newPlan = await pricingClient.GetPlanOrThrow(ResolvePlanType(planChange));
+
+        if (organization.UseSecretsManager && !newPlan.SupportsSecretsManager)
+        {
+            throw new BadRequestException("The selected plan does not support Secrets Manager.");
+        }
+
+        var billingAddress = ResolveBillingAddress(planChange.Country, planChange.PostalCode);
 
         var options = (
                 HasSubscription: !string.IsNullOrEmpty(organization.GatewaySubscriptionId),
@@ -54,11 +61,24 @@ public class GetOrganizationPlanChangePreviewQuery(
         options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
         options.CustomerDetails = new InvoiceCustomerDetailsOptions
         {
-            Address = ResolveBillingAddress(planChange.Country, planChange.PostalCode)
+            Address = billingAddress
         };
 
         return await invoicePreviewService.GetInvoicePreviewAsync(options, planChange.Tier, planChange.Cadence);
     }
+
+    private static PlanType ResolvePlanType(OrganizationPlanChange planChange) =>
+        planChange.Tier switch
+        {
+            PlanTierType.Families => PlanType.FamiliesAnnually,
+            PlanTierType.Teams => planChange.Cadence == PlanCadenceType.Monthly
+                ? PlanType.TeamsMonthly
+                : PlanType.TeamsAnnually,
+            PlanTierType.Enterprise => planChange.Cadence == PlanCadenceType.Monthly
+                ? PlanType.EnterpriseMonthly
+                : PlanType.EnterpriseAnnually,
+            _ => throw new BadRequestException($"Cannot change an organization to the {planChange.Tier} tier.")
+        };
 
     private static AddressOptions ResolveBillingAddress(string? country, string? postalCode)
     {

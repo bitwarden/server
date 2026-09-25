@@ -231,6 +231,32 @@ public class GetOrganizationPlanChangePreviewQueryTests
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
+    [Fact]
+    public async Task Run_UnsupportedTier_ThrowsBadRequest()
+    {
+        var organization = new Organization { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
+        var planChange = new OrganizationPlanChange { Tier = PlanTierType.Premium, Cadence = PlanCadenceType.Annually, Country = "US", PostalCode = "90210" };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
+    }
+
+    [Fact]
+    public async Task Run_SecretsManagerOrganizationTargetsPlanWithoutSecretsManager_ThrowsBadRequest()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.Free,
+            Seats = 5,
+            UseSecretsManager = true
+        };
+        var planChange = new OrganizationPlanChange { Tier = PlanTierType.Families, Cadence = PlanCadenceType.Annually, Country = "US", PostalCode = "90210" };
+
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(FamiliesPlan());
+
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
+    }
+
     private static void AssertSwap(List<InvoiceSubscriptionDetailsItemOptions> items, string id, string price, long quantity)
     {
         var item = Assert.Single(items, candidate => candidate.Id == id);
