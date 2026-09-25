@@ -84,6 +84,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
             {
                 gObj.Id = existingGrant.Id;
                 dbContext.Entry(existingGrant).CurrentValues.SetValues(gObj);
+                await dbContext.SaveChangesAsync();
             }
             else
             {
