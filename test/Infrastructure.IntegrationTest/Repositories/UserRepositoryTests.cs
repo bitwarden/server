@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -8,6 +9,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -921,6 +923,48 @@ public class UserRepositoryTests
         Assert.Equal("newHash", updatedUser.MasterPassword);
         Assert.Equal("hint", updatedUser.MasterPasswordHint);
         Assert.Equal("wrapped-user-key", updatedUser.Key);
+    }
+
+    // A value that starts with the database field protection sentinel ("P|") but cannot be
+    // unprotected is ambiguous: it may be caller-supplied data that merely starts with the
+    // sentinel, or genuine protector output whose key is no longer available. Silently
+    // re-protecting it either way would wrap it a second time, and a later read would
+    // unprotect only the outer layer and return the still-protected inner value as if it were
+    // plaintext. The write must be rejected instead of guessing.
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyStartsWithProtectionSentinelButIsNotProtected_ThrowsAndDoesNotStore(
+        IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+
+        var poisonedKey = "P|poisoned-key";
+        user.Key = poisonedKey;
+
+        await Assert.ThrowsAnyAsync<Exception>(() => userRepository.ReplaceAsync(user));
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.NotEqual(poisonedKey, readBack.Key);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task ReplaceAsync_KeyIsAlreadyGenuinelyProtectedValue_DoesNotDoubleProtect(
+        IUserRepository userRepository, IDataProtectionProvider dataProtectionProvider)
+    {
+        var dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        var alreadyProtectedKey = string.Concat(
+            Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect("wrapped-user-key"));
+
+        var user = await userRepository.CreateTestUserAsync();
+
+        user.Key = alreadyProtectedKey;
+        await userRepository.ReplaceAsync(user);
+
+        var readBack = await userRepository.GetByIdAsync(user.Id);
+
+        Assert.NotNull(readBack);
+        Assert.Equal("wrapped-user-key", readBack.Key);
     }
 
     private static UserAccountKeysData BuildV2AccountKeysData() => new()
