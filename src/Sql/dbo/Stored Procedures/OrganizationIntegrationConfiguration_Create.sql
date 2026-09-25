@@ -6,7 +6,9 @@
     @Template VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Filters VARCHAR(MAX) = NULL
+    @Filters VARCHAR(MAX) = NULL,
+    @DisabledDate DATETIME2(7) = NULL,
+    @DisabledReason INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +22,9 @@ BEGIN
         [Template],
         [CreationDate],
         [RevisionDate],
-        [Filters]
+        [Filters],
+        [DisabledDate],
+        [DisabledReason]
         )
     VALUES
         (
@@ -31,6 +35,8 @@ BEGIN
             @Template,
             @CreationDate,
             @RevisionDate,
-            @Filters
+            @Filters,
+            @DisabledDate,
+            @DisabledReason
         )
 END

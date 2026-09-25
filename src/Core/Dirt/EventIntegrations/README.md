@@ -156,6 +156,97 @@ defaults to `false` which indicates we should use retry queues with a timing che
      isn't enabled. Since this solution is only intended for self-host, it should be a pretty minimal impact with short
      delays and a small number of retries.
 
+### Circuit breaker
+
+An organization whose credentials have been revoked fails every event it produces, forever, and each failure costs a
+delivery attempt and a dead letter; `IntegrationCircuitBreaker` bounds that by disabling delivery once the failures
+are clearly not going to resolve on their own.
+
+Detection is [Polly](https://www.pollydocs.org/strategies/circuit-breaker.html) rather than a hand-rolled counter.
+Both integration listeners report every final outcome to the breaker, which replays all of them into a keyed
+`ResiliencePipelineRegistry`, where Polly measures the non-retryable failures over a rolling window:
+
+| Setting | Meaning |
+| --- | --- |
+| `IntegrationCircuitBreakerMinimumThroughput` | Attempts required inside the window before the ratio is evaluated. Polly requires 2 or more; anything less turns the breaker off, which is the default. |
+| `IntegrationCircuitBreakerFailureRatio` | Proportion of those attempts that must be non-retryable failures. Must be above 0 and at most 1. |
+| `IntegrationCircuitBreakerSamplingDuration` | The wall-clock window outcomes are measured over, and how long the circuit stays open after a trip. Polly accepts 500ms through 1 day. |
+
+A value outside any of those ranges turns the breaker off rather than throwing, because Polly validates them when the
+pipeline is built and that happens on the message path. A deployment that set the throughput but got one of the
+values wrong is warned about once, so it stays distinguishable from a deployment that never turned the breaker on.
+
+A window rather than a consecutive count is what makes the failure history self-managing: a configuration that fails
+once a month never accumulates toward a trip, and one that has been fixed is not disabled by history from before the
+fix.
+
+Only non-retryable failures count toward opening the circuit. A rate-limited or unavailable service recovers on its
+own and should not cost an organization its integration, while an authentication, configuration, or permanent failure
+will not recover without someone changing the configuration. Successes are still sampled, which is what dilutes the
+ratio for a busy configuration and what closes a half-open circuit after a break.
+
+#### Scope
+
+Disabled state lives on `OrganizationIntegrationConfiguration` only. The configuration is the unit that fails, the
+unit the breaker can attribute a failure to (messages carry `ConfigurationId`), and the unit that gets disabled, so
+one broken configuration cannot stop an integration whose other configurations still deliver. A message without a
+usable configuration id is ignored by the breaker rather than escalated to the whole integration.
+
+`OrganizationIntegrationStatus` is deliberately not involved. It describes configuration shape, such as whether a
+token is present or OAuth finished, which is a different axis from whether delivery is suppressed. The configuration
+response model carries `DisabledDate` and `DisabledReason` instead.
+
+#### Disabling and recovery
+
+Polly's circuit state is per process, and the database row is what holds delivery off, so no shared counter is
+needed. That suits the write-rate guidance in [CACHING](../../Utilities/CACHING.md).
+
+Every outcome is sampled, so the registry holds one pipeline per organization and configuration that delivers events
+in that process. Polly has no eviction API, so those live until the process restarts. Each entry is small, but the
+set grows with active configurations rather than with failing ones, which is the cost of letting successes close a
+half-open circuit.
+
+What gets replayed is `IntegrationOutcome`, a projection of the four fields the pipeline reads, and every one of them
+is a value type. Polly retains the last handled outcome for as long as a circuit stays open, and an open circuit
+means the configuration is disabled and producing nothing further to replace it, so whatever the replayed value
+reaches stays reachable until the process restarts. An integration message reaches the decrypted credentials of a
+third-party service, and the breaker has no reason to extend how long those live.
+
+If the write that disables a configuration fails, the circuit is already open and Polly fires the open transition
+only once, so the attempt is logged with the organization and configuration and retried by the next transition after
+the break rather than lost silently.
+
+Disabling writes `DisabledDate` and `DisabledReason`, scoped through the integration so the write cannot cross
+tenants, and removes the organization's integration tag from the cache, which is the same invalidation path the admin
+commands use. `EventIntegrationHandler` reads `DisabledDate` through the details it already caches, so a disabled
+configuration is skipped before a message is ever published and the hot path costs nothing.
+
+Nothing re-enables on a timer, so recovery is always something a person asks for. There are three ways to ask:
+
+- `POST organizations/{organizationId}/integrations/{integrationId}/enable` re-enables every configuration under an
+  integration without changing it, and returns how many it re-enabled. **A client that surfaces the disabled state
+  has to offer this.** For Slack and Teams it is the only way to clear the state at all, because their OAuth handlers
+  reject an integration that already holds a configuration, so an admin cannot re-run auth in place. Clearing the
+  state only resumes delivery, so a credential that is still revoked fails again.
+- Editing an integration cascades the same clear, because credentials live on the integration and fixing them is what
+  recovers the configurations beneath it.
+- Editing a configuration clears its own state, which is the right granularity for a fault local to that
+  configuration, such as a channel that no longer exists.
+
+The first two enforce the organization in SQL, joining through the integration the same way the disable does, and
+both log how many configurations they re-enabled. The third goes through the ordinary configuration update, which is
+keyed on the configuration id alone, so its tenant scoping comes from the ownership checks the command runs before
+the write rather than from the statement itself.
+
+None of the three reaches Polly's circuit state, which lives in the listener processes. Re-enabling before the break
+has elapsed therefore resumes delivery without restoring protection: an open circuit short-circuits every outcome, so
+nothing is counted and nothing re-disables the configuration until the break expires and the next sampled failure
+reopens it. One sampling duration of failures per premature re-enable is the worst case, and it settles itself, so a
+client is better off telling an admin to fix the cause first than trying to work around the window.
+
+One gap is deliberate: nothing notifies the organization when a configuration is disabled, so an admin has to notice
+that delivery stopped.
+
 ### Dead letter retention
 
 Every dead letter in this architecture is explicit. The listener calls the platform's dead letter path once retries

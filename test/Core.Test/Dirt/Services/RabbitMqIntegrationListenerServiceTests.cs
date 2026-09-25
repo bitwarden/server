@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Text;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Dirt.Services.Implementations;

@@ -14,6 +14,7 @@ public class OrganizationIntegrationController(
     ICreateOrganizationIntegrationCommand createCommand,
     IUpdateOrganizationIntegrationCommand updateCommand,
     IDeleteOrganizationIntegrationCommand deleteCommand,
+    IEnableOrganizationIntegrationCommand enableCommand,
     IGetOrganizationIntegrationsQuery getQuery) : Controller
 {
     [HttpGet("")]
@@ -81,6 +82,23 @@ public class OrganizationIntegrationController(
         var integration = model.ToOrganizationIntegration(organizationId);
         var updated = await updateCommand.UpdateAsync(organizationId, integrationId, integration);
         return Ok(new OrganizationIntegrationResponseModel(updated));
+    }
+
+    /// <summary>
+    /// Re-enables the configurations of an integration that the circuit breaker disabled. Nothing re-enables them
+    /// on a timer, so a client that surfaces the disabled state has to offer this once the cause is fixed.
+    /// </summary>
+    /// <returns>The number of configurations re-enabled.</returns>
+    /// <exception cref="NotFoundResult">Not enough permissions to access the organization.</exception>
+    [HttpPost("{integrationId:guid}/enable")]
+    public async Task<ActionResult<int>> EnableAsync(Guid organizationId, Guid integrationId)
+    {
+        if (!await HasPermission(organizationId))
+        {
+            return NotFound();
+        }
+
+        return Ok(await enableCommand.EnableAsync(organizationId, integrationId));
     }
 
     [HttpDelete("{integrationId:guid}")]
