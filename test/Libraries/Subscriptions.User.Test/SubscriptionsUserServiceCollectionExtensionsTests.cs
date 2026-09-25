@@ -18,6 +18,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
         services.AddSingleton(Substitute.For<IUserService>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
@@ -28,5 +29,7 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         Assert.IsType<GetSubscriptionUpgradePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionUpgradePreviewQuery>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionUpgradePreviewHandler>());
         Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPreviewHandler>());
+        Assert.IsType<GetSubscriptionPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionPurchasePreviewQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPurchasePreviewHandler>());
     }
 }

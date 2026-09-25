@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace Bit.Subscriptions.User.Test;
+namespace Bit.Subscriptions.Organization.Test;
 
 internal sealed class RecordingLogger<T> : ILogger<T>
 {

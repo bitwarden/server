@@ -16,6 +16,8 @@ public static class SubscriptionsUserServiceCollectionExtensions
         services.TryAddScoped<IGetSubscriptionUpgradePreviewQuery, GetSubscriptionUpgradePreviewQuery>();
         services.TryAddScoped<GetAccountSubscriptionUpgradePreviewHandler>();
         services.TryAddScoped<GetAccountSubscriptionPreviewHandler>();
+        services.TryAddScoped<IGetSubscriptionPurchasePreviewQuery, GetSubscriptionPurchasePreviewQuery>();
+        services.TryAddScoped<GetAccountSubscriptionPurchasePreviewHandler>();
         return services;
     }
 }
