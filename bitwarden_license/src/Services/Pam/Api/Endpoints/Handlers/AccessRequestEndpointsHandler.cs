@@ -64,7 +64,6 @@ public class AccessRequestEndpointsHandler(
     public async Task<AccessLeaseResponseModel> Activate(ClaimsPrincipal user, Guid id)
     {
         var userId = userService.GetProperUserId(user)!.Value;
-        // One instant for the mint and the response status, so a fresh lease never serializes as expired.
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var lease = await activateAccessRequestCommand.ActivateAsync(userId, id, now);
         return new AccessLeaseResponseModel(lease, now);
