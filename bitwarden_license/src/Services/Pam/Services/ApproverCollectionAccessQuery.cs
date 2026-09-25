@@ -9,42 +9,28 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
 
     public ApproverCollectionAccessQuery(
         ICollectionRepository collectionRepository,
         ICurrentContext currentContext,
-        IOrganizationUserRepository organizationUserRepository,
         IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _collectionRepository = collectionRepository;
         _currentContext = currentContext;
-        _organizationUserRepository = organizationUserRepository;
         _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task<HashSet<Guid>> GetManageableCollectionIdsAsync(Guid userId)
     {
-        // Collections assigned with Manage, directly or via a group, including in disabled organizations.
+        // Collections assigned with Manage, directly or via a group. Suspended organizations are excluded.
         var assigned = await _collectionRepository.GetManyByUserIdAsync(userId);
         var manageable = assigned.Where(c => c.Manage).Select(c => c.Id).ToHashSet();
 
-        // Owners/Admins and EditAnyCollection custom users can manage every collection in the organization; fold
-        // those in from the request context for the user's active orgs.
-        var contextOrgIds = new HashSet<Guid>();
+        // Owners/Admins and EditAnyCollection custom users can manage every collection in an enabled organization.
         foreach (var org in _currentContext.Organizations)
         {
-            contextOrgIds.Add(org.Id);
             await FoldInManageAllCollectionsAsync(org, manageable);
-        }
-
-        // A suspended organization is missing from the claims, so fold in confirmed memberships from the database.
-        var memberships = await _organizationUserRepository.GetManyDetailsByUserAsync(
-            userId, OrganizationUserStatusType.Confirmed);
-        foreach (var membership in memberships.Where(ou => !contextOrgIds.Contains(ou.OrganizationId)))
-        {
-            await FoldInManageAllCollectionsAsync(new CurrentContextOrganization(membership), manageable);
         }
 
         return manageable;
@@ -64,21 +50,8 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
             return false;
         }
 
-        // A suspended organization is missing from the claims, so fall back to the confirmed membership.
         var org = _currentContext.GetOrganization(collection.OrganizationId);
-        if (org is null)
-        {
-            var membership = await _organizationUserRepository.GetDetailsByUserAsync(
-                userId, collection.OrganizationId, OrganizationUserStatusType.Confirmed);
-            if (membership is null)
-            {
-                return false;
-            }
-
-            org = new CurrentContextOrganization(membership);
-        }
-
-        return await CanManageAllCollectionsAsync(org);
+        return org is not null && await CanManageAllCollectionsAsync(org);
     }
 
     private async Task FoldInManageAllCollectionsAsync(CurrentContextOrganization org, HashSet<Guid> manageable)
@@ -97,17 +70,18 @@ public class ApproverCollectionAccessQuery : IApproverCollectionAccessQuery
 
     private async Task<bool> CanManageAllCollectionsAsync(CurrentContextOrganization org)
     {
-        if (org.Permissions.EditAnyCollection)
-        {
-            return true;
-        }
-
-        if (org.Type is not (OrganizationUserType.Owner or OrganizationUserType.Admin))
+        var isAdmin = org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin;
+        if (!org.Permissions.EditAnyCollection && !isAdmin)
         {
             return false;
         }
 
         var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(org.Id);
-        return ability?.AllowAdminAccessToAllCollectionItems ?? false;
+        if (ability is not { Enabled: true })
+        {
+            return false;
+        }
+
+        return org.Permissions.EditAnyCollection || ability.AllowAdminAccessToAllCollectionItems;
     }
 }
