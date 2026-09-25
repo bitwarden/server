@@ -23,6 +23,8 @@ internal sealed class GetSubscriptionPurchasePreviewQuery(
     ISubscriptionDiscountService subscriptionDiscountService,
     IInvoicePreviewService invoicePreviewService) : IGetSubscriptionPurchasePreviewQuery
 {
+    private const string CatalogFaultMessage = "The plan could not be previewed. Please contact support for assistance.";
+
     public async Task<InvoicePreview> Run(UserEntity user, GetSubscriptionPurchasePreviewRequest request)
     {
         var additionalStorage = request.AdditionalStorage ?? 0;
@@ -75,7 +77,20 @@ internal sealed class GetSubscriptionPurchasePreviewQuery(
                 "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
         }
 
-        return PurchasePreviewGuard.RequireSeats(preview, logger, user.Id, items.Select(item => item.Price));
+        return RequireSeats(preview, user, items);
+    }
+
+    private InvoicePreview RequireSeats(InvoicePreview preview, UserEntity user, IEnumerable<InvoiceSubscriptionDetailsItemOptions> items)
+    {
+        if (preview.PasswordManager.Seats is not null)
+        {
+            return preview;
+        }
+
+        logger.LogError(
+            "Premium purchase preview for user ({UserId}) resolved no Password Manager seats line. Prices={PriceIds}",
+            user.Id, string.Join(",", items.Select(item => item.Price)));
+        throw new ConflictException(CatalogFaultMessage);
     }
 
     // All-or-nothing: an ineligible coupon drops every coupon rather than failing the preview.

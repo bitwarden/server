@@ -18,8 +18,6 @@ public static class SubscriptionsUserServiceCollectionExtensions
         services.TryAddScoped<GetAccountSubscriptionPreviewHandler>();
         services.TryAddScoped<IGetSubscriptionPurchasePreviewQuery, GetSubscriptionPurchasePreviewQuery>();
         services.TryAddScoped<GetAccountSubscriptionPurchasePreviewHandler>();
-        services.TryAddScoped<IGetOrganizationPurchasePreviewQuery, GetOrganizationPurchasePreviewQuery>();
-        services.TryAddScoped<GetAccountOrganizationPurchasePreviewHandler>();
         return services;
     }
 }

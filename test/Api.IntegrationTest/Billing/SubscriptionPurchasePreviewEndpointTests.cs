@@ -6,12 +6,12 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.Billing;
 
-internal static class AccountSubscriptionPurchasePreviewRequests
+internal static class SubscriptionPurchasePreviewRequests
 {
     public const string PremiumRoute =
         "/account/billing/subscription/purchase/preview?additionalStorage=0&country=US&postalCode=12345";
 
-    public const string OrganizationRoute = "/account/billing/subscription/purchase/organization/preview";
+    public const string OrganizationRoute = "/organizations/billing/subscription/purchase/preview";
 
     public static object OrganizationBody() => new
     {
@@ -26,13 +26,13 @@ internal static class AccountSubscriptionPurchasePreviewRequests
 }
 
 /// <summary>With the preview-driven cart flag at its default (off), the purchase preview routes do not exist.</summary>
-public class AccountSubscriptionPurchasePreviewFlagOffTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SubscriptionPurchasePreviewFlagOffTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly ApiApplicationFactory _factory;
     private readonly HttpClient _client;
     private readonly LoginHelper _loginHelper;
 
-    public AccountSubscriptionPurchasePreviewFlagOffTests(ApiApplicationFactory factory)
+    public SubscriptionPurchasePreviewFlagOffTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
@@ -55,7 +55,7 @@ public class AccountSubscriptionPurchasePreviewFlagOffTests : IClassFixture<ApiA
     [Fact]
     public async Task PremiumPurchasePreview_WhenFlagIsOff_Returns404()
     {
-        var response = await _client.GetAsync(AccountSubscriptionPurchasePreviewRequests.PremiumRoute);
+        var response = await _client.GetAsync(SubscriptionPurchasePreviewRequests.PremiumRoute);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -64,20 +64,20 @@ public class AccountSubscriptionPurchasePreviewFlagOffTests : IClassFixture<ApiA
     public async Task OrganizationPurchasePreview_WhenFlagIsOff_Returns404()
     {
         var response = await _client.PostAsJsonAsync(
-            AccountSubscriptionPurchasePreviewRequests.OrganizationRoute,
-            AccountSubscriptionPurchasePreviewRequests.OrganizationBody());
+            SubscriptionPurchasePreviewRequests.OrganizationRoute,
+            SubscriptionPurchasePreviewRequests.OrganizationBody());
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
 
 /// <summary>With the flag on, the purchase preview routes still require the caller to be signed in.</summary>
-public class AccountSubscriptionPurchasePreviewFlagOnTests
-    : IClassFixture<AccountSubscriptionPurchasePreviewFlagOnTests.PreviewDrivenCartApiFactory>, IDisposable
+public class SubscriptionPurchasePreviewFlagOnTests
+    : IClassFixture<SubscriptionPurchasePreviewFlagOnTests.PreviewDrivenCartApiFactory>, IDisposable
 {
     private readonly HttpClient _client;
 
-    public AccountSubscriptionPurchasePreviewFlagOnTests(PreviewDrivenCartApiFactory factory) =>
+    public SubscriptionPurchasePreviewFlagOnTests(PreviewDrivenCartApiFactory factory) =>
         _client = factory.CreateClient();
 
     public void Dispose() => _client.Dispose();
@@ -85,7 +85,7 @@ public class AccountSubscriptionPurchasePreviewFlagOnTests
     [Fact]
     public async Task PremiumPurchasePreview_WithoutABearerToken_Returns401()
     {
-        var response = await _client.GetAsync(AccountSubscriptionPurchasePreviewRequests.PremiumRoute);
+        var response = await _client.GetAsync(SubscriptionPurchasePreviewRequests.PremiumRoute);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -94,8 +94,8 @@ public class AccountSubscriptionPurchasePreviewFlagOnTests
     public async Task OrganizationPurchasePreview_WithoutABearerToken_Returns401()
     {
         var response = await _client.PostAsJsonAsync(
-            AccountSubscriptionPurchasePreviewRequests.OrganizationRoute,
-            AccountSubscriptionPurchasePreviewRequests.OrganizationBody());
+            SubscriptionPurchasePreviewRequests.OrganizationRoute,
+            SubscriptionPurchasePreviewRequests.OrganizationBody());
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

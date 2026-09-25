@@ -8,28 +8,29 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Models.Requests;
+using Bit.Subscriptions.Organization.Models.Requests;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using static Bit.Subscriptions.User.Models.Requests.GetOrganizationPurchasePreviewRequest;
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Queries;
+namespace Bit.Subscriptions.Organization.Queries;
 
-internal interface IGetOrganizationPurchasePreviewQuery
+internal interface IPreviewOrganizationSubscriptionPurchaseQuery
 {
-    Task<InvoicePreview> Run(UserEntity user, GetOrganizationPurchasePreviewRequest request);
+    Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request);
 }
 
-internal sealed class GetOrganizationPurchasePreviewQuery(
-    ILogger<GetOrganizationPurchasePreviewQuery> logger,
+internal sealed class PreviewOrganizationSubscriptionPurchaseQuery(
+    ILogger<PreviewOrganizationSubscriptionPurchaseQuery> logger,
     IPricingClient pricingClient,
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService,
-    IInvoicePreviewService invoicePreviewService) : IGetOrganizationPurchasePreviewQuery
+    IInvoicePreviewService invoicePreviewService) : IPreviewOrganizationSubscriptionPurchaseQuery
 {
-    public async Task<InvoicePreview> Run(UserEntity user, GetOrganizationPurchasePreviewRequest request)
+    private const string CatalogFaultMessage = "The plan could not be previewed. Please contact support for assistance.";
+
+    public async Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
         var (purchase, passwordManager, billingAddress) = Validate(request);
         var (planType, planTier) = ResolvePlan(purchase.Tier, purchase.Cadence);
@@ -96,12 +97,24 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
                 "The tax ID number you provided was invalid. Please try again or contact support for assistance.");
         }
 
-        return PurchasePreviewGuard.RequireSeats(
-            preview, logger, user.Id, options.SubscriptionDetails.Items.Select(item => item.Price));
+        return RequireSeats(preview, user, options.SubscriptionDetails.Items);
+    }
+
+    private InvoicePreview RequireSeats(InvoicePreview preview, UserEntity user, IEnumerable<InvoiceSubscriptionDetailsItemOptions> items)
+    {
+        if (preview.PasswordManager.Seats is not null)
+        {
+            return preview;
+        }
+
+        logger.LogError(
+            "Organization purchase preview for user ({UserId}) resolved no Password Manager seats line. Prices={PriceIds}",
+            user.Id, string.Join(",", items.Select(item => item.Price)));
+        throw new ConflictException(CatalogFaultMessage);
     }
 
     private static (PurchaseSelections Purchase, PasswordManagerSelections PasswordManager, BillingAddressSelections BillingAddress)
-        Validate(GetOrganizationPurchasePreviewRequest request)
+        Validate(PreviewOrganizationSubscriptionPurchaseRequest request)
     {
         var purchase = request.Purchase
             ?? throw new BadRequestException("Purchase", "The Purchase field is required.");
@@ -196,7 +209,7 @@ internal sealed class GetOrganizationPurchasePreviewQuery(
             logger.LogError(
                 "Organization purchase preview for user ({UserId}) found no {PlanType} plan in the pricing service",
                 user.Id, planType);
-            throw new ConflictException(PurchasePreviewGuard.CatalogFaultMessage);
+            throw new ConflictException(CatalogFaultMessage);
         }
 
         return plan;

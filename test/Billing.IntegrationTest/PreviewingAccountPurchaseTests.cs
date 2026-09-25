@@ -20,7 +20,7 @@ public class PreviewingAccountPurchaseTests(PreviewDrivenCartFixture fixture)
     : IClassFixture<PreviewDrivenCartFixture>
 {
     private const string PremiumRoute = "/account/billing/subscription/purchase/preview";
-    private const string OrganizationRoute = "/account/billing/subscription/purchase/organization/preview";
+    private const string OrganizationRoute = "/organizations/billing/subscription/purchase/preview";
 
     [BillingFact]
     public async Task PremiumPurchase_WithoutStorage_PreviewsThePremiumSeatWithTax()

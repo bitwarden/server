@@ -5,30 +5,30 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Exceptions;
 using Bit.Invoicing.InvoicePreviews;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Models.Requests;
-using Bit.Subscriptions.User.Queries;
+using Bit.Subscriptions.Organization.Models.Requests;
+using Bit.Subscriptions.Organization.Queries;
 using NSubstitute;
 using Stripe;
 using Xunit;
-using static Bit.Subscriptions.User.Models.Requests.GetOrganizationPurchasePreviewRequest;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Test.Queries;
+namespace Bit.Subscriptions.Organization.Test.Queries;
 
-public class GetOrganizationPurchasePreviewQueryTests
+public class PreviewOrganizationSubscriptionPurchaseQueryTests
 {
     private const string TaxIdValue = "DE123456789";
+    private const string CatalogFaultMessage = "The plan could not be previewed. Please contact support for assistance.";
 
-    private readonly RecordingLogger<GetOrganizationPurchasePreviewQuery> _logger = new();
+    private readonly RecordingLogger<PreviewOrganizationSubscriptionPurchaseQuery> _logger = new();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
     private readonly ITaxService _taxService = Substitute.For<ITaxService>();
     private readonly IInvoicePreviewService _invoicePreviewService = Substitute.For<IInvoicePreviewService>();
-    private readonly GetOrganizationPurchasePreviewQuery _sut;
+    private readonly PreviewOrganizationSubscriptionPurchaseQuery _sut;
 
-    public GetOrganizationPurchasePreviewQueryTests()
+    public PreviewOrganizationSubscriptionPurchaseQueryTests()
     {
-        _sut = new GetOrganizationPurchasePreviewQuery(
+        _sut = new PreviewOrganizationSubscriptionPurchaseQuery(
             _logger, _pricingClient, _subscriptionDiscountService, _taxService, _invoicePreviewService);
 
         _pricingClient.GetPlan(PlanType.FamiliesAnnually).Returns(TestPlan.Packaged("2020-families-org-annually", "personal-storage-gb-annually"));
@@ -41,7 +41,7 @@ public class GetOrganizationPurchasePreviewQueryTests
     [Fact]
     public async Task Run_WhenPurchaseIsMissing_ThrowsBadRequest()
     {
-        var request = new GetOrganizationPurchasePreviewRequest { BillingAddress = Address() };
+        var request = new PreviewOrganizationSubscriptionPurchaseRequest(null, Address());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
@@ -156,7 +156,7 @@ public class GetOrganizationPurchasePreviewQueryTests
     [Fact]
     public async Task Run_WhenBillingAddressIsMissing_ThrowsBadRequest()
     {
-        var request = new GetOrganizationPurchasePreviewRequest { Purchase = Purchase(ProductTierType.Teams) };
+        var request = new PreviewOrganizationSubscriptionPurchaseRequest(Purchase(ProductTierType.Teams), null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(User(), request));
 
@@ -222,7 +222,7 @@ public class GetOrganizationPurchasePreviewQueryTests
 
         var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(Purchase(ProductTierType.Teams))));
 
-        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        Assert.Equal(CatalogFaultMessage, exception.Message);
         var error = Assert.Single(_logger.Errors);
         Assert.Contains("TeamsAnnually", error);
         await _invoicePreviewService.DidNotReceiveWithAnyArgs()
@@ -368,14 +368,12 @@ public class GetOrganizationPurchasePreviewQueryTests
     {
         ArrangePreview();
 
-        await _sut.Run(User(), Request(new PurchaseSelections
-        {
-            Tier = ProductTierType.Teams,
-            Cadence = PlanCadenceType.Annually,
-            PasswordManager = new PasswordManagerSelections(4, 2, false),
-            SecretsManager = new SecretsManagerSelections(4, 20, true),
-            Coupons = ["USER-COUPON"]
-        }));
+        await _sut.Run(User(), Request(new PurchaseSelections(
+            ProductTierType.Teams,
+            PlanCadenceType.Annually,
+            new PasswordManagerSelections(4, 2, false),
+            new SecretsManagerSelections(4, 20, true),
+            ["USER-COUPON"])));
 
         var options = CapturedOptions();
         var discount = Assert.Single(options.Discounts);
@@ -545,7 +543,7 @@ public class GetOrganizationPurchasePreviewQueryTests
             Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(5, 0, false)),
             new BillingAddressSelections("DE", "10115", new TaxIdSelection("eu_vat", TaxIdValue)))));
 
-        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        Assert.Equal(CatalogFaultMessage, exception.Message);
         var error = Assert.Single(_logger.Errors);
         Assert.Contains("enterprise-seat-annually", error);
         Assert.DoesNotContain(TaxIdValue, error);
@@ -583,15 +581,11 @@ public class GetOrganizationPurchasePreviewQueryTests
     private static PurchaseSelections Purchase(
         ProductTierType tier,
         PlanCadenceType cadence = PlanCadenceType.Annually,
-        PasswordManagerSelections? passwordManager = null) => new()
-        {
-            Tier = tier,
-            Cadence = cadence,
-            PasswordManager = passwordManager ?? new PasswordManagerSelections(1, 0, false)
-        };
+        PasswordManagerSelections? passwordManager = null) =>
+        new(tier, cadence, passwordManager ?? new PasswordManagerSelections(1, 0, false), null, null);
 
-    private static GetOrganizationPurchasePreviewRequest Request(PurchaseSelections purchase, BillingAddressSelections? billingAddress = null) =>
-        new() { Purchase = purchase, BillingAddress = billingAddress ?? Address() };
+    private static PreviewOrganizationSubscriptionPurchaseRequest Request(PurchaseSelections purchase, BillingAddressSelections? billingAddress = null) =>
+        new(purchase, billingAddress ?? Address());
 
     private static string? ErrorFor(BadRequestException exception, string key) =>
         exception.ModelState![key]?.Errors.Single().ErrorMessage;

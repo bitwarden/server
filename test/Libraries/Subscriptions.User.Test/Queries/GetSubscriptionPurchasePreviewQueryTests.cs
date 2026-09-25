@@ -197,7 +197,7 @@ public class GetSubscriptionPurchasePreviewQueryTests
 
         var exception = await Assert.ThrowsAsync<ConflictException>(() => _sut.Run(User(), Request(additionalStorage: 2)));
 
-        Assert.Equal(PurchasePreviewGuard.CatalogFaultMessage, exception.Message);
+        Assert.Equal("The plan could not be previewed. Please contact support for assistance.", exception.Message);
         var error = Assert.Single(_logger.Errors);
         Assert.Contains(PremiumSeatPriceId, error);
     }

@@ -2,15 +2,15 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Services;
 using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Handlers;
-using Bit.Subscriptions.User.Models.Requests;
+using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Models.Requests;
 using NSubstitute;
 using Xunit;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Test.Handlers;
+namespace Bit.Subscriptions.Organization.Test.Handlers;
 
-public class GetAccountOrganizationPurchasePreviewHandlerTests
+public class PreviewOrganizationSubscriptionPurchaseHandlerTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly ClaimsPrincipal _principal = new();
@@ -19,8 +19,8 @@ public class GetAccountOrganizationPurchasePreviewHandlerTests
     public async Task HandleAsync_WhenPrincipalDoesNotResolveToUser_ThrowsUnauthorized()
     {
         _userService.GetUserByPrincipalAsync(_principal).Returns((UserEntity?)null);
-        var query = new FakeGetOrganizationPurchasePreviewQuery();
-        var sut = new GetAccountOrganizationPurchasePreviewHandler(_userService, query);
+        var query = new FakePreviewOrganizationSubscriptionPurchaseQuery();
+        var sut = new PreviewOrganizationSubscriptionPurchaseHandler(_userService, query);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sut.HandleAsync(_principal, Request()));
         Assert.Equal(0, query.Calls);
@@ -33,8 +33,8 @@ public class GetAccountOrganizationPurchasePreviewHandlerTests
         var request = Request();
         var preview = SamplePreview();
         _userService.GetUserByPrincipalAsync(_principal).Returns(user);
-        var query = new FakeGetOrganizationPurchasePreviewQuery { Result = preview };
-        var sut = new GetAccountOrganizationPurchasePreviewHandler(_userService, query);
+        var query = new FakePreviewOrganizationSubscriptionPurchaseQuery { Result = preview };
+        var sut = new PreviewOrganizationSubscriptionPurchaseHandler(_userService, query);
 
         var result = await sut.HandleAsync(_principal, request);
 
@@ -43,16 +43,9 @@ public class GetAccountOrganizationPurchasePreviewHandlerTests
         Assert.Same(request, query.ReceivedRequest);
     }
 
-    private static GetOrganizationPurchasePreviewRequest Request() => new()
-    {
-        Purchase = new GetOrganizationPurchasePreviewRequest.PurchaseSelections
-        {
-            Tier = ProductTierType.Families,
-            Cadence = PlanCadenceType.Annually,
-            PasswordManager = new GetOrganizationPurchasePreviewRequest.PasswordManagerSelections(1, 0, false)
-        },
-        BillingAddress = new GetOrganizationPurchasePreviewRequest.BillingAddressSelections("US", "12345", null)
-    };
+    private static PreviewOrganizationSubscriptionPurchaseRequest Request() => new(
+        new PurchaseSelections(ProductTierType.Families, PlanCadenceType.Annually, new PasswordManagerSelections(1, 0, false), null, null),
+        new BillingAddressSelections("US", "12345", null));
 
     private static InvoicePreview SamplePreview() => new()
     {

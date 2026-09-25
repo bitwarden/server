@@ -1,19 +1,19 @@
 ﻿using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Models.Requests;
-using Bit.Subscriptions.User.Queries;
+using Bit.Subscriptions.Organization.Models.Requests;
+using Bit.Subscriptions.Organization.Queries;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Test;
+namespace Bit.Subscriptions.Organization.Test;
 
-internal sealed class FakeGetOrganizationPurchasePreviewQuery : IGetOrganizationPurchasePreviewQuery
+internal sealed class FakePreviewOrganizationSubscriptionPurchaseQuery : IPreviewOrganizationSubscriptionPurchaseQuery
 {
     public InvoicePreview? Result { get; init; }
     public Exception? Exception { get; init; }
     public UserEntity? ReceivedUser { get; private set; }
-    public GetOrganizationPurchasePreviewRequest? ReceivedRequest { get; private set; }
+    public PreviewOrganizationSubscriptionPurchaseRequest? ReceivedRequest { get; private set; }
     public int Calls { get; private set; }
 
-    public Task<InvoicePreview> Run(UserEntity user, GetOrganizationPurchasePreviewRequest request)
+    public Task<InvoicePreview> Run(UserEntity user, PreviewOrganizationSubscriptionPurchaseRequest request)
     {
         Calls++;
         ReceivedUser = user;
