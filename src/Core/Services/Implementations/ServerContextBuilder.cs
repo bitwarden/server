@@ -5,6 +5,7 @@ using Bitwarden.Server.Sdk.Features;
 using LaunchDarkly.Sdk;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services.Implementations;
 
@@ -23,10 +24,14 @@ public class ServerContextBuilder : IContextBuilder
     private const string _contextAttributeOrganizations = "organizations";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<ServerContextBuilder> _logger;
 
-    public ServerContextBuilder(IHttpContextAccessor httpContextAccessor)
+    public ServerContextBuilder(
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<ServerContextBuilder> logger)
     {
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public LaunchDarkly.Sdk.Context Build()
@@ -36,10 +41,12 @@ public class ServerContextBuilder : IContextBuilder
 
         if (currentContext is null)
         {
-            return LaunchDarkly.Sdk.Context.Builder(_anonymousUser)
+            var anonymous = LaunchDarkly.Sdk.Context.Builder(_anonymousUser)
                 .Kind(ContextKind.Default)
                 .Anonymous(true)
                 .Build();
+            _logger.LogInformation("LD context (no HttpContext): {Context}", anonymous);
+            return anonymous;
         }
 
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
@@ -132,7 +139,14 @@ public class ServerContextBuilder : IContextBuilder
                 break;
         }
 
-        return builder.Build();
+        var built = builder.Build();
+        _logger.LogInformation(
+            "LD context (path={Path}, hasUser={HasUser}, clientType={ClientType}): {Context}",
+            _httpContextAccessor.HttpContext?.Request.Path.Value,
+            currentContext.UserId.HasValue,
+            currentContext.IdentityClientType,
+            built);
+        return built;
 
         void SetCommonContextAttributes(ContextBuilder builder)
         {
