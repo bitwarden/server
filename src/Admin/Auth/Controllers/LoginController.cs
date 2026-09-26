@@ -92,15 +92,15 @@ public class LoginController : Controller
             return NotFound();
         }
 
-        var redirectUrl = Url.Action(nameof(SsoCallback), "Login", new { returnUrl });
+        var redirectUrl = Url.Action(nameof(SsoSignIn), "Login", new { returnUrl });
         var properties = _signInManager.ConfigureExternalAuthenticationProperties(
             AdminAuthenticationSchemes.UpstreamOidc, redirectUrl);
         return Challenge(properties, AdminAuthenticationSchemes.UpstreamOidc);
     }
 
-    [HttpGet("login/sso-callback")]
+    [HttpGet("login/sso-signin")]
     [AllowAnonymous]
-    public async Task<IActionResult> SsoCallback(string returnUrl = null, string remoteError = null)
+    public async Task<IActionResult> SsoSignIn(string returnUrl = null, string remoteError = null)
     {
         if (!_adminSettings.OidcEnabled)
         {

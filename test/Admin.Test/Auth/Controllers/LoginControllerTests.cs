@@ -24,21 +24,21 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoCallback_ReturnsNotFound_WhenOidcDisabled()
+    public async Task SsoSignIn_ReturnsNotFound_WhenOidcDisabled()
     {
         var controller = BuildController(oidcEnabled: false);
 
-        var result = await controller.SsoCallback(returnUrl: "/home");
+        var result = await controller.SsoSignIn(returnUrl: "/home");
 
         Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
-    public async Task SsoCallback_RedirectsWithError_WhenRemoteErrorProvided()
+    public async Task SsoSignIn_RedirectsWithError_WhenRemoteErrorProvided()
     {
         var controller = BuildController(oidcEnabled: true);
 
-        var result = await controller.SsoCallback(returnUrl: "/home", remoteError: "access_denied");
+        var result = await controller.SsoSignIn(returnUrl: "/home", remoteError: "access_denied");
 
         var redirect = Assert.IsType<RedirectToActionResult>(result);
         Assert.Equal("Index", redirect.ActionName);
