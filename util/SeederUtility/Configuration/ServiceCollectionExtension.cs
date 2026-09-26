@@ -81,6 +81,8 @@ public static class ServiceCollectionExtension
         // extracting a shared helper — the Seeder must never require a change to shared/production code for
         // its own DI needs. The Add*/TryAdd* mix below is harmless: nothing else in this composition chain
         // (AddDatabaseRepositories, AddLicenseServices, AddPush, AddBillingOperations) registers either type.
+        services.AddSingleton<SubscriptionScheduleService>();
+        services.AddSingleton<StripeSubscriptionScheduleAdapter>();
         services.AddSingleton<IStripeAdapter, StripeAdapter>();
 
         // Constructed but never exercised — the seeder only ever pays by card — so empty credentials are fine.

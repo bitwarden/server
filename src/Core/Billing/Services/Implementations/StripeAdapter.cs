@@ -36,8 +36,9 @@ public class StripeAdapter : IStripeAdapter
     private readonly BillingPortalSessionService _billingPortalSessionService;
     private readonly SubscriptionScheduleService _subscriptionScheduleService;
     private readonly CheckoutSessionService _checkoutSessionsService;
+    private readonly StripeSubscriptionScheduleAdapter _subscriptionScheduleAdapter;
 
-    public StripeAdapter()
+    public StripeAdapter(StripeSubscriptionScheduleAdapter subscriptionScheduleAdapter)
     {
         _customerService = new CustomerService();
         _subscriptionService = new SubscriptionService();
@@ -59,6 +60,7 @@ public class StripeAdapter : IStripeAdapter
         _billingPortalSessionService = new BillingPortalSessionService();
         _subscriptionScheduleService = new SubscriptionScheduleService();
         _checkoutSessionsService = new CheckoutSessionService();
+        _subscriptionScheduleAdapter = subscriptionScheduleAdapter;
     }
 
     /**************
@@ -282,17 +284,25 @@ public class StripeAdapter : IStripeAdapter
     public Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options) =>
         _subscriptionScheduleService.CreateAsync(options);
 
+    public Task<SubscriptionSchedule> CreateSubscriptionScheduleWithPhasesAsync(
+        Subscription subscription,
+        SubscriptionSchedulePhaseOptions phase2Options,
+        string managingSystem,
+        Dictionary<string, string> phaseMetadata = null) =>
+        _subscriptionScheduleAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+            subscription, phase2Options, managingSystem, phaseMetadata);
+
     public Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null) =>
-        _subscriptionScheduleService.GetAsync(id, options);
+        _subscriptionScheduleAdapter.GetSubscriptionScheduleAsync(id, options);
 
     public Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options) =>
-        _subscriptionScheduleService.ListAsync(options);
+        _subscriptionScheduleAdapter.ListSubscriptionSchedulesAsync(options);
 
     public Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options) =>
-        _subscriptionScheduleService.UpdateAsync(id, options);
+        _subscriptionScheduleAdapter.UpdateSubscriptionScheduleAsync(id, options);
 
     public Task<SubscriptionSchedule> ReleaseSubscriptionScheduleAsync(string id, SubscriptionScheduleReleaseOptions options = null) =>
-        _subscriptionScheduleService.ReleaseAsync(id, options);
+        _subscriptionScheduleAdapter.ReleaseSubscriptionScheduleAsync(id, options);
 
     /******************
      ** TEST CLOCK **
