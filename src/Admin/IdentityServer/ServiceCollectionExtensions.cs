@@ -66,7 +66,7 @@ public static class ServiceCollectionExtensions
                 options.SignedOutCallbackPath = oidc.SignedOutCallbackPath;
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.UsePkce = true;
-                options.SaveTokens = false;
+                options.SaveTokens = true;
                 options.GetClaimsFromUserInfoEndpoint = oidc.GetClaimsFromUserInfoEndpoint;
                 options.MapInboundClaims = false;
 

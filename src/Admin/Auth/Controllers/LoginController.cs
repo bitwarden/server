@@ -1,6 +1,7 @@
 // FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Security.Claims;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Bit.Admin.IdentityServer;
@@ -133,7 +134,11 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 4 });
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: false);
+        var ssoMarker = new[]
+        {
+            new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso)
+        };
+        await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, ssoMarker);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -148,7 +153,19 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        var signedInViaSso = User.HasClaim(
+            AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso);
+
         await _signInManager.SignOutAsync();
+
+        if (signedInViaSso)
+        {
+            var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
+            return SignOut(
+                new AuthenticationProperties { RedirectUri = loggedOutRedirect },
+                AdminAuthenticationSchemes.UpstreamOidc);
+        }
+
         return RedirectToAction("Index", new
         {
             success = 1

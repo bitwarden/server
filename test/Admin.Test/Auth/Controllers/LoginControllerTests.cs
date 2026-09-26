@@ -1,10 +1,13 @@
+using System.Security.Claims;
 using Bit.Admin;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
+using Bit.Admin.IdentityServer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -68,6 +71,43 @@ public class LoginControllerTests
         var view = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<LoginModel>(view.Model);
         Assert.False(model.SsoEnabled);
+    }
+
+    [Fact]
+    public async Task Logout_LocalOnly_WhenNoSsoMarkerClaim()
+    {
+        var controller = BuildController(oidcEnabled: true);
+        SetUser(controller, new Claim(ClaimTypes.Email, "you@example.com"));
+
+        var result = await controller.Logout();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Index", redirect.ActionName);
+        Assert.Equal(1, redirect.RouteValues!["success"]);
+    }
+
+    [Fact]
+    public async Task Logout_TriggersRpInitiatedLogout_WhenSsoMarkerClaimPresent()
+    {
+        var controller = BuildController(oidcEnabled: true);
+        SetUser(controller,
+            new Claim(ClaimTypes.Email, "you@example.com"),
+            new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso));
+
+        var result = await controller.Logout();
+
+        var signOut = Assert.IsType<SignOutResult>(result);
+        Assert.Contains(AdminAuthenticationSchemes.UpstreamOidc, signOut.AuthenticationSchemes);
+        Assert.NotNull(signOut.Properties?.RedirectUri);
+    }
+
+    private static void SetUser(LoginController controller, params Claim[] claims)
+    {
+        var identity = new ClaimsIdentity(claims, authenticationType: "TestAuth");
+        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        controller.Url = Substitute.For<IUrlHelper>();
+        controller.Url.Action(Arg.Any<UrlActionContext>()).Returns("/login?success=1");
     }
 
     private static LoginController BuildController(bool oidcEnabled)
