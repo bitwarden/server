@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Admin;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.IdentityServer;
