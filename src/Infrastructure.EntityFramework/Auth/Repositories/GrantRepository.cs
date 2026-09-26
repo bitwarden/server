@@ -31,10 +31,10 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         {
             var dbContext = GetDatabaseContext(scope);
             await dbContext.Grants.Where(g =>
-                g.SubjectId == subjectId &&
-                g.ClientId == clientId &&
-                g.SessionId == sessionId &&
-                g.Type == type).ExecuteDeleteAsync();
+                (subjectId == null || g.SubjectId == subjectId) &&
+                (clientId == null || g.ClientId == clientId) &&
+                (sessionId == null || g.SessionId == sessionId) &&
+                (type == null || g.Type == type)).ExecuteDeleteAsync();
         }
     }
 
@@ -57,13 +57,13 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         {
             var dbContext = GetDatabaseContext(scope);
             var query = from g in dbContext.Grants
-                        where g.SubjectId == subjectId &&
-                            g.ClientId == clientId &&
-                            g.SessionId == sessionId &&
-                            g.Type == type
+                        where (subjectId == null || g.SubjectId == subjectId) &&
+                            (clientId == null || g.ClientId == clientId) &&
+                            (sessionId == null || g.SessionId == sessionId) &&
+                            (type == null || g.Type == type)
                         select g;
             var grants = await query.ToListAsync();
-            return (ICollection<IGrant>)grants;
+            return grants.ToList<IGrant>();
         }
     }
 
