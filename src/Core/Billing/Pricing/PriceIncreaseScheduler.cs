@@ -112,7 +112,8 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2);
+        await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+            subscription, phase2, ManagingSystems.PersonalPriceIncrease);
         return true;
     }
 
@@ -176,7 +177,8 @@ public class PriceIncreaseScheduler(
             [MetadataKeys.MigrationCohortName] = cohort.Name
         };
 
-        await CreateAndConfigureScheduleAsync(subscription, phase2, phaseMetadata);
+        await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+            subscription, phase2, ManagingSystems.BusinessPriceIncrease, phaseMetadata);
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);
         if (assignment is null)
@@ -289,69 +291,6 @@ public class PriceIncreaseScheduler(
         }
 
         return exists;
-    }
-
-    private async Task<SubscriptionSchedule> CreateAndConfigureScheduleAsync(
-        Subscription subscription,
-        SubscriptionSchedulePhaseOptions phase2Options,
-        Dictionary<string, string>? phaseMetadata = null)
-    {
-        var schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-            new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
-
-        try
-        {
-            var phase1 = schedule.Phases[0];
-
-            var phase1Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.StartDate,
-                EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = i.PriceId,
-                    Quantity = i.Quantity,
-                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
-                        i.Discounts?.Select(d => d.CouponId) ?? [])
-                })],
-                Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            if (phaseMetadata is not null)
-            {
-                phase1Options.Metadata = phaseMetadata;
-                phase2Options.Metadata = phaseMetadata;
-            }
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = [phase1Options, phase2Options]
-                });
-
-            return schedule;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
-                schedule.Id, subscription.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (Exception releaseEx)
-            {
-                logger.LogError(releaseEx,
-                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId})",
-                    schedule.Id, subscription.Id);
-            }
-
-            throw;
-        }
     }
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
