@@ -103,82 +103,32 @@ public class RedeemAnnualUpgradeOfferCommand(
         // here would make a failed create unrecoverable.
         await priceIncreaseScheduler.ReleaseSchedule(scheduleToRelease);
 
+        // MapOrNull refused any subscription without line items, so the current period end is set.
+        var periodEnd = subscription.GetCurrentPeriodEnd()!.Value;
+
+        // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
+        // exactly one annual term, then the schedule releases.
+        var phase2Options = new SubscriptionSchedulePhaseOptions
+        {
+            StartDate = periodEnd,
+            EndDate = periodEnd.AddYears(1),
+            Items = phase2Items,
+            Discounts = ReusedPhaseDiscounts(subscription),
+            ProrationBehavior = ProrationBehavior.None
+        };
+
         SubscriptionSchedule schedule;
 
         try
         {
-            schedule = await stripeAdapter.CreateSubscriptionScheduleAsync(
-                new SubscriptionScheduleCreateOptions { FromSubscription = subscription.Id });
+            schedule = await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+                subscription, phase2Options, ManagingSystems.AnnualUpgrade);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
                 "{Command}: Failed to create annual-upgrade schedule for Organization ({OrganizationId}) after releasing schedule ({ReleasedScheduleId}). The organization keeps its migration cohort assignment, so the recovery scheduler will re-create the released schedule on the next upcoming-invoice or subscription-updated event; verify it was re-created.",
                 CommandName, organization.Id, scheduleToRelease?.Id);
-
-            throw;
-        }
-
-        try
-        {
-            var phase1 = schedule.Phases[0];
-
-            var sourcePlanType = organization.PlanType.ToString();
-
-            // Phase 1 must round-trip its discounts. Omitting them is accepted by Stripe and
-            // silently strips them from the live subscription.
-            var phase1Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.StartDate,
-                EndDate = phase1.EndDate,
-                Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                {
-                    Price = i.PriceId,
-                    Quantity = i.Quantity,
-                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
-                        i.Discounts?.Select(d => d.CouponId) ?? [])
-                })],
-                Discounts = ReusedPhaseDiscounts(subscription),
-                // Only the marker's presence is read; the value is for triage.
-                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
-            // exactly one annual term, then the schedule releases per EndBehavior below.
-            var phase2Options = new SubscriptionSchedulePhaseOptions
-            {
-                StartDate = phase1.EndDate,
-                EndDate = phase1.EndDate.AddYears(1),
-                Items = phase2Items,
-                Discounts = ReusedPhaseDiscounts(subscription),
-                Metadata = new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = sourcePlanType },
-                ProrationBehavior = ProrationBehavior.None
-            };
-
-            await stripeAdapter.UpdateSubscriptionScheduleAsync(schedule.Id,
-                new SubscriptionScheduleUpdateOptions
-                {
-                    EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                    Phases = [phase1Options, phase2Options]
-                });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "{Command}: Failed to configure annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId}), attempting to release orphaned schedule",
-                CommandName, schedule.Id, organization.Id);
-
-            try
-            {
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(schedule.Id);
-            }
-            catch (StripeException releaseEx)
-            {
-                _logger.LogError(releaseEx,
-                    "{Command}: Failed to release orphaned annual-upgrade schedule ({ScheduleId}) for Organization ({OrganizationId})",
-                    CommandName, schedule.Id, organization.Id);
-            }
 
             throw;
         }

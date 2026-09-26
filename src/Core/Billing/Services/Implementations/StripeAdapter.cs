@@ -34,7 +34,6 @@ public class StripeAdapter : IStripeAdapter
     private readonly CouponService _couponService;
     private readonly ProductService _productService;
     private readonly BillingPortalSessionService _billingPortalSessionService;
-    private readonly SubscriptionScheduleService _subscriptionScheduleService;
     private readonly CheckoutSessionService _checkoutSessionsService;
     private readonly StripeSubscriptionScheduleAdapter _subscriptionScheduleAdapter;
 
@@ -58,7 +57,6 @@ public class StripeAdapter : IStripeAdapter
         _couponService = new CouponService();
         _productService = new ProductService();
         _billingPortalSessionService = new BillingPortalSessionService();
-        _subscriptionScheduleService = new SubscriptionScheduleService();
         _checkoutSessionsService = new CheckoutSessionService();
         _subscriptionScheduleAdapter = subscriptionScheduleAdapter;
     }
@@ -281,9 +279,6 @@ public class StripeAdapter : IStripeAdapter
     /***************************
      ** SUBSCRIPTION SCHEDULE **
      ***************************/
-    public Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options) =>
-        _subscriptionScheduleService.CreateAsync(options);
-
     public Task<SubscriptionSchedule> CreateSubscriptionScheduleWithPhasesAsync(
         Subscription subscription,
         SubscriptionSchedulePhaseOptions phase2Options,
