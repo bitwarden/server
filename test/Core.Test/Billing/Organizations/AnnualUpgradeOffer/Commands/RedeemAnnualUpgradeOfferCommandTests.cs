@@ -50,12 +50,11 @@ public class RedeemAnnualUpgradeOfferCommandTests
         GatewaySubscriptionId = "sub_123"
     };
 
-    private (Subscription Subscription, SubscriptionSchedule Schedule) SetupRedeemableSubscription(
+    private Subscription SetupRedeemableSubscription(
         Organization organization,
         List<SubscriptionItem> items,
         List<Discount>? subscriptionDiscounts = null,
-        Customer? customer = null,
-        List<SubscriptionSchedulePhaseDiscount>? phase1Discounts = null)
+        Customer? customer = null)
     {
         foreach (var item in items)
         {
@@ -74,25 +73,12 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
-        var schedule = new SubscriptionSchedule
-        {
-            Id = "sub_sched_new",
-            Phases =
-            [
-                new SubscriptionSchedulePhase
-                {
-                    StartDate = _phase1Start,
-                    EndDate = _phase1End,
-                    Items = [.. items.Select(i => new SubscriptionSchedulePhaseItem { PriceId = i.Price.Id, Quantity = i.Quantity })],
-                    Discounts = phase1Discounts
-                }
-            ]
-        };
+        var schedule = new SubscriptionSchedule { Id = "sub_sched_new" };
         _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(schedule);
 
-        return (subscription, schedule);
+        return subscription;
     }
 
     [Fact]
@@ -146,7 +132,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
 
         var result = await _command.Run(organization);
@@ -453,7 +439,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
         var schedule = new SubscriptionSchedule
         {
@@ -480,7 +466,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
         var schedule = new SubscriptionSchedule
         {
@@ -511,7 +497,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }]);
         subscription.ScheduleId = "sub_sched_unread";
         subscription.Schedule = null;
@@ -530,7 +516,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var monthlyPlan = new Teams2020Plan(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
         var schedule = new SubscriptionSchedule
         {
@@ -563,7 +549,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var monthlyPlan = new Teams2020Plan(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
 
         _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
@@ -590,7 +576,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var organization = CreateOrganization(PlanType.TeamsMonthly2020);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization, []);
+        var subscription = SetupRedeemableSubscription(organization, []);
         var schedule = new SubscriptionSchedule
         {
             Id = "sub_sched_annual_upgrade",
@@ -624,7 +610,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var monthlyPlan = new Teams2020Plan(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
 
         var result = await _command.Run(organization);
@@ -640,7 +626,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var monthlyPlan = new Teams2020Plan(false);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(new TeamsPlan(true));
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
         var schedule = new SubscriptionSchedule
         {
@@ -772,7 +758,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        var (subscription, _) = SetupRedeemableSubscription(organization,
+        var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 5 }]);
 
         var result = await _command.Run(organization);

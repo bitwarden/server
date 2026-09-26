@@ -132,7 +132,7 @@ public class UpdateOrganizationSubscriptionCommand(
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules our code created, identified by their managing-system marker.
+            // PM-40537: only rewrite schedules our code created, as classified by SubscriptionScheduleOwnershipMapper.
             var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
             var schedulePlans = annualUpgradePlans
                                 ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
@@ -184,7 +184,7 @@ public class UpdateOrganizationSubscriptionCommand(
             }
 
             _logger.LogInformation(
-                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is one our code did not create; leaving it untouched and updating the subscription directly",
+                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not an annual-upgrade or business price increase schedule; leaving it untouched and updating the subscription directly",
                 CommandName, activeSchedule.Id, subscription.Id);
         }
 
@@ -238,7 +238,7 @@ public class UpdateOrganizationSubscriptionCommand(
         !(subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d is null)) &&
         (subscription.TestClockId is null || subscription.TestClock is not null);
 
-    // An annual-upgrade schedule (PM-38333) is recognised by its managing-system marker. When
+    // An annual-upgrade schedule (PM-38333) is recognised by SubscriptionScheduleOwnershipMapper. When
     // recognised, source is the current monthly plan and target is the annual-latest
     // plan, so phase 1 stays monthly (identity) and phase 2 maps to annual-latest. Returns null
     // when this is not an annual-upgrade schedule, letting the caller fall back to cohort-migration

@@ -41,8 +41,8 @@ public class StripeSubscriptionScheduleAdapter(
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}), attempting to release orphaned schedule",
-                schedule.Id, subscription.Id);
+                "Failed to update subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}) managed by ({ManagingSystem}), attempting to release orphaned schedule",
+                schedule.Id, subscription.Id, managingSystem);
 
             try
             {
@@ -51,8 +51,8 @@ public class StripeSubscriptionScheduleAdapter(
             catch (Exception releaseEx)
             {
                 logger.LogError(releaseEx,
-                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}). Manual release required.",
-                    schedule.Id, subscription.Id);
+                    "Failed to release orphaned subscription schedule ({ScheduleId}) for subscription ({SubscriptionId}) managed by ({ManagingSystem}). Manual release required.",
+                    schedule.Id, subscription.Id, managingSystem);
             }
 
             throw;
