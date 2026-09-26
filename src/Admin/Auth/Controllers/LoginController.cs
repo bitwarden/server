@@ -1,21 +1,31 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
+using Bit.Admin.IdentityServer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Admin.Auth.Controllers;
 
 public class LoginController : Controller
 {
     private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
+    private readonly UserManager<IdentityUser> _userManager;
+    private readonly AdminSettings _adminSettings;
 
     public LoginController(
-        PasswordlessSignInManager<IdentityUser> signInManager)
+        PasswordlessSignInManager<IdentityUser> signInManager,
+        UserManager<IdentityUser> userManager,
+        IOptions<AdminSettings> adminSettings)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
+        _adminSettings = adminSettings.Value;
     }
 
     public IActionResult Index(string returnUrl = null, int? error = null, int? success = null,
@@ -30,7 +40,9 @@ public class LoginController : Controller
         {
             ReturnUrl = returnUrl,
             Error = GetMessage(error),
-            Success = GetMessage(success)
+            Success = GetMessage(success),
+            SsoEnabled = _adminSettings.OidcEnabled,
+            SsoDisplayName = _adminSettings.Oidc?.DisplayName
         });
     }
 
@@ -47,6 +59,8 @@ public class LoginController : Controller
             });
         }
 
+        model.SsoEnabled = _adminSettings.OidcEnabled;
+        model.SsoDisplayName = _adminSettings.Oidc?.DisplayName;
         return View(model);
     }
 
@@ -60,6 +74,67 @@ public class LoginController : Controller
                 error = 2
             });
         }
+
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet("login/sso")]
+    [AllowAnonymous]
+    public IActionResult Sso(string returnUrl = null)
+    {
+        if (!_adminSettings.OidcEnabled)
+        {
+            return NotFound();
+        }
+
+        var redirectUrl = Url.Action(nameof(SsoCallback), "Login", new { returnUrl });
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(
+            AdminAuthenticationSchemes.UpstreamOidc, redirectUrl);
+        return Challenge(properties, AdminAuthenticationSchemes.UpstreamOidc);
+    }
+
+    [HttpGet("login/sso-callback")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SsoCallback(string returnUrl = null, string remoteError = null)
+    {
+        if (!_adminSettings.OidcEnabled)
+        {
+            return NotFound();
+        }
+
+        if (!string.IsNullOrEmpty(remoteError))
+        {
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        var email = info.Principal.FindFirst(_adminSettings.Oidc.EmailClaimType)?.Value;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        var normalizedEmail = email.ToLowerInvariant();
+        var user = await _userManager.FindByEmailAsync(normalizedEmail);
+        if (user == null)
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 4 });
+        }
+
+        await _signInManager.SignInAsync(user, isPersistent: false);
+        await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
@@ -89,6 +164,7 @@ public class LoginController : Controller
             3 => "If a valid admin user with this email address exists, " +
                 "we've sent you an email with a secure link to log in.",
             4 => "Access denied. Please log in.",
+            5 => "SSO sign-in failed. Try again or use the email link.",
             _ => null,
         };
     }
