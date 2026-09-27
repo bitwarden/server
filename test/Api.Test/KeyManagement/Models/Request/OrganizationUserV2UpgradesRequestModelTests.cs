@@ -89,13 +89,32 @@ public class OrganizationUserV2UpgradesRequestModelTests
         Assert.Contains(results, r => r.MemberNames.Contains(nameof(upgrade.UserKeyId)));
     }
 
+    [Fact]
+    public void Validate_WithoutAnAccountRecoveryKey_ReturnsNoErrors()
+    {
+        // Arrange - a null key unenrolls the member, which clears an upgrade that cannot be completed
+        var upgrade = new OrganizationUserV2UpgradeRequestModel
+        {
+            OrganizationUserId = Guid.NewGuid(),
+            UserKeyId = _validUserKeyId,
+            AccountRecoveryKey = null
+        };
+
+        // Act
+        var results = Validate(upgrade);
+
+        // Assert
+        Assert.Empty(results);
+    }
+
     [Theory]
-    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_WithoutAnAccountRecoveryKey_ReturnsNoErrors(string? accountRecoveryKey)
+    [InlineData("not-an-encrypted-string")]
+    public void Validate_WithAccountRecoveryKeyThatIsNotAnEncryptedString_ReturnsValidationError(
+        string accountRecoveryKey)
     {
-        // Arrange - no key unenrolls the member, which clears an upgrade that cannot be completed
+        // Arrange - a blank key is not a way to unenroll, only a null key is
         var upgrade = new OrganizationUserV2UpgradeRequestModel
         {
             OrganizationUserId = Guid.NewGuid(),
@@ -107,25 +126,8 @@ public class OrganizationUserV2UpgradesRequestModelTests
         var results = Validate(upgrade);
 
         // Assert
-        Assert.Empty(results);
-    }
-
-    [Fact]
-    public void Validate_WithAccountRecoveryKeyThatIsNotAnEncryptedString_ReturnsValidationError()
-    {
-        // Arrange
-        var upgrade = new OrganizationUserV2UpgradeRequestModel
-        {
-            OrganizationUserId = Guid.NewGuid(),
-            UserKeyId = _validUserKeyId,
-            AccountRecoveryKey = "not-an-encrypted-string"
-        };
-
-        // Act
-        var results = Validate(upgrade);
-
-        // Assert
         Assert.Single(results);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(upgrade.AccountRecoveryKey)));
         Assert.Contains(results,
             r => r.ErrorMessage == "AccountRecoveryKey is not a valid encrypted string.");
     }
@@ -152,18 +154,15 @@ public class OrganizationUserV2UpgradesRequestModelTests
         });
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ToData_WithoutAnAccountRecoveryKey_MapsTheKeyToNull(string? accountRecoveryKey)
+    [Fact]
+    public void ToData_WithoutAnAccountRecoveryKey_MapsTheKeyToNull()
     {
-        // Arrange - a blank key is stored as null, to match how the key is read
+        // Arrange - a null key unenrolls the member
         var model = ModelFor(new OrganizationUserV2UpgradeRequestModel
         {
             OrganizationUserId = Guid.NewGuid(),
             UserKeyId = _validUserKeyId,
-            AccountRecoveryKey = accountRecoveryKey
+            AccountRecoveryKey = null
         });
 
         // Act

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Utilities;
 
@@ -7,7 +6,7 @@ namespace Bit.Api.KeyManagement.Models.Requests;
 
 /// <summary>
 /// Account recovery keys an organization admin re-wrapped with members' V2 user keys, read from the members'
-/// V2 upgrade tokens. An entry with no key unenrolls the member from account recovery instead.
+/// V2 upgrade tokens. An entry with a null key unenrolls the member from account recovery instead.
 /// </summary>
 public class OrganizationUserV2UpgradesRequestModel : IValidatableObject
 {
@@ -33,7 +32,7 @@ public class OrganizationUserV2UpgradesRequestModel : IValidatableObject
     }
 }
 
-public class OrganizationUserV2UpgradeRequestModel : IValidatableObject
+public class OrganizationUserV2UpgradeRequestModel
 {
     [Required]
     public required Guid OrganizationUserId { get; init; }
@@ -48,11 +47,12 @@ public class OrganizationUserV2UpgradeRequestModel : IValidatableObject
     public required string UserKeyId { get; init; }
 
     /// <summary>
-    /// The member's V2 user key wrapped with the organization's public key, or no key to unenroll the member from
-    /// account recovery. Send no key when the upgrade cannot be completed, for example when the V2 upgrade token
+    /// The member's V2 user key wrapped with the organization's public key, or null to unenroll the member from
+    /// account recovery. Send null when the upgrade cannot be completed, for example when the V2 upgrade token
     /// does not contain a usable user key. The member keeps their vault, and the organization's enrollment policy
-    /// prompts them to enroll again.
+    /// prompts them to enroll again. A blank key is rejected, because only a key or its absence is meaningful.
     /// </summary>
+    [EncryptedString]
     public string? AccountRecoveryKey { get; init; }
 
     public OrganizationUserAccountRecoveryKeyUpdate ToData()
@@ -61,27 +61,7 @@ public class OrganizationUserV2UpgradeRequestModel : IValidatableObject
         {
             OrganizationUserId = OrganizationUserId,
             UserKeyId = UserKeyId,
-            // Store null, not a blank string, to match how the key is read
-            AccountRecoveryKey = OrganizationUser.IsValidResetPasswordKey(AccountRecoveryKey)
-                ? AccountRecoveryKey
-                : null
+            AccountRecoveryKey = AccountRecoveryKey
         };
-    }
-
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
-    {
-        if (!OrganizationUser.IsValidResetPasswordKey(AccountRecoveryKey))
-        {
-            yield break;
-        }
-
-        // Validated here rather than with an attribute, because a blank key is meaningful. It unenrolls.
-        var encryptedString = new EncryptedStringAttribute();
-        if (!encryptedString.IsValid(AccountRecoveryKey))
-        {
-            yield return new ValidationResult(
-                encryptedString.FormatErrorMessage(nameof(AccountRecoveryKey)),
-                [nameof(AccountRecoveryKey)]);
-        }
     }
 }
