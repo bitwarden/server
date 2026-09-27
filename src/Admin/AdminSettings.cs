@@ -18,6 +18,12 @@ public class AdminSettings
     // useful in environments where the operator wants all admin access to flow through an audited IdP.
     public bool EnablePasswordlessLogin { get; set; } = true;
 
+    // How long the admin session cookie is valid, in minutes. Applies to both passwordless and
+    // SSO sign-ins. The cookie renews on activity (sliding), so this is effectively the
+    // idle-timeout window: an admin who does nothing for this long has to sign in again.
+    // Default 2 days matches historical behavior; tighten for stricter session hygiene.
+    public int SessionTimeoutMinutes { get; set; } = 2880;
+
     // Upstream OIDC (federated SSO) configuration. Presence of Authority/ClientId/ClientSecret
     // enables the SSO flow; absent, only the passwordless email flow is available.
     public OidcSettings Oidc { get; set; } = new OidcSettings();

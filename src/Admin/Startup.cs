@@ -75,7 +75,7 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         // Identity
-        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
+        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings, adminSettings);
         services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {

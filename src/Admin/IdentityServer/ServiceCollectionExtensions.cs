@@ -13,7 +13,8 @@ namespace Bit.Admin.IdentityServer;
 public static class ServiceCollectionExtensions
 {
     public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
-        this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
+        this IServiceCollection services, GlobalSettings globalSettings, AdminSettings adminSettings)
+        where TUserStore : class
     {
         services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
         services.Configure<DataProtectionTokenProviderOptions>(options =>
@@ -39,14 +40,24 @@ public static class ServiceCollectionExtensions
             options.AccessDeniedPath = "/login?accessDenied=true";
             options.Cookie.Name = $"Bitwarden_{globalSettings.ProjectName}";
             options.Cookie.HttpOnly = true;
-            // Always mark Secure. Default (SameAsRequest) can downgrade behind a TLS-terminating
-            // proxy that doesn't forward X-Forwarded-Proto, causing the cookie to leak over HTTP.
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            // Scope Secure=Always to SSO deployments only. Self-hosters who declined TLS at
+            // install time reach the Admin over plain HTTP; forcing Secure there would silently
+            // drop the cookie and lock them out with no error. When SSO is enabled the OIDC
+            // correlation cookie (SameSite=None) already requires HTTPS end-to-end, so upgrading
+            // the app cookie to match is safe. SameAsRequest is fine in the non-SSO topology -
+            // Startup calls UseForwardedHeaders(XForwardedProto) so a TLS-terminating proxy
+            // resolves to https correctly.
+            options.Cookie.SecurePolicy = adminSettings.OidcEnabled
+                ? CookieSecurePolicy.Always
+                : CookieSecurePolicy.SameAsRequest;
             // Lax is required so the cookie is sent on the top-level GET redirect back from the
             // OIDC callback; Strict would break SSO. HttpOnly + Secure + Lax is the standard
             // defense-in-depth combo.
             options.Cookie.SameSite = SameSiteMode.Lax;
-            options.ExpireTimeSpan = TimeSpan.FromDays(2);
+            // Session lifetime is operator-configurable so deployments with stricter session
+            // hygiene requirements can dial it down. Sliding stays on, so this is effectively 
+            // the idle-timeout window rather than an absolute maximum.
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(adminSettings.SessionTimeoutMinutes);
             options.ReturnUrlParameter = "returnUrl";
             options.SlidingExpiration = true;
         });
@@ -105,14 +116,17 @@ public static class ServiceCollectionExtensions
                 // attach it as id_token_hint on RP-initiated logout.
                 options.SaveTokens = true;
 
-                // Always hit UserInfo after the token exchange. Some IdPs (Okta) leave email
-                // and email_verified out of the ID token; UserInfo is the authoritative source.
-                // Extra round-trip is negligible on interactive admin logins.
-                options.GetClaimsFromUserInfoEndpoint = true;
-
                 // Disable the legacy WS-* claim-name mapping so `sub`, `email`, `email_verified`
                 // stay in their OIDC-native short form. Matches the JWT on the wire and simplifies
                 // config (`EmailClaimType=email` rather than the long xmlsoap URI).
+                //
+                // We deliberately do NOT call GetClaimsFromUserInfoEndpoint. UserInfo claims go
+                // through a separate ClaimActions pipeline that MapInboundClaims does not
+                // affect and whose defaults reintroduce the xmlsoap URIs - untangling that
+                // requires additional per-claim mapping. Rely on the ID token instead: it's a
+                // one-checkbox change at every mainstream IdP to include `email` and
+                // `email_verified` in the ID token, and it's already the default at Auth0,
+                // Azure AD/Entra, and Keycloak (Okta needs a small config change).
                 options.MapInboundClaims = false;
 
                 options.Scope.Clear();
