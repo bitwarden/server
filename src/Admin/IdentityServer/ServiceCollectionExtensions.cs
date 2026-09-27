@@ -55,11 +55,29 @@ public static class ServiceCollectionExtensions
             // defense-in-depth combo.
             options.Cookie.SameSite = SameSiteMode.Lax;
             // Session lifetime is operator-configurable so deployments with stricter session
-            // hygiene requirements can dial it down. Sliding stays on, so this is effectively 
+            // hygiene requirements can dial it down. Sliding stays on, so this is effectively
             // the idle-timeout window rather than an absolute maximum.
             options.ExpireTimeSpan = TimeSpan.FromMinutes(adminSettings.SessionTimeoutMinutes);
             options.ReturnUrlParameter = "returnUrl";
             options.SlidingExpiration = true;
+
+            // Absolute session cap (FedRAMP AC-12): sliding renewals cannot extend a session
+            // past AbsoluteSessionTimeoutMinutes from initial sign-in. Enforced against the
+            // ticket's IssuedUtc, which the framework sets once at sign-in and sliding never
+            // touches (unlike ExpiresUtc). Zero disables the cap.
+            if (adminSettings.AbsoluteSessionTimeoutMinutes > 0)
+            {
+                var absoluteMax = TimeSpan.FromMinutes(adminSettings.AbsoluteSessionTimeoutMinutes);
+                options.Events.OnValidatePrincipal = async ctx =>
+                {
+                    var issuedUtc = ctx.Properties?.IssuedUtc;
+                    if (issuedUtc.HasValue && DateTimeOffset.UtcNow - issuedUtc.Value > absoluteMax)
+                    {
+                        ctx.RejectPrincipal();
+                        await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+                    }
+                };
+            }
         });
 
         return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);

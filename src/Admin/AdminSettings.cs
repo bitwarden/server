@@ -24,6 +24,12 @@ public class AdminSettings
     // Default 2 days matches historical behavior; tighten for stricter session hygiene.
     public int SessionTimeoutMinutes { get; set; } = 2880;
 
+    // Absolute session lifetime cap, in minutes, measured from initial sign-in. Sliding
+    // renewals of the cookie cannot extend past this - an admin working continuously still
+    // has to re-sign-in after this window. 0 disables the cap (session lifetime is bounded
+    // only by SessionTimeoutMinutes).
+    public int AbsoluteSessionTimeoutMinutes { get; set; } = 0;
+
     // Upstream OIDC (federated SSO) configuration. Presence of Authority/ClientId/ClientSecret
     // enables the SSO flow; absent, only the passwordless email flow is available.
     public OidcSettings Oidc { get; set; } = new OidcSettings();
