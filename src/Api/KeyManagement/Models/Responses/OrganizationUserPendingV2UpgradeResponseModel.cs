@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.HttpExtensions;
@@ -34,11 +35,13 @@ public class OrganizationUserPendingV2UpgradeResponseModel : ResponseModel
     /// <summary>
     /// The key id of the member's current user key. Return it unchanged with the re-wrapped key.
     /// </summary>
+    [Required]
     public required string UserKeyId { get; init; }
 
     /// <summary>
     /// The member's V1 user key wrapped with the organization's public key.
     /// </summary>
+    [Required]
     public required string AccountRecoveryKey { get; init; }
 
     /// <summary>
