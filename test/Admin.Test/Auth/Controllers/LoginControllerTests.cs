@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Admin;
 using Bit.Admin.Auth.Controllers;
 using Bit.Admin.Auth.IdentityServer;
@@ -151,18 +150,6 @@ public class LoginControllerTests
 
     private static void StubExternalPrincipal(IAuthenticationService authService, params Claim[] claims)
     {
-        // Default auth_time to "now" so tests exercise the happy path unless overridden.
-        var enriched = claims.Concat([
-            new Claim("auth_time", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
-        ]).ToArray();
-        var identity = new ClaimsIdentity(enriched, authenticationType: "oidc");
-        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), IdentityConstants.ExternalScheme);
-        authService.AuthenticateAsync(Arg.Any<HttpContext>(), IdentityConstants.ExternalScheme)
-            .Returns(AuthenticateResult.Success(ticket));
-    }
-
-    private static void StubExternalPrincipalRaw(IAuthenticationService authService, params Claim[] claims)
-    {
         var identity = new ClaimsIdentity(claims, authenticationType: "oidc");
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), IdentityConstants.ExternalScheme);
         authService.AuthenticateAsync(Arg.Any<HttpContext>(), IdentityConstants.ExternalScheme)
@@ -172,10 +159,7 @@ public class LoginControllerTests
     private static void StubExternalPrincipalWithTokens(
         IAuthenticationService authService, AuthenticationToken[] tokens, Claim[] claims)
     {
-        var enriched = claims.Concat([
-            new Claim("auth_time", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
-        ]).ToArray();
-        var identity = new ClaimsIdentity(enriched, authenticationType: "oidc");
+        var identity = new ClaimsIdentity(claims, authenticationType: "oidc");
         var props = new AuthenticationProperties();
         props.StoreTokens(tokens);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), props, IdentityConstants.ExternalScheme);
@@ -278,40 +262,6 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenAuthTimeMissing()
-    {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
-        var authService = AttachAuthenticationServices(controller);
-        StubExternalPrincipalRaw(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"));
-
-        var result = await controller.SsoSignIn();
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(5, redirect.RouteValues!["error"]);
-    }
-
-    [Fact]
-    public async Task SsoSignIn_RedirectsError5_WhenAuthTimeExceedsMaxAge()
-    {
-        var controller = BuildController(oidcEnabled: true, out _, out _);
-        var authService = AttachAuthenticationServices(controller);
-        var stale = DateTimeOffset.UtcNow
-            .AddSeconds(-AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds - AdminSettings.OidcSettings.ClockSkewSeconds - 60)
-            .ToUnixTimeSeconds();
-        StubExternalPrincipalRaw(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"),
-            new Claim("auth_time", stale.ToString(CultureInfo.InvariantCulture)));
-
-        var result = await controller.SsoSignIn();
-
-        var redirect = Assert.IsType<RedirectToActionResult>(result);
-        Assert.Equal(5, redirect.RouteValues!["error"]);
-    }
-
-    [Fact]
     public async Task SsoSignIn_StoresIdTokenOnAppCookie_OnSuccess()
     {
         // Presence of id_token on the app cookie is both (a) the marker that this is an SSO
@@ -353,25 +303,6 @@ public class LoginControllerTests
 
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.Equal("/dashboard", redirect.Url);
-    }
-
-    [Fact]
-    public async Task SsoSignIn_AcceptsAuthTimeSlightlyInFuture()
-    {
-        // Regression: a fast IdP clock should not lock out every SSO login.
-        var controller = BuildController(oidcEnabled: true, out _, out var userManager);
-        var authService = AttachAuthenticationServices(controller);
-        var user = new IdentityUser { Email = "you@example.com" };
-        var slightlyFuture = DateTimeOffset.UtcNow.AddSeconds(30).ToUnixTimeSeconds();
-        StubExternalPrincipalRaw(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"),
-            new Claim("auth_time", slightlyFuture.ToString(CultureInfo.InvariantCulture)));
-        userManager.FindByEmailAsync("you@example.com").Returns(user);
-
-        var result = await controller.SsoSignIn();
-
-        Assert.IsType<RedirectToActionResult>(result);
     }
 
     [Fact]

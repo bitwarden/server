@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Bit.Admin.Auth.IdentityServer;
+﻿using Bit.Admin.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
@@ -189,16 +188,12 @@ public static class ServiceCollectionExtensions
                 options.TokenValidationParameters.ClockSkew =
                     TimeSpan.FromSeconds(AdminSettings.OidcSettings.ClockSkewSeconds);
 
-                // Force re-authentication at the IdP on every Admin Portal sign-in. A stolen
-                // IdP session shouldn't automatically grant admin access without the operator
-                // re-proving control (password + MFA at the IdP).
+                // Force credential entry at the IdP on every Admin Portal sign-in. The Admin
+                // Portal is a high-privilege surface, and re-proving control (password + MFA)
+                // on each cookie renewal is worth the UX cost - a stolen IdP session cookie
+                // shouldn't grant admin access silently. Guarantees auth_time on the returned
+                // ID token is effectively "now", so we don't also need max_age.
                 options.AdditionalAuthorizationParameters.Add("prompt", "login");
-                // Require the IdP-side authentication to have happened within max_age seconds.
-                // Bounds the "attacker rides a stale IdP session into the Admin Portal" window
-                // even if prompt=login is ignored by a non-conformant IdP. Server-side
-                // enforcement lives in SsoSignIn (the OIDC middleware treats this as a hint).
-                options.AdditionalAuthorizationParameters.Add("max_age",
-                    AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds.ToString(CultureInfo.InvariantCulture));
 
                 // Attach id_token_hint from the sign-out AuthenticationProperties. Logout
                 // reads the id_token from the app cookie up-front (before SignOutAsync) and

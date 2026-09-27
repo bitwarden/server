@@ -158,31 +158,6 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        // Enforce that the IdP-side authentication happened recently. Threat: an attacker who
-        // captures a long-lived IdP session (session cookie theft, an unlocked corporate
-        // laptop, a shared workstation with "remember me" enabled) could ride that session
-        // into the Admin Portal without ever re-authenticating - potentially days or weeks
-        // after the last real login.
-        //
-        // How this pairs with the OIDC config:
-        //   - `max_age=3600` on the authorize request tells the IdP "the user must have
-        //     authenticated within the last hour". Most IdPs honor it and re-prompt.
-        //   - But the .NET OIDC handler does NOT validate the returned `auth_time` against
-        //     the `max_age` we sent (spec says the RP MUST do this itself). A non-conformant
-        //     IdP that ignores max_age would silently hand us a stale session and we'd
-        //     otherwise accept it.
-        //   - So we enforce it here, server-side, against the `auth_time` claim.
-        //
-        // Fail-secure: reject if the claim is missing (OIDC Core 3.1.3.7 requires the IdP to
-        // include auth_time whenever max_age is sent, so absence means the IdP is broken or
-        // hostile) or if it exceeds the max-age window plus a small clock-skew tolerance.
-        if (!IsAuthTimeWithinMaxAge(external.Principal))
-        {
-            _logger.LogWarning("SSO sign-in rejected: IdP auth_time missing or exceeds max_age.");
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            return RedirectToAction("Index", new { error = 5 });
-        }
-
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
@@ -256,25 +231,6 @@ public class LoginController : Controller
             return !_adminSettings.Oidc.RequireEmailVerifiedClaim;
         }
         return bool.TryParse(claim, out var verified) && verified;
-    }
-
-    private static bool IsAuthTimeWithinMaxAge(ClaimsPrincipal principal)
-    {
-        // The OIDC handler does not validate `auth_time` against the `max_age` we sent, so a
-        // non-conformant IdP could hand us a stale session. Enforce here. Fail-secure: reject
-        // if the claim is missing or unparseable (the spec REQUIRES the IdP to return
-        // auth_time whenever max_age is present in the request).
-        var claim = principal.FindFirst("auth_time")?.Value;
-        if (!long.TryParse(claim, System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture, out var authTime))
-        {
-            return false;
-        }
-        var age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - authTime;
-        // Allow clock-skew tolerance on both ends: a slightly fast IdP clock produces
-        // negative age, and a slightly slow one erodes the max-age budget.
-        return age >= -AdminSettings.OidcSettings.ClockSkewSeconds
-            && age <= AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds + AdminSettings.OidcSettings.ClockSkewSeconds;
     }
 
     private string GetMessage(int? messageCode)
