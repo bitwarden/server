@@ -145,6 +145,12 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
+        // Require the IdP to have verified the email address before we treat it as the
+        // identity to match against the admin allowlist. Without this check, any IdP that
+        // permits self-registration (public Auth0/Okta tenants, Keycloak realms with sign-up
+        // enabled, etc.) would let an attacker create an account claiming an admin's email
+        // and get in. The email address is the entire authorization key here, so we must be
+        // sure that it's been verified.
         if (!IsEmailVerified(external.Principal))
         {
             _logger.LogWarning("SSO sign-in rejected: email_verified claim is not true.");
@@ -152,6 +158,24 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
+        // Enforce that the IdP-side authentication happened recently. Threat: an attacker who
+        // captures a long-lived IdP session (session cookie theft, an unlocked corporate
+        // laptop, a shared workstation with "remember me" enabled) could ride that session
+        // into the Admin Portal without ever re-authenticating - potentially days or weeks
+        // after the last real login.
+        //
+        // How this pairs with the OIDC config:
+        //   - `max_age=3600` on the authorize request tells the IdP "the user must have
+        //     authenticated within the last hour". Most IdPs honor it and re-prompt.
+        //   - But the .NET OIDC handler does NOT validate the returned `auth_time` against
+        //     the `max_age` we sent (spec says the RP MUST do this itself). A non-conformant
+        //     IdP that ignores max_age would silently hand us a stale session and we'd
+        //     otherwise accept it.
+        //   - So we enforce it here, server-side, against the `auth_time` claim.
+        //
+        // Fail-secure: reject if the claim is missing (OIDC Core 3.1.3.7 requires the IdP to
+        // include auth_time whenever max_age is sent, so absence means the IdP is broken or
+        // hostile) or if it exceeds the max-age window plus a small clock-skew tolerance.
         if (!IsAuthTimeWithinMaxAge(external.Principal))
         {
             _logger.LogWarning("SSO sign-in rejected: IdP auth_time missing or exceeds max_age.");
@@ -169,20 +193,22 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        var ssoMarker = new[]
-        {
-            new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso)
-        };
         var props = new AuthenticationProperties { IsPersistent = false };
-        // Store only id_token (needed for id_token_hint on RP-initiated logout). Access/refresh
-        // tokens go unused by this app - keeping them in the cookie is unnecessary attack surface
-        // if the cookie is ever exfiltrated.
+        // Store id_token on the cookie. Two purposes:
+        //   1. It's the value we'll attach as id_token_hint on RP-initiated logout so the
+        //      upstream IdP can identify the client and honor the app-level Allowed Logout
+        //      URLs list (without it, Auth0/Okta fall back to tenant-level URLs).
+        //   2. Its presence at logout time is what tells Logout() this was an SSO session -
+        //      the passwordless flow never stores tokens, so no separate marker is needed.
+        // Only id_token is stored; access/refresh tokens are unused by the Admin app and
+        // would be unnecessary attack surface if the cookie were ever exfiltrated.
         var idToken = external.Properties?.GetTokenValue("id_token");
         if (!string.IsNullOrEmpty(idToken))
         {
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
-        await _signInManager.SignInWithClaimsAsync(user, props, ssoMarker);
+
+        await _signInManager.SignInWithClaimsAsync(user, props, Array.Empty<Claim>());
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
 
@@ -198,18 +224,25 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
-        var signedInViaSso = User.HasClaim(
-            AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso);
+        // Presence of `id_token` on the app cookie means this is an SSO session (the
+        // passwordless flow never stores tokens), so it's both the "was SSO" signal and the
+        // value we need for id_token_hint. Read before SignOutAsync so we don't rely on
+        // handler-level caching to serve it back afterward.
+        var auth = await HttpContext.AuthenticateAsync();
+        var idToken = auth.Properties?.GetTokenValue("id_token");
 
         await _signInManager.SignOutAsync();
 
         var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
 
-        if (signedInViaSso)
+        // Also gate on OidcEnabled: if OIDC was removed from config while an SSO-signed-in
+        // admin still holds a valid cookie, SignOut against the unregistered scheme would
+        // throw InvalidOperationException (500) on the highest-privilege surface.
+        if (!string.IsNullOrEmpty(idToken) && _adminSettings.OidcEnabled)
         {
-            return SignOut(
-                new AuthenticationProperties { RedirectUri = loggedOutRedirect },
-                AdminAuthenticationSchemes.UpstreamOidc);
+            var props = new AuthenticationProperties { RedirectUri = loggedOutRedirect };
+            props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
+            return SignOut(props, AdminAuthenticationSchemes.UpstreamOidc);
         }
 
         return Redirect(loggedOutRedirect);
@@ -238,7 +271,10 @@ public class LoginController : Controller
             return false;
         }
         var age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - authTime;
-        return age >= 0 && age <= AdminAuthenticationSchemes.MaxIdpAuthAgeSeconds;
+        // Allow clock-skew tolerance on both ends: a slightly fast IdP clock produces
+        // negative age, and a slightly slow one erodes the max-age budget.
+        return age >= -AdminSettings.OidcSettings.ClockSkewSeconds
+            && age <= AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds + AdminSettings.OidcSettings.ClockSkewSeconds;
     }
 
     private string GetMessage(int? messageCode)

@@ -32,6 +32,18 @@ public class AdminSettings
 
     public class OidcSettings
     {
+        // Sent to the IdP as `max_age` on the authorize request and enforced server-side by
+        // SsoSignIn against the returned `auth_time` claim. Shared constant so the hint we
+        // send and the enforcement we apply can't drift apart. Bounds how long an existing
+        // IdP session can be reused before the operator has to re-authenticate.
+        public const int MaxIdpAuthAgeSeconds = 3600;
+
+        // Matches TokenValidationParameters.ClockSkew. Allowed on both ends of the auth_time
+        // window so a slightly fast IdP clock (ordinary NTP drift) doesn't reject every SSO
+        // login, and a slightly slow one doesn't erode the max-age budget.
+        public const int ClockSkewSeconds = 120;
+
+
         // OIDC discovery root (e.g., "https://tenant.auth0.com/"). The handler appends
         // /.well-known/openid-configuration to fetch endpoints and JWKS.
         public string Authority { get; set; }

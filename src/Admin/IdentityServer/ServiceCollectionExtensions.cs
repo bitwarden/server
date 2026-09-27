@@ -135,8 +135,11 @@ public static class ServiceCollectionExtensions
                 options.TokenValidationParameters.RequireSignedTokens = true;
                 options.TokenValidationParameters.RequireExpirationTime = true;
                 // Tighter than the 5-minute default; still permissive enough to survive typical
-                // IdP/app clock drift. Reduces the window for expired-token replay.
-                options.TokenValidationParameters.ClockSkew = TimeSpan.FromMinutes(2);
+                // IdP/app clock drift. Reduces the window for expired-token replay. Sourced
+                // from the shared constant so this tolerance can't drift apart from the
+                // auth_time enforcement in LoginController.
+                options.TokenValidationParameters.ClockSkew =
+                    TimeSpan.FromSeconds(AdminSettings.OidcSettings.ClockSkewSeconds);
 
                 // Force re-authentication at the IdP on every Admin Portal sign-in. A stolen
                 // IdP session shouldn't automatically grant admin access without the operator
@@ -147,22 +150,22 @@ public static class ServiceCollectionExtensions
                 // even if prompt=login is ignored by a non-conformant IdP. Server-side
                 // enforcement lives in SsoSignIn (the OIDC middleware treats this as a hint).
                 options.AdditionalAuthorizationParameters.Add("max_age",
-                    AdminAuthenticationSchemes.MaxIdpAuthAgeSeconds.ToString(CultureInfo.InvariantCulture));
+                    AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds.ToString(CultureInfo.InvariantCulture));
 
-                // SsoSignIn copies the OIDC principal into the Identity cookie and signs out
-                // the external OIDC scheme, so by logout time the OIDC handler's own scheme has
-                // no auth ticket and can't attach id_token_hint on its own. Without id_token_hint
-                // (or client_id), an upstream IdP can't identify the client and falls back to
-                // tenant-level Allowed Logout URLs, which rejects our app-level URL. Pull the
-                // id_token from the Identity cookie (stored there via props.StoreTokens during
-                // sign-in) and attach it manually.
-                options.Events.OnRedirectToIdentityProviderForSignOut = async ctx =>
+                // Attach id_token_hint from the sign-out AuthenticationProperties. Logout
+                // reads the id_token from the app cookie up-front (before SignOutAsync) and
+                // passes it here as a stored token, so this doesn't rely on handler-level
+                // caching of the pre-sign-out ticket. Without id_token_hint (or client_id),
+                // an upstream IdP can't identify the client and falls back to tenant-level
+                // Allowed Logout URLs, which rejects our app-level URL.
+                options.Events.OnRedirectToIdentityProviderForSignOut = ctx =>
                 {
-                    var idToken = await ctx.HttpContext.GetTokenAsync("id_token");
+                    var idToken = ctx.Properties?.GetTokenValue("id_token");
                     if (!string.IsNullOrEmpty(idToken))
                     {
                         ctx.ProtocolMessage.IdTokenHint = idToken;
                     }
+                    return Task.CompletedTask;
                 };
             });
 

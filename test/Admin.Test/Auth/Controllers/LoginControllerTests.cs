@@ -77,10 +77,14 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task Logout_LocalOnly_WhenNoSsoMarkerClaim()
+    public async Task Logout_LocalOnly_WhenNoIdTokenStored()
     {
+        // Passwordless sessions never store an id_token, so Logout should skip RP-initiated
+        // logout and just redirect locally.
         var controller = BuildController(oidcEnabled: true);
-        SetUser(controller, new Claim(ClaimTypes.Email, "you@example.com"));
+        var authService = AttachAuthenticationServices(controller);
+        StubCurrentAuth(authService, new AuthenticationProperties());
+        controller.Url.Action(Arg.Any<UrlActionContext>()).Returns("/login?success=1");
 
         var result = await controller.Logout();
 
@@ -89,27 +93,41 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task Logout_TriggersRpInitiatedLogout_WhenSsoMarkerClaimPresent()
+    public async Task Logout_TriggersRpInitiatedLogout_WhenIdTokenPresent()
     {
+        // SSO sessions store id_token during SsoSignIn; its presence is what tells Logout
+        // to trigger RP-initiated logout, and its value is what gets attached as id_token_hint.
         var controller = BuildController(oidcEnabled: true);
-        SetUser(controller,
-            new Claim(ClaimTypes.Email, "you@example.com"),
-            new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso));
+        var authService = AttachAuthenticationServices(controller);
+        var props = new AuthenticationProperties();
+        props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = "the-id-token" }]);
+        StubCurrentAuth(authService, props);
+        controller.Url.Action(Arg.Any<UrlActionContext>()).Returns("/login?success=1");
 
         var result = await controller.Logout();
 
         var signOut = Assert.IsType<SignOutResult>(result);
         Assert.Contains(AdminAuthenticationSchemes.UpstreamOidc, signOut.AuthenticationSchemes);
         Assert.NotNull(signOut.Properties?.RedirectUri);
+        Assert.Equal("the-id-token", signOut.Properties!.GetTokenValue("id_token"));
     }
 
-    private static void SetUser(LoginController controller, params Claim[] claims)
+    [Fact]
+    public async Task Logout_LocalOnly_WhenIdTokenPresentButOidcDisabled()
     {
-        var identity = new ClaimsIdentity(claims, authenticationType: "TestAuth");
-        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
-        controller.Url = Substitute.For<IUrlHelper>();
+        // Regression: if OIDC config is removed while an SSO-signed-in admin still holds a
+        // valid cookie (with a stale id_token), SignOut against the now-unregistered scheme
+        // would throw. Falling back to local logout is the safe behavior.
+        var controller = BuildController(oidcEnabled: false);
+        var authService = AttachAuthenticationServices(controller);
+        var props = new AuthenticationProperties();
+        props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = "stale-token" }]);
+        StubCurrentAuth(authService, props);
         controller.Url.Action(Arg.Any<UrlActionContext>()).Returns("/login?success=1");
+
+        var result = await controller.Logout();
+
+        Assert.IsType<RedirectResult>(result);
     }
 
     private static IAuthenticationService AttachAuthenticationServices(LoginController controller)
@@ -121,6 +139,14 @@ public class LoginControllerTests
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
         controller.Url = Substitute.For<IUrlHelper>();
         return authService;
+    }
+
+    private static void StubCurrentAuth(IAuthenticationService authService, AuthenticationProperties properties)
+    {
+        var identity = new ClaimsIdentity(authenticationType: "TestAuth");
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), properties, "TestAuth");
+        authService.AuthenticateAsync(Arg.Any<HttpContext>(), null)
+            .Returns(AuthenticateResult.Success(ticket));
     }
 
     private static void StubExternalPrincipal(IAuthenticationService authService, params Claim[] claims)
@@ -139,6 +165,20 @@ public class LoginControllerTests
     {
         var identity = new ClaimsIdentity(claims, authenticationType: "oidc");
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), IdentityConstants.ExternalScheme);
+        authService.AuthenticateAsync(Arg.Any<HttpContext>(), IdentityConstants.ExternalScheme)
+            .Returns(AuthenticateResult.Success(ticket));
+    }
+
+    private static void StubExternalPrincipalWithTokens(
+        IAuthenticationService authService, AuthenticationToken[] tokens, Claim[] claims)
+    {
+        var enriched = claims.Concat([
+            new Claim("auth_time", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture))
+        ]).ToArray();
+        var identity = new ClaimsIdentity(enriched, authenticationType: "oidc");
+        var props = new AuthenticationProperties();
+        props.StoreTokens(tokens);
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), props, IdentityConstants.ExternalScheme);
         authService.AuthenticateAsync(Arg.Any<HttpContext>(), IdentityConstants.ExternalScheme)
             .Returns(AuthenticateResult.Success(ticket));
     }
@@ -257,7 +297,8 @@ public class LoginControllerTests
     {
         var controller = BuildController(oidcEnabled: true, out _, out _);
         var authService = AttachAuthenticationServices(controller);
-        var stale = DateTimeOffset.UtcNow.AddSeconds(-AdminAuthenticationSchemes.MaxIdpAuthAgeSeconds - 60)
+        var stale = DateTimeOffset.UtcNow
+            .AddSeconds(-AdminSettings.OidcSettings.MaxIdpAuthAgeSeconds - AdminSettings.OidcSettings.ClockSkewSeconds - 60)
             .ToUnixTimeSeconds();
         StubExternalPrincipalRaw(authService,
             new Claim("email", "you@example.com"),
@@ -271,14 +312,20 @@ public class LoginControllerTests
     }
 
     [Fact]
-    public async Task SsoSignIn_SignsInWithSsoMarker_OnSuccess()
+    public async Task SsoSignIn_StoresIdTokenOnAppCookie_OnSuccess()
     {
+        // Presence of id_token on the app cookie is both (a) the marker that this is an SSO
+        // session, so Logout will trigger RP-initiated logout, and (b) the value used as
+        // id_token_hint on the end-session request. Assert it lands on the sign-in props.
         var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager);
         var authService = AttachAuthenticationServices(controller);
         var user = new IdentityUser { Email = "you@example.com" };
-        StubExternalPrincipal(authService,
-            new Claim("email", "you@example.com"),
-            new Claim("email_verified", "true"));
+        StubExternalPrincipalWithTokens(authService,
+            tokens: [new AuthenticationToken { Name = "id_token", Value = "the-id-token" }],
+            claims: [
+                new Claim("email", "you@example.com"),
+                new Claim("email_verified", "true"),
+            ]);
         userManager.FindByEmailAsync("you@example.com").Returns(user);
 
         var result = await controller.SsoSignIn();
@@ -286,10 +333,58 @@ public class LoginControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         await signInManager.Received(1).SignInWithClaimsAsync(
             user,
-            Arg.Any<AuthenticationProperties>(),
-            Arg.Is<IEnumerable<Claim>>(claims => claims.Any(c =>
-                c.Type == AdminAuthenticationSchemes.AuthMethodClaimType &&
-                c.Value == AdminAuthenticationSchemes.AuthMethodSso)));
+            Arg.Is<AuthenticationProperties>(p => p.GetTokenValue("id_token") == "the-id-token"),
+            Arg.Any<IEnumerable<Claim>>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RedirectsToLocalReturnUrl_WhenLocal()
+    {
+        var controller = BuildController(oidcEnabled: true, out _, out var userManager);
+        var authService = AttachAuthenticationServices(controller);
+        controller.Url.IsLocalUrl("/dashboard").Returns(true);
+        var user = new IdentityUser { Email = "you@example.com" };
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"));
+        userManager.FindByEmailAsync("you@example.com").Returns(user);
+
+        var result = await controller.SsoSignIn(returnUrl: "/dashboard");
+
+        var redirect = Assert.IsType<RedirectResult>(result);
+        Assert.Equal("/dashboard", redirect.Url);
+    }
+
+    [Fact]
+    public async Task SsoSignIn_AcceptsAuthTimeSlightlyInFuture()
+    {
+        // Regression: a fast IdP clock should not lock out every SSO login.
+        var controller = BuildController(oidcEnabled: true, out _, out var userManager);
+        var authService = AttachAuthenticationServices(controller);
+        var user = new IdentityUser { Email = "you@example.com" };
+        var slightlyFuture = DateTimeOffset.UtcNow.AddSeconds(30).ToUnixTimeSeconds();
+        StubExternalPrincipalRaw(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "true"),
+            new Claim("auth_time", slightlyFuture.ToString(CultureInfo.InvariantCulture)));
+        userManager.FindByEmailAsync("you@example.com").Returns(user);
+
+        var result = await controller.SsoSignIn();
+
+        Assert.IsType<RedirectToActionResult>(result);
+    }
+
+    [Fact]
+    public void Sso_ReturnsChallengeResultForUpstreamOidc_WhenEnabled()
+    {
+        var controller = BuildController(oidcEnabled: true);
+        controller.Url = Substitute.For<IUrlHelper>();
+        controller.Url.Action(Arg.Any<UrlActionContext>()).Returns("/login/sso-signin");
+
+        var result = controller.Sso();
+
+        var challenge = Assert.IsType<ChallengeResult>(result);
+        Assert.Contains(AdminAuthenticationSchemes.UpstreamOidc, challenge.AuthenticationSchemes);
     }
 
     [Fact]

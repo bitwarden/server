@@ -25,9 +25,8 @@
                             <label asp-for="Email" class="visually-hidden">Email Address</label>
                             <div class="d-flex gap-2">
                                 <input asp-for="Email" type="email" class="form-control"
-                                       placeholder="ex. john@example.com" required autofocus
-                                       id="email-input">
-                                <button class="btn btn-primary flex-shrink-0" type="submit" id="email-submit" disabled>
+                                       placeholder="ex. john@example.com" required autofocus>
+                                <button class="btn btn-primary flex-shrink-0" type="submit">
                                     Continue
                                 </button>
                             </div>
@@ -57,16 +56,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        (function () {
-            var input = document.getElementById('email-input');
-            var button = document.getElementById('email-submit');
-            if (!input || !button) return;
-            var sync = function () { button.disabled = input.value.trim().length === 0; };
-            input.addEventListener('input', sync);
-            sync();
-        })();
-    </script>
-}
