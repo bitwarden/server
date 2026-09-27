@@ -4,6 +4,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -12,12 +13,20 @@ namespace Bit.Admin.IdentityServer;
 
 public static class ServiceCollectionExtensions
 {
-    private const string SessionExpiredItemKey = "admin_session_expired";
-
     public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
         this IServiceCollection services, GlobalSettings globalSettings, AdminSettings adminSettings)
         where TUserStore : class
     {
+        // SessionTimeoutMinutes = 0 (or negative) sets ExpireTimeSpan = Zero and locks every
+        // admin out on the next request with no error message. Fail loudly so a typo in the
+        // env var doesn't brick the portal.
+        if (adminSettings.SessionTimeoutMinutes <= 0)
+        {
+            throw new InvalidOperationException(
+                $"AdminSettings:SessionTimeoutMinutes must be greater than 0 " +
+                $"(got {adminSettings.SessionTimeoutMinutes}).");
+        }
+
         services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
         services.Configure<DataProtectionTokenProviderOptions>(options =>
         {
@@ -56,47 +65,34 @@ public static class ServiceCollectionExtensions
             // OIDC callback; Strict would break SSO. HttpOnly + Secure + Lax is the standard
             // defense-in-depth combo.
             options.Cookie.SameSite = SameSiteMode.Lax;
-            // Session lifetime is operator-configurable so deployments with stricter session
-            // hygiene requirements can dial it down. Sliding stays on, so this is effectively
-            // the idle-timeout window rather than an absolute maximum.
+            // Session lifetime and sliding-vs-absolute behavior are both operator-configurable.
+            // With SessionSliding = true (default), this is an idle timeout. With false, it's a
+            // fixed lifetime from sign-in - the framework's built-in absolute cap. FedRAMP-strict
+            // deployments should set SessionSliding=false + short SessionTimeoutMinutes + rely on
+            // SSO (which lets the IdP silently re-sign-in when the IdP session is still fresh).
             options.ExpireTimeSpan = TimeSpan.FromMinutes(adminSettings.SessionTimeoutMinutes);
+            options.SlidingExpiration = adminSettings.SessionSliding;
             options.ReturnUrlParameter = "returnUrl";
-            options.SlidingExpiration = true;
+        });
 
-            // Absolute session cap (FedRAMP AC-12): sliding renewals cannot extend a session
-            // past AbsoluteSessionTimeoutMinutes from initial sign-in. Enforced against the
-            // ticket's IssuedUtc, which the framework sets once at sign-in and sliding never
-            // touches (unlike ExpiresUtc). Zero disables the cap.
-            if (adminSettings.AbsoluteSessionTimeoutMinutes > 0)
-            {
-                var absoluteMax = TimeSpan.FromMinutes(adminSettings.AbsoluteSessionTimeoutMinutes);
-                options.Events.OnValidatePrincipal = async ctx =>
-                {
-                    var issuedUtc = ctx.Properties?.IssuedUtc;
-                    if (issuedUtc.HasValue && DateTimeOffset.UtcNow - issuedUtc.Value > absoluteMax)
-                    {
-                        // Flag the request so OnRedirectToLogin can surface a distinct
-                        // "session expired" message on the login page. Without this, the
-                        // user gets silently bounced to /login with no explanation.
-                        ctx.HttpContext.Items[SessionExpiredItemKey] = true;
-                        ctx.RejectPrincipal();
-                        await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-                    }
-                };
-            }
-
-            // Turn the OnValidatePrincipal rejection into a user-facing message by tagging
-            // the login-page redirect with error=6. Any other redirect to login (unauth'd
-            // access, direct navigation) goes through untagged.
+        // Show a distinct "session expired" message on the login page whenever the browser sent
+        // our auth cookie but the framework rejected it (idle or absolute expiry). Cookie in
+        // request but user unauth'd = they had a session that just died, not a first-time
+        // visitor. Runs as PostConfigure so it can chain the default OnRedirectToLogin rather
+        // than replace it (Identity's cookie configuration is a PostConfigure too).
+        services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
+        {
+            var existingRedirect = options.Events.OnRedirectToLogin;
             options.Events.OnRedirectToLogin = ctx =>
             {
-                if (ctx.HttpContext.Items.ContainsKey(SessionExpiredItemKey))
+                var hadCookie = !string.IsNullOrEmpty(options.Cookie.Name)
+                    && ctx.HttpContext.Request.Cookies.ContainsKey(options.Cookie.Name);
+                if (hadCookie)
                 {
                     var separator = ctx.RedirectUri.Contains('?') ? '&' : '?';
                     ctx.RedirectUri = $"{ctx.RedirectUri}{separator}error=6";
                 }
-                ctx.Response.Redirect(ctx.RedirectUri);
-                return Task.CompletedTask;
+                return existingRedirect(ctx);
             };
         });
 

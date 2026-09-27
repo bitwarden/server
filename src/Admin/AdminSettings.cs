@@ -19,16 +19,13 @@ public class AdminSettings
     public bool EnablePasswordlessLogin { get; set; } = true;
 
     // How long the admin session cookie is valid, in minutes. Applies to both passwordless and
-    // SSO sign-ins. The cookie renews on activity (sliding), so this is effectively the
-    // idle-timeout window: an admin who does nothing for this long has to sign in again.
-    // Default 2 days matches historical behavior; tighten for stricter session hygiene.
+    // SSO sign-ins. Default 2 days matches historical behavior; tighten for stricter session hygiene .
     public int SessionTimeoutMinutes { get; set; } = 2880;
 
-    // Absolute session lifetime cap, in minutes, measured from initial sign-in. Sliding
-    // renewals of the cookie cannot extend past this - an admin working continuously still
-    // has to re-sign-in after this window. 0 disables the cap (session lifetime is bounded
-    // only by SessionTimeoutMinutes).
-    public int AbsoluteSessionTimeoutMinutes { get; set; } = 0;
+    // When true, the session cookie's expiration resets on every request (idle timeout only).
+    // When false, the cookie has a fixed lifetime from sign-in and the admin has to re-auth
+    // after SessionTimeoutMinutes regardless of activity.
+    public bool SessionSliding { get; set; } = true;
 
     // Upstream OIDC (federated SSO) configuration. Presence of Authority/ClientId/ClientSecret
     // enables the SSO flow; absent, only the passwordless email flow is available.
