@@ -38,9 +38,9 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
-        var adminSettings = new AdminSettings();
-        Configuration.GetSection("AdminSettings").Bind(adminSettings);
-        services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
+        var adminSettingsSection = Configuration.GetSection("AdminSettings");
+        var adminSettings = adminSettingsSection.Get<AdminSettings>() ?? new AdminSettings();
+        services.Configure<AdminSettings>(adminSettingsSection);
 
         // Data Protection
         services.AddCustomDataProtectionServices(Environment, globalSettings);

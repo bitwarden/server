@@ -4,7 +4,6 @@
 using System.Security.Claims;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
-using Bit.Admin.IdentityServer;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -18,15 +17,18 @@ public class LoginController : Controller
     private readonly PasswordlessSignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
     private readonly AdminSettings _adminSettings;
+    private readonly ILogger<LoginController> _logger;
 
     public LoginController(
         PasswordlessSignInManager<IdentityUser> signInManager,
         UserManager<IdentityUser> userManager,
-        IOptions<AdminSettings> adminSettings)
+        IOptions<AdminSettings> adminSettings,
+        ILogger<LoginController> logger)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _adminSettings = adminSettings.Value;
+        _logger = logger;
     }
 
     public IActionResult Index(string returnUrl = null, int? error = null, int? success = null,
@@ -42,6 +44,7 @@ public class LoginController : Controller
             ReturnUrl = returnUrl,
             Error = GetMessage(error),
             Success = GetMessage(success),
+            PasswordlessLoginEnabled = _adminSettings.PasswordlessLoginEnabled,
             SsoEnabled = _adminSettings.OidcEnabled,
             SsoDisplayName = _adminSettings.Oidc?.DisplayName
         });
@@ -51,6 +54,11 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(LoginModel model)
     {
+        if (!_adminSettings.PasswordlessLoginEnabled)
+        {
+            return NotFound();
+        }
+
         if (ModelState.IsValid)
         {
             await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
@@ -60,6 +68,7 @@ public class LoginController : Controller
             });
         }
 
+        model.PasswordlessLoginEnabled = _adminSettings.PasswordlessLoginEnabled;
         model.SsoEnabled = _adminSettings.OidcEnabled;
         model.SsoDisplayName = _adminSettings.Oidc?.DisplayName;
         return View(model);
@@ -67,6 +76,11 @@ public class LoginController : Controller
 
     public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
     {
+        if (!_adminSettings.PasswordlessLoginEnabled)
+        {
+            return NotFound();
+        }
+
         var result = await _signInManager.PasswordlessSignInAsync(email, token, true);
         if (!result.Succeeded)
         {
@@ -110,28 +124,49 @@ public class LoginController : Controller
 
         if (!string.IsNullOrEmpty(remoteError))
         {
+            _logger.LogWarning("SSO sign-in rejected: upstream IdP returned remote error.");
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        var info = await _signInManager.GetExternalLoginInfoAsync();
-        if (info == null)
+        var external = await HttpContext.AuthenticateAsync(IdentityConstants.ExternalScheme);
+        if (!external.Succeeded)
         {
+            _logger.LogWarning("SSO sign-in rejected: no external principal from upstream IdP.");
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        var email = info.Principal.FindFirst(_adminSettings.Oidc.EmailClaimType)?.Value;
+        var email = external.Principal.FindFirst(_adminSettings.Oidc.EmailClaimType)?.Value;
         if (string.IsNullOrWhiteSpace(email))
         {
+            _logger.LogWarning("SSO sign-in rejected: email claim ({ClaimType}) missing from upstream principal.",
+                _adminSettings.Oidc.EmailClaimType);
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        var normalizedEmail = email.ToLowerInvariant();
-        var user = await _userManager.FindByEmailAsync(normalizedEmail);
+        if (!IsEmailVerified(external.Principal))
+        {
+            _logger.LogWarning("SSO sign-in rejected: email_verified claim is not true.");
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        if (!IsAuthTimeWithinMaxAge(external.Principal))
+        {
+            _logger.LogWarning("SSO sign-in rejected: IdP auth_time missing or exceeds max_age.");
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return RedirectToAction("Index", new { error = 5 });
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
+            // Same error code as other reject branches. Distinct codes would let any authenticated
+            // IdP user enumerate which emails are on the admin allowlist.
+            _logger.LogWarning("SSO sign-in rejected: principal not on admin allowlist.");
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            return RedirectToAction("Index", new { error = 4 });
+            return RedirectToAction("Index", new { error = 5 });
         }
 
         var ssoMarker = new[]
@@ -139,12 +174,17 @@ public class LoginController : Controller
             new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso)
         };
         var props = new AuthenticationProperties { IsPersistent = false };
-        if (info.AuthenticationTokens != null)
+        // Store only id_token (needed for id_token_hint on RP-initiated logout). Access/refresh
+        // tokens go unused by this app - keeping them in the cookie is unnecessary attack surface
+        // if the cookie is ever exfiltrated.
+        var idToken = external.Properties?.GetTokenValue("id_token");
+        if (!string.IsNullOrEmpty(idToken))
         {
-            props.StoreTokens(info.AuthenticationTokens);
+            props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
         await _signInManager.SignInWithClaimsAsync(user, props, ssoMarker);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        _logger.LogInformation("SSO sign-in succeeded.");
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
         {
@@ -173,6 +213,32 @@ public class LoginController : Controller
         }
 
         return Redirect(loggedOutRedirect);
+    }
+
+    private bool IsEmailVerified(ClaimsPrincipal principal)
+    {
+        var claim = principal.FindFirst("email_verified")?.Value;
+        if (string.IsNullOrEmpty(claim))
+        {
+            return !_adminSettings.Oidc.RequireEmailVerifiedClaim;
+        }
+        return bool.TryParse(claim, out var verified) && verified;
+    }
+
+    private static bool IsAuthTimeWithinMaxAge(ClaimsPrincipal principal)
+    {
+        // The OIDC handler does not validate `auth_time` against the `max_age` we sent, so a
+        // non-conformant IdP could hand us a stale session. Enforce here. Fail-secure: reject
+        // if the claim is missing or unparseable (the spec REQUIRES the IdP to return
+        // auth_time whenever max_age is present in the request).
+        var claim = principal.FindFirst("auth_time")?.Value;
+        if (!long.TryParse(claim, System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out var authTime))
+        {
+            return false;
+        }
+        var age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - authTime;
+        return age >= 0 && age <= AdminAuthenticationSchemes.MaxIdpAuthAgeSeconds;
     }
 
     private string GetMessage(int? messageCode)
