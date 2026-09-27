@@ -12,6 +12,8 @@ namespace Bit.Admin.IdentityServer;
 
 public static class ServiceCollectionExtensions
 {
+    private const string SessionExpiredItemKey = "admin_session_expired";
+
     public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
         this IServiceCollection services, GlobalSettings globalSettings, AdminSettings adminSettings)
         where TUserStore : class
@@ -73,11 +75,29 @@ public static class ServiceCollectionExtensions
                     var issuedUtc = ctx.Properties?.IssuedUtc;
                     if (issuedUtc.HasValue && DateTimeOffset.UtcNow - issuedUtc.Value > absoluteMax)
                     {
+                        // Flag the request so OnRedirectToLogin can surface a distinct
+                        // "session expired" message on the login page. Without this, the
+                        // user gets silently bounced to /login with no explanation.
+                        ctx.HttpContext.Items[SessionExpiredItemKey] = true;
                         ctx.RejectPrincipal();
                         await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
                     }
                 };
             }
+
+            // Turn the OnValidatePrincipal rejection into a user-facing message by tagging
+            // the login-page redirect with error=6. Any other redirect to login (unauth'd
+            // access, direct navigation) goes through untagged.
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                if (ctx.HttpContext.Items.ContainsKey(SessionExpiredItemKey))
+                {
+                    var separator = ctx.RedirectUri.Contains('?') ? '&' : '?';
+                    ctx.RedirectUri = $"{ctx.RedirectUri}{separator}error=6";
+                }
+                ctx.Response.Redirect(ctx.RedirectUri);
+                return Task.CompletedTask;
+            };
         });
 
         return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
