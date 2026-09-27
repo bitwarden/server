@@ -122,16 +122,17 @@ public class OrganizationUsersKeysController : Controller
         var inOrganization = (await _organizationUserRepository.GetManyAsync(ids))
             .Where(organizationUser => organizationUser.OrganizationId == orgId);
 
-        var authorized = new HashSet<Guid>();
+        // Authorization is awaited one membership at a time, because the handler reads request-scoped context.
+        var authorizations = new List<(Guid OrganizationUserId, bool CanRecoverAccount)>();
         foreach (var organizationUser in inOrganization)
         {
-            if (await CanRecoverAccountAsync(organizationUser))
-            {
-                authorized.Add(organizationUser.Id);
-            }
+            authorizations.Add((organizationUser.Id, await CanRecoverAccountAsync(organizationUser)));
         }
 
-        return authorized;
+        return authorizations
+            .Where(authorization => authorization.CanRecoverAccount)
+            .Select(authorization => authorization.OrganizationUserId)
+            .ToHashSet();
     }
 
     private async Task<bool> CanRecoverAccountAsync(OrganizationUser organizationUser) =>
