@@ -44,7 +44,7 @@ public class LoginController : Controller
             ReturnUrl = returnUrl,
             Error = GetMessage(error),
             Success = GetMessage(success),
-            PasswordlessLoginEnabled = _adminSettings.PasswordlessLoginEnabled,
+            EnablePasswordlessLogin = _adminSettings.EnablePasswordlessLogin,
             SsoEnabled = _adminSettings.OidcEnabled,
             SsoDisplayName = _adminSettings.Oidc?.DisplayName
         });
@@ -54,7 +54,7 @@ public class LoginController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Index(LoginModel model)
     {
-        if (!_adminSettings.PasswordlessLoginEnabled)
+        if (!_adminSettings.EnablePasswordlessLogin)
         {
             return NotFound();
         }
@@ -68,7 +68,7 @@ public class LoginController : Controller
             });
         }
 
-        model.PasswordlessLoginEnabled = _adminSettings.PasswordlessLoginEnabled;
+        model.EnablePasswordlessLogin = _adminSettings.EnablePasswordlessLogin;
         model.SsoEnabled = _adminSettings.OidcEnabled;
         model.SsoDisplayName = _adminSettings.Oidc?.DisplayName;
         return View(model);
@@ -76,7 +76,7 @@ public class LoginController : Controller
 
     public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
     {
-        if (!_adminSettings.PasswordlessLoginEnabled)
+        if (!_adminSettings.EnablePasswordlessLogin)
         {
             return NotFound();
         }

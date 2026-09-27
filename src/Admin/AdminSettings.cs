@@ -16,7 +16,7 @@ public class AdminSettings
 
     // Kill switch for the email magic-link login flow. Set to false to require SSO exclusively -
     // useful in environments where the operator wants all admin access to flow through an audited IdP.
-    public bool PasswordlessLoginEnabled { get; set; } = true;
+    public bool EnablePasswordlessLogin { get; set; } = true;
 
     // Upstream OIDC (federated SSO) configuration. Presence of Authority/ClientId/ClientSecret
     // enables the SSO flow; absent, only the passwordless email flow is available.
