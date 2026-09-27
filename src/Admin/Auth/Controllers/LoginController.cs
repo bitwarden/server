@@ -138,7 +138,12 @@ public class LoginController : Controller
         {
             new Claim(AdminAuthenticationSchemes.AuthMethodClaimType, AdminAuthenticationSchemes.AuthMethodSso)
         };
-        await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, ssoMarker);
+        var props = new AuthenticationProperties { IsPersistent = false };
+        if (info.AuthenticationTokens != null)
+        {
+            props.StoreTokens(info.AuthenticationTokens);
+        }
+        await _signInManager.SignInWithClaimsAsync(user, props, ssoMarker);
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
         if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -158,18 +163,16 @@ public class LoginController : Controller
 
         await _signInManager.SignOutAsync();
 
+        var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
+
         if (signedInViaSso)
         {
-            var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
             return SignOut(
                 new AuthenticationProperties { RedirectUri = loggedOutRedirect },
                 AdminAuthenticationSchemes.UpstreamOidc);
         }
 
-        return RedirectToAction("Index", new
-        {
-            success = 1
-        });
+        return Redirect(loggedOutRedirect);
     }
 
     private string GetMessage(int? messageCode)

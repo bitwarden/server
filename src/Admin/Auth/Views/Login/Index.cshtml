@@ -21,12 +21,17 @@
                     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                     <div class="mb-3">
                         <label asp-for="Email" class="visually-hidden">Email Address</label>
-                        <input asp-for="Email" type="email" class="form-control" placeholder="ex. john@example.com"
-                               required autofocus>
+                        <div class="d-flex gap-2">
+                            <input asp-for="Email" type="email" class="form-control"
+                                   placeholder="ex. john@example.com" required autofocus
+                                   id="email-input">
+                            <button class="btn btn-primary flex-shrink-0" type="submit" id="email-submit" disabled>
+                                Continue
+                            </button>
+                        </div>
                         <span asp-validation-for="Email" class="invalid-feedback"></span>
                         <div class="form-text">We'll email you a secure login link.</div>
                     </div>
-                    <button class="btn btn-primary" type="submit">Continue</button>
                 </form>
                 @if (Model.SsoEnabled)
                 {
@@ -42,3 +47,16 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var input = document.getElementById('email-input');
+            var button = document.getElementById('email-submit');
+            if (!input || !button) return;
+            var sync = function () { button.disabled = input.value.trim().length === 0; };
+            input.addEventListener('input', sync);
+            sync();
+        })();
+    </script>
+}

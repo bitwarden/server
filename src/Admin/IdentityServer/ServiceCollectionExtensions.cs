@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -77,6 +78,22 @@ public static class ServiceCollectionExtensions
                 }
 
                 options.TokenValidationParameters.NameClaimType = oidc.EmailClaimType;
+
+                // SsoSignIn copies the OIDC principal into the Identity cookie and signs out
+                // the external OIDC scheme, so by logout time the OIDC handler's own scheme
+                // has no auth ticket and can't attach id_token_hint on its own. Without
+                // id_token_hint (or client_id), an upstream IdP can't identify the client and falls back
+                // to tenant-level Allowed Logout URLs, which rejects our app-level URL. Pull
+                // the id_token from the Identity cookie (stored there via props.StoreTokens
+                // during sign-in) and attach it manually.
+                options.Events.OnRedirectToIdentityProviderForSignOut = async ctx =>
+                {
+                    var idToken = await ctx.HttpContext.GetTokenAsync("id_token");
+                    if (!string.IsNullOrEmpty(idToken))
+                    {
+                        ctx.ProtocolMessage.IdTokenHint = idToken;
+                    }
+                };
             });
 
         return services;
