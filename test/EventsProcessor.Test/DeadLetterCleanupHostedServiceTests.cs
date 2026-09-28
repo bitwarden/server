@@ -1,4 +1,5 @@
-﻿using Azure.Messaging.ServiceBus;
+﻿using System.Globalization;
+using Azure.Messaging.ServiceBus;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Settings;
 using Bit.EventsProcessor;
@@ -46,6 +47,75 @@ public class DeadLetterCleanupHostedServiceTests
         await sut.StopAsync(CancellationToken.None);
 
         serviceBusService.DidNotReceiveWithAnyArgs().CreateDeadLetterReceiver(default!, default!);
+    }
+
+    [Fact]
+    public void SweepInterval_ConfiguredPositive_UsesConfiguredValue()
+    {
+        var globalSettings = new GlobalSettings();
+        globalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval = TimeSpan.FromMinutes(15);
+
+        Assert.Equal(
+            TimeSpan.FromMinutes(15),
+            DeadLetterCleanupHostedService.SweepInterval(
+                globalSettings,
+                NullLogger<DeadLetterCleanupHostedService>.Instance));
+    }
+
+    [Fact]
+    public void SweepInterval_ConfiguredAtMaximum_UsesConfiguredValue()
+    {
+        var globalSettings = new GlobalSettings();
+        globalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval =
+            DeadLetterCleanupHostedService.MaxSweepInterval;
+
+        Assert.Equal(
+            DeadLetterCleanupHostedService.MaxSweepInterval,
+            DeadLetterCleanupHostedService.SweepInterval(
+                globalSettings,
+                NullLogger<DeadLetterCleanupHostedService>.Instance));
+    }
+
+    [Fact]
+    public void MaxSweepInterval_SitsAtTheLongestDelayTaskDelayAccepts()
+    {
+        // Pre-canceled so no timer is left running; the delay is validated before the token is honored
+        var canceled = new CancellationToken(canceled: true);
+
+        Assert.True(Task.Delay(
+            DeadLetterCleanupHostedService.MaxSweepInterval, TimeProvider.System, canceled).IsCanceled);
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+        {
+            _ = Task.Delay(
+                DeadLetterCleanupHostedService.MaxSweepInterval + TimeSpan.FromMilliseconds(1),
+                TimeProvider.System,
+                canceled);
+        });
+    }
+
+    public static TheoryData<TimeSpan> OutOfRangeIntervals()
+    {
+        var intervals = new TheoryData<TimeSpan>();
+        intervals.Add(TimeSpan.Zero);
+        intervals.Add(TimeSpan.FromHours(-1));
+        intervals.Add(DeadLetterCleanupHostedService.MaxSweepInterval + TimeSpan.FromMilliseconds(1));
+        // A bare number in configuration binds as days, so "720" meant as hours lands here
+        intervals.Add(TimeSpan.Parse("720", CultureInfo.InvariantCulture));
+        return intervals;
+    }
+
+    [Theory]
+    [MemberData(nameof(OutOfRangeIntervals))]
+    public void SweepInterval_ConfiguredOutOfRange_FallsBackToDefault(TimeSpan configured)
+    {
+        var globalSettings = new GlobalSettings();
+        globalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval = configured;
+
+        Assert.Equal(
+            GlobalSettings.EventLoggingSettings.AzureServiceBusSettings.DefaultDeadLetterSweepInterval,
+            DeadLetterCleanupHostedService.SweepInterval(
+                globalSettings,
+                NullLogger<DeadLetterCleanupHostedService>.Instance));
     }
 
     [Fact]
