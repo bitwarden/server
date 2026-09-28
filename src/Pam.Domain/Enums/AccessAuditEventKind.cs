@@ -1,4 +1,4 @@
-namespace Bit.Pam.Enums;
+﻿namespace Bit.Pam.Enums;
 
 // The kinds of event in the PAM access-audit trail, grouped by subject and incremented by 10 per group.
 // Kinds marked "not emitted yet" have no caller: the expiry kinds are time-derived and need a background sweep, the

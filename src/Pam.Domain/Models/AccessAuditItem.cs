@@ -1,4 +1,4 @@
-namespace Bit.Pam.Models;
+﻿namespace Bit.Pam.Models;
 
 /// <summary>
 /// One subject the access-audit trail names within a range, either a cipher or an access rule. Exactly one of the two
