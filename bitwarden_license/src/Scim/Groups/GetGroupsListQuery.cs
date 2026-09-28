@@ -36,9 +36,17 @@ public class GetGroupsListQuery : IGetGroupsListQuery
                 ["externalid"] = g => g.ExternalId
             });
 
-        var filtered = predicate != null
-            ? groups.Where(predicate)
-            : groups.AsEnumerable();
+        IEnumerable<Group> filtered;
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            filtered = predicate != null
+                ? groups.Where(predicate)
+                : Enumerable.Empty<Group>();
+        }
+        else
+        {
+            filtered = groups.AsEnumerable();
+        }
 
         totalResults = filtered.Count();
         groupList = filtered.OrderBy(g => g.Name)

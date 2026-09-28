@@ -35,9 +35,17 @@ public class GetUsersListQuery : IGetUsersListQuery
                 ["externalid"] = ou => ou.ExternalId
             });
 
-        var filtered = predicate != null
-            ? orgUsers.Where(predicate)
-            : orgUsers.AsEnumerable();
+        IEnumerable<OrganizationUserUserDetails> filtered;
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            filtered = predicate != null
+                ? orgUsers.Where(predicate)
+                : Enumerable.Empty<OrganizationUserUserDetails>();
+        }
+        else
+        {
+            filtered = orgUsers.AsEnumerable();
+        }
 
         totalResults = filtered.Count();
         userList = filtered.OrderBy(ou => ou.Email)
