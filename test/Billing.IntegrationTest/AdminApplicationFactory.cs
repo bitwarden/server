@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using System.Text.RegularExpressions;
+using System.Web;
 using Bit.Admin.Jobs;
 using Bit.Core.Services;
 using Bit.IntegrationTestCommon;
@@ -48,9 +49,8 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
                 var jobHostedServiceDescriptor = services.Single(sd => sd.ImplementationType == typeof(JobsHostedService));
                 services.Remove(jobHostedServiceDescriptor);
 
-                // Turn off antiforgery application-wide so tests don't have to
-                // mint or thread CSRF tokens through every form post. Tests that
-                // assert antiforgery is enforced opt out via disableAntiforgery: false.
+                // Disable antiforgery by default so tests don't thread antiforgery tokens
+                // through every post. Tests that assert enforcement pass disableAntiforgery: false.
                 if (disableAntiforgery)
                 {
                     services.PostConfigure<MvcOptions>(options =>
@@ -71,12 +71,6 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
     public IServiceProvider Services => _factory.Services;
 
     /// <summary>
-    /// Creates an <see cref="HttpClient"/> against the Admin host with no
-    /// authenticated session.
-    /// </summary>
-    public HttpClient CreateClient() => _factory.CreateClient();
-
-    /// <summary>
     /// Signs into the Admin Portal using the passwordless flow and returns a
     /// client whose cookies carry an authenticated admin session.
     /// </summary>
@@ -86,10 +80,19 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
         var client = _factory.CreateClient();
         var mailService = _factory.Services.GetRequiredService<IMailService>();
 
-        var loginResponse = await client.PostAsync("/login", new FormUrlEncodedContent(new Dictionary<string, string>
+        // GET the login page first for the antiforgery cookie and token, then include the
+        // token in the POST so sign-in works whether or not antiforgery is enabled.
+        var loginPage = await client.GetAsync("/login");
+        await Assert.SuccessResponseAsync(loginPage);
+        var antiforgeryToken = ExtractAntiforgeryToken(await loginPage.Content.ReadAsStringAsync());
+
+        var loginForm = new Dictionary<string, string> { { "Email", Email } };
+        if (!string.IsNullOrEmpty(antiforgeryToken))
         {
-            { "Email", Email },
-        }));
+            loginForm.Add("__RequestVerificationToken", antiforgeryToken);
+        }
+
+        var loginResponse = await client.PostAsync("/login", new FormUrlEncodedContent(loginForm));
         await Assert.SuccessResponseAsync(loginResponse);
 
         var token = mailService.ReceivedCalls()
@@ -139,6 +142,38 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
         }
 
         return token;
+    }
+
+    /// <summary>
+    /// Gets the rendered Admin page with the authenticated client and returns a
+    /// valid antiforgery token. The cookie is left on the
+    /// client's cookie container, so a following unsafe request will validate.
+    /// </summary>
+    public async Task<string> GetAntiforgeryTokenAsync(HttpClient client, string path = "/")
+    {
+        var page = await client.GetAsync(path);
+        await Assert.SuccessResponseAsync(page);
+        var token = ExtractAntiforgeryToken(await page.Content.ReadAsStringAsync());
+        if (string.IsNullOrEmpty(token))
+        {
+            Assert.Fail($"No antiforgery token found on '{path}'.");
+        }
+
+        return token;
+    }
+
+    /// <summary>
+    /// Pulls the hidden <c>__RequestVerificationToken</c> field out of a rendered
+    /// Admin page so a request can carry a valid antiforgery token.
+    /// </summary>
+    private static string? ExtractAntiforgeryToken(string html)
+    {
+        var match = Regex.Match(
+            html,
+            """
+            name="__RequestVerificationToken"[^>]*value="(?<token>[^"]+)"
+            """);
+        return match.Success ? match.Groups["token"].Value : null;
     }
 
     public ValueTask DisposeAsync() => _factory.DisposeAsync();

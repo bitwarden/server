@@ -6,11 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.IntegrationTest;
 
-/// <summary>
-/// Guards the fix for VULN-826: the Admin MVC pipeline must register a global
-/// <see cref="AutoValidateAntiforgeryTokenAttribute"/> so antiforgery protection
-/// is default-on, and an unsafe request without a token must actually be rejected.
-/// </summary>
 public class AdminAntiforgeryConfigurationTests
 {
     [Fact]
@@ -38,14 +33,42 @@ public class AdminAntiforgeryConfigurationTests
         try
         {
             await using var factory = new AdminApplicationFactory(testDatabase, disableAntiforgery: false);
-            var client = factory.CreateClient();
+            var client = await factory.SignInAdminAsync();
 
-            var response = await client.PostAsync("/login", new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "Email", "admin@localhost" },
-            }));
+            // TriggerBillingSync has no [ValidateAntiForgeryToken] of its own, so only the global
+            // filter protects it. A tokenless POST should be rejected with 400 before the action runs.
+            var response = await client.PostAsync(
+                $"/organizations/triggerbillingsync/{Guid.NewGuid()}",
+                new FormUrlEncodedContent(new Dictionary<string, string>()));
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+        finally
+        {
+            testDatabase.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task AdminPipeline_AcceptsUnsafePostWithValidAntiforgeryToken()
+    {
+        ITestDatabase testDatabase = new SqliteTestDatabase();
+        try
+        {
+            await using var factory = new AdminApplicationFactory(testDatabase, disableAntiforgery: false);
+            var client = await factory.SignInAdminAsync();
+
+            // Same endpoint, now with a valid token from an authenticated page. An unknown
+            // org id just redirects, so any non-400 response proves the token was accepted.
+            var token = await factory.GetAntiforgeryTokenAsync(client);
+            var response = await client.PostAsync(
+                $"/organizations/triggerbillingsync/{Guid.NewGuid()}",
+                new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "__RequestVerificationToken", token },
+                }));
+
+            Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
         }
         finally
         {
