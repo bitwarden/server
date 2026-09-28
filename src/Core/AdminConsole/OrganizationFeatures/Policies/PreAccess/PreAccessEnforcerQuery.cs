@@ -24,7 +24,7 @@ public class PreAccessEnforcerQuery(
         var emptyPolicies = new Dictionary<PolicyType, Policy>();
         if (!organizationAbility.Enabled || !organizationAbility.UsePolicies)
         {
-            return new PreAccessPolicyEnforcer(organizationId, emptyPolicies, [], factories);
+            return new PreAccessPolicyEnforcer(emptyPolicies, [], factories);
         }
 
         var enabledPolicies = (await policyRepository.GetManyByOrganizationIdAsync(organizationId))
@@ -32,7 +32,7 @@ public class PreAccessEnforcerQuery(
             .ToDictionary(p => p.Type);
         if (enabledPolicies.Count == 0)
         {
-            return new PreAccessPolicyEnforcer(organizationId, emptyPolicies, [], factories);
+            return new PreAccessPolicyEnforcer(emptyPolicies, [], factories);
         }
 
         // Matches the IsProvider calculation used by general policy enforcement: any provider user of a provider
@@ -41,6 +41,6 @@ public class PreAccessEnforcerQuery(
             .Where(providerUser => providerUser.UserId.HasValue)
             .Select(providerUser => providerUser.UserId!.Value);
 
-        return new PreAccessPolicyEnforcer(organizationId, enabledPolicies, providerUserIds, factories);
+        return new PreAccessPolicyEnforcer(enabledPolicies, providerUserIds, factories);
     }
 }

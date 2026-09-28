@@ -29,7 +29,7 @@ public class PreAccessPolicyEnforcerTests
     public void Evaluate_PolicyEnabled_NotExempt_ReturnsEnforced(PolicyType policyType, Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId, Policies(CreatePolicy(organizationId, policyType)), [], _factories);
+        var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
         var result = sut.Evaluate(policyType, userId, OrganizationUserType.User);
@@ -39,10 +39,10 @@ public class PreAccessPolicyEnforcerTests
     }
 
     [Theory, BitAutoData]
-    public void Evaluate_NoPolicies_ReturnsNotEnforced(Guid organizationId, Guid userId)
+    public void Evaluate_NoPolicies_ReturnsNotEnforced(Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId, NoPolicies, [], _factories);
+        var sut = new PreAccessPolicyEnforcer(NoPolicies, [], _factories);
 
         // Act
         var result = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
@@ -60,7 +60,7 @@ public class PreAccessPolicyEnforcerTests
         PolicyType policyType, OrganizationUserType proposedRole, Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId, Policies(CreatePolicy(organizationId, policyType)), [], _factories);
+        var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
         var result = sut.Evaluate(policyType, userId, proposedRole);
@@ -80,7 +80,7 @@ public class PreAccessPolicyEnforcerTests
         PolicyType policyType, OrganizationUserType proposedRole, Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId, Policies(CreatePolicy(organizationId, policyType)), [], _factories);
+        var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
         var result = sut.Evaluate(policyType, userId, proposedRole);
@@ -96,7 +96,7 @@ public class PreAccessPolicyEnforcerTests
         PolicyType policyType, Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId,
+        var sut = new PreAccessPolicyEnforcer(
             Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
 
         // Act
@@ -113,7 +113,7 @@ public class PreAccessPolicyEnforcerTests
         PolicyType policyType, Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId,
+        var sut = new PreAccessPolicyEnforcer(
             Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
 
         // Act
@@ -127,7 +127,7 @@ public class PreAccessPolicyEnforcerTests
     public void Evaluate_OtherUserIsProvider_ReturnsEnforced(Guid organizationId, Guid userId, Guid providerUserId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId,
+        var sut = new PreAccessPolicyEnforcer(
             Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)), [providerUserId], _factories);
 
         // Act
@@ -143,7 +143,7 @@ public class PreAccessPolicyEnforcerTests
         // Arrange
         var policy = CreatePolicy(organizationId, PolicyType.ResetPassword);
         policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-        var sut = new PreAccessPolicyEnforcer(organizationId, Policies(policy), [], _factories);
+        var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
 
         // Act
         var result = sut.Evaluate(PolicyType.ResetPassword, userId, OrganizationUserType.User);
@@ -153,42 +153,53 @@ public class PreAccessPolicyEnforcerTests
         Assert.True(result.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled);
     }
 
-    [Theory, BitAutoData]
-    public void Evaluate_PassesFutureStateToFactory(Guid organizationId, Guid userId)
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public void Evaluate_DelegatesToFactoryEnforcePreAccess(bool isProvider, Guid organizationId, Guid userId)
     {
         // Arrange
         const PolicyType policyType = PolicyType.SingleOrg;
         const OrganizationUserType proposedRole = OrganizationUserType.Custom;
-        const OrganizationUserStatusType expectedStatus = OrganizationUserStatusType.Accepted;
         const string policyData = "{\"some\":\"data\"}";
 
         var policy = CreatePolicy(organizationId, policyType);
         policy.Data = policyData;
-        var factory = Substitute.For<IPolicyRequirementFactory<IPolicyRequirement>>();
-        factory.PolicyType.Returns(policyType);
-        factory.Enforce(Arg.Any<PolicyDetails>()).Returns(true);
-        var sut = new PreAccessPolicyEnforcer(organizationId, Policies(policy), [userId], [factory]);
+        var factory = Substitute.For<IPolicyRequirementFactory<IPolicyRequirement>, IPreAccessPolicyRequirementFactory>();
+        var preAccessFactory = (IPreAccessPolicyRequirementFactory)factory;
+        preAccessFactory.PolicyType.Returns(policyType);
+        preAccessFactory.EnforcePreAccess(proposedRole, isProvider).Returns(true);
+        var sut = new PreAccessPolicyEnforcer(Policies(policy), isProvider ? [userId] : [], [factory]);
 
         // Act
         var result = sut.Evaluate(policyType, userId, proposedRole);
 
         // Assert
-        factory.Received(1).Enforce(Arg.Is<PolicyDetails>(pd =>
-            pd.OrganizationId == organizationId &&
-            pd.PolicyType == policyType &&
-            pd.PolicyData == policyData &&
-            pd.OrganizationUserType == proposedRole &&
-            pd.OrganizationUserStatus == expectedStatus &&
-            pd.IsProvider));
+        preAccessFactory.Received(1).EnforcePreAccess(proposedRole, isProvider);
         Assert.True(result.Enforced);
         Assert.Equal(policyData, result.Data);
+    }
+
+    [Theory, BitAutoData]
+    public void Evaluate_FactoryDoesNotSupportPreAccess_Throws(Guid organizationId, Guid userId)
+    {
+        // Arrange
+        var factory = Substitute.For<IPolicyRequirementFactory<IPolicyRequirement>>();
+        factory.PolicyType.Returns(PolicyType.SingleOrg);
+        var sut = new PreAccessPolicyEnforcer(
+            Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)), [], [factory]);
+
+        // Act & Assert
+        var exception = Assert.Throws<NotImplementedException>(
+            () => sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User));
+        Assert.Contains("No Requirement Factory found", exception.Message);
     }
 
     [Theory, BitAutoData]
     public void Evaluate_CanEvaluateManyUsersAndPolicies(Guid organizationId, Guid userId, Guid providerUserId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId,
+        var sut = new PreAccessPolicyEnforcer(
             Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)),
             [providerUserId], _factories);
 
@@ -200,10 +211,10 @@ public class PreAccessPolicyEnforcerTests
     }
 
     [Theory, BitAutoData]
-    public void Evaluate_NoFactoryRegistered_Throws(Guid organizationId, Guid userId)
+    public void Evaluate_NoFactoryRegistered_Throws(Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(organizationId, NoPolicies, [], []);
+        var sut = new PreAccessPolicyEnforcer(NoPolicies, [], []);
 
         // Act & Assert
         var exception = Assert.Throws<NotImplementedException>(
