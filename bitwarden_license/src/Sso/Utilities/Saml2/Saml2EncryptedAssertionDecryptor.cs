@@ -4,7 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using Sustainsys.Saml2;
 
-namespace Bit.Sso.Utilities;
+namespace Bit.Sso.Utilities.Saml2;
 
 // Centralizes decryption of a <saml:EncryptedAssertion>. Sustainsys.Saml2 2.11.0 exposes no
 // public API for this outside its own response-processing pipeline.

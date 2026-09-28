@@ -1,7 +1,7 @@
 ﻿using System.Xml;
 using Sustainsys.Saml2;
 
-namespace Bit.Sso.Utilities;
+namespace Bit.Sso.Utilities.Saml2;
 
 /// <summary>
 /// Reads the shape of a SAML envelope to find encrypted assertions.
