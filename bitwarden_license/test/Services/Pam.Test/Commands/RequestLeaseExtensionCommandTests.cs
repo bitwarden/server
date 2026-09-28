@@ -199,6 +199,39 @@ public class RequestLeaseExtensionCommandTests
             .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_DurationEqualsRuleMax_Extends(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+
+        var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId,
+            Submission(lease.Id, _maxExtensionDurationSeconds));
+
+        Assert.Equal(AccessRequestStatus.Approved, result.Status);
+        Assert.Equal(lease.NotAfter.AddSeconds(_maxExtensionDurationSeconds), result.NotAfter);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RuleHasNoMaxExtensionLength_ThrowsBadRequest(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: false, [])
+            {
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = null,
+            });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id, 1)));
+        Assert.Contains("maximum extension length", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
+    }
+
     [Theory]
     [BitAutoData("")]
     [BitAutoData("   ")]

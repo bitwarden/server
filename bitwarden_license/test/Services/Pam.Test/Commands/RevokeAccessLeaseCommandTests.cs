@@ -64,6 +64,36 @@ public class RevokeAccessLeaseCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RevokeAsync_HolderWhoCanAlsoManage_EndsAsCancelled(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
+        SetupManageableLease(sutProvider, lease.RequesterId, lease);
+
+        await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, null);
+
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
+            lease, AccessLeaseAction.Cancelled, Arg.Any<AccessDecision>(), _now);
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("   ")]
+    public async Task RevokeAsync_BlankReason_RecordsNoComment(string reason, Guid userId, AccessLease lease)
+    {
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now.AddHours(1);
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await sutProvider.Sut.RevokeAsync(userId, lease.Id, reason);
+
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
+            lease, AccessLeaseAction.Revoked, Arg.Is<AccessDecision>(d => d.Comment == null), _now);
+    }
+
+    [Theory, BitAutoData]
     public async Task RevokeAsync_NotActive_ThrowsConflict(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup();
