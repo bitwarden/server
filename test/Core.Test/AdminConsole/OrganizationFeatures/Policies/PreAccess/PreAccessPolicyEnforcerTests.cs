@@ -32,10 +32,10 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(policyType, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.True(result.Enforced);
+        Assert.True(decision.IsEnforced);
     }
 
     [Theory, BitAutoData]
@@ -45,10 +45,10 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(NoPolicies, [], _factories);
 
         // Act
-        var result = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.False(result.Enforced);
+        Assert.False(decision.IsEnforced);
     }
 
     [Theory, BitAutoData]
@@ -60,10 +60,10 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
 
         // Act
-        var result = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.False(result.Enforced);
+        Assert.False(decision.IsEnforced);
     }
 
     [Theory]
@@ -78,10 +78,10 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, proposedRole);
+        var decision = sut.Evaluate(policyType, userId, proposedRole);
 
         // Assert
-        Assert.False(result.Enforced);
+        Assert.False(decision.IsEnforced);
     }
 
     [Theory]
@@ -98,10 +98,10 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, proposedRole);
+        var decision = sut.Evaluate(policyType, userId, proposedRole);
 
         // Assert
-        Assert.True(result.Enforced);
+        Assert.True(decision.IsEnforced);
     }
 
     [Theory]
@@ -115,10 +115,10 @@ public class PreAccessPolicyEnforcerTests
             Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(policyType, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.False(result.Enforced);
+        Assert.False(decision.IsEnforced);
     }
 
     [Theory]
@@ -132,10 +132,10 @@ public class PreAccessPolicyEnforcerTests
             Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(policyType, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.True(result.Enforced);
+        Assert.True(decision.IsEnforced);
     }
 
     [Theory, BitAutoData]
@@ -146,10 +146,10 @@ public class PreAccessPolicyEnforcerTests
             Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)), [providerUserId], _factories);
 
         // Act
-        var result = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.True(result.Enforced);
+        Assert.True(decision.IsEnforced);
     }
 
     [Theory, BitAutoData]
@@ -161,11 +161,11 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
 
         // Act
-        var result = sut.Evaluate(PolicyType.ResetPassword, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(PolicyType.ResetPassword, userId, OrganizationUserType.User);
 
         // Assert
-        Assert.True(result.Enforced);
-        Assert.True(result.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled);
+        Assert.True(decision.IsEnforced);
+        Assert.True(decision.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled);
     }
 
     [Theory]
@@ -187,12 +187,12 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(Policies(policy), isProvider ? [userId] : [], [factory]);
 
         // Act
-        var result = sut.Evaluate(policyType, userId, proposedRole);
+        var decision = sut.Evaluate(policyType, userId, proposedRole);
 
         // Assert
         preAccessFactory.Received(1).EnforcePreAccess(proposedRole, isProvider);
-        Assert.True(result.Enforced);
-        Assert.Equal(policyData, result.Data);
+        Assert.True(decision.IsEnforced);
+        Assert.Equal(policyData, decision.Data);
     }
 
     [Theory, BitAutoData]
@@ -219,10 +219,10 @@ public class PreAccessPolicyEnforcerTests
             [providerUserId], _factories);
 
         // Act & Assert
-        Assert.True(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).Enforced);
-        Assert.False(sut.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).Enforced);
-        Assert.False(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Admin).Enforced);
-        Assert.False(sut.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).Enforced);
+        Assert.True(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).IsEnforced);
+        Assert.False(sut.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).IsEnforced);
+        Assert.False(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Admin).IsEnforced);
+        Assert.False(sut.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).IsEnforced);
     }
 
     [Theory, BitAutoData]

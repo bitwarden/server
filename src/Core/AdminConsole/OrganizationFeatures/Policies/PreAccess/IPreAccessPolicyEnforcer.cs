@@ -23,5 +23,5 @@ public interface IPreAccessPolicyEnforcer
     /// <param name="policyType">The policy to evaluate.</param>
     /// <param name="userId">The user who is about to be granted access.</param>
     /// <param name="proposedRole">The role the user will hold in the target organization.</param>
-    PreAccessPolicyResult Evaluate(PolicyType policyType, Guid userId, OrganizationUserType proposedRole);
+    PreAccessPolicyDecision Evaluate(PolicyType policyType, Guid userId, OrganizationUserType proposedRole);
 }

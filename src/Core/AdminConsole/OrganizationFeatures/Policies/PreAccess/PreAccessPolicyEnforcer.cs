@@ -29,7 +29,7 @@ public class PreAccessPolicyEnforcer(
 
     private readonly HashSet<Guid> _providerUserIds = providerUserIds.ToHashSet();
 
-    public PreAccessPolicyResult Evaluate(PolicyType policyType, Guid userId, OrganizationUserType proposedRole)
+    public PreAccessPolicyDecision Evaluate(PolicyType policyType, Guid userId, OrganizationUserType proposedRole)
     {
         var factory = factories
                           .OfType<IPreAccessPolicyRequirementFactory>()
@@ -38,11 +38,11 @@ public class PreAccessPolicyEnforcer(
 
         if (!_enabledPolicies.TryGetValue(policyType, out var policy))
         {
-            return PreAccessPolicyResult.NotEnforced;
+            return PreAccessPolicyDecision.NotEnforced;
         }
 
         return factory.EnforcePreAccess(proposedRole, _providerUserIds.Contains(userId))
-            ? new PreAccessPolicyResult(true, policy.Data)
-            : PreAccessPolicyResult.NotEnforced;
+            ? PreAccessPolicyDecision.Enforced(policy.Data)
+            : PreAccessPolicyDecision.NotEnforced;
     }
 }

@@ -52,8 +52,8 @@ public class PreAccessEnforcerQueryTests
         var enforcer = await CreateSut().RunAsync(organizationId);
 
         // Assert
-        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).Enforced);
-        Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).Enforced);
+        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).IsEnforced);
+        Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).IsEnforced);
         await _policyRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
         await _providerUserRepository.DidNotReceiveWithAnyArgs().GetManyByOrganizationAsync(default);
     }
@@ -80,11 +80,11 @@ public class PreAccessEnforcerQueryTests
         var enforcer = await CreateSut().RunAsync(organizationId);
 
         // Assert
-        Assert.True(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).Enforced);
-        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Owner).Enforced);
-        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).Enforced);
-        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, acceptedProviderUserId, OrganizationUserType.User).Enforced);
-        Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).Enforced);
+        Assert.True(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).IsEnforced);
+        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Owner).IsEnforced);
+        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).IsEnforced);
+        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, acceptedProviderUserId, OrganizationUserType.User).IsEnforced);
+        Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).IsEnforced);
         await _policyRepository.Received(1).GetManyByOrganizationIdAsync(organizationId);
         await _providerUserRepository.Received(1).GetManyByOrganizationAsync(organizationId);
     }
