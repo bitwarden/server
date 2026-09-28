@@ -9,10 +9,10 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Bit.Subscriptions.Organization;
 
-/// <summary>Registration entry point for the organization-scoped subscription feature library.</summary>
+/// <summary>Registration entry point for the organization subscription feature library.</summary>
 public static class SubscriptionsOrganizationServiceCollectionExtensions
 {
-    /// <summary>Registers the organization-scoped subscription services and the Invoicing library they depend on.</summary>
+    /// <summary>Registers the organization subscription services and the Invoicing library they depend on.</summary>
     public static IServiceCollection AddOrganizationSubscriptions(this IServiceCollection services)
     {
         services.AddInvoicing();

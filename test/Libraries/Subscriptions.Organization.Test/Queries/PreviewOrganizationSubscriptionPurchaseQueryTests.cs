@@ -182,6 +182,26 @@ public class PreviewOrganizationSubscriptionPurchaseQueryTests
     }
 
     [Fact]
+    public async Task Run_WhenEverySelectionIsAtItsMaximum_PreviewsThePurchase()
+    {
+        var preview = ArrangePreview();
+        var request = Request(Purchase(ProductTierType.Enterprise, passwordManager: new PasswordManagerSelections(100000, 99, false)) with
+        {
+            SecretsManager = new SecretsManagerSelections(100000, 100000, false)
+        });
+
+        var result = await _sut.Run(User(), request);
+
+        Assert.Same(preview, result);
+        var items = CapturedOptions().SubscriptionDetails.Items;
+        Assert.Equal(4, items.Count);
+        Assert.Single(items, item => item.Price == "enterprise-seat-annually" && item.Quantity == 100000);
+        Assert.Single(items, item => item.Price == "storage-gb-annually" && item.Quantity == 99);
+        Assert.Single(items, item => item.Price == "sm-enterprise-seat-annually" && item.Quantity == 100000);
+        Assert.Single(items, item => item.Price == "sm-enterprise-sa-annually" && item.Quantity == 100000);
+    }
+
+    [Fact]
     public async Task Run_WhenBillingAddressIsMissing_ThrowsBadRequest()
     {
         var request = new PreviewOrganizationSubscriptionPurchaseRequest(Purchase(ProductTierType.Teams), null);

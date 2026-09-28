@@ -127,6 +127,29 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
         Assert.Contains(expectedMessage, responseBody);
     }
 
+    [Theory]
+    [InlineData("\"tier\": \"Premium\", \"cadence\": \"Annually\",")]
+    [InlineData("\"tier\": \"Teams\", \"cadence\": \"weekly\",")]
+    public async Task PreviewOrganizationSubscriptionPurchase_WithAnUnknownTierOrCadenceName_Returns400WithoutRunningTheQuery(
+        string enumFields)
+    {
+        var query = new FakePreviewOrganizationSubscriptionPurchaseQuery { Result = SamplePreview() };
+        var body = $$"""
+            {
+              "purchase": {
+                {{enumFields}}
+                "passwordManager": { "seats": 1, "additionalStorage": 0, "sponsored": false }
+              },
+              "billingAddress": { "country": "US", "postalCode": "12345" }
+            }
+            """;
+
+        var context = await InvokeAsync(query, body);
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.Equal(0, query.Calls);
+    }
+
     [Fact]
     public async Task PreviewOrganizationSubscriptionPurchase_BindsTheNestedSelectionsAndTaxId()
     {

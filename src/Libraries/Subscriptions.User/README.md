@@ -66,11 +66,9 @@ Coupons are all-or-nothing: they apply only when `ISubscriptionDiscountService` 
 eligible for the Premium discount tier, and otherwise they are dropped silently and the preview runs
 without them.
 
-Every amount comes from Stripe through `Bit.Invoicing`, and `PasswordManager.Seats` is always
-present. If Stripe resolves no seats line, the query logs the user id and the price ids it sent and
-returns a 409; the organization purchase preview in `Subscriptions.Organization` does the same. A
-missing plan differs between the two: here `IPricingClient.GetAvailablePremiumPlan` throws
-`NotFoundException`, which surfaces as a 404, while the organization preview returns a 409.
+If Stripe resolves no seats line, the query logs the user id and the price ids it sent and returns
+a 409. A missing plan returns a 404, because `IPricingClient.GetAvailablePremiumPlan` throws
+`NotFoundException`.
 
 ## Stripe boundary
 

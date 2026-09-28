@@ -52,6 +52,16 @@ public class UserSubscriptionPurchaseEndpointsRequestBindingTests
     }
 
     [Fact]
+    public async Task GetSubscriptionPurchasePreview_SetsNoStore()
+    {
+        var query = new FakeGetSubscriptionPurchasePreviewQuery { Result = SamplePreview() };
+
+        var context = await InvokePremiumAsync(query, "country=US&postalCode=12345");
+
+        Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
+    }
+
+    [Fact]
     public async Task GetSubscriptionPurchasePreview_WhenQueryThrowsBadRequest_Returns400()
     {
         var query = new FakeGetSubscriptionPurchasePreviewQuery

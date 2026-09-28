@@ -85,12 +85,8 @@ discount tier, and otherwise they are dropped silently.
 
 The Stripe tax ID type is derived with `ITaxService`. If it can't be derived, the query falls back
 to the client's code and logs a warning naming only the country and that code, never the tax ID
-value. A Spanish NIF also sends the `ES`-prefixed EU VAT ID. Every amount comes from Stripe through
-`Bit.Invoicing`, and `PasswordManager.Seats` is always present. A missing seats line or a plan the
-pricing service doesn't have is a catalog fault the user can't fix: it is logged with the user id
-and the price ids or plan type, and returned as a 409. Stripe's `customer_tax_location_invalid` and
-`tax_id_invalid` become 400s. Any other Stripe error propagates, and the group's exception handling
-turns it into a 500.
+value. A missing seats line or a plan the pricing service doesn't have is a catalog fault the user
+can't fix and returns a 409.
 
 ## Stripe boundary
 
