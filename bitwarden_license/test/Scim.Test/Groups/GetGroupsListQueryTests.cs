@@ -169,6 +169,23 @@ public class GetGroupsListCommandTests
         Assert.Equal("Prefix-Test-Group", result.groupList.First().Name);
     }
 
+    [Theory]
+    [BitAutoData("active eq true")]
+    [BitAutoData("displayName pr")]
+    public async Task GetGroupsList_UnparseableFilter_ReturnsEmpty(string filter, SutProvider<GetGroupsListQuery> sutProvider, Guid organizationId, IList<Group> groups)
+    {
+        groups = SetGroupsOrganizationId(groups, organizationId);
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(groups);
+
+        var result = await sutProvider.Sut.GetGroupsListAsync(organizationId, new GetGroupsQueryParamModel { Filter = filter });
+
+        Assert.Empty(result.groupList);
+        Assert.Equal(0, result.totalResults);
+    }
+
     private IList<Group> SetGroupsOrganizationId(IList<Group> groups, Guid organizationId)
     {
         return groups.Select(g =>

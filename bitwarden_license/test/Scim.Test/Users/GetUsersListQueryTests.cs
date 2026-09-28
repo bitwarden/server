@@ -180,6 +180,23 @@ public class GetUsersListQueryTests
         Assert.Equal("prefix-user@example.com", result.userList.First().Email);
     }
 
+    [Theory]
+    [BitAutoData("active eq true")]
+    [BitAutoData("userName pr")]
+    public async Task GetUsersList_UnparseableFilter_ReturnsEmpty(string filter, SutProvider<GetUsersListQuery> sutProvider, Guid organizationId, IList<OrganizationUserUserDetails> organizationUserUserDetails)
+    {
+        organizationUserUserDetails = SetUsersOrganizationId(organizationUserUserDetails, organizationId);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(organizationId)
+            .Returns(organizationUserUserDetails);
+
+        var result = await sutProvider.Sut.GetUsersListAsync(organizationId, new GetUsersQueryParamModel { Filter = filter });
+
+        Assert.Empty(result.userList);
+        Assert.Equal(0, result.totalResults);
+    }
+
     private IList<OrganizationUserUserDetails> SetUsersOrganizationId(IList<OrganizationUserUserDetails> organizationUserUserDetails, Guid organizationId)
     {
         return organizationUserUserDetails.Select(ouud =>
