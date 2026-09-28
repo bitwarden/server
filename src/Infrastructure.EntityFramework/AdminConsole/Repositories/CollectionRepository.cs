@@ -426,6 +426,131 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task<ICollection<CollectionAdminDetails>> GetManyByIdsWithPermissionsAsync(
+        IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new BulkCollectionAdminDetailsQuery(collectionIds, userId).Run(dbContext);
+
+            ICollection<CollectionAdminDetails> collections;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                collections = (await query.ToListAsync())
+                    .GroupBy(c => new
+                    {
+                        c.Id,
+                        c.OrganizationId,
+                        c.Name,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.ExternalId,
+                        c.Unmanaged,
+                        c.DefaultUserCollectionEmail,
+                        c.Type,
+                        c.HasEnabledAccessRule
+                    }).Select(collectionGroup => new CollectionAdminDetails
+                    {
+                        Id = collectionGroup.Key.Id,
+                        OrganizationId = collectionGroup.Key.OrganizationId,
+                        Name = collectionGroup.Key.Name,
+                        CreationDate = collectionGroup.Key.CreationDate,
+                        RevisionDate = collectionGroup.Key.RevisionDate,
+                        ExternalId = collectionGroup.Key.ExternalId,
+                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        HidePasswords =
+                            Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                        Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                        Unmanaged = collectionGroup.Key.Unmanaged,
+                        DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
+                        Type = collectionGroup.Key.Type,
+                        HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                    }).ToList();
+            }
+            else
+            {
+                collections = await (from c in query
+                                     group c by new
+                                     {
+                                         c.Id,
+                                         c.OrganizationId,
+                                         c.Name,
+                                         c.CreationDate,
+                                         c.RevisionDate,
+                                         c.ExternalId,
+                                         c.Unmanaged,
+                                         c.DefaultUserCollectionEmail,
+                                         c.Type,
+                                         c.HasEnabledAccessRule
+                                     }
+                    into collectionGroup
+                                     select new CollectionAdminDetails
+                                     {
+                                         Id = collectionGroup.Key.Id,
+                                         OrganizationId = collectionGroup.Key.OrganizationId,
+                                         Name = collectionGroup.Key.Name,
+                                         CreationDate = collectionGroup.Key.CreationDate,
+                                         RevisionDate = collectionGroup.Key.RevisionDate,
+                                         ExternalId = collectionGroup.Key.ExternalId,
+                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                                         HidePasswords =
+                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                                         Unmanaged = collectionGroup.Key.Unmanaged,
+                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
+                                         Type = collectionGroup.Key.Type,
+                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                                     }).ToListAsync();
+            }
+
+            if (!includeAccessRelationships)
+            {
+                return collections;
+            }
+
+            // Filter in the database. Joining the in-memory list against the DbSet reads every row in the table.
+            var resolvedIds = collections.Select(c => c.Id).ToList();
+
+            // A lookup returns an empty sequence for a collection with no rows.
+            var groups = (await dbContext.CollectionGroups
+                    .Where(cg => resolvedIds.Contains(cg.CollectionId))
+                    .ToListAsync())
+                .ToLookup(cg => cg.CollectionId);
+
+            var users = (await dbContext.CollectionUsers
+                    .Where(cu => resolvedIds.Contains(cu.CollectionId))
+                    .ToListAsync())
+                .ToLookup(cu => cu.CollectionId);
+
+            foreach (var collection in collections)
+            {
+                collection.Groups = groups[collection.Id]
+                    .Select(cg => new CollectionAccessSelection
+                    {
+                        Id = cg.GroupId,
+                        HidePasswords = cg.HidePasswords,
+                        ReadOnly = cg.ReadOnly,
+                        Manage = cg.Manage,
+                    }).ToList();
+                collection.Users = users[collection.Id]
+                    .Select(cu => new CollectionAccessSelection
+                    {
+                        Id = cu.OrganizationUserId,
+                        HidePasswords = cu.HidePasswords,
+                        ReadOnly = cu.ReadOnly,
+                        Manage = cu.Manage
+                    }).ToList();
+            }
+
+            return collections;
+        }
+    }
+
     public async Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId,
         bool includeAccessRelationships)
     {

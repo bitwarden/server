@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
@@ -10,12 +11,8 @@ public class CollectionAuthorizationService(
     ICollectionRepository collectionRepository,
     IOrganizationAbilityCacheService organizationAbilityCacheService) : ICollectionAuthorizationService
 {
-    // Collection ID mapped to its organization ID, or null if unresolved
-    private readonly Dictionary<Guid, Guid?> _organizationIdByCollectionId = new();
-    // Orphaned collection IDs per organization; only fetched for Owner/Admin callers
-    private readonly Dictionary<Guid, HashSet<Guid>> _orphanedCollectionIdsByOrganizationId = new();
-    // Collections the caller manages, across organizations; null until first fetched
-    private HashSet<Guid>? _callerManagedCollectionIds;
+    // Collection ID and its details, or null if the collection was not found.
+    private readonly Dictionary<Guid, CollectionAdminDetails?> _detailsByCollectionId = new();
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
         (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate)).Contains(collectionId);
@@ -28,9 +25,8 @@ public class CollectionAuthorizationService(
 
     /// <summary>
     /// Returns the subset of <paramref name="collectionIds"/> that the caller is authorized to operate on.
-    /// The organization-wide rule is applied first. If it does not authorize the caller, each collection is then
-    /// checked on its own. Data is read from the database only when it is needed, and each read is cached for the
-    /// lifetime of the request.
+    /// Organization-wide rules are applied first. If none apply to the caller then each collection is
+    /// checked on its own.
     /// </summary>
     private async Task<IReadOnlySet<Guid>> AuthorizeAsync(
         Guid organizationId,
@@ -42,7 +38,11 @@ public class CollectionAuthorizationService(
             return new HashSet<Guid>();
         }
 
-        var requestedCollectionIds = await GetCollectionIdsInOrganizationAsync(organizationId, collectionIds);
+        await EnsureCollectionDetailsCachedAsync(collectionIds);
+
+        var requestedCollectionIds = collectionIds
+            .Where(id => _detailsByCollectionId[id] is { } details && details.OrganizationId == organizationId)
+            .ToHashSet();
         if (requestedCollectionIds.Count == 0)
         {
             return new HashSet<Guid>();
@@ -51,8 +51,7 @@ public class CollectionAuthorizationService(
         var organization = currentContext.GetOrganization(organizationId);
         if (organization is null)
         {
-            // A non-member has no organization permissions for the rules to read, so only a provider user
-            // can be authorized here.
+            // A non-member has no organization permissions, so only a provider user can be authorized.
             return await currentContext.ProviderUserForOrgAsync(organizationId)
                 ? requestedCollectionIds
                 : new HashSet<Guid>();
@@ -64,19 +63,8 @@ public class CollectionAuthorizationService(
             return requestedCollectionIds;
         }
 
-        var callerManagedCollectionIds = await GetCallerManagedCollectionIdsAsync(currentContext.UserId.Value);
-        var hasUnmanagedCollections = requestedCollectionIds.Any(id => !callerManagedCollectionIds.Contains(id));
-        // Only Owners and Admins can manage orphaned collections, and only unmanaged collections need the check.
-        var orphanedCollectionIds = hasUnmanagedCollections && CollectionRules.CollectionAssignment.CanManageOrphanedCollections(organization)
-            ? await GetOrphanedCollectionIdsAsync(organizationId)
-            : new HashSet<Guid>();
-
         var authorizedCollectionIds = requestedCollectionIds
-            .Where(id => CollectionRules.CollectionAssignment.CanManage(
-                organization,
-                new CollectionRules.CollectionAssignment.ManagementFacts(
-                    CallerManagesCollection: callerManagedCollectionIds.Contains(id),
-                    IsOrphaned: orphanedCollectionIds.Contains(id))))
+            .Where(id => CollectionRules.CollectionAssignment.CanManage(organization, _detailsByCollectionId[id]!))
             .ToHashSet();
 
         if (authorizedCollectionIds.Count < requestedCollectionIds.Count &&
@@ -88,64 +76,21 @@ public class CollectionAuthorizationService(
         return authorizedCollectionIds;
     }
 
-    private async Task<HashSet<Guid>> GetCollectionIdsInOrganizationAsync(
-        Guid organizationId,
-        IReadOnlyCollection<Guid> collectionIds)
+    private async Task EnsureCollectionDetailsCachedAsync(IReadOnlyCollection<Guid> collectionIds)
     {
-        await EnsureCollectionOrganizationsCachedAsync(collectionIds);
-
-        bool BelongsToRequestedOrganization(Guid id) => _organizationIdByCollectionId[id] == organizationId;
-
-        return collectionIds.Where(BelongsToRequestedOrganization).ToHashSet();
-    }
-
-    private async Task EnsureCollectionOrganizationsCachedAsync(IReadOnlyCollection<Guid> collectionIds)
-    {
-        var uncachedIds = collectionIds.Where(id => !_organizationIdByCollectionId.ContainsKey(id)).ToList();
+        var uncachedIds = collectionIds.Where(id => !_detailsByCollectionId.ContainsKey(id)).ToList();
         if (uncachedIds.Count == 0)
         {
             return;
         }
 
-        var collections = await collectionRepository.GetManyByManyIdsAsync(uncachedIds);
-        var organizationIdsByCollectionId = collections.ToDictionary(c => c.Id, c => (Guid?)c.OrganizationId);
+        var collections = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            uncachedIds, currentContext.UserId, includeAccessRelationships: false);
+        var detailsById = collections.ToDictionary(c => c.Id);
 
         foreach (var id in uncachedIds)
         {
-            _organizationIdByCollectionId[id] = organizationIdsByCollectionId.GetValueOrDefault(id);
+            _detailsByCollectionId[id] = detailsById.GetValueOrDefault(id);
         }
-    }
-
-    private async Task<HashSet<Guid>> GetCallerManagedCollectionIdsAsync(Guid userId)
-    {
-        if (_callerManagedCollectionIds is not null)
-        {
-            return _callerManagedCollectionIds;
-        }
-
-        var callerCollections = await collectionRepository.GetManyByUserIdAsync(userId);
-        _callerManagedCollectionIds = callerCollections
-            .Where(collection => collection.Manage)
-            .Select(collection => collection.Id)
-            .ToHashSet();
-
-        return _callerManagedCollectionIds;
-    }
-
-    private async Task<HashSet<Guid>> GetOrphanedCollectionIdsAsync(Guid organizationId)
-    {
-        if (_orphanedCollectionIdsByOrganizationId.TryGetValue(organizationId, out var cachedIds))
-        {
-            return cachedIds;
-        }
-
-        var organizationCollections = await collectionRepository.GetManyByOrganizationIdWithAccessAsync(organizationId);
-        var orphanedIds = organizationCollections
-            .Where(result => CollectionRules.CollectionAssignment.IsOrphaned(result.Item2))
-            .Select(result => result.Item1.Id)
-            .ToHashSet();
-        _orphanedCollectionIdsByOrganizationId[organizationId] = orphanedIds;
-
-        return orphanedIds;
     }
 }

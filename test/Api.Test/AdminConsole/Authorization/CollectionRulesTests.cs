@@ -46,8 +46,6 @@ public class CollectionRulesTests
     [Fact]
     public void CanUpdate_CustomUserWithManageUsersPermission_DoesNotGrantAccess()
     {
-        // ManageUsers authorizes a change to user access only. It must not authorize an update to the
-        // collection metadata.
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
         var result = CollectionRules.OrganizationRole.CanUpdate(organization, Ability(allowAdminAccess: true));
@@ -194,7 +192,6 @@ public class CollectionRulesTests
     [Fact]
     public void CanModifyGroupAccess_CustomUserWithManageUsersPermission_DoesNotGrantAccess()
     {
-        // ManageUsers must not authorize a change to group access. ManageGroups authorizes that change.
         var organization = Organization(OrganizationUserType.Custom, new Permissions { ManageUsers = true });
 
         var result = CollectionRules.OrganizationRole.CanModifyGroupAccess(organization, Ability(allowAdminAccess: true));
@@ -255,9 +252,24 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: true, IsOrphaned: false));
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, Details(manage: true));
 
         Assert.True(result);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    [InlineData(OrganizationUserType.User)]
+    [InlineData(OrganizationUserType.Custom)]
+    public void CanManage_WhenCallerIsAssignedWithoutManage_Failure(OrganizationUserType type)
+    {
+        var organization = Organization(type);
+
+        var result = CollectionRules.CollectionAssignment.CanManage(
+            organization, Details(manage: false, assigned: true));
+
+        Assert.False(result);
     }
 
     [Theory]
@@ -267,7 +279,8 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
+        var result = CollectionRules.CollectionAssignment.CanManage(
+            organization, Details(manage: false, unmanaged: true));
 
         Assert.True(result);
     }
@@ -279,7 +292,7 @@ public class CollectionRulesTests
     {
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: false));
+        var result = CollectionRules.CollectionAssignment.CanManage(organization, Details(manage: false));
 
         Assert.False(result);
     }
@@ -289,11 +302,10 @@ public class CollectionRulesTests
     [InlineData(OrganizationUserType.Custom)]
     public void CanManage_WhenNotAdminOrOwner_OrphanedDoesNotGrantAccess(OrganizationUserType type)
     {
-        // Only Owners and Admins can manage orphaned collections. For any other member, an orphaned
-        // collection does not authorize the operation.
         var organization = Organization(type);
 
-        var result = CollectionRules.CollectionAssignment.CanManage(organization, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
+        var result = CollectionRules.CollectionAssignment.CanManage(
+            organization, Details(manage: false, unmanaged: true));
 
         Assert.False(result);
     }
@@ -301,37 +313,8 @@ public class CollectionRulesTests
     [Fact]
     public void CanManage_WhenMissingOrgAccess_OrphanedDoesNotGrantAccess()
     {
-        var result = CollectionRules.CollectionAssignment.CanManage(null, new CollectionRules.CollectionAssignment.ManagementFacts(CallerManagesCollection: false, IsOrphaned: true));
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void IsOrphaned_WhenNoUserOrGroupManages_ReturnsTrue()
-    {
-        var accessDetails = AccessDetails(userManages: false, groupManages: false);
-
-        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
-
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void IsOrphaned_WhenAUserManages_ReturnsFalse()
-    {
-        var accessDetails = AccessDetails(userManages: true, groupManages: false);
-
-        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void IsOrphaned_WhenAGroupManages_ReturnsFalse()
-    {
-        var accessDetails = AccessDetails(userManages: false, groupManages: true);
-
-        var result = CollectionRules.CollectionAssignment.IsOrphaned(accessDetails);
+        var result = CollectionRules.CollectionAssignment.CanManage(
+            null, Details(manage: false, unmanaged: true));
 
         Assert.False(result);
     }
@@ -342,10 +325,6 @@ public class CollectionRulesTests
     private static OrganizationAbility Ability(bool allowAdminAccess) =>
         new() { AllowAdminAccessToAllCollectionItems = allowAdminAccess };
 
-    private static CollectionAccessDetails AccessDetails(bool userManages, bool groupManages) =>
-        new()
-        {
-            Users = [new CollectionAccessSelection { Manage = userManages }],
-            Groups = [new CollectionAccessSelection { Manage = groupManages }],
-        };
+    private static CollectionAdminDetails Details(bool manage, bool assigned = false, bool unmanaged = false) =>
+        new() { Manage = manage, Assigned = assigned || manage, Unmanaged = unmanaged };
 }

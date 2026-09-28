@@ -5,9 +5,8 @@
 /// Each operation is authorized independently.
 /// </summary>
 /// <remarks>
-/// A collection ID is left out of the result if the collection does not exist, or if it belongs to a different
-/// organization. No error is thrown in these cases. An empty request returns an empty result, so do not read an
-/// empty result as authorized.
+/// A collection ID is left out of the result if it does not exist or belongs to a different organization.
+/// No error is thrown. An empty request returns an empty result, so do not read that as authorized.
 /// </remarks>
 public interface ICollectionAuthorizationService
 {

@@ -9,8 +9,7 @@ namespace Bit.Api.AdminConsole.Authorization.Collections;
 /// Business rules for collection authorization. These rules do not read the database.
 /// <see cref="OrganizationRole"/> holds the permissions that apply to every collection in the organization.
 /// <see cref="CollectionAssignment"/> holds the permissions that apply to one collection.
-/// <see cref="CollectionAuthorizationService"/> reads the data that these rules need, calls both sets of rules,
-/// and applies the provider user bypass.
+/// <see cref="CollectionAuthorizationService"/> reads the data these rules need and calls both sets.
 /// </summary>
 public static class CollectionRules
 {
@@ -21,30 +20,21 @@ public static class CollectionRules
     /// </summary>
     public static class CollectionAssignment
     {
-        /// <summary>The facts <see cref="CanManage"/> needs to decide access to one collection.</summary>
-        public readonly record struct ManagementFacts(bool CallerManagesCollection, bool IsOrphaned);
-
         /// <summary>
         /// Returns true if the caller can manage one collection without an organization-wide permission.
-        /// This is true if the caller is assigned to manage the collection, or if the caller is an Owner or
+        /// This is true if the caller has Manage access to the collection, or if the caller is an Owner or
         /// Admin and the collection is orphaned.
         /// </summary>
-        public static bool CanManage(CurrentContextOrganization? organizationClaims, ManagementFacts facts) =>
-            facts.CallerManagesCollection ||
-            (facts.IsOrphaned && CanManageOrphanedCollections(organizationClaims));
+        /// <remarks>Being assigned to the collection is not enough. The caller needs Manage.</remarks>
+        public static bool CanManage(CurrentContextOrganization? organizationClaims, CollectionAdminDetails details) =>
+            details.Manage ||
+            (details.Unmanaged && CanManageOrphanedCollections(organizationClaims));
 
         /// <summary>
-        /// Returns true if the caller can manage orphaned collections. Callers can check this first and skip
-        /// the lookup of orphaned collections when it returns false.
+        /// Returns true if the caller can manage orphaned collections.
         /// </summary>
-        public static bool CanManageOrphanedCollections(CurrentContextOrganization? organizationClaims) =>
+        private static bool CanManageOrphanedCollections(CurrentContextOrganization? organizationClaims) =>
             organizationClaims is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-
-        /// <summary>
-        /// Returns true if the collection has no user or group set to manage it.
-        /// </summary>
-        public static bool IsOrphaned(CollectionAccessDetails accessDetails) =>
-            !accessDetails.Users.Any(user => user.Manage) && !accessDetails.Groups.Any(group => group.Manage);
     }
 
     /// <summary>

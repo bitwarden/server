@@ -203,6 +203,51 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task<ICollection<CollectionAdminDetails>> GetManyByIdsWithPermissionsAsync(
+        IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadManyByIdsWithPermissions]",
+                new { Ids = collectionIds.ToGuidIdArrayTVP(), UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
+                commandType: CommandType.StoredProcedure);
+
+            var collections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
+
+            if (!includeAccessRelationships)
+            {
+                return collections;
+            }
+
+            // A lookup returns an empty sequence for a collection with no rows.
+            var groups = (await results.ReadAsync<CollectionGroup>()).ToLookup(g => g.CollectionId);
+            var users = (await results.ReadAsync<CollectionUser>()).ToLookup(u => u.CollectionId);
+
+            foreach (var collection in collections)
+            {
+                collection.Groups = groups[collection.Id]
+                    .Select(g => new CollectionAccessSelection
+                    {
+                        Id = g.GroupId,
+                        HidePasswords = g.HidePasswords,
+                        ReadOnly = g.ReadOnly,
+                        Manage = g.Manage
+                    }).ToList();
+                collection.Users = users[collection.Id]
+                    .Select(u => new CollectionAccessSelection
+                    {
+                        Id = u.OrganizationUserId,
+                        HidePasswords = u.HidePasswords,
+                        ReadOnly = u.ReadOnly,
+                        Manage = u.Manage
+                    }).ToList();
+            }
+
+            return collections;
+        }
+    }
+
     public async Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships)
     {
         using (var connection = new SqlConnection(ConnectionString))
