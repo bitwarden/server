@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using System.Runtime.CompilerServices;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Utilities;
 using Bitwarden.Server.Sdk.Features;
@@ -36,8 +37,8 @@ public class ServerContextBuilder : IContextBuilder
 
     public LaunchDarkly.Sdk.Context Build()
     {
-        var currentContext = _httpContextAccessor.HttpContext
-            ?.RequestServices.GetRequiredService<ICurrentContext>();
+        var httpContext = _httpContextAccessor.HttpContext;
+        var currentContext = httpContext?.RequestServices.GetRequiredService<ICurrentContext>();
 
         if (currentContext is null)
         {
@@ -45,7 +46,10 @@ public class ServerContextBuilder : IContextBuilder
                 .Kind(ContextKind.Default)
                 .Anonymous(true)
                 .Build();
-            _logger.LogInformation("LD context (no HttpContext): {Context}", anonymous);
+            _logger.LogInformation(
+                "LD context (no HttpContext): {Context}\nStackTrace:\n{StackTrace}",
+                anonymous,
+                Environment.StackTrace);
             return anonymous;
         }
 
@@ -140,12 +144,24 @@ public class ServerContextBuilder : IContextBuilder
         }
 
         var built = builder.Build();
+        var contextHash = RuntimeHelpers.GetHashCode(currentContext);
+        var isAuthenticated = httpContext?.User?.Identity?.IsAuthenticated ?? false;
+        var (builtFromHttpContext, builtFromClaimsPrincipal) = currentContext switch
+        {
+            CurrentContext cc => (cc.BuiltFromHttpContext, cc.BuiltFromClaimsPrincipal),
+            _ => (false, false),
+        };
         _logger.LogInformation(
-            "LD context (path={Path}, hasUser={HasUser}, clientType={ClientType}): {Context}",
-            _httpContextAccessor.HttpContext?.Request.Path.Value,
+            "LD context (path={Path}, hasUser={HasUser}, clientType={ClientType}, ctxHash={CtxHash}, isAuth={IsAuth}, builtHttp={BuiltHttp}, builtClaims={BuiltClaims}): {Context}\nStackTrace:\n{StackTrace}",
+            httpContext?.Request.Path.Value,
             currentContext.UserId.HasValue,
             currentContext.IdentityClientType,
-            built);
+            contextHash,
+            isAuthenticated,
+            builtFromHttpContext,
+            builtFromClaimsPrincipal,
+            built,
+            Environment.StackTrace);
         return built;
 
         void SetCommonContextAttributes(ContextBuilder builder)

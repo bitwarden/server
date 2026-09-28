@@ -27,6 +27,9 @@ public class CurrentContext(
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
+    public bool BuiltFromHttpContext => _builtHttpContext;
+    public bool BuiltFromClaimsPrincipal => _builtClaimsPrincipal;
+
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
     public virtual User User { get; set; }
