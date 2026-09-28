@@ -234,7 +234,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
     }
 
     [Fact]
-    public async Task PostV2UpgradesAsync_StaleUserKeyId_BadRequestAndKeyIsUnchanged()
+    public async Task PostV2UpgradesAsync_StaleUserKeyId_SucceedsAndLeavesTheUpgradePending()
     {
         // Arrange - the member rotated again, so the re-wrapped key uses a user key they no longer hold
         var memberEmail = await CreateMemberAsync(OrganizationUserType.User);
@@ -245,13 +245,17 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var response = await _client.PostAsJsonAsync(UpgradesUri(),
             RequestFor(organizationUser.Id, "fedcba9876543210fedcba9876543210"));
 
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Assert - the upgrade is skipped rather than rejected, and stays pending for the admin to read again
+        response.EnsureSuccessStatusCode();
 
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(written);
         Assert.Equal(_v1AccountRecoveryKey, written.ResetPasswordKey);
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+
+        var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
+        pendingAfter.EnsureSuccessStatusCode();
+        Assert.Contains(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
     [Fact]

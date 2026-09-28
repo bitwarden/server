@@ -38,34 +38,19 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
             }).ToListAsync();
     }
 
-    public async Task<int> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
         IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
     {
-        var requested = updates.ToList();
-        if (requested.Count == 0)
-        {
-            return 0;
-        }
-
-        // Two updates for one membership would make the outcome depend on write order. The Dapper procedure
-        // reports this as a short row count, so report nothing written here as well.
-        var distinctIdCount = requested.Select(update => update.OrganizationUserId).Distinct().Count();
-        if (distinctIdCount != requested.Count)
-        {
-            return 0;
-        }
-
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        var updatedCount = 0;
-        foreach (var update in requested)
+        foreach (var update in updates)
         {
             // The user key id is part of the update's WHERE clause, so the check and the write are one statement.
             // Reading the key id first and writing after would leave a window for a rotation between the two,
-            // and the stale key would be installed.
-            updatedCount += await dbContext.OrganizationUsers
+            // and the stale key would be installed. A row that no longer matches is skipped, which leaves its
+            // upgrade pending for the admin to complete later.
+            await dbContext.OrganizationUsers
                 .Where(organizationUser => organizationUser.Id == update.OrganizationUserId
                     && organizationUser.OrganizationId == organizationId
                     && organizationUser.V2UpgradeToken != null
@@ -76,16 +61,5 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
                     // The token is consumed, so the upgrade cannot be replayed.
                     .SetProperty(organizationUser => organizationUser.V2UpgradeToken, (string?)null));
         }
-
-        // One stale row leaves every other row unchanged.
-        if (updatedCount != requested.Count)
-        {
-            await transaction.RollbackAsync();
-            return 0;
-        }
-
-        await transaction.CommitAsync();
-
-        return updatedCount;
     }
 }

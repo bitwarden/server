@@ -48,11 +48,9 @@ BEGIN
         [AccountRecoveryKey] VARCHAR(MAX) '$.AccountRecoveryKey'
     )
 
-    DECLARE @ExpectedCount INT = (SELECT COUNT(1) FROM @OrganizationUserInput)
-
-    BEGIN TRANSACTION
-
     -- The join on [UserKeyId] rejects a key re-wrapped against a user key that has been rotated again since.
+    -- Such a row is skipped, and the rows that still match are written. Nothing is lost: the membership keeps
+    -- its token, so the admin reads the upgrade again and completes it then.
     -- The same statement clears the token, so an upgrade cannot be replayed.
     -- A NULL [AccountRecoveryKey] is not a missing value. It unenrolls the member from account recovery.
     UPDATE
@@ -69,18 +67,5 @@ BEGIN
     WHERE
         OU.[OrganizationId] = @OrganizationId
         AND OU.[V2UpgradeToken] IS NOT NULL
-
-    DECLARE @UpdatedCount INT = @@ROWCOUNT
-
-    IF @UpdatedCount <> @ExpectedCount
-    BEGIN
-        ROLLBACK TRANSACTION
-        SELECT 0
-        RETURN
-    END
-
-    COMMIT TRANSACTION
-
-    SELECT @UpdatedCount
 END
 GO

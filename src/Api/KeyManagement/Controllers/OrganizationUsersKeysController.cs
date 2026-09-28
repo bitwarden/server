@@ -81,7 +81,7 @@ public class OrganizationUsersKeysController : Controller
     /// the member from account recovery and clears the token. The member keeps their vault, and the organization's
     /// enrollment policy prompts them to enroll again.
     ///
-    /// Every membership is written, or none of them are.
+    /// A membership that changed since the read is skipped rather than rejected, and stays pending.
     /// </remarks>
     [HttpPost("v2-upgrades")]
     [Authorize<ManageAccountRecoveryRequirement>]

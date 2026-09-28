@@ -6,7 +6,7 @@
 /// </summary>
 public class OrganizationUserAccountRecoveryKeyUpdate
 {
-    public Guid OrganizationUserId { get; init; }
+    public required Guid OrganizationUserId { get; init; }
 
     /// <summary>
     /// The key id of the user key the new <see cref="AccountRecoveryKey"/> wraps. The write only applies when this

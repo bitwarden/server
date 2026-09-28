@@ -1,5 +1,4 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.KeyManagement.Commands;
+﻿using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -26,9 +25,6 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
         repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
             .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-                organizationId, Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>())
-            .Returns(1);
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
 
@@ -55,9 +51,6 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
         repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
             .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-                organizationId, Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>())
-            .Returns(1);
 
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey: null) };
 
@@ -75,7 +68,7 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ApplyAsync_NoKeyGivenAndKeyIdDoesNotMatchTheUserRow_ThrowsAndWritesNothing(
+    public async Task ApplyAsync_NoKeyGivenAndKeyIdDoesNotMatchTheUserRow_SkipsTheUpgradeAndWritesNothing(
         Guid organizationId,
         Guid organizationUserId,
         SutProvider<ApplyOrganizationUserV2UpgradesCommand> sutProvider)
@@ -88,17 +81,15 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey: null) };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ApplyAsync(organizationId, updates));
+        await sutProvider.Sut.ApplyAsync(organizationId, updates);
 
         // Assert
-        Assert.Equal(ApplyOrganizationUserV2UpgradesCommand.StaleUpgradeErrorMessage, exception.Message);
         await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             default, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ApplyAsync_KeyIdDoesNotMatchTheUserRow_ThrowsAndWritesNothing(
+    public async Task ApplyAsync_KeyIdDoesNotMatchTheUserRow_SkipsTheUpgradeAndWritesNothing(
         Guid organizationId,
         Guid organizationUserId,
         string accountRecoveryKey,
@@ -112,24 +103,22 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ApplyAsync(organizationId, updates));
+        await sutProvider.Sut.ApplyAsync(organizationId, updates);
 
         // Assert
-        Assert.Equal(ApplyOrganizationUserV2UpgradesCommand.StaleUpgradeErrorMessage, exception.Message);
         await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             default, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ApplyAsync_MembershipHasNoPendingUpgrade_ThrowsAndWritesNothing(
+    public async Task ApplyAsync_MembershipHasNoPendingUpgrade_SkipsTheUpgradeAndWritesNothing(
         Guid organizationId,
         Guid organizationUserId,
         string accountRecoveryKey,
         SutProvider<ApplyOrganizationUserV2UpgradesCommand> sutProvider)
     {
-        // Arrange - covers an unknown id, an id from another organization, and a membership with no token. None
-        // of these appear in the pending set.
+        // Arrange - covers an unknown id, an id from another organization, a membership with no token, and an
+        // upgrade another admin completed first. None of these appear in the pending set.
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
         repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
             .Returns(PendingUpgrades());
@@ -137,24 +126,22 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ApplyAsync(organizationId, updates));
+        await sutProvider.Sut.ApplyAsync(organizationId, updates);
 
         // Assert
-        Assert.Equal(ApplyOrganizationUserV2UpgradesCommand.StaleUpgradeErrorMessage, exception.Message);
         await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
             default, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ApplyAsync_OneOfTwoMembershipsIsStale_ThrowsAndWritesNeither(
+    public async Task ApplyAsync_OneOfTwoMembershipsIsStale_WritesTheOtherOne(
         Guid organizationId,
         Guid freshOrganizationUserId,
         Guid staleOrganizationUserId,
         string accountRecoveryKey,
         SutProvider<ApplyOrganizationUserV2UpgradesCommand> sutProvider)
     {
-        // Arrange
+        // Arrange - a stale membership must not hold back the memberships that can still be upgraded
         var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
         repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
             .Returns(PendingUpgrades(
@@ -168,38 +155,14 @@ public class ApplyOrganizationUserV2UpgradesCommandTests
         };
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ApplyAsync(organizationId, updates));
+        await sutProvider.Sut.ApplyAsync(organizationId, updates);
 
         // Assert
-        Assert.Equal(ApplyOrganizationUserV2UpgradesCommand.StaleUpgradeErrorMessage, exception.Message);
-        await repository.DidNotReceiveWithAnyArgs().UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-            default, default!);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ApplyAsync_RepositoryWritesFewerRowsThanRequested_Throws(
-        Guid organizationId,
-        Guid organizationUserId,
-        string accountRecoveryKey,
-        SutProvider<ApplyOrganizationUserV2UpgradesCommand> sutProvider)
-    {
-        // Arrange - the member rotated between the validation read and the write, so the repository rolls back
-        var repository = sutProvider.GetDependency<IOrganizationUserKeyRepository>();
-        repository.GetManyPendingV2UpgradesByOrganizationIdAsync(organizationId)
-            .Returns(PendingUpgrades((organizationUserId, UserKeyId)));
-        repository.UpdateManyV2UpgradedAccountRecoveryKeysAsync(
-                organizationId, Arg.Any<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>())
-            .Returns(0);
-
-        var updates = new[] { Update(organizationUserId, UserKeyId, accountRecoveryKey) };
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.ApplyAsync(organizationId, updates));
-
-        // Assert
-        Assert.Equal(ApplyOrganizationUserV2UpgradesCommand.StaleUpgradeErrorMessage, exception.Message);
+        await repository.Received(1).UpdateManyV2UpgradedAccountRecoveryKeysAsync(
+            organizationId,
+            Arg.Is<IEnumerable<OrganizationUserAccountRecoveryKeyUpdate>>(written =>
+                written.Count() == 1
+                && written.Single().OrganizationUserId == freshOrganizationUserId));
     }
 
     [Theory, BitAutoData]

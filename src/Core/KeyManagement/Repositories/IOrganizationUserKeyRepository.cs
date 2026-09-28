@@ -19,11 +19,10 @@ public interface IOrganizationUserKeyRepository
     /// with a null key clears the account recovery key too, which unenrolls the member.
     /// </summary>
     /// <remarks>
-    /// Every row is written, or none of them are. A row is written only when it belongs to the organization, still
-    /// has a V2 upgrade token, and its user row still holds the key id given in the update. If any row fails these
-    /// conditions, nothing is written and the result is 0.
+    /// A row is written only when it belongs to the organization, still has a V2 upgrade token, and its user row
+    /// still holds the key id given in the update. A row that fails these conditions is skipped, and the rest are
+    /// still written.
     /// </remarks>
-    /// <returns>The number of rows written.</returns>
-    Task<int> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+    Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
         IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates);
 }

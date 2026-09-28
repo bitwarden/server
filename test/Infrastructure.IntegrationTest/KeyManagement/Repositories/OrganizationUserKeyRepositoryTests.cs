@@ -109,12 +109,10 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(1, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Null(written.V2UpgradeToken);
@@ -133,12 +131,10 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)]);
 
         // Assert
-        Assert.Equal(1, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Null(written!.ResetPasswordKey);
         Assert.Null(written.V2UpgradeToken);
@@ -157,12 +153,10 @@ public class OrganizationUserKeyRepositoryTests
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
@@ -181,25 +175,23 @@ public class OrganizationUserKeyRepositoryTests
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
     }
 
     [Theory, DatabaseData]
-    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_OneOfTwoKeyIdsIsStale_WritesNeither(
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_OneOfTwoKeyIdsIsStale_WritesTheOtherRow(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationUserKeyRepository sut)
     {
-        // Arrange - one stale row must leave the other row unchanged
+        // Arrange - one stale row must not hold back the row that can still be upgraded
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var (_, fresh) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
@@ -207,15 +199,13 @@ public class OrganizationUserKeyRepositoryTests
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(fresh.Id, _userKeyId), Update(stale.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var writtenFresh = await organizationUserRepository.GetByIdAsync(fresh.Id);
-        Assert.Equal(_v1AccountRecoveryKey, writtenFresh!.ResetPasswordKey);
-        Assert.Equal(_v2UpgradeToken, writtenFresh.V2UpgradeToken);
+        Assert.Equal(_v2AccountRecoveryKey, writtenFresh!.ResetPasswordKey);
+        Assert.Null(writtenFresh.V2UpgradeToken);
 
         var writtenStale = await organizationUserRepository.GetByIdAsync(stale.Id);
         Assert.Equal(_v1AccountRecoveryKey, writtenStale!.ResetPasswordKey);
@@ -236,12 +226,10 @@ public class OrganizationUserKeyRepositoryTests
             otherOrganization, _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
@@ -260,38 +248,34 @@ public class OrganizationUserKeyRepositoryTests
             _userKeyId, _v1AccountRecoveryKey, v2UpgradeToken: null);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
     }
 
     [Theory, DatabaseData]
-    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_SameMembershipTwice_WritesNothing(
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_SameMembershipTwice_WritesTheKeyOnce(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationUserKeyRepository sut)
     {
-        // Arrange - two updates for one membership would make the outcome depend on write order
+        // Arrange - the request model rejects a repeated membership, so the repository only has to stay graceful
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var (_, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        var updatedCount = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
             [Update(organizationUser.Id, _userKeyId), Update(organizationUser.Id, _userKeyId)]);
 
         // Assert
-        Assert.Equal(0, updatedCount);
-
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
-        Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
-        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+        Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
+        Assert.Null(written.V2UpgradeToken);
     }
 
     private static OrganizationUserAccountRecoveryKeyUpdate Update(Guid organizationUserId, string userKeyId,

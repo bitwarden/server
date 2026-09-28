@@ -35,13 +35,12 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
         return results.ToList();
     }
 
-    public async Task<int> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
         IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
     {
         await using var connection = new SqlConnection(_connectionString);
 
-        // The procedure owns the transaction. It rolls back and returns 0 unless every row is written.
-        return await connection.ExecuteScalarAsync<int>(
+        await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_UpdateManyV2UpgradedAccountRecoveryKeys]",
             new
             {
