@@ -21,6 +21,7 @@ public class RequestLeaseExtensionCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 12, 12, 0, 0, DateTimeKind.Utc);
     private const int _maxExtensionDurationSeconds = 4 * 60 * 60;
+    private const string _requesterIp = "10.1.2.3";
 
     /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
@@ -232,6 +233,57 @@ public class RequestLeaseExtensionCommandTests
             .CreateApprovedExtensionAsync(default!, default!, default, default);
     }
 
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_IpAllowlistStillAdmitsCaller_Extends(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupRuleConditions(sutProvider, lease, new HumanApprovalCondition(),
+            new IpAllowlistCondition { Cidrs = ["10.0.0.0/8"] });
+
+        var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        Assert.Equal(AccessRequestStatus.Approved, result.Status);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_IpAllowlistNoLongerAdmitsCaller_ThrowsBadRequestWithoutWriting(AccessLease lease)
+    {
+        // The holder activated from an allowed network and has since left it.
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupRuleConditions(sutProvider, lease, new HumanApprovalCondition(),
+            new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        Assert.Contains("current network", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RuleConditionsUnreadable_ThrowsBadRequestWithoutWriting(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        // Unreadable conditions get the fail-safe approval gate; ConditionsUnreadable marks it.
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId, RequiresHumanApproval: true,
+                [new HumanApprovalCondition()])
+            {
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
+                ConditionsUnreadable = true,
+            });
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id)));
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateApprovedExtensionAsync(default!, default!, default, default);
+    }
+
     [Theory]
     [BitAutoData("")]
     [BitAutoData("   ")]
@@ -363,7 +415,11 @@ public class RequestLeaseExtensionCommandTests
 
     private static SutProvider<RequestLeaseExtensionCommand> Setup()
     {
-        var sutProvider = new SutProvider<RequestLeaseExtensionCommand>().WithFakeTimeProvider().Create();
+        var sutProvider = new SutProvider<RequestLeaseExtensionCommand>()
+            .WithFakeTimeProvider()
+            // Real engine, not a stub: these tests exercise actual IP allowlist evaluation.
+            .SetDependency<IAccessRuleEngine>(new AccessRuleEngine())
+            .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         return sutProvider;
     }
@@ -378,6 +434,7 @@ public class RequestLeaseExtensionCommandTests
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         // Licensed by default; the licensing test overrides it.
         sutProvider.GetDependency<ICurrentContext>().AccessPam(lease.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(_requesterIp);
 
         // A human-approval rule still yields automatic extensions — the approval gate never applies to extensions.
         sutProvider.GetDependency<IGoverningRuleResolver>()
@@ -392,6 +449,19 @@ public class RequestLeaseExtensionCommandTests
 
         sutProvider.GetDependency<IAccessRequestRepository>().CountExtensionsByLeaseIdAsync(lease.Id).Returns(0);
         SetupOutcome(sutProvider, AccessLeaseExtendOutcome.Extended);
+    }
+
+    private static void SetupRuleConditions(
+        SutProvider<RequestLeaseExtensionCommand> sutProvider, AccessLease lease, params AccessCondition[] conditions)
+    {
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(lease.RequesterId, lease.CipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(lease.OrganizationId, lease.CollectionId,
+                conditions.Any(c => c is HumanApprovalCondition), conditions)
+            {
+                AllowsExtensions = true,
+                MaxExtensionDurationSeconds = _maxExtensionDurationSeconds,
+            });
     }
 
     // The rule the lease was granted under, reached through the request that birthed it.

@@ -22,6 +22,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IGoverningRuleResolver _resolver;
+    private readonly IAccessRuleEngine _ruleEngine;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
@@ -29,12 +30,14 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     public RequestLeaseExtensionCommand(
         IAccessLeaseRepository accessLeaseRepository,
         IGoverningRuleResolver resolver,
+        IAccessRuleEngine ruleEngine,
         IAccessRequestRepository accessRequestRepository,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _resolver = resolver;
+        _ruleEngine = ruleEngine;
         _accessRequestRepository = accessRequestRepository;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
@@ -56,12 +59,11 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // No pre-check that the lease is still live: that question is settled under the per-lease lock in
-        // CreateApprovedExtensionAsync, which records a denied request rather than refusing the call.
+        // Liveness is decided under the per-lease lock in CreateApprovedExtensionAsync; an ended lease yields a
+        // denied request.
 
-        // The rule the lease was granted under, not whichever governs the cipher today: re-deriving lets an
-        // ungoverned path refuse the extension outright, and a newer rule take over its cap. The approval gate
-        // never applies: extensions are auto-approved, gated only by the rule opting in and the per-lease maximum.
+        // Extensions are judged against the rule the lease was granted under (falling back to the current rule when
+        // none was recorded) and are auto-approved, subject to the rule's extension settings and automated conditions.
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
         var originatingRequest = await _accessRequestRepository.GetByIdAsync(lease.AccessRequestId);
         var pinnedRuleId = originatingRequest?.RuleId;
@@ -95,6 +97,13 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         if (string.IsNullOrWhiteSpace(submission.Reason))
         {
             throw new BadRequestException("A justification is required to extend a lease.");
+        }
+
+        // Automated conditions (e.g. an IP allowlist) must still hold at extension, as they do at activation.
+        var denial = FindConditionDenial(governingRule, signals);
+        if (denial is not null)
+        {
+            throw new BadRequestException(AccessDenialMessage.For(denial));
         }
 
         // A lease may be extended once. Friendly early check; the mint proc re-counts under a per-lease lock
@@ -150,6 +159,26 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
         // countdown.
         return Project(request, AccessRequestAction.Approved, AccessDecisionVerdict.Approve, comment: null, now);
+    }
+
+    /// <summary>
+    /// Evaluates the governing rule's automated conditions against the caller's signals, with the approval gate
+    /// stripped.
+    /// </summary>
+    private AccessEvaluation? FindConditionDenial(GoverningRule governingRule, AccessSignals signals)
+    {
+        if (governingRule.ConditionsUnreadable)
+        {
+            return AccessEvaluation.Deny(DenyReason.UnsupportedCondition);
+        }
+
+        var evaluation = _ruleEngine.Evaluate(governingRule.AutomatedConditions, signals);
+        return evaluation.Outcome switch
+        {
+            AccessEvaluationOutcome.Allow => null,
+            AccessEvaluationOutcome.RequiresApproval => AccessEvaluation.Deny(DenyReason.UnsupportedCondition),
+            _ => evaluation,
+        };
     }
 
     /// <summary>
