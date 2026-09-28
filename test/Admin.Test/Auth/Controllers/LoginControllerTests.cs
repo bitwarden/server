@@ -225,6 +225,68 @@ public class LoginControllerTests
     }
 
     [Fact]
+    public async Task SsoSignIn_AcceptsSignIn_WhenEmailVerifiedMissingAndNotRequired()
+    {
+        // Verifies the security-weakening branch of IsEmailVerified: with
+        // RequireEmailVerifiedClaim=false, an absent email_verified claim is allowed.
+        // This is the only path where an operator flag reduces posture; pin the contract.
+        var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager,
+            requireEmailVerified: false);
+        var authService = AttachAuthenticationServices(controller);
+        var user = new IdentityUser { Email = "you@example.com" };
+        StubExternalPrincipal(authService, new Claim("email", "you@example.com"));
+        userManager.FindByEmailAsync("you@example.com").Returns(user);
+
+        var result = await controller.SsoSignIn();
+
+        Assert.IsType<RedirectToActionResult>(result);
+        await signInManager.Received(1).SignInWithClaimsAsync(
+            user, Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
+    }
+
+    [Fact]
+    public async Task SsoSignIn_RejectsSignIn_WhenEmailVerifiedFalse_EvenWhenNotRequired()
+    {
+        // Fail-secure: RequireEmailVerifiedClaim=false relaxes only the *absent* case.
+        // A claim present with value "false" (or any non-true) still rejects.
+        var controller = BuildController(oidcEnabled: true, out var signInManager, out _,
+            requireEmailVerified: false);
+        var authService = AttachAuthenticationServices(controller);
+        StubExternalPrincipal(authService,
+            new Claim("email", "you@example.com"),
+            new Claim("email_verified", "false"));
+
+        var result = await controller.SsoSignIn();
+
+        var redirect = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal(5, redirect.RouteValues!["error"]);
+        await signInManager.DidNotReceive().SignInWithClaimsAsync(
+            Arg.Any<IdentityUser>(), Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
+    }
+
+    [Fact]
+    public async Task IndexPost_ReturnsNotFound_WhenPasswordlessDisabled()
+    {
+        var controller = BuildController(oidcEnabled: true, out _, out _,
+            enablePasswordlessLogin: false);
+
+        var result = await controller.Index(new LoginModel { Email = "you@example.com" });
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Confirm_ReturnsNotFound_WhenPasswordlessDisabled()
+    {
+        var controller = BuildController(oidcEnabled: true, out _, out _,
+            enablePasswordlessLogin: false);
+
+        var result = await controller.Confirm("you@example.com", "token", returnUrl: null);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
     public async Task SsoSignIn_RedirectsError5_WhenEmailNotOnAllowlist()
     {
         var controller = BuildController(oidcEnabled: true, out var signInManager, out var userManager);
@@ -343,16 +405,19 @@ public class LoginControllerTests
     private static LoginController BuildController(
         bool oidcEnabled,
         out PasswordlessSignInManager<IdentityUser> signInManager,
-        out UserManager<IdentityUser> userManager)
+        out UserManager<IdentityUser> userManager,
+        bool requireEmailVerified = true,
+        bool enablePasswordlessLogin = true)
     {
-        var settings = new AdminSettings();
+        var settings = new AdminSettings { EnablePasswordlessLogin = enablePasswordlessLogin };
         if (oidcEnabled)
         {
             settings.Oidc = new AdminSettings.OidcSettings
             {
                 Authority = "https://idp.example.com",
                 ClientId = "admin-portal",
-                ClientSecret = "supersecret"
+                ClientSecret = "supersecret",
+                RequireEmailVerifiedClaim = requireEmailVerified,
             };
         }
         else
