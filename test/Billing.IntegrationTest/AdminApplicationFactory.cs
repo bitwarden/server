@@ -36,6 +36,11 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
                     // Dapper (which would talk to the user-secret's real SqlServer instead of the
                     // SQLite-backed DbContext the ITestDatabase registers).
                     ["globalSettings:databaseProvider"] = "sqlite",
+
+                    // Register the admin the tests sign in as. Without this the ReadOnlyEnvIdentityUserStore
+                    // has no admins to resolve, sign-in fails silently, and no passwordless email is sent.
+                    // Local runs pick this up from dev/secrets.json, but CI has no such secrets.
+                    ["adminSettings:admins"] = "admin@localhost",
                 };
                 testDatabase.ModifyGlobalSettings(configValues);
                 config.AddInMemoryCollection(configValues);
