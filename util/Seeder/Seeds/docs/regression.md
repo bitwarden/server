@@ -8,12 +8,13 @@ Unit tests cover none of the CLI, the API, or a real database. Use this whenever
 
 Compose services (`dev/docker-compose.yml`) — container names vary by compose project.
 
-| Service                 | Needed for                                                             |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `mssql`                 | Everything                                                             |
-| `storage` (Azurite)     | Attachment presets                                                     |
-| `idp` (`--profile idp`) | `features.local-sso` — cert is fetched from live metadata              |
-| SeederApi on `:5047`    | Scene tests. Basic auth from `seederSettings:accounts` in user-secrets |
+| Service                       | Needed for                                                             |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `mssql`                       | Everything                                                             |
+| `storage` (Azurite)           | Attachment presets                                                     |
+| `idp` (`--profile idp`)       | `features.local-sso` — cert is fetched from live metadata              |
+| SeederApi on `:5047`          | Scene tests. Basic auth from `seederSettings:accounts` in user-secrets |
+| SeederApi-SelfHost on `:5048` | Self-hosted scenes. `--launch-profile SeederApi-SelfHost`              |
 
 Attachment and IdP steps throw rather than degrade, so a green seed means they worked.
 
@@ -32,7 +33,7 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run -- preset --name <name> --mangle
 | --------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `UserSeeder` premium/billing      | `individual.premium`                                                         | `Premium=1`, expiry ≈ +365d, `MaxStorageGb` set                                                                                                                                    |
 | `GenerateSelfHostUserLicenseStep` license write | `individual --self-hosted --subscription premium` (CLI) with a trusted licensing cert configured | `{LicenseDirectory}/user/{userId}.json` exists and its `token` is an RS256 JWT with issuer `bitwarden`, audience `user:{userId}`. With no trusted cert, no file is written and a warning is logged |
-| `SingleUserScene` license write | `POST :5047/seed` with `SingleUserScene`, `selfHosted: true`, `premium: true` | Response `result.premiumLicenseWritten` is `true` and `{LicenseDirectory}/user/{userId}.json` exists. With no trusted cert, `premiumLicenseWritten` is `false` and `premiumLicenseWarning` explains why |
+| `SingleUserScene` license write | `POST :5048/seed` with `SingleUserScene`, `selfHosted: true`, `premium: true` | Response `result.premiumLicenseWritten` is `true` and `{LicenseDirectory}/user/{userId}.json` exists. With no trusted cert, `premiumLicenseWritten` is `false` and `premiumLicenseWarning` explains why. The same request to `:5047` (cloud mode) returns HTTP 400 and persists no `User` row |
 | `UserSeeder` other fields         | `individual.free`                                                            | `Culture='en-US'`, `Premium=0`, expiry NULL                                                                                                                                        |
 | Password plumbing                 | any preset `--password X`                                                    | **Developer logs in with X.** SQL can't help — key derivation and stored hash are both opaque; only a login proves they agree                                                      |
 | `CreateRosterStep`                | `qa.dunder-mifflin-enterprise-full`                                          | `User.Name` is "First Last", never the mangled email local part                                                                                                                    |
