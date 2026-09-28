@@ -297,6 +297,25 @@ public class GetOrganizationPlanChangePreviewQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => _sut.Run(organization, planChange));
     }
 
+    [Fact]
+    public async Task Run_StripeRejectsTaxLocation_ThrowsBadRequest()
+    {
+        var organization = new Organization
+        {
+            Id = Guid.NewGuid(),
+            PlanType = PlanType.Free,
+            Seats = 5
+        };
+        var planChange = new OrganizationPlanChange { Tier = PlanTierType.Teams, Cadence = PlanCadenceType.Annually, Country = "ZZ", PostalCode = "00000" };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns<InvoicePreview>(_ => throw new StripeException { StripeError = new StripeError { Code = StripeConstants.ErrorCodes.CustomerTaxLocationInvalid } });
+
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Run(organization, planChange));
+    }
+
     private static void AssertSwap(List<InvoiceSubscriptionDetailsItemOptions> items, string id, string price, long quantity)
     {
         var item = Assert.Single(items, candidate => candidate.Id == id);

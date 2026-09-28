@@ -60,7 +60,16 @@ public class GetOrganizationPlanChangePreviewQuery(
         options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
         options.CustomerDetails = new InvoiceCustomerDetailsOptions { Address = billingAddress };
 
-        return await invoicePreviewService.GetInvoicePreviewAsync(options, planChange.Tier, planChange.Cadence);
+        try
+        {
+            return await invoicePreviewService.GetInvoicePreviewAsync(options, planChange.Tier, planChange.Cadence);
+        }
+        catch (StripeException stripeException)
+            when (stripeException.StripeError?.Code == ErrorCodes.CustomerTaxLocationInvalid)
+        {
+            throw new BadRequestException(
+                "Your location wasn't recognized. Please ensure your country and postal code are valid and try again.");
+        }
     }
 
 
