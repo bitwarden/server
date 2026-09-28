@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
@@ -50,12 +50,12 @@ public class GetOrganizationPlanChangePreviewQuery(
                 HasSubscription: !string.IsNullOrEmpty(organization.GatewaySubscriptionId),
                 IsFreeOrganization: organization.PlanType == PlanType.Free)
             switch
-            {
-                { HasSubscription: true } => await BuildPlanChangeOptionsAsync(organization, newPlan),
-                { IsFreeOrganization: true } => await BuildPurchaseOptionsAsync(organization, newPlan),
-                _ => throw new BadRequestException(
-                    "Your organization has no subscription to preview a plan change against. Please contact support for assistance.")
-            };
+        {
+            { HasSubscription: true } => await BuildPlanChangeOptionsAsync(organization, newPlan),
+            { IsFreeOrganization: true } => await BuildPurchaseOptionsAsync(organization, newPlan),
+            _ => throw new BadRequestException(
+                "Your organization has no subscription to preview a plan change against. Please contact support for assistance.")
+        };
 
         options.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
         options.CustomerDetails = new InvoiceCustomerDetailsOptions { Address = billingAddress };
@@ -93,7 +93,8 @@ public class GetOrganizationPlanChangePreviewQuery(
             Subscription = organization.GatewaySubscriptionId,
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
-                Items = items, ProrationBehavior = ProrationBehavior.AlwaysInvoice
+                Items = items,
+                ProrationBehavior = ProrationBehavior.AlwaysInvoice
             }
         };
     }
@@ -121,7 +122,8 @@ public class GetOrganizationPlanChangePreviewQuery(
         {
             items.Add(new InvoiceSubscriptionDetailsItemOptions
             {
-                Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = organization.SmSeats ?? 0
+                Price = newPlan.SecretsManager.StripeSeatPlanId,
+                Quantity = organization.SmSeats ?? 0
             });
         }
 

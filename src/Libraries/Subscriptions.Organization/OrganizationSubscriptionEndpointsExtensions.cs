@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
