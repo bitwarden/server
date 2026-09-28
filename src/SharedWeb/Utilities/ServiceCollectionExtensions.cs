@@ -286,7 +286,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient();
 
         services.AddSingleton<Stripe.SubscriptionScheduleService>();
-        services.AddSingleton<StripeSubscriptionScheduleAdapter>();
+        services.AddSingleton<IStripeSubscriptionScheduleAdapter, StripeSubscriptionScheduleAdapter>();
         services.AddSingleton<IStripeAdapter, StripeAdapter>();
         services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>
         {

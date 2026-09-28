@@ -35,9 +35,9 @@ public class StripeAdapter : IStripeAdapter
     private readonly ProductService _productService;
     private readonly BillingPortalSessionService _billingPortalSessionService;
     private readonly CheckoutSessionService _checkoutSessionsService;
-    private readonly StripeSubscriptionScheduleAdapter _subscriptionScheduleAdapter;
+    private readonly IStripeSubscriptionScheduleAdapter _subscriptionScheduleAdapter;
 
-    public StripeAdapter(StripeSubscriptionScheduleAdapter subscriptionScheduleAdapter)
+    public StripeAdapter(IStripeSubscriptionScheduleAdapter subscriptionScheduleAdapter)
     {
         _customerService = new CustomerService();
         _subscriptionService = new SubscriptionService();
