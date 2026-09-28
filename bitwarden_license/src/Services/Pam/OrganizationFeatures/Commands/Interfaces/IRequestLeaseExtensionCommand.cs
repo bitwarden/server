@@ -5,19 +5,17 @@ namespace Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 public interface IRequestLeaseExtensionCommand
 {
     /// <summary>
-    /// Extends the caller's active lease by the requested duration, subject to the governing rule's
-    /// <c>AllowsExtensions</c> / <c>MaxExtensionDurationSeconds</c> settings. The lease's end is pushed out in
-    /// place; no new lease is minted. Only the lease's requester may extend it.
+    /// Pushes the caller's lease end out in place, auto-approved under the rule the lease was granted under.
     /// </summary>
+    /// <remarks>
+    /// A lease that ends before the extension applies resolves the request Denied rather than throwing.
+    /// </remarks>
     /// <exception cref="Bit.Core.Exceptions.NotFoundException">
     /// The lease does not exist or the caller is not its requester.
     /// </exception>
-    /// <exception cref="Bit.Core.Exceptions.ConflictException">
-    /// The lease is no longer active (revoked or expired).
-    /// </exception>
     /// <exception cref="Bit.Core.Exceptions.BadRequestException">
-    /// The item is not lease-gated or does not allow extensions, the lease has already been extended, the duration is
-    /// non-positive or exceeds the maximum extension length, or no justification was supplied.
+    /// The item is not lease-gated, its rule is inactive or disallows extensions, the duration is out of range, no
+    /// justification was supplied, the lease was already extended, or the rule's automated conditions deny the caller.
     /// </exception>
     Task<AccessRequestDetails> ExtendAsync(Guid userId, AccessLeaseExtensionSubmission submission);
 }
