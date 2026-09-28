@@ -182,9 +182,7 @@ public static class ServiceCollectionExtensions
                 options.TokenValidationParameters.RequireSignedTokens = true;
                 options.TokenValidationParameters.RequireExpirationTime = true;
                 // Tighter than the 5-minute default; still permissive enough to survive typical
-                // IdP/app clock drift. Reduces the window for expired-token replay. Sourced
-                // from the shared constant so this tolerance can't drift apart from the
-                // auth_time enforcement in LoginController.
+                // IdP/app clock drift. Reduces the window for expired-token replay.
                 options.TokenValidationParameters.ClockSkew =
                     TimeSpan.FromSeconds(AdminSettings.OidcSettings.ClockSkewSeconds);
 
@@ -194,6 +192,15 @@ public static class ServiceCollectionExtensions
                 // shouldn't grant admin access silently. Guarantees auth_time on the returned
                 // ID token is effectively "now", so we don't also need max_age.
                 options.AdditionalAuthorizationParameters.Add("prompt", "login");
+
+                // Pin the OIDC helper cookies explicitly (default is SameSite=None, which the
+                // framework requires for the redirect-back cross-site POST). SecurePolicy is
+                // safe as Always because the OIDC handler is only registered when OidcEnabled
+                // is true, and RequireHttpsMetadata above already refuses to run over http://.
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.NonceCookie.SameSite = SameSiteMode.None;
+                options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                 // Attach id_token_hint from the sign-out AuthenticationProperties. Logout
                 // reads the id_token from the app cookie up-front (before SignOutAsync) and

@@ -183,6 +183,11 @@ public class LoginController : Controller
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
 
+        // Direct SignInWithClaimsAsync bypasses PreSignInCheck/CanSignInAsync that the
+        // passwordless path goes through via PasswordlessSignInAsync. Deliberate: impact is
+        // nil against ReadOnlyEnvIdentityUserStore (no lockout, always confirmed), and the
+        // OIDC handler + email_verified + allowlist checks above are the authorization gate
+        // for the SSO path.
         await _signInManager.SignInWithClaimsAsync(user, props, Array.Empty<Claim>());
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
