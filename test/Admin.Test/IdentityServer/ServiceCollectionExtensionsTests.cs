@@ -1,4 +1,4 @@
-using Bit.Admin;
+﻿using Bit.Admin;
 using Bit.Admin.IdentityServer;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
