@@ -7,6 +7,7 @@ using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Enums;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
@@ -20,6 +21,26 @@ public class CipherLeaseEndpointsHandlerTests
 {
     private static readonly ClaimsPrincipal _user = new();
     private static readonly DateTime _now = new(2026, 9, 25, 12, 0, 0, DateTimeKind.Utc);
+
+    [Theory, BitAutoData]
+    public async Task State_ReturnsSnapshotFromQuery(
+        Guid id, Guid userId, Bit.Pam.Entities.AccessLease activeLease, SutProvider<CipherLeaseEndpointsHandler> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(userId);
+        sutProvider.GetDependency<IGetCipherAccessStateQuery>()
+            .GetStateAsync(userId, id)
+            .Returns(new Bit.Services.Pam.Models.CipherAccessState(id, DateTime.UtcNow, activeLease, null, null));
+
+        var result = await sutProvider.Sut.State(_user, id);
+
+        Assert.Equal(id, result.CipherId);
+        Assert.NotNull(result.ActiveLease);
+        Assert.Equal(activeLease.Id, result.ActiveLease!.Id);
+        Assert.Null(result.PendingRequest);
+        Assert.Null(result.ApprovedRequest);
+    }
 
     [Theory, BitAutoData]
     public async Task Post_SubmitsForTheCallerAndProjectsTheResult(Guid id, Guid userId, AccessRequest request)
