@@ -35,10 +35,8 @@ public class PreAccessEnforcerQuery(
             return new PreAccessPolicyEnforcer(emptyPolicies, [], factories);
         }
 
-        // Matches the IsProvider calculation used by general policy enforcement: any provider user of a provider
-        // that manages the organization, regardless of status.
         var providerUserIds = (await providerUserRepository.GetManyByOrganizationAsync(organizationId))
-            .Where(providerUser => providerUser.UserId.HasValue)
+            .Where(providerUser => providerUser.UserId.HasValue && providerUser.Status is ProviderStatusType.Accepted or ProviderStatusType.Confirmed)
             .Select(providerUser => providerUser.UserId!.Value);
 
         return new PreAccessPolicyEnforcer(enabledPolicies, providerUserIds, factories);
