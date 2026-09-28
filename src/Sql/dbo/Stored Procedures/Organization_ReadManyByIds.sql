@@ -61,7 +61,9 @@ BEGIN
            o.[AllowAdminAccessToAllCollectionItems],
            o.[UseRiskInsights],
            o.[UseInviteLinks],
-           o.[UsePam]
+           o.[UsePam],
+           o.[PamSeats],
+           o.[MaxAutoscalePamSeats]
     FROM [dbo].[OrganizationView] o
     INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 

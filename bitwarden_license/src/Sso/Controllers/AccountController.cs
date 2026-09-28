@@ -57,7 +57,6 @@ public class AccountController : Controller
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public AccountController(
@@ -80,7 +79,6 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
     {
         _schemeProvider = schemeProvider;
@@ -102,7 +100,6 @@ public class AccountController : Controller
         _dataProtector = dataProtector;
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
-        _featureService = featureService;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
@@ -646,8 +643,7 @@ public class AccountController : Controller
                     guaranteedExistingUser.Email);
             }
 
-            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged
-                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            if (guaranteedOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 await PromoteStagedOrgUserAndSendInviteAsync(guaranteedOrgUser, organization);
 
@@ -680,8 +676,7 @@ public class AccountController : Controller
         // new BW User row + fire its welcome email for an SSO login that
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
-        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged
-                                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus);
+        var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
@@ -759,8 +754,7 @@ public class AccountController : Controller
         else
         {
 
-            if (possibleOrgUser.Status == OrganizationUserStatusType.Staged
-                && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+            if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
                 // Seat availability was verified up-front before user creation so safe to consume this seat.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;

@@ -48,6 +48,7 @@ public class Startup
         services.TryAddSingleton<IMailService, NoopMailService>();
         services.AddPush(globalSettings);
         services.TryAddSingleton<ILicensingService, LicensingService>();
+        services.TryAddSingleton<Func<ILicensingService>>(sp => sp.GetRequiredService<ILicensingService>);
 
         services.AddSeederApiServices();
         services.AddScenes();
