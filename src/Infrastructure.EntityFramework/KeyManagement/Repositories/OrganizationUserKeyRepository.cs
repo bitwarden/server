@@ -66,12 +66,14 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
             }
         }
 
-        // Bump the account revision date of the members whose row was updated.
+        // Bump the account revision date of the members whose row was updated. The date comes from the server, not
+        // from the database.
+        var revisionDate = DateTime.UtcNow;
         await dbContext.Users
             .Where(user => dbContext.OrganizationUsers
                 .Any(organizationUser => writtenIds.Contains(organizationUser.Id)
                     && organizationUser.UserId == user.Id))
             .ExecuteUpdateAsync(setters =>
-                setters.SetProperty(user => user.AccountRevisionDate, DateTime.UtcNow));
+                setters.SetProperty(user => user.AccountRevisionDate, revisionDate));
     }
 }
