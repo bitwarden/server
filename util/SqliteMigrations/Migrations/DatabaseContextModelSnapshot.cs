@@ -230,6 +230,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 
@@ -252,6 +255,9 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2494,6 +2500,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid>("CipherId")
                         .HasColumnType("TEXT");
 
@@ -2521,9 +2530,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2531,13 +2537,14 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Status");
+                    b.HasIndex("CollectionId", "Action");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("NotAfter", "Action");
 
-                    b.HasIndex("NotAfter", "Status");
+                    b.HasIndex("CipherId", "Action", "NotAfter")
+                        .IsDescending(false, false, true);
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2545,6 +2552,12 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessRequest", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ActionDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("CipherId")
@@ -2574,14 +2587,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("TEXT");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -2589,11 +2596,15 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("CollectionId", "CreationDate");
 
-                    b.HasIndex("OrganizationId", "Status");
+                    b.HasIndex("OrganizationId", "Action");
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CreationDate");
+
+                    b.HasIndex("CollectionId", "Action", "NotAfter");
+
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessRequest", (string)null);
                 });

@@ -1,8 +1,12 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
 using Bit.ExceptionHandling;
 using Bit.Invoicing;
+using Bit.Subscriptions.User.Handlers;
+using Bit.Subscriptions.User.Models.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Subscriptions.User;
@@ -19,6 +23,26 @@ public static class UserSubscriptionEndpointsExtensions
         group.RequireAuthorization(Policies.Application);
         group.WithBasicExceptionHandling();
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
+
+        group.AddEndpointFilter(async (context, next) =>
+        {
+            context.HttpContext.Response.Headers.CacheControl = "no-store";
+            return await next(context);
+        });
+
+        group.MapGet("upgrade/preview",
+                async (ClaimsPrincipal principal, [AsParameters] GetSubscriptionUpgradePreviewRequest request,
+                       [FromServices] GetAccountSubscriptionUpgradePreviewHandler handler) =>
+                    await handler.HandleAsync(principal, request))
+            .WithName("GetAccountSubscriptionUpgradePreview")
+            .WithDescription("Previews the invoice for upgrading the user's Premium subscription to an organization plan.");
+
+        group.MapGet("preview",
+                async (ClaimsPrincipal principal, [FromServices] GetAccountSubscriptionPreviewHandler handler) =>
+                    await handler.HandleAsync(principal))
+            .WithName("GetAccountSubscriptionPreview")
+            .WithDescription("Previews the account's upcoming subscription renewal.");
+
         return group;
     }
 }
