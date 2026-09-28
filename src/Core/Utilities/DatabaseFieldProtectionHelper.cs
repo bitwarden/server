@@ -24,15 +24,11 @@ public static class DatabaseFieldProtectionHelper
             return value;
         }
 
-        var unprotected = Unprotect(dataProtector, value);
-        if (!ReferenceEquals(unprotected, value))
-        {
-            return value;
-        }
+        var plaintext = Unprotect(dataProtector, value)!;
 
         try
         {
-            return string.Concat(Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
+            return string.Concat(Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(plaintext));
         }
         catch (CryptographicException ex)
         {

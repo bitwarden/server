@@ -31,7 +31,7 @@ public class DatabaseFieldProtectionHelperTests
     }
 
     [Fact]
-    public void Protect_AlreadyGenuinelyProtectedValue_ReturnsValueUnchanged()
+    public void Protect_AlreadyGenuinelyProtectedValue_RemainsProtectedWithSamePlaintext()
     {
         var dataProtector = CreateDataProtector();
         var alreadyProtected = string.Concat(
@@ -39,7 +39,8 @@ public class DatabaseFieldProtectionHelperTests
 
         var result = DatabaseFieldProtectionHelper.Protect(dataProtector, alreadyProtected);
 
-        Assert.Equal(alreadyProtected, result);
+        Assert.StartsWith(Constants.DatabaseFieldProtectedPrefix, result);
+        Assert.Equal("plaintext-value", DatabaseFieldProtectionHelper.Unprotect(dataProtector, result));
     }
 
     [Fact]
