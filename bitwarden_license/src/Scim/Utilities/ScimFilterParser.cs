@@ -10,42 +10,44 @@ public static class ScimFilterParser
     private static readonly string[] _supportedOperators = { "eq", "ne", "co", "sw" };
 
     /// <summary>
-    /// Parses a SCIM filter string into attribute, operator, and value components.
-    /// Returns false if the filter cannot be parsed.
+    /// Parses a SCIM filter string and returns a predicate that can be used to filter results.
+    /// Returns null if the filter cannot be parsed or the attribute is not in the provided map.
     /// </summary>
-    public static bool Parse(string filter, out string? attribute, out string? op, out string? value)
+    /// <param name="filter">Raw SCIM filter string (e.g., "userName eq \"john\"").</param>
+    /// <param name="attributeSelectors">Map of lowercase attribute names to field selectors.</param>
+    public static Func<T, bool>? TryGetPredicate<T>(
+        string? filter,
+        Dictionary<string, Func<T, string?>> attributeSelectors)
     {
-        attribute = null;
-        op = null;
-        value = null;
-
         if (string.IsNullOrWhiteSpace(filter))
         {
-            return false;
+            return null;
         }
 
         var parts = filter.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 3)
         {
-            return false;
+            return null;
         }
 
         var candidateOp = parts[1].ToLowerInvariant();
         if (!_supportedOperators.Contains(candidateOp))
         {
-            return false;
+            return null;
         }
 
-        attribute = parts[0].ToLowerInvariant();
-        op = candidateOp;
-        value = parts[2].Trim().Trim('"');
-        return true;
+        var attribute = parts[0].ToLowerInvariant();
+        var filterValue = parts[2].Trim().Trim('"');
+
+        if (!attributeSelectors.TryGetValue(attribute, out var selector))
+        {
+            return null;
+        }
+
+        return item => Matches(selector(item), candidateOp, filterValue);
     }
 
-    /// <summary>
-    /// Evaluates whether a field value matches the filter using the given operator.
-    /// </summary>
-    public static bool Matches(string fieldValue, string op, string filterValue)
+    private static bool Matches(string? fieldValue, string op, string filterValue)
     {
         if (fieldValue == null)
         {

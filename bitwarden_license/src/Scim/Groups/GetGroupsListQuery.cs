@@ -29,38 +29,22 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         var groupList = new List<Group>();
         var totalResults = 0;
 
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            if (ScimFilterParser.Parse(filter, out var attribute, out var op, out var value))
+        var predicate = ScimFilterParser.TryGetPredicate<Group>(filter,
+            new Dictionary<string, Func<Group, string>>
             {
-                Func<Group, string> selector = attribute switch
-                {
-                    "displayname" => g => g.Name,
-                    "externalid" => g => g.ExternalId,
-                    _ => null
-                };
+                ["displayname"] = g => g.Name,
+                ["externalid"] = g => g.ExternalId
+            });
 
-                if (selector != null)
-                {
-                    var matches = groups
-                        .Where(g => ScimFilterParser.Matches(selector(g), op, value))
-                        .ToList();
-                    totalResults = matches.Count;
-                    groupList = matches.OrderBy(g => g.Name)
-                        .Skip(startIndex - 1)
-                        .Take(count)
-                        .ToList();
-                }
-            }
-        }
-        else
-        {
-            groupList = groups.OrderBy(g => g.Name)
-                .Skip(startIndex - 1)
-                .Take(count)
-                .ToList();
-            totalResults = groups.Count;
-        }
+        var filtered = predicate != null
+            ? groups.Where(predicate)
+            : groups.AsEnumerable();
+
+        totalResults = filtered.Count();
+        groupList = filtered.OrderBy(g => g.Name)
+            .Skip(startIndex - 1)
+            .Take(count)
+            .ToList();
 
         return (groupList, totalResults);
     }

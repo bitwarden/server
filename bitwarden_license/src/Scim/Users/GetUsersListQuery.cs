@@ -28,38 +28,22 @@ public class GetUsersListQuery : IGetUsersListQuery
         var userList = new List<OrganizationUserUserDetails>();
         var totalResults = 0;
 
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            if (ScimFilterParser.Parse(filter, out var attribute, out var op, out var value))
+        var predicate = ScimFilterParser.TryGetPredicate<OrganizationUserUserDetails>(filter,
+            new Dictionary<string, Func<OrganizationUserUserDetails, string>>
             {
-                Func<OrganizationUserUserDetails, string> selector = attribute switch
-                {
-                    "username" => ou => ou.Email,
-                    "externalid" => ou => ou.ExternalId,
-                    _ => null
-                };
+                ["username"] = ou => ou.Email,
+                ["externalid"] = ou => ou.ExternalId
+            });
 
-                if (selector != null)
-                {
-                    var matches = orgUsers
-                        .Where(ou => ScimFilterParser.Matches(selector(ou), op, value))
-                        .ToList();
-                    totalResults = matches.Count;
-                    userList = matches.OrderBy(ou => ou.Email)
-                        .Skip(startIndex - 1)
-                        .Take(count)
-                        .ToList();
-                }
-            }
-        }
-        else
-        {
-            userList = orgUsers.OrderBy(ou => ou.Email)
-                .Skip(startIndex - 1)
-                .Take(count)
-                .ToList();
-            totalResults = orgUsers.Count;
-        }
+        var filtered = predicate != null
+            ? orgUsers.Where(predicate)
+            : orgUsers.AsEnumerable();
+
+        totalResults = filtered.Count();
+        userList = filtered.OrderBy(ou => ou.Email)
+            .Skip(startIndex - 1)
+            .Take(count)
+            .ToList();
 
         return (userList, totalResults);
     }
