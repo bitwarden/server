@@ -55,7 +55,7 @@ public class AccessRequestActivationRaceTests
             "Activation ran to completion while the request row was held, so it never claimed the row. Without that " +
             "claim its precondition read is an ordinary MVCC read that sees a pre-retraction state and mints anyway.");
 
-        // Settle the retraction the way AccessRequest_Cancel does, and let go.
+        // Settle the retraction the way AccessRequest_UpdateCancelled does, and let go.
         await held.CancelAsync(now);
         await held.CommitAsync();
 
@@ -187,7 +187,7 @@ public class AccessRequestActivationRaceTests
             return held;
         }
 
-        /// <summary>Settles the held request as a requester cancellation, mirroring AccessRequest_Cancel's UPDATE.</summary>
+        /// <summary>Settles the held request as a requester cancellation, mirroring AccessRequest_UpdateCancelled's UPDATE.</summary>
         public Task CancelAsync(DateTime now)
             => ExecuteAsync(
                 $"UPDATE {Table("AccessRequest")} SET {Name("Action")} = 3, {Name("ActionDate")} = @Now " +
