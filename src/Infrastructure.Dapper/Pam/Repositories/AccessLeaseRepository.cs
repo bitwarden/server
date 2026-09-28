@@ -132,7 +132,7 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            $"[{Schema}].[AccessLease_Revoke]",
+            $"[{Schema}].[AccessLease_UpdateRevoked]",
             new
             {
                 AccessLeaseId = lease.Id,
