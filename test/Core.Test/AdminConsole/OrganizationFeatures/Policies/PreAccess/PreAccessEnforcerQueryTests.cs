@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
@@ -59,7 +60,7 @@ public class PreAccessEnforcerQueryTests
 
     [Theory, BitAutoData]
     public async Task RunAsync_EnabledPolicies_ReturnsEnforcerLoadedWithOrganizationState(
-        Guid organizationId, Guid userId, Guid providerUserId)
+        Guid organizationId, Guid userId, Guid providerUserId, Guid acceptedProviderUserId)
     {
         // Arrange
         ArrangeOrganizationAbility(organizationId, enabled: true, usePolicies: true);
@@ -70,8 +71,9 @@ public class PreAccessEnforcerQueryTests
         ]);
         _providerUserRepository.GetManyByOrganizationAsync(organizationId).Returns(
         [
-            new ProviderUser { UserId = providerUserId },
-            new ProviderUser { UserId = null }
+            new ProviderUser { UserId = providerUserId, Status = ProviderUserStatusType.Confirmed },
+            new ProviderUser { UserId = acceptedProviderUserId, Status = ProviderUserStatusType.Accepted },
+            new ProviderUser { UserId = null, Status = ProviderUserStatusType.Invited }
         ]);
 
         // Act
@@ -81,6 +83,7 @@ public class PreAccessEnforcerQueryTests
         Assert.True(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).Enforced);
         Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Owner).Enforced);
         Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).Enforced);
+        Assert.False(enforcer.Evaluate(PolicyType.SingleOrg, acceptedProviderUserId, OrganizationUserType.User).Enforced);
         Assert.False(enforcer.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).Enforced);
         await _policyRepository.Received(1).GetManyByOrganizationIdAsync(organizationId);
         await _providerUserRepository.Received(1).GetManyByOrganizationAsync(organizationId);

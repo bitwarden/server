@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 
@@ -21,24 +20,18 @@ public class PreAccessEnforcerQuery(
         var organizationAbility = await organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)
             ?? throw new PreAccessOrganizationNotFoundException();
 
-        var emptyPolicies = new Dictionary<PolicyType, Policy>();
         if (!organizationAbility.Enabled || !organizationAbility.UsePolicies)
         {
-            return new PreAccessPolicyEnforcer(emptyPolicies, [], factories);
+            return new PreAccessPolicyEnforcer([], [], factories);
         }
 
-        var enabledPolicies = (await policyRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(p => p.Enabled)
-            .ToDictionary(p => p.Type);
-        if (enabledPolicies.Count == 0)
-        {
-            return new PreAccessPolicyEnforcer(emptyPolicies, [], factories);
-        }
+        var policies = await policyRepository.GetManyByOrganizationIdAsync(organizationId);
 
+        // Accepted and Confirmed provider users are always linked to a user account; Invited users are not.
         var providerUserIds = (await providerUserRepository.GetManyByOrganizationAsync(organizationId))
-            .Where(providerUser => providerUser.UserId.HasValue && providerUser.Status is ProviderStatusType.Accepted or ProviderStatusType.Confirmed)
+            .Where(providerUser => providerUser.Status is ProviderUserStatusType.Accepted or ProviderUserStatusType.Confirmed)
             .Select(providerUser => providerUser.UserId!.Value);
 
-        return new PreAccessPolicyEnforcer(enabledPolicies, providerUserIds, factories);
+        return new PreAccessPolicyEnforcer(policies, providerUserIds, factories);
     }
 }

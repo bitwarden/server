@@ -51,6 +51,21 @@ public class PreAccessPolicyEnforcerTests
         Assert.False(result.Enforced);
     }
 
+    [Theory, BitAutoData]
+    public void Evaluate_PolicyDisabled_ReturnsNotEnforced(Guid organizationId, Guid userId)
+    {
+        // Arrange
+        var policy = CreatePolicy(organizationId, PolicyType.SingleOrg);
+        policy.Enabled = false;
+        var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
+
+        // Act
+        var result = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+
+        // Assert
+        Assert.False(result.Enforced);
+    }
+
     [Theory]
     [BitAutoData(PolicyType.SingleOrg, OrganizationUserType.Owner)]
     [BitAutoData(PolicyType.SingleOrg, OrganizationUserType.Admin)]
@@ -222,10 +237,9 @@ public class PreAccessPolicyEnforcerTests
         Assert.Contains("No Requirement Factory found", exception.Message);
     }
 
-    private static readonly IReadOnlyDictionary<PolicyType, Policy> NoPolicies = new Dictionary<PolicyType, Policy>();
+    private static readonly Policy[] NoPolicies = [];
 
-    private static Dictionary<PolicyType, Policy> Policies(params Policy[] policies) =>
-        policies.ToDictionary(p => p.Type);
+    private static Policy[] Policies(params Policy[] policies) => policies;
 
     private static Policy CreatePolicy(Guid organizationId, PolicyType type) =>
         new() { Id = Guid.NewGuid(), OrganizationId = organizationId, Type = type, Enabled = true };

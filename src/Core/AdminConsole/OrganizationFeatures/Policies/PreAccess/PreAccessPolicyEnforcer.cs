@@ -8,8 +8,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 /// <summary>
 /// See <see cref="IPreAccessPolicyEnforcer"/>.
 /// </summary>
-/// <param name="enabledPolicies">
-/// The target organization's enabled policies, keyed by type. Leave empty if the organization cannot use policies.
+/// <param name="policies">
+/// The target organization's policies. Disabled policies are ignored. Leave empty if the organization cannot use
+/// policies.
 /// </param>
 /// <param name="providerUserIds">The ids of users who are provider users for the target organization.</param>
 /// <param name="factories">
@@ -17,11 +18,15 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 /// are supported.
 /// </param>
 public class PreAccessPolicyEnforcer(
-    IReadOnlyDictionary<PolicyType, Policy> enabledPolicies,
+    IEnumerable<Policy> policies,
     IEnumerable<Guid> providerUserIds,
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : IPreAccessPolicyEnforcer
 {
+    private readonly Dictionary<PolicyType, Policy> _enabledPolicies = policies
+        .Where(p => p.Enabled)
+        .ToDictionary(p => p.Type);
+
     private readonly HashSet<Guid> _providerUserIds = providerUserIds.ToHashSet();
 
     public PreAccessPolicyResult Evaluate(PolicyType policyType, Guid userId, OrganizationUserType proposedRole)
@@ -31,7 +36,7 @@ public class PreAccessPolicyEnforcer(
                           .SingleOrDefault(f => f.PolicyType == policyType)
             ?? throw new NotImplementedException("No Requirement Factory found for " + policyType);
 
-        if (!enabledPolicies.TryGetValue(policyType, out var policy))
+        if (!_enabledPolicies.TryGetValue(policyType, out var policy))
         {
             return PreAccessPolicyResult.NotEnforced;
         }
