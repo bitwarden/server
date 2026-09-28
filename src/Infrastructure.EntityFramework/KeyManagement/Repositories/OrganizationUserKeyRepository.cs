@@ -44,13 +44,12 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
+        var writtenIds = new List<Guid>();
         foreach (var update in updates)
         {
-            // The user key id is part of the update's WHERE clause, so the check and the write are one statement.
-            // Reading the key id first and writing after would leave a window for a rotation between the two,
-            // and the stale key would be installed. A row that no longer matches is skipped, which leaves its
-            // upgrade pending for the admin to complete later.
-            await dbContext.OrganizationUsers
+            // The key id is checked in the WHERE clause, so a rotation cannot slip in between the check and the
+            // write. A row that no longer matches is skipped and stays pending.
+            var updatedCount = await dbContext.OrganizationUsers
                 .Where(organizationUser => organizationUser.Id == update.OrganizationUserId
                     && organizationUser.OrganizationId == organizationId
                     && organizationUser.V2UpgradeToken != null
@@ -60,6 +59,19 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
                     .SetProperty(organizationUser => organizationUser.ResetPasswordKey, update.AccountRecoveryKey)
                     // The token is consumed, so the upgrade cannot be replayed.
                     .SetProperty(organizationUser => organizationUser.V2UpgradeToken, (string?)null));
+
+            if (updatedCount > 0)
+            {
+                writtenIds.Add(update.OrganizationUserId);
+            }
         }
+
+        // Bump the account revision date of the members whose row was updated.
+        await dbContext.Users
+            .Where(user => dbContext.OrganizationUsers
+                .Any(organizationUser => writtenIds.Contains(organizationUser.Id)
+                    && organizationUser.UserId == user.Id))
+            .ExecuteUpdateAsync(setters =>
+                setters.SetProperty(user => user.AccountRevisionDate, DateTime.UtcNow));
     }
 }

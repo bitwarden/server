@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyV2UpgradeDetailsByOrganizationId]
+﻿CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadManyV2UpgradeDetailsByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -36,6 +36,8 @@ BEGIN
         [AccountRecoveryKey] VARCHAR(MAX)
     )
 
+    DECLARE @UpdatedUserIds [dbo].[GuidIdArray]
+
     INSERT INTO @OrganizationUserInput
     SELECT
         [Id],
@@ -48,16 +50,15 @@ BEGIN
         [AccountRecoveryKey] VARCHAR(MAX) '$.AccountRecoveryKey'
     )
 
-    -- The join on [UserKeyId] rejects a key re-wrapped against a user key that has been rotated again since.
-    -- Such a row is skipped, and the rows that still match are written. Nothing is lost: the membership keeps
-    -- its token, so the admin reads the upgrade again and completes it then.
-    -- The same statement clears the token, so an upgrade cannot be replayed.
-    -- A NULL [AccountRecoveryKey] is not a missing value. It unenrolls the member from account recovery.
+    -- The key id is checked in the join, so a rotation cannot slip in between the check and the write. A row
+    -- that no longer matches is skipped and stays pending. A NULL key unenrolls the member.
     UPDATE
         [dbo].[OrganizationUser]
     SET
         [ResetPasswordKey] = OUI.[AccountRecoveryKey],
         [V2UpgradeToken] = NULL
+    OUTPUT
+        INSERTED.[UserId] INTO @UpdatedUserIds
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
@@ -67,5 +68,8 @@ BEGIN
     WHERE
         OU.[OrganizationId] = @OrganizationId
         AND OU.[V2UpgradeToken] IS NOT NULL
+
+    -- Bump the account revision date of the members whose row was updated.
+    EXEC [dbo].[User_BumpManyAccountRevisionDates] @UpdatedUserIds
 END
 GO
