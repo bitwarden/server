@@ -168,6 +168,11 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
+        // IsPersistent = false: SSO sessions die when the browser closes, by design. The
+        // passwordless flow uses IsPersistent = true and survives a browser restart; SSO
+        // deliberately doesn't, so a shared/kiosk browser doesn't leave an admin session
+        // reachable after the operator walks away. Combined with prompt=login on every
+        // sign-in, this makes each new browser session pay the full IdP re-auth cost.
         var props = new AuthenticationProperties { IsPersistent = false };
         // Store id_token on the cookie. Two purposes:
         //   1. It's the value we'll attach as id_token_hint on RP-initiated logout so the

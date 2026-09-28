@@ -12,6 +12,21 @@ namespace Bit.Admin.IdentityServer;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Wraps an OnValidatePrincipal delegate so that any ShouldRenew=true set by the inner
+    /// delegate (typically SecurityStampValidator) is reset to false after it runs. Exposed
+    /// as a testable seam so the "renewal does not defeat SessionSliding=false" contract
+    /// can be pinned without spinning up a full DI graph.
+    /// </summary>
+    public static Func<Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext, Task>
+        SuppressRenewAfter(
+            Func<Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext, Task> inner)
+        => async ctx =>
+        {
+            await inner(ctx);
+            ctx.ShouldRenew = false;
+        };
+
     public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
         this IServiceCollection services, GlobalSettings globalSettings, AdminSettings adminSettings)
         where TUserStore : class
@@ -65,10 +80,8 @@ public static class ServiceCollectionExtensions
             // defense-in-depth combo.
             options.Cookie.SameSite = SameSiteMode.Lax;
             // Session lifetime and sliding-vs-absolute behavior are both operator-configurable.
-            // With SessionSliding = true (default), this is an idle timeout. With false, it's a
-            // fixed lifetime from sign-in - the framework's built-in absolute cap. FedRAMP-strict
-            // deployments should set SessionSliding=false + short SessionTimeoutMinutes + rely on
-            // SSO (which lets the IdP silently re-sign-in when the IdP session is still fresh).
+            // With SessionSliding = true (default), this is an idle timeout. With false, it's
+            // intended as a fixed lifetime from sign-in.
             options.ExpireTimeSpan = TimeSpan.FromMinutes(adminSettings.SessionTimeoutMinutes);
             options.SlidingExpiration = adminSettings.SessionSliding;
             options.ReturnUrlParameter = "returnUrl";
@@ -93,6 +106,25 @@ public static class ServiceCollectionExtensions
                 }
                 return existingRedirect(ctx);
             };
+
+            // SecurityStampValidator.SecurityStampVerified sets ctx.ShouldRenew=true after
+            // each successful re-validation (every SecurityStampValidatorOptions.ValidationInterval,
+            // 5 min by default). CookieAuthenticationHandler.HandleAuthenticateAsync then calls
+            // RequestRefresh(ShouldRenew) unconditionally - NOT gated on SlidingExpiration -
+            // which rewrites IssuedUtc/ExpiresUtc on the ticket. So SessionSliding=false alone
+            // gives sliding-like behavior with 5-min granularity.
+            //
+            // Chain after the stamp validator (do not replace it - revocation via
+            // ReadOnlyEnvIdentityUserStore's FindByIdAsync depends on it running). When the
+            // operator has asked for a fixed lifetime, suppress the renewal that would
+            // otherwise defeat it. Cost: the stamp check now runs on every request instead of
+            // every 5 min. Against ReadOnlyEnvIdentityUserStore that's a config lookup, and
+            // it makes revocation faster.
+            if (!adminSettings.SessionSliding)
+            {
+                options.Events.OnValidatePrincipal =
+                    SuppressRenewAfter(options.Events.OnValidatePrincipal);
+            }
         });
 
         return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
@@ -109,6 +141,16 @@ public static class ServiceCollectionExtensions
         }
 
         var oidc = adminSettings.Oidc;
+
+        // Guard against an explicit null/empty EmailClaimType binding (e.g. "EmailClaimType": null
+        // in appsettings). Both TokenValidationParameters.NameClaimType and
+        // ClaimsPrincipal.FindFirst throw ArgumentNullException on null - fail loud at boot
+        // rather than 500 on the SSO callback.
+        if (string.IsNullOrWhiteSpace(oidc.EmailClaimType))
+        {
+            throw new InvalidOperationException(
+                "AdminSettings:Oidc:EmailClaimType must not be null or empty when SSO is enabled.");
+        }
 
         services.AddAuthentication()
             .AddOpenIdConnect(AdminAuthenticationSchemes.UpstreamOidc, oidc.DisplayName, options =>
@@ -186,11 +228,12 @@ public static class ServiceCollectionExtensions
                 options.TokenValidationParameters.ClockSkew =
                     TimeSpan.FromSeconds(AdminSettings.OidcSettings.ClockSkewSeconds);
 
-                // Force credential entry at the IdP on every Admin Portal sign-in. The Admin
-                // Portal is a high-privilege surface, and re-proving control (password + MFA)
-                // on each cookie renewal is worth the UX cost - a stolen IdP session cookie
-                // shouldn't grant admin access silently. Guarantees auth_time on the returned
-                // ID token is effectively "now", so we don't also need max_age.
+                // Request that the IdP prompts for credentials on every Admin Portal sign-in
+                // rather than silently reusing an existing IdP session. Per OIDC Core 3.1.2.1
+                // this is a request the IdP SHOULD honor - it's not something we enforce
+                // server-side (nothing in the response proves it happened). Auth0, Okta, Entra,
+                // and Keycloak all honor it in practice; a non-conformant IdP would allow a
+                // stolen IdP session cookie to ride into the Admin Portal silently.
                 options.AdditionalAuthorizationParameters.Add("prompt", "login");
 
                 // Pin the OIDC helper cookies explicitly (default is SameSite=None, which the
