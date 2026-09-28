@@ -12,9 +12,8 @@ using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent;
 namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 /// <summary>
-/// The EF counterpart of the Dapper audit store. Neither the write payload nor the read model is an
-/// <c>ITableObject</c>, so this derives from <see cref="BaseEntityFrameworkRepository"/> rather than
-/// <c>Repository&lt;,,&gt;</c> and maps both directions itself.
+/// Neither the write payload nor the read model is an <c>ITableObject</c>, so this derives from
+/// <see cref="BaseEntityFrameworkRepository"/> rather than <c>Repository&lt;,,&gt;</c> and maps both directions itself.
 /// </summary>
 public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccessAuditEventRepository
 {
@@ -27,9 +26,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Resolve the actor and requester names once and freeze them into the row, the same way
-        // AccessAuditEvent_Create does with its LEFT JOINs, so a later delete or rename cannot change what this event
-        // says. A name stays null where its id is null or the referenced row is gone.
+        // Frozen here as AccessAuditEvent_Create does with its LEFT JOINs.
         var actor = await ReadUserAsync(dbContext, auditEvent.ActorId);
         var requester = await ReadUserAsync(dbContext, auditEvent.RequesterId);
 
@@ -79,16 +76,10 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         var since = filter.Since;
         var until = filter.Until;
 
-        // Rows are self-contained, so this touches no other table -- the names were frozen at write time.
         var query = dbContext.AccessAuditEvents
             .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since && e.OccurredDate <= until);
 
-        // Resume where the previous page stopped. Paging is keyset rather than Skip: the store is append-only and read
-        // newest first, so an offset would re-serve rows as events arrive. Keyed on (OccurredDate, Id) rather than
-        // OccurredDate alone because an action writes its before/after halves at one instant, so a boundary landing
-        // inside a group of events sharing a timestamp is ordinary here and a date-only key would drop every row tied
-        // with it. The comparison has to match the ORDER BY below for the cursor to land on the same boundary the
-        // previous page ended at.
+        // The comparison has to match the ORDER BY below, or the cursor lands on a different boundary.
         if (filter.Before is { } before)
         {
             var beforeOccurredDate = before.OccurredDate;
@@ -98,10 +89,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 || (e.OccurredDate == beforeOccurredDate && e.Id.CompareTo(beforeId) < 0));
         }
 
-        // Collapse each action's before/after pair (shared CorrelationId) into one row -- the Outcome when it landed,
-        // otherwise the lone Attempt. Expressed as "no further-along half of this action exists" rather than as a
-        // GroupBy, which is what the Dapper procedure's NOT EXISTS does and what translates to SQL here. Scoped to the
-        // page's own range, so an action straddling a bound reads as in-doubt at that edge rather than disappearing.
+        // Expressed as "no further-along half exists" rather than as a GroupBy, because that is what translates to
+        // SQL on all three providers.
         query = query.Where(e => !dbContext.AccessAuditEvents.Any(p =>
             p.CorrelationId == e.CorrelationId
             && p.OrganizationId == organizationId
@@ -109,17 +98,12 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             && p.OccurredDate <= until
             && (p.Phase > e.Phase || (p.Phase == e.Phase && p.Id.CompareTo(e.Id) < 0))));
 
-        // The dimensions are applied AFTER the collapse, to the row that survived it, because the two halves of one
-        // action need not agree: a refused activation writes its Attempt as LeaseActivated and its Outcome as
-        // LeaseActivationRejected, so filtering before the collapse would answer "activated" with an action that was
-        // turned down.
         if (filter.Kinds.Count > 0)
         {
             var kinds = filter.Kinds.ToList();
             query = query.Where(e => kinds.Contains(e.Kind));
         }
 
-        // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
         if (filter.ActorIds.Count > 0 || filter.IncludeAutomatedActor)
         {
             var actorIds = filter.ActorIds.ToList();
@@ -135,8 +119,6 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             query = query.Where(e => e.RequesterId != null && requesterIds.Contains(e.RequesterId.Value));
         }
 
-        // The Item dimension is two columns, and they UNION rather than narrow: a rule-administration event names a
-        // rule and no cipher, so one selection spanning both is asking for either, not for the empty intersection.
         if (filter.CipherIds.Count > 0 || filter.RuleIds.Count > 0)
         {
             var cipherIds = filter.CipherIds.ToList();
@@ -196,10 +178,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             .Where(e => e.OrganizationId == organizationId && e.OccurredDate >= since && e.OccurredDate <= until)
             .AsNoTracking();
 
-        // Grouped and ordered rather than aggregated so each subject carries its MOST RECENT context: a renamed rule
-        // reads in the menu the way the newest rows read in the table, and a cipher's collection is the one it was
-        // last gated through. Expressed as GroupBy + First rather than the procedure's ROW_NUMBER because that is what
-        // translates across the three providers; the answer is the same.
+        // GroupBy + First where the procedure uses ROW_NUMBER, because that is what translates across the three
+        // providers; the answer is the same.
         var ciphers = await inRange
             .Where(e => e.CipherId != null)
             .GroupBy(e => e.CipherId!.Value)

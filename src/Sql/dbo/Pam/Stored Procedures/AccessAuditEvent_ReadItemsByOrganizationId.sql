@@ -6,18 +6,11 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The distinct subjects the organization's access-audit trail names between @StartDate and @EndDate: one row per
-    -- cipher, one per access rule. This is what the trail's Item filter is built from, and it exists because neither
-    -- of the two obvious sources works -- a page of the trail holds a page's worth of rows and cannot name every item
-    -- in range, and the caller's own vault would offer every credential they hold whether the trail mentions it or not.
-    --
-    -- No cipher NAME is returned, because the store holds none: a cipher's name is Vault Data, so the subject cipher is
-    -- recorded by id only and the caller resolves the name from its own vault, dropping the ones it cannot read.
-    -- [RuleName] IS returned: plaintext organization configuration, snapshotted per event, so it travels with the id.
-    --
-    -- Ranked rather than aggregated so each subject carries its MOST RECENT context -- a renamed rule reads in the
-    -- menu the way the newest rows read in the table, and a cipher's collection is the one it was last gated through.
-    -- MIN/MAX would pick alphabetically, which for a rename is simply the wrong name.
+    -- What the trail's Item filter is built from. Neither obvious source works: a page of the trail cannot name
+    -- every item in range, and the caller's own vault would offer every credential they hold whether the trail
+    -- mentions it or not. No cipher name is returned, because the store holds none; the caller resolves it from its
+    -- own vault. Ranked rather than aggregated so each subject carries its most recent context, where MIN/MAX would
+    -- pick alphabetically and for a renamed rule that is the wrong name.
     ;WITH [Ciphers] AS (
         SELECT
             [CipherId],

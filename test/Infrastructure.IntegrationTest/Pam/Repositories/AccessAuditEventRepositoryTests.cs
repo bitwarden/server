@@ -11,11 +11,8 @@ namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 public class AccessAuditEventRepositoryTests
 {
-    // An emitted action round-trips as ONE row: CreateAsync writes the before/after pair as two rows (the store is
-    // append-only, nothing is overwritten) and the read collapses them to the Outcome -- what actually happened --
-    // with its subject ids and detail intact. The collapse lives in the store rather than in the caller because a
-    // caller holding one page could not tell an Attempt whose Outcome sits on the next page from one that never
-    // landed.
+    // Two rows are written, because the store is append-only and nothing is overwritten, and the read collapses
+    // them to the Outcome.
     [DatabaseTheory, DatabaseData]
     public async Task Create_ThenRead_CollapsesTheBeforeAfterPairToItsOutcome(
         IOrganizationRepository organizationRepository,
@@ -42,8 +39,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal("looks good", row.Detail);
     }
 
-    // An action whose Outcome never landed collapses to its lone Attempt, which the caller flags as in-doubt. This is
-    // the case the collapse must not confuse with "the Outcome is on the next page".
+    // The case the collapse must not confuse with "the Outcome is on the next page".
     [DatabaseTheory, DatabaseData]
     public async Task Read_AnActionWithNoOutcome_ComesBackAsItsAttempt(
         IOrganizationRepository organizationRepository,
@@ -64,8 +60,7 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(AccessAuditEventPhase.Attempt, row.Phase);
     }
 
-    // The acceptance criterion the collapse exists for: a pair whose halves fall on either side of a page boundary
-    // still reads as one row, because the collapse happens before the page is cut rather than after.
+    // The collapse happens before the page is cut, so a pair split by a boundary still reads as one row.
     [DatabaseTheory, DatabaseData]
     public async Task Read_APairSpanningAPageBoundary_StillCollapsesToOneRow(
         IOrganizationRepository organizationRepository,
@@ -76,8 +71,7 @@ public class AccessAuditEventRepositoryTests
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
 
-        // Two actions, each written as a pair. Read one row at a time, so any page boundary that could split a pair
-        // does: four stored rows, and a caller reading a page at a time must still see exactly two actions.
+        // Read one row at a time, so every boundary that could split a pair does.
         var older = BuildEvent(organization.Id, AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt,
             now.AddMinutes(-5)) with
         { AccessRequestId = first };
@@ -96,9 +90,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal([second, first], events.Select(e => e.AccessRequestId!.Value)); // newest first
     }
 
-    // Paging is keyed on (OccurredDate, Id), not OccurredDate alone, so a boundary landing inside a group of events
-    // sharing one instant neither drops nor repeats any of them. Those groups are ordinary here: the two halves of an
-    // action are written at the same instant, and a burst of activity produces more.
+    // Events sharing one instant are ordinary here, since an action's two halves are written at the same instant,
+    // so a boundary landing inside such a group must neither drop nor repeat any of them.
     [DatabaseTheory, DatabaseData]
     public async Task Read_EventsSharingAnInstant_ArePagedWithoutSkippingOrRepeating(
         IOrganizationRepository organizationRepository,
@@ -124,9 +117,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(requestIds.Order(), returned.Order());
     }
 
-    // The reason paging is keyset and not an offset. The store is append-only and read newest first, so an event
-    // written between two page requests shifts an offset window down by one and re-serves a row the caller already
-    // has. A cursor is anchored to a row instead of a position, so the new event simply falls outside the page.
+    // An event written between two page requests shifts an offset window down by one and re-serves a row. A cursor
+    // is anchored to a row instead of a position, so the new event falls outside the page.
     [DatabaseTheory, DatabaseData]
     public async Task Read_EventAppendedBetweenPages_DoesNotReserveRows(
         IOrganizationRepository organizationRepository,
@@ -144,8 +136,7 @@ public class AccessAuditEventRepositoryTests
             await CreateAtAsync(accessAuditEventRepository, organization.Id, now.AddMinutes(-i), requestId);
         }
 
-        // The upper bound reaches past the event appended below, so it is genuinely in range and the cursor is the
-        // only thing keeping it off the second page.
+        // Reaches past the event appended below, so the cursor is the only thing keeping it off the second page.
         var since = now.AddDays(-1);
         var until = now.AddMinutes(5);
 
@@ -153,8 +144,7 @@ public class AccessAuditEventRepositoryTests
             organization.Id, new AccessAuditTrailFilter { Since = since, Until = until, PageSize = 2 });
         var firstPageIds = firstPage.Select(e => e.AccessRequestId!.Value).ToList();
 
-        // A PAM action emits while the caller is between pages. Under an offset this is what pushed an already-seen
-        // row onto the next page.
+        // A PAM action emits while the caller is between pages.
         var appendedId = Guid.NewGuid();
         await CreateAtAsync(accessAuditEventRepository, organization.Id, now.AddMinutes(1), appendedId);
 
@@ -174,7 +164,6 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(requestIds, firstPageIds.Concat(secondPageIds));
     }
 
-    // The trail is scoped to a single organization: an event in another org never appears.
     [DatabaseTheory, DatabaseData]
     public async Task Read_ScopesToOrganization(
         IOrganizationRepository organizationRepository,
@@ -196,7 +185,6 @@ public class AccessAuditEventRepositoryTests
         Assert.All(events, e => Assert.Equal(organization.Id, e.OrganizationId));
     }
 
-    // Both bounds are inclusive and both are honoured, newest first.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByRange_AndOrdersNewestFirst(
         IOrganizationRepository organizationRepository,
@@ -249,9 +237,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(3, events.Count);
     }
 
-    // The kind filter is applied to the row that SURVIVED the collapse, not to either half. A refused activation
-    // writes its Attempt as LeaseActivated and its Outcome as LeaseActivationRejected, so filtering before the
-    // collapse would answer "activated" with an action that was turned down.
+    // A refused activation writes its Attempt as LeaseActivated and its Outcome as LeaseActivationRejected, so
+    // filtering before the collapse would answer "activated" with an action that was refused.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByKind_OnTheCollapsedRowRatherThanEitherHalf(
         IOrganizationRepository organizationRepository,
@@ -306,8 +293,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(events, e => e.AccessRequestId == approved);
     }
 
-    // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own: an
-    // auditor following one approver and the automatic decisions alongside them is asking for both sets.
+    // An actor selection unions the chosen identities with the automatic bucket, which has no id of its own.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByActor_AndUnionsTheAutomaticBucket(
         IOrganizationRepository organizationRepository,
@@ -367,9 +353,8 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal([wanted], byBoth.Select(e => e.AccessRequestId!.Value));
     }
 
-    // The Item dimension is two columns and they UNION: a rule-administration event names a rule and no cipher, so a
-    // selection spanning both is asking for either, not for the empty intersection every other pair of dimensions
-    // would give.
+    // The two Item columns union where every other pair of dimensions intersects: a rule-administration event names
+    // a rule and no cipher.
     [DatabaseTheory, DatabaseData]
     public async Task Read_FiltersByItem_UnioningCiphersWithRules(
         IOrganizationRepository organizationRepository,
@@ -400,8 +385,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(byEither, e => e.AccessRequestId == onNeither);
     }
 
-    // The rotation columns round-trip, enums included. They are orthogonal to Kind; the rotation event kinds arrive
-    // with the rotation feature.
+    // The rotation columns are orthogonal to Kind; the rotation event kinds arrive with the rotation feature.
     [DatabaseTheory, DatabaseData]
     public async Task Create_ThenRead_RoundTripsRotationContext(
         IOrganizationRepository organizationRepository,
@@ -555,9 +539,7 @@ public class AccessAuditEventRepositoryTests
         Assert.DoesNotContain(items, item => item.CipherId == hiddenCipherId);
     }
 
-    // The point of the self-contained store: the display name is snapshotted at write time, so it SURVIVES deleting
-    // the referenced entity. Emit a RuleCreated for a real rule, then delete the rule -- the event still names it
-    // (a read-time join would return NULL here).
+    // Delete the rule the event names; a read-time join would return NULL here.
     [DatabaseTheory, DatabaseData]
     public async Task Read_SnapshotName_SurvivesEntityDeletion(
         IOrganizationRepository organizationRepository,
@@ -590,8 +572,7 @@ public class AccessAuditEventRepositoryTests
             e.Kind == AccessAuditEventKind.RuleCreated && e.AccessRuleId == rule.Id && e.RuleName == "audit-rule");
     }
 
-    // Renaming the referenced entity must NOT rewrite history: the event keeps the name as it was when written. This is
-    // the definitive proof the name is frozen at write, not re-resolved at read.
+    // A name re-resolved at read would come back with the new one.
     [DatabaseTheory, DatabaseData]
     public async Task Read_SnapshotName_IsNotRewrittenByRename(
         IOrganizationRepository organizationRepository,
@@ -628,8 +609,7 @@ public class AccessAuditEventRepositoryTests
 
     /// <summary>
     /// Walks every page the way a caller does, so a test asserting on the whole trail also exercises the resume
-    /// position. <paramref name="pageSize"/> is deliberately small in the paging tests, to force boundaries where a
-    /// single read would have none.
+    /// position. <paramref name="pageSize"/> is deliberately small in the paging tests, to force boundaries.
     /// </summary>
     private static async Task<List<AccessAuditEvent>> ReadAllAsync(
         IAccessAuditEventRepository repository,

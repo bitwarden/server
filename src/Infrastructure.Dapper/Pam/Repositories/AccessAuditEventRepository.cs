@@ -61,9 +61,9 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     public async Task<ICollection<AccessAuditEvent>> GetPageByOrganizationIdAsync(
         Guid organizationId, AccessAuditTrailFilter filter)
     {
-        // The range bounds and the cursor are only stable page boundaries if they round-trip at the column's full
-        // precision, so the datetimes are declared as DATETIME2(7) rather than left to Dapper's default mapping, which
-        // truncates. ref: https://github.com/StackExchange/Dapper/issues/229
+        // Declared as DATETIME2(7) rather than left to Dapper's default mapping, which truncates: the bounds and the
+        // cursor are only stable page boundaries if they round-trip at the column's full precision.
+        // ref: https://github.com/StackExchange/Dapper/issues/229
         var parameters = new DynamicParameters();
         parameters.Add("@OrganizationId", organizationId, DbType.Guid);
         parameters.Add("@StartDate", filter.Since, DbType.DateTime2, null, 7);
@@ -90,8 +90,6 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     public async Task<ICollection<AccessAuditItem>> GetItemsByOrganizationIdAsync(
         Guid organizationId, DateTime since, DateTime until)
     {
-        // DATETIME2(7) for the same reason as above: the range has to mean the same instant here as it does on the
-        // page read, or the menu would offer options the page cannot match.
         var parameters = new DynamicParameters();
         parameters.Add("@OrganizationId", organizationId, DbType.Guid);
         parameters.Add("@StartDate", since, DbType.DateTime2, null, 7);
@@ -107,9 +105,8 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
     }
 
     /// <summary>
-    /// A selection as the JSON array the procedure's OPENJSON reads, or null when nothing is selected -- which is how
-    /// the procedure is told the dimension is unfiltered, and is not the same as an empty array (which would match
-    /// nothing).
+    /// A selection as the JSON array the procedure's OPENJSON reads, or null when nothing is selected, which is how
+    /// the procedure is told the dimension is unfiltered. Not the same as an empty array, which would match nothing.
     /// </summary>
     private static string? JsonList<T>(IEnumerable<T> values)
     {

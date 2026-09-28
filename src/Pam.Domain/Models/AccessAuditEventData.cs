@@ -3,10 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The write-side payload for a PAM audit event: the raw facts a state-changing action records at the moment it
-/// happens, before anything is stored. Unlike the read model <see cref="AccessAuditEvent"/> it carries no resolved
-/// display names for the actor and requester; those are snapshotted into the row at write time. Emitted through the PAM
-/// audit-event emitter.
+/// The write-side payload. Unlike the read model <see cref="AccessAuditEvent"/> it carries no actor or requester
+/// display names; those are resolved and snapshotted at write time.
 /// </summary>
 public record AccessAuditEventData
 {
@@ -14,9 +12,9 @@ public record AccessAuditEventData
     public AccessAuditEventPhase Phase { get; init; } = AccessAuditEventPhase.Outcome;
 
     /// <summary>
-    /// Correlates an action's attempt/outcome pair: the Attempt and Outcome emitted from the same instance (via
-    /// <c>with</c>) share this id, so the trail read can collapse them into one entry. A genuinely separate event
-    /// emitted alongside (e.g. the automatic approval on an auto-approved submit) must be given its own id.
+    /// Correlates an action's Attempt/Outcome pair: both halves emitted from the same instance (via <c>with</c>)
+    /// share this id, so the trail read can collapse them. A separate event emitted alongside (the automatic
+    /// approval on an auto-approved submit, say) must be given its own id.
     /// </summary>
     public Guid CorrelationId { get; init; } = Guid.NewGuid();
 
@@ -31,9 +29,9 @@ public record AccessAuditEventData
     public Guid? AccessRuleId { get; init; }
 
     /// <summary>
-    /// Supplied by the rule commands, which hold the entity, rather than resolved by a JOIN at write time: a rule can
-    /// be hard-deleted in the same action, after which a JOIN could no longer resolve it. The target system and
-    /// access connector names below follow the same pattern.
+    /// Supplied by the rule commands rather than resolved by a JOIN at write time: a rule can be hard-deleted in the
+    /// same action, after which a JOIN could no longer resolve it. The target system and access connector names below
+    /// follow the same pattern.
     /// </summary>
     public string? RuleName { get; init; }
 
@@ -46,7 +44,6 @@ public record AccessAuditEventData
     public PamRotationSource? RotationSource { get; init; }
     public PamRotationSyncState? SyncState { get; init; }
 
-    /// <summary>An approver comment, an auto-denial reason, or a revoke reason, whichever the action carried.</summary>
     public string? Detail { get; init; }
 
     public DateTime? LeaseNotBefore { get; init; }

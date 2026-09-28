@@ -7,11 +7,9 @@ using Bit.Pam.Enums;
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
 /// <summary>
-/// The EF persistence model for one row of the PAM audit store. Unlike the other PAM models this does not derive from a
-/// domain entity: the store's write payload (<see cref="Bit.Pam.Models.AccessAuditEventData"/>) and its read model
-/// (<see cref="Bit.Pam.Models.AccessAuditEvent"/>) are deliberately different shapes and neither carries an <c>Id</c>,
-/// so the stored row is its own type. There is no mapper profile; the repository maps both directions explicitly,
-/// because the write side resolves the snapshot names and the read side does not.
+/// Derives from no domain entity, because the write payload (<see cref="Bit.Pam.Models.AccessAuditEventData"/>) and
+/// the read model (<see cref="Bit.Pam.Models.AccessAuditEvent"/>) are deliberately different shapes and neither
+/// carries an <c>Id</c>. There is no mapper profile; the repository maps both directions explicitly.
 /// </summary>
 public class AccessAuditEvent
 {
@@ -22,8 +20,8 @@ public class AccessAuditEvent
     public AccessAuditEventPhase Phase { get; set; }
     public DateTime OccurredDate { get; set; }
 
-    // Subject ids are deliberately not foreign keys, and neither are the rotation ids below: an audit event outlives
-    // what it references.
+    // Deliberately not foreign keys, and neither are the rotation ids below: an audit event outlives what it
+    // references.
     public Guid? ActorId { get; set; }
     public Guid? RequesterId { get; set; }
     public Guid? CollectionId { get; set; }
@@ -36,8 +34,6 @@ public class AccessAuditEvent
     public DateTime? LeaseNotBefore { get; set; }
     public DateTime? LeaseNotAfter { get; set; }
 
-    // Display names frozen at write time, all plaintext: the audit store holds no vault data, so the subject cipher and
-    // collection are identified by id only.
     [MaxLength(50)]
     public string? ActorName { get; set; }
 

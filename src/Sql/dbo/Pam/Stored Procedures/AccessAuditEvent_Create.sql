@@ -28,12 +28,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Snapshot the display names into the row at write time so the audit event is self-contained: a later delete or
-    -- rename cannot change what this event says. Actor and requester names are resolved by id from [User] here and
-    -- frozen, staying NULL where the id is NULL or the row is gone. The rule, target system, and access connector
-    -- names come from the caller instead of a JOIN, because those entities can be deleted or renamed in the same
-    -- action. The subject cipher and collection are recorded by id alone; their names are vault data, which this
-    -- store never holds.
+    -- The names are snapshotted so a later delete or rename cannot change what this event says. Actor and requester
+    -- resolve from [User] here; the rule, target system, and access connector names come from the caller instead,
+    -- because those entities can be deleted in the same action. The cipher and collection are recorded by id alone:
+    -- their names are vault data, which this store never holds.
     INSERT INTO [dbo].[AccessAuditEvent]
     (
         [Id],
