@@ -175,6 +175,10 @@ public class CurrentContext(
             ? secretsManagerAccessClaim.ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
+        var accessPam = claimsDict.TryGetValue(Claims.PamAccess, out var pamAccessClaim)
+            ? pamAccessClaim.ToDictionary(s => s.Value, _ => true)
+            : new Dictionary<string, bool>();
+
         var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.TryGetValue(Claims.OrganizationOwner, out var organizationOwnerClaim))
         {
@@ -184,6 +188,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -203,6 +208,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -214,6 +220,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -226,6 +233,7 @@ public class CurrentContext(
                     Type = OrganizationUserType.Custom,
                     Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -434,6 +442,11 @@ public class CurrentContext(
         }
 
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
+    }
+
+    public bool AccessPam(Guid orgId)
+    {
+        return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
     }
 
     public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
