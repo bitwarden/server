@@ -105,9 +105,6 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         // MapOrNull refused any subscription without line items, so the current period end is set.
         var periodEnd = subscription.GetCurrentPeriodEnd()!.Value;
-
-        // Stripe requires every phase to be bounded (end_date or duration); Phase 2 runs
-        // exactly one annual term, then the schedule releases.
         var phase2Options = new SubscriptionSchedulePhaseOptions
         {
             StartDate = periodEnd,
