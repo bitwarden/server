@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,7 +24,8 @@ public class SendControlsSyncPolicyEvent(
     TimeProvider timeProvider,
     ISendRepository sendRepository,
     IFeatureService featureService,
-    IOrganizationUserRepository orgUserRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
+    IOrganizationUserRepository orgUserRepository,
+    IEventService eventService) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -95,31 +97,34 @@ public class SendControlsSyncPolicyEvent(
         var orgOwnerAndAdminUserIds = (await orgUserRepository.GetManyByMinimumRoleAsync(postUpsertedPolicyState.OrganizationId, Core.Enums.OrganizationUserType.Admin)).Select(oud => oud.GetUserId());
         foreach (var sendIdsChunk in orgSendIds.Chunk(50))
         {
-            var enabled = new List<Guid>();
-            var disabled = new List<Guid>();
             var sendsChunk = await sendRepository.GetManyByIdsAsync(sendIdsChunk);
-            foreach (var send in sendsChunk)
-            {
-                if (
-                    // If the policy is disabled then we want to re-enable any Sends that were previously disabled
-                    // If the Send was created by an Owner or an Admin in the organization we ignore it
-                    postUpsertedPolicyState.Enabled && !orgOwnerAndAdminUserIds.Contains(send.UserId) && SendIsNonCompliant(send, sendControlsPolicyData))
-                {
-                    disabled.Add(send.Id);
-                }
-                else
-                {
-                    enabled.Add(send.Id);
-                }
-            }
-            if (enabled.Count > 0)
-            {
-                await sendRepository.UpdateManyDisabledAsync(enabled, false);
-            }
-            if (disabled.Count > 0)
-            {
-                await sendRepository.UpdateManyDisabledAsync(disabled, true);
-            }
+
+            bool IsIgnored(Send send) => orgOwnerAndAdminUserIds.Contains(send.UserId);
+
+            // If the Send was created by an Owner or an Admin in the organization we ignore it
+            var toDisable = sendsChunk
+                .Where(s => !s.Disabled && postUpsertedPolicyState.Enabled && !IsIgnored(s) && SendIsNonCompliant(s, sendControlsPolicyData))
+                .ToList();
+            var toEnable = sendsChunk
+                .Where(s => s.Disabled && !postUpsertedPolicyState.Enabled)
+                .ToList();
+
+            await UpdateAndLogSendsAsync(toEnable, disabled: false, EventType.Send_PolicyEnabled);
+            await UpdateAndLogSendsAsync(toDisable, disabled: true, EventType.Send_PolicyDisabled);
+        }
+    }
+
+    private async Task UpdateAndLogSendsAsync(List<Send> sends, bool disabled, EventType eventType)
+    {
+        if (sends.Count == 0)
+        {
+            return;
+        }
+
+        await sendRepository.UpdateManyDisabledAsync(sends.Select(s => s.Id).ToList(), disabled);
+        foreach (var send in sends.Where(s => s.UserId.HasValue))
+        {
+            await eventService.LogSendEventAsync(send.UserId!.Value, send.Id, eventType);
         }
     }
 
