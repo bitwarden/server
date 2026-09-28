@@ -13,19 +13,20 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 
 public class PreAccessPolicyEnforcerTests
 {
+    // The policy types are arbitrary; they only identify which test factory handles each policy.
+    private const PolicyType ExemptingPolicyType = PolicyType.SingleOrg;
+    private const PolicyType NonExemptingPolicyType = PolicyType.TwoFactorAuthentication;
+
     private static readonly IPolicyRequirementFactory<IPolicyRequirement>[] _factories =
     [
-        new SingleOrganizationPolicyRequirementFactory(),
-        new RequireTwoFactorPolicyRequirementFactory(),
-        new AutomaticUserConfirmationPolicyRequirementFactory(),
-        new ResetPasswordPolicyRequirementFactory()
+        // This exempt role is intentionally unusual to make sure we're not relying on the base class defaults
+        new TestPreAccessPolicyRequirementFactory(ExemptingPolicyType, [OrganizationUserType.Custom], exemptProviders: true),
+        new TestPreAccessPolicyRequirementFactory(NonExemptingPolicyType, [], exemptProviders: false)
     ];
 
     [Theory]
-    [BitAutoData(PolicyType.SingleOrg)]
-    [BitAutoData(PolicyType.TwoFactorAuthentication)]
-    [BitAutoData(PolicyType.AutomaticUserConfirmation)]
-    [BitAutoData(PolicyType.ResetPassword)]
+    [BitAutoData(ExemptingPolicyType)]
+    [BitAutoData(NonExemptingPolicyType)]
     public void Evaluate_PolicyEnabled_NotExempt_ReturnsEnforced(PolicyType policyType, Guid organizationId, Guid userId)
     {
         // Arrange
@@ -45,7 +46,7 @@ public class PreAccessPolicyEnforcerTests
         var sut = new PreAccessPolicyEnforcer(NoPolicies, [], _factories);
 
         // Act
-        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(NonExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.False(decision.IsEnforced);
@@ -55,42 +56,34 @@ public class PreAccessPolicyEnforcerTests
     public void Evaluate_PolicyDisabled_ReturnsNotEnforced(Guid organizationId, Guid userId)
     {
         // Arrange
-        var policy = CreatePolicy(organizationId, PolicyType.SingleOrg);
+        var policy = CreatePolicy(organizationId, NonExemptingPolicyType);
         policy.Enabled = false;
         var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
 
         // Act
-        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(NonExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.False(decision.IsEnforced);
     }
 
-    [Theory]
-    [BitAutoData(PolicyType.SingleOrg, OrganizationUserType.Owner)]
-    [BitAutoData(PolicyType.SingleOrg, OrganizationUserType.Admin)]
-    [BitAutoData(PolicyType.TwoFactorAuthentication, OrganizationUserType.Owner)]
-    [BitAutoData(PolicyType.TwoFactorAuthentication, OrganizationUserType.Admin)]
-    public void Evaluate_ExemptRole_ReturnsNotEnforced(
-        PolicyType policyType, OrganizationUserType proposedRole, Guid organizationId, Guid userId)
+    [Theory, BitAutoData]
+    public void Evaluate_ExemptRole_ReturnsNotEnforced(Guid organizationId, Guid userId)
     {
         // Arrange
-        var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, policyType)), [], _factories);
+        var sut = new PreAccessPolicyEnforcer(Policies(CreatePolicy(organizationId, ExemptingPolicyType)), [], _factories);
 
         // Act
-        var decision = sut.Evaluate(policyType, userId, proposedRole);
+        var decision = sut.Evaluate(ExemptingPolicyType, userId, OrganizationUserType.Custom);
 
         // Assert
         Assert.False(decision.IsEnforced);
     }
 
     [Theory]
-    [BitAutoData(PolicyType.SingleOrg, OrganizationUserType.Custom)]
-    [BitAutoData(PolicyType.TwoFactorAuthentication, OrganizationUserType.Custom)]
-    [BitAutoData(PolicyType.AutomaticUserConfirmation, OrganizationUserType.Owner)]
-    [BitAutoData(PolicyType.AutomaticUserConfirmation, OrganizationUserType.Admin)]
-    [BitAutoData(PolicyType.ResetPassword, OrganizationUserType.Owner)]
-    [BitAutoData(PolicyType.ResetPassword, OrganizationUserType.Admin)]
+    [BitAutoData(ExemptingPolicyType, OrganizationUserType.Owner)]
+    [BitAutoData(ExemptingPolicyType, OrganizationUserType.Admin)]
+    [BitAutoData(NonExemptingPolicyType, OrganizationUserType.Custom)]
     public void Evaluate_NonExemptRole_ReturnsEnforced(
         PolicyType policyType, OrganizationUserType proposedRole, Guid organizationId, Guid userId)
     {
@@ -104,35 +97,29 @@ public class PreAccessPolicyEnforcerTests
         Assert.True(decision.IsEnforced);
     }
 
-    [Theory]
-    [BitAutoData(PolicyType.SingleOrg)]
-    [BitAutoData(PolicyType.TwoFactorAuthentication)]
-    public void Evaluate_ProviderUser_ExemptPolicy_ReturnsNotEnforced(
-        PolicyType policyType, Guid organizationId, Guid userId)
+    [Theory, BitAutoData]
+    public void Evaluate_ProviderUser_ExemptPolicy_ReturnsNotEnforced(Guid organizationId, Guid userId)
     {
         // Arrange
         var sut = new PreAccessPolicyEnforcer(
-            Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
+            Policies(CreatePolicy(organizationId, ExemptingPolicyType)), [userId], _factories);
 
         // Act
-        var decision = sut.Evaluate(policyType, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(ExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.False(decision.IsEnforced);
     }
 
-    [Theory]
-    [BitAutoData(PolicyType.AutomaticUserConfirmation)]
-    [BitAutoData(PolicyType.ResetPassword)]
-    public void Evaluate_ProviderUser_NonExemptPolicy_ReturnsEnforced(
-        PolicyType policyType, Guid organizationId, Guid userId)
+    [Theory, BitAutoData]
+    public void Evaluate_ProviderUser_NonExemptPolicy_ReturnsEnforced(Guid organizationId, Guid userId)
     {
         // Arrange
         var sut = new PreAccessPolicyEnforcer(
-            Policies(CreatePolicy(organizationId, policyType)), [userId], _factories);
+            Policies(CreatePolicy(organizationId, NonExemptingPolicyType)), [userId], _factories);
 
         // Act
-        var decision = sut.Evaluate(policyType, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(NonExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.True(decision.IsEnforced);
@@ -143,10 +130,10 @@ public class PreAccessPolicyEnforcerTests
     {
         // Arrange
         var sut = new PreAccessPolicyEnforcer(
-            Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)), [providerUserId], _factories);
+            Policies(CreatePolicy(organizationId, ExemptingPolicyType)), [providerUserId], _factories);
 
         // Act
-        var decision = sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(ExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.True(decision.IsEnforced);
@@ -156,16 +143,16 @@ public class PreAccessPolicyEnforcerTests
     public void Evaluate_Enforced_ReturnsPolicyData(Guid organizationId, Guid userId)
     {
         // Arrange
-        var policy = CreatePolicy(organizationId, PolicyType.ResetPassword);
-        policy.Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        var policy = CreatePolicy(organizationId, NonExemptingPolicyType);
+        policy.Data = CoreHelpers.ClassToJsonData(new TestPolicyDataModel { Setting = true });
         var sut = new PreAccessPolicyEnforcer(Policies(policy), [], _factories);
 
         // Act
-        var decision = sut.Evaluate(PolicyType.ResetPassword, userId, OrganizationUserType.User);
+        var decision = sut.Evaluate(NonExemptingPolicyType, userId, OrganizationUserType.User);
 
         // Assert
         Assert.True(decision.IsEnforced);
-        Assert.True(decision.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled);
+        Assert.True(decision.GetDataModel<TestPolicyDataModel>().Setting);
     }
 
     [Theory]
@@ -215,14 +202,16 @@ public class PreAccessPolicyEnforcerTests
     {
         // Arrange
         var sut = new PreAccessPolicyEnforcer(
-            Policies(CreatePolicy(organizationId, PolicyType.SingleOrg)),
+            Policies(
+                CreatePolicy(organizationId, ExemptingPolicyType),
+                CreatePolicy(organizationId, NonExemptingPolicyType)),
             [providerUserId], _factories);
 
         // Act & Assert
-        Assert.True(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.User).IsEnforced);
-        Assert.False(sut.Evaluate(PolicyType.SingleOrg, providerUserId, OrganizationUserType.User).IsEnforced);
-        Assert.False(sut.Evaluate(PolicyType.SingleOrg, userId, OrganizationUserType.Admin).IsEnforced);
-        Assert.False(sut.Evaluate(PolicyType.TwoFactorAuthentication, userId, OrganizationUserType.User).IsEnforced);
+        Assert.True(sut.Evaluate(ExemptingPolicyType, userId, OrganizationUserType.User).IsEnforced);
+        Assert.False(sut.Evaluate(ExemptingPolicyType, providerUserId, OrganizationUserType.User).IsEnforced);
+        Assert.False(sut.Evaluate(ExemptingPolicyType, userId, OrganizationUserType.Custom).IsEnforced);
+        Assert.True(sut.Evaluate(NonExemptingPolicyType, providerUserId, OrganizationUserType.Custom).IsEnforced);
     }
 
     [Theory, BitAutoData]
@@ -243,4 +232,22 @@ public class PreAccessPolicyEnforcerTests
 
     private static Policy CreatePolicy(Guid organizationId, PolicyType type) =>
         new() { Id = Guid.NewGuid(), OrganizationId = organizationId, Type = type, Enabled = true };
+
+    private class TestPreAccessPolicyRequirementFactory(
+        PolicyType policyType,
+        IEnumerable<OrganizationUserType> exemptRoles,
+        bool exemptProviders) : BasePolicyRequirementFactory<TestPolicyRequirement>
+    {
+        public override PolicyType PolicyType => policyType;
+        protected override IEnumerable<OrganizationUserType> ExemptRoles => exemptRoles;
+        protected override bool ExemptProviders => exemptProviders;
+
+        public override TestPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+            => new() { Policies = policyDetails };
+    }
+
+    private class TestPolicyDataModel : IPolicyDataModel
+    {
+        public bool Setting { get; set; }
+    }
 }
