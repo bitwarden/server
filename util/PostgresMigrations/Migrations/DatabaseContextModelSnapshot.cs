@@ -237,6 +237,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
@@ -259,6 +262,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2471,6 +2477,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid>("CipherId")
                         .HasColumnType("uuid");
 
@@ -2498,9 +2507,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2508,13 +2514,14 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Status");
+                    b.HasIndex("CollectionId", "Action");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("NotAfter", "Action");
 
-                    b.HasIndex("NotAfter", "Status");
+                    b.HasIndex("CipherId", "Action", "NotAfter")
+                        .IsDescending(false, false, true);
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2523,6 +2530,12 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<byte>("Action")
+                        .HasColumnType("smallint");
+
+                    b.Property<DateTime?>("ActionDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("uuid");
@@ -2551,14 +2564,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("uuid");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
 
                     b.HasKey("Id");
 
@@ -2566,11 +2573,15 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("CollectionId", "CreationDate");
 
-                    b.HasIndex("OrganizationId", "Status");
+                    b.HasIndex("OrganizationId", "Action");
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CreationDate");
+
+                    b.HasIndex("CollectionId", "Action", "NotAfter");
+
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessRequest", (string)null);
                 });

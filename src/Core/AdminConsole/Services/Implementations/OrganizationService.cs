@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -530,7 +531,7 @@ public class OrganizationService : IOrganizationService
             var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
             if (!canScale)
             {
-                throw new BadRequestException(failureReason);
+                throw new BadRequestException(await ToInviteSeatLimitMessageAsync(organization, failureReason));
             }
         }
 
@@ -854,11 +855,44 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
-            return (false, $"Seat limit has been reached.");
+            return (false, SeatLimitHasBeenReachedMessage);
         }
 
         return (true, failureReason);
     }
+
+    /// <summary>
+    /// The flow-neutral seat limit message. <see cref="CanScaleAsync"/> also backs member restore, Families
+    /// sponsorship and SSO just-in-time provisioning, so it stays neutral for them. Only the invite flow swaps in
+    /// the seat-count wording, via <see cref="ToInviteSeatLimitMessageAsync"/>.
+    /// </summary>
+    public const string SeatLimitHasBeenReachedMessage = "Seat limit has been reached.";
+
+    /// <summary>
+    /// Design approved the seat-count wording for the invite flow only, so the substitution happens here rather
+    /// than inside <see cref="CanScaleAsync"/>. Any other failure reason is passed through untouched.
+    /// </summary>
+    private async Task<string> ToInviteSeatLimitMessageAsync(Organization organization, string failureReason)
+    {
+        if (failureReason != SeatLimitHasBeenReachedMessage)
+        {
+            return failureReason;
+        }
+
+        var seatLimitMessage = await CanManageBillingAsync(organization.Id)
+            ? PasswordManagerSeatLimitHasBeenReachedError.Code
+            : PasswordManagerSeatLimitHasBeenReachedNoBillingAccessError.Code;
+
+        return string.Format(seatLimitMessage, organization.MaxAutoscaleSeats!.Value);
+    }
+
+    /// <summary>
+    /// Seat scaling is also triggered by callers without an authenticated member (SCIM, the Public API, and
+    /// background work), where nobody could raise the seat limit in place. <see cref="ICurrentContext.EditSubscription"/>
+    /// requires a user, so short circuit those callers.
+    /// </summary>
+    private async Task<bool> CanManageBillingAsync(Guid organizationId) =>
+        _currentContext.UserId.HasValue && await _currentContext.EditSubscription(organizationId);
 
     public async Task AutoAddSeatsAsync(Organization organization, int seatsToAdd)
     {

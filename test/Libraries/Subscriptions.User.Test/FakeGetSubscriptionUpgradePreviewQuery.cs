@@ -1,19 +1,19 @@
 ﻿using Bit.Invoicing.InvoicePreviews.Models;
-using Bit.Subscriptions.User.Commands;
 using Bit.Subscriptions.User.Models.Requests;
+using Bit.Subscriptions.User.Queries;
 using UserEntity = Bit.Core.Entities.User;
 
 namespace Bit.Subscriptions.User.Test;
 
-internal sealed class FakePreviewPremiumUpgradeCommand : IPreviewPremiumUpgradeCommand
+internal sealed class FakeGetSubscriptionUpgradePreviewQuery : IGetSubscriptionUpgradePreviewQuery
 {
     public InvoicePreview? Result { get; init; }
     public Exception? Exception { get; init; }
     public UserEntity? ReceivedUser { get; private set; }
-    public PreviewPremiumUpgradeRequest? ReceivedRequest { get; private set; }
+    public GetSubscriptionUpgradePreviewRequest? ReceivedRequest { get; private set; }
     public int Calls { get; private set; }
 
-    public Task<InvoicePreview> Run(UserEntity user, PreviewPremiumUpgradeRequest request)
+    public Task<InvoicePreview> Run(UserEntity user, GetSubscriptionUpgradePreviewRequest request)
     {
         Calls++;
         ReceivedUser = user;

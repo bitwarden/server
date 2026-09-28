@@ -10,26 +10,26 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using UserEntity = Bit.Core.Entities.User;
 
-namespace Bit.Subscriptions.User.Commands;
+namespace Bit.Subscriptions.User.Queries;
 
-internal interface IPreviewPremiumUpgradeCommand
+internal interface IGetSubscriptionUpgradePreviewQuery
 {
-    Task<InvoicePreview> Run(UserEntity user, PreviewPremiumUpgradeRequest request);
+    Task<InvoicePreview> Run(UserEntity user, GetSubscriptionUpgradePreviewRequest request);
 }
 
-internal sealed class PreviewPremiumUpgradeCommand(
-    ILogger<PreviewPremiumUpgradeCommand> logger,
+internal sealed class GetSubscriptionUpgradePreviewQuery(
+    ILogger<GetSubscriptionUpgradePreviewQuery> logger,
     IPricingClient pricingClient,
     IStripeAdapter stripeAdapter,
-    IInvoicePreviewService invoicePreviewService) : IPreviewPremiumUpgradeCommand
+    IInvoicePreviewService invoicePreviewService) : IGetSubscriptionUpgradePreviewQuery
 {
     private const string InvalidSubscriptionMessage =
         "Subscription is in an invalid state. Please contact support for assistance.";
 
-    public async Task<InvoicePreview> Run(UserEntity user, PreviewPremiumUpgradeRequest request)
+    public async Task<InvoicePreview> Run(UserEntity user, GetSubscriptionUpgradePreviewRequest request)
     {
         var (targetPlanType, targetPlanTier) = ResolveTargetPlan(request.TargetProductTierType);
-        var billingAddress = ResolveBillingAddress(request.BillingAddress);
+        var billingAddress = ResolveBillingAddress(request.Country, request.PostalCode);
 
         if (!user.Premium)
         {
@@ -121,30 +121,24 @@ internal sealed class PreviewPremiumUpgradeCommand(
             ProductTierType.Teams => (PlanType.TeamsAnnually, PlanTierType.Teams),
             ProductTierType.Enterprise => (PlanType.EnterpriseAnnually, PlanTierType.Enterprise),
             _ => throw new BadRequestException(
-                nameof(PreviewPremiumUpgradeRequest.TargetProductTierType),
+                nameof(GetSubscriptionUpgradePreviewRequest.TargetProductTierType),
                 $"Cannot upgrade Premium subscription to {targetProductTierType} plan.")
         };
 
-    private static AddressOptions ResolveBillingAddress(PremiumUpgradeBillingAddressRequest? billingAddress)
+    private static AddressOptions ResolveBillingAddress(string? country, string? postalCode)
     {
-        if (billingAddress is null)
+        if (string.IsNullOrWhiteSpace(country) || country.Length != 2)
         {
             throw new BadRequestException(
-                nameof(PreviewPremiumUpgradeRequest.BillingAddress), "The BillingAddress field is required.");
+                nameof(GetSubscriptionUpgradePreviewRequest.Country), "Country code must be 2 characters long.");
         }
 
-        if (string.IsNullOrWhiteSpace(billingAddress.Country) || billingAddress.Country.Length != 2)
+        if (string.IsNullOrWhiteSpace(postalCode))
         {
             throw new BadRequestException(
-                nameof(PremiumUpgradeBillingAddressRequest.Country), "Country code must be 2 characters long.");
+                nameof(GetSubscriptionUpgradePreviewRequest.PostalCode), "The PostalCode field is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(billingAddress.PostalCode))
-        {
-            throw new BadRequestException(
-                nameof(PremiumUpgradeBillingAddressRequest.PostalCode), "The PostalCode field is required.");
-        }
-
-        return new AddressOptions { Country = billingAddress.Country, PostalCode = billingAddress.PostalCode };
+        return new AddressOptions { Country = country, PostalCode = postalCode };
     }
 }
