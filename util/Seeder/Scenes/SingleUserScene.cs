@@ -8,7 +8,6 @@ using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Seeder.Scenes;
@@ -34,7 +33,7 @@ public class SingleUserScene(
     IPasswordHasher<User> passwordHasher,
     IUserRepository userRepository,
     IManglerService manglerService,
-    IServiceProvider serviceProvider,
+    Func<ILicensingService> licenseServiceFactory,
     ISeederLicenseSigner licenseSigner,
     IGlobalSettings globalSettings,
     ILogger<SingleUserScene> logger) : IScene<SingleUserScene.Request, SingleUserSceneResult>
@@ -83,8 +82,7 @@ public class SingleUserScene(
         var licenseOutcome = default(LicenseWriteOutcome);
         if (request.SelfHosted && user.Premium)
         {
-            licenseOutcome = await SelfHostLicenseService.WriteLicenseAsync(
-                serviceProvider.GetRequiredService<ILicensingService>, licenseSigner, user, logger);
+            licenseOutcome = await SelfHostLicenseService.WriteLicenseAsync(licenseServiceFactory, licenseSigner, user, logger);
         }
 
         return new SceneResult<SingleUserSceneResult>(
