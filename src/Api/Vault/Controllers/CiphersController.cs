@@ -1820,6 +1820,9 @@ public class CiphersController : Controller
             catch (JsonException)
             {
                 // Existing stored data is corrupt — skip Fido2 check so a valid PUT can overwrite it.
+                _logger.LogWarning(
+                    "Cipher {CipherId} has corrupt Data and could not be deserialized for Fido2 credential validation.",
+                    cipher.Id);
             }
         }
     }
