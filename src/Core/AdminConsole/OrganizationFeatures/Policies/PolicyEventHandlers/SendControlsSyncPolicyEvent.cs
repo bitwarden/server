@@ -109,12 +109,12 @@ public class SendControlsSyncPolicyEvent(
                 .Where(s => s.Disabled && !postUpsertedPolicyState.Enabled)
                 .ToList();
 
-            await UpdateAndLogSendsAsync(toEnable, disabled: false, EventType.Send_PolicyEnabled);
-            await UpdateAndLogSendsAsync(toDisable, disabled: true, EventType.Send_PolicyDisabled);
+            await UpdateAndLogSendsAsync(toEnable, disabled: false, EventType.Send_PolicyEnabled, postUpsertedPolicyState.OrganizationId);
+            await UpdateAndLogSendsAsync(toDisable, disabled: true, EventType.Send_PolicyDisabled, postUpsertedPolicyState.OrganizationId);
         }
     }
 
-    private async Task UpdateAndLogSendsAsync(List<Send> sends, bool disabled, EventType eventType)
+    private async Task UpdateAndLogSendsAsync(List<Send> sends, bool disabled, EventType eventType, Guid organizationId)
     {
         if (sends.Count == 0)
         {
@@ -122,10 +122,7 @@ public class SendControlsSyncPolicyEvent(
         }
 
         await sendRepository.UpdateManyDisabledAsync(sends.Select(s => s.Id).ToList(), disabled);
-        foreach (var send in sends.Where(s => s.UserId.HasValue))
-        {
-            await eventService.LogSendEventAsync(send.UserId!.Value, send.Id, eventType);
-        }
+        await eventService.LogSendEventsAsync(sends.Select(s => (s, eventType)), organizationId);
     }
 
     private static bool SendIsNonCompliant(Send send, SendControlsPolicyData policyData)

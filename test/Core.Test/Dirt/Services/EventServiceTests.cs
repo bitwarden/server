@@ -11,6 +11,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -724,6 +725,59 @@ public class EventServiceTests
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
                 events.Any(e => e.ProviderId == providerId && e.ActingUserId == ownerUserId)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_UsesGivenOrganizationId_NotActingUsersOwnMemberships(
+        Send send1, Send send2, EventType eventType, Guid organizationId, Guid actingUserId,
+        SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+
+        await sutProvider.Sut.LogSendEventsAsync(
+            new[] { (send1, eventType), (send2, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Count() == 2
+                && events.All(e => e.Type == eventType && e.OrganizationId == organizationId && e.ActingUserId == actingUserId)
+                && events.Any(e => e.SendId == send1.Id && e.UserId == send1.UserId)
+                && events.Any(e => e.SendId == send2.Id && e.UserId == send2.UserId)));
+        await sutProvider.GetDependency<ICurrentContext>()
+            .DidNotReceiveWithAnyArgs()
+            .OrganizationMembershipAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_SkipsSendsWithNoUserId(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        send.UserId = null;
+
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_WhenEventsDisabled_DoesNotLog(
+        Send send, EventType eventType, Guid organizationId, SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = false, Enabled = true });
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
     }
 
     [Theory, BitAutoData]

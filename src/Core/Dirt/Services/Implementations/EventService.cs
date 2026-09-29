@@ -15,6 +15,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -792,6 +793,33 @@ public class EventService : IEventService
         else
         {
             await _eventWriteService.CreateAsync(events.First());
+        }
+    }
+
+    public async Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId)
+    {
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (!CanUseEvents(orgAbility))
+        {
+            return;
+        }
+
+        var eventMessages = events
+            .Where(e => e.send.UserId.HasValue)
+            .Select(e => new EventMessage(_currentContext)
+            {
+                OrganizationId = organizationId,
+                UserId = e.send.UserId,
+                ActingUserId = _currentContext?.UserId,
+                Type = e.type,
+                SendId = e.send.Id,
+                Date = DateTime.UtcNow
+            })
+            .ToList();
+
+        if (eventMessages.Count > 0)
+        {
+            await _eventWriteService.CreateManyAsync(eventMessages);
         }
     }
 

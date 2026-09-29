@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -220,11 +221,13 @@ public class SendControlsSyncPolicyEventTests
         var otherwiseCompliantSend1 = new Send
         {
             Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
             AuthType = AuthType.None,
         };
         var otherwiseCompliantSend2 = new Send
         {
             Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
             AuthType = AuthType.Password,
         };
         var sendIds = new List<Guid>([otherwiseCompliantSend1.Id, otherwiseCompliantSend2.Id]);
@@ -241,6 +244,15 @@ public class SendControlsSyncPolicyEventTests
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Count() == 2 && l.Contains(otherwiseCompliantSend1.Id) && l.Contains(otherwiseCompliantSend2.Id)), true);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogSendEventsAsync(
+                Arg.Is<IEnumerable<(Send send, EventType type)>>(events =>
+                    events.Count() == 2
+                    && events.All(e => e.type == EventType.Send_PolicyDisabled)
+                    && events.Any(e => e.send.Id == otherwiseCompliantSend1.Id)
+                    && events.Any(e => e.send.Id == otherwiseCompliantSend2.Id)),
+                policyUpdate.OrganizationId);
     }
 
     [Theory, BitAutoData]
@@ -721,7 +733,7 @@ public class SendControlsSyncPolicyEventTests
             .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
             .Returns(true);
 
-        var previouslyDisabledSend = new Send { Id = Guid.NewGuid(), Disabled = true };
+        var previouslyDisabledSend = new Send { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Disabled = true };
         var sendIds = new List<Guid>([previouslyDisabledSend.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
@@ -736,5 +748,13 @@ public class SendControlsSyncPolicyEventTests
         await sutProvider.GetDependency<ISendRepository>()
             .Received(1)
             .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Contains(previouslyDisabledSend.Id)), false);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogSendEventsAsync(
+                Arg.Is<IEnumerable<(Send send, EventType type)>>(events =>
+                    events.Count() == 1
+                    && events.Single().type == EventType.Send_PolicyEnabled
+                    && events.Single().send.Id == previouslyDisabledSend.Id),
+                policyUpdate.OrganizationId);
     }
 }
