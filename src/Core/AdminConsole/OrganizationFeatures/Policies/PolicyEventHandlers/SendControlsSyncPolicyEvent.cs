@@ -99,11 +99,9 @@ public class SendControlsSyncPolicyEvent(
         {
             var sendsChunk = await sendRepository.GetManyByIdsAsync(sendIdsChunk);
 
-            bool IsIgnored(Send send) => orgOwnerAndAdminUserIds.Contains(send.UserId);
-
             // If the Send was created by an Owner or an Admin in the organization we ignore it
             var toDisable = sendsChunk
-                .Where(s => !s.Disabled && postUpsertedPolicyState.Enabled && !IsIgnored(s) && SendIsNonCompliant(s, sendControlsPolicyData))
+                .Where(s => !s.Disabled && postUpsertedPolicyState.Enabled && !orgOwnerAndAdminUserIds.Contains(s.UserId) && SendIsNonCompliant(s, sendControlsPolicyData))
                 .ToList();
             var toEnable = sendsChunk
                 .Where(s => s.Disabled && !postUpsertedPolicyState.Enabled)
