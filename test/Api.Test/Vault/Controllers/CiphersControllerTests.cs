@@ -2547,6 +2547,30 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetAdmin_WithProviderUser_ReturnsCipher(
+        Guid userId, Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        var cipher = new CipherOrganizationDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<CollectionCipher>());
+
+        var result = await sutProvider.Sut.GetAdmin(cipher.Id.ToString());
+
+        Assert.NotNull(result.Data);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAdmin_LeasingGatedCipher_WebVault_ReturnsPartialShape(
         Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
