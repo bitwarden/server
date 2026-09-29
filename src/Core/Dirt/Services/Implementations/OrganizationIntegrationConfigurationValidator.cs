@@ -62,13 +62,15 @@ public class OrganizationIntegrationConfigurationValidator : IOrganizationIntegr
     /// <summary>
     /// The key must be exactly <c>ChannelId</c> so it replaces the integration's install channel when the two
     /// configurations are merged (see <see cref="OrganizationIntegrationConfigurationDetails.MergedConfiguration"/>).
-    /// A differently cased key would be added alongside it instead.
+    /// A differently cased key would be added alongside it instead. No other keys are allowed, because any key here
+    /// overrides the install-time values (such as <c>ServiceUrl</c>) that only the Bot Framework callback may set.
     /// </summary>
     private static bool IsTeamsConfigurationValid(string configuration)
     {
         try
         {
             return JsonNode.Parse(configuration) is JsonObject json
+                && json.Count == 1
                 && json[nameof(TeamsIntegrationConfiguration.ChannelId)] is JsonValue channelId
                 && channelId.TryGetValue<string>(out var value)
                 && !string.IsNullOrWhiteSpace(value);

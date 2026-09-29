@@ -116,6 +116,9 @@ public class OrganizationIntegrationConfigurationValidatorTests
     [InlineData("{\"ChannelId\":123}")]
     [InlineData("{\"channelId\":\"19:channel@thread.tacv2\"}")]
     [InlineData("[\"19:channel@thread.tacv2\"]")]
+    [InlineData("{\"ChannelId\":\"19:channel@thread.tacv2\",\"ServiceUrl\":\"https://attacker.example/\"}")]
+    [InlineData("{\"ChannelId\":\"19:channel@thread.tacv2\",\"TenantId\":\"other-tenant\"}")]
+    [InlineData("{\"ChannelId\":\"19:channel@thread.tacv2\",\"ChannelId\":\"19:other@thread.tacv2\"}")]
     public void ValidateConfiguration_TeamsInvalidChannelConfiguration_ReturnsFalse(string configuration)
     {
         var config = new OrganizationIntegrationConfiguration
