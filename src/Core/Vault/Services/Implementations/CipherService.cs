@@ -505,17 +505,33 @@ public class CipherService : ICipherService
         }
 
 
-        await DeleteAttachmentsForOrganizationAsync(organizationId);
+        await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
 
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
-    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId)
+    public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
     {
-        var cipherIdsWithAttachments = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
+        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        if (excludeDefaultUserCollectionCiphers)
+        {
+            var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
+                .Where(c => c.Type == CollectionType.DefaultUserCollection)
+                .Select(c => c.Id)
+                .ToHashSet();
+
+            var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
+                .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
+                .Select(cc => cc.CipherId)
+                .ToHashSet();
+
+            ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
+        }
+
+        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
         foreach (var cipherId in cipherIdsWithAttachments)
         {

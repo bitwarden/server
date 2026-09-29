@@ -98,34 +98,78 @@ public class TwoFactorEmailServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SendNewDeviceVerificationEmailAsync_Success(SutProvider<TwoFactorEmailService> sutProvider, User user)
+    public async Task SendNewDeviceVerificationEmailAsync_Success(
+        SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         var email = user.Email.ToLowerInvariant();
-        var token = "thisisatokentocompare";
         var IpAddress = "1.1.1.1";
         var deviceType = DeviceType.Android;
+        var deviceIdentifier = "device-identifier";
+        var code = "123456";
 
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType = deviceType;
         context.IpAddress = IpAddress;
 
-        var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
-        userTwoFactorTokenProvider
-            .CanGenerateTwoFactorTokenAsync(Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(true));
-        userTwoFactorTokenProvider
-            .GenerateAsync("otp:" + user.Email, Arg.Any<UserManager<User>>(), user)
-            .Returns(Task.FromResult(token));
+        sutProvider.GetDependency<INewDeviceVerificationOtpStore>()
+            .IssueAsync(user, deviceIdentifier)
+            .Returns(code);
 
-        var userManager = sutProvider.GetDependency<UserManager<User>>();
-        userManager.RegisterTokenProvider(TokenOptions.DefaultEmailProvider, userTwoFactorTokenProvider);
-
-        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType.ToString(),
+            .SendTwoFactorEmailAsync(email, user.Email, code, IpAddress, deviceType.ToString(),
                 TwoFactorEmailPurpose.NewDeviceVerification);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_ExceptionBecauseNoDeviceIdentifier_DoesNotIssueCode(
+        SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user, " "));
+
+        await sutProvider.GetDependency<INewDeviceVerificationOtpStore>()
+            .DidNotReceiveWithAnyArgs()
+            .IssueAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyNewDeviceVerificationOtpAsync_DelegatesToStore(
+        SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        var deviceIdentifier = "device-identifier";
+        var otp = "123456";
+
+        sutProvider.GetDependency<INewDeviceVerificationOtpStore>()
+            .ValidateAndConsumeAsync(user, deviceIdentifier, otp)
+            .Returns(true);
+
+        Assert.True(await sutProvider.Sut.VerifyNewDeviceVerificationOtpAsync(user, deviceIdentifier, otp));
+    }
+
+    [Theory, BitAutoData]
+    public async Task VerifyNewDeviceVerificationOtpAsync_NoDeviceIdentifier_Throws(
+        SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => sutProvider.Sut.VerifyNewDeviceVerificationOtpAsync(user, " ", "123456"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPendingNewDeviceVerificationDeviceIdentifierAsync_DelegatesToStore(
+        SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        var deviceIdentifier = "device-identifier";
+
+        sutProvider.GetDependency<INewDeviceVerificationOtpStore>()
+            .GetPendingDeviceIdentifierAsync(user)
+            .Returns(deviceIdentifier);
+
+        Assert.Equal(
+            deviceIdentifier,
+            await sutProvider.Sut.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user));
     }
 
     [Theory, BitAutoData]
@@ -169,7 +213,8 @@ public class TwoFactorEmailServiceTests
     [Theory, BitAutoData]
     public async Task SendNewDeviceVerificationEmailAsync_ExceptionBecauseUserNull(SutProvider<TwoFactorEmailService> sutProvider)
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null));
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null, "device-identifier"));
     }
 
     [Theory]

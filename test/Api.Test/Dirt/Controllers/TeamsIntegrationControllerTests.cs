@@ -10,6 +10,7 @@ using Bit.Core.Dirt.Models.Data.Teams;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http;
@@ -37,6 +38,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -68,6 +70,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -88,6 +91,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -108,6 +112,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -134,6 +139,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -153,6 +159,7 @@ public class TeamsIntegrationControllerTests
     public async Task CreateAsync_StateEmpty_ThrowsNotFound(
         SutProvider<TeamsIntegrationController> sutProvider)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -170,6 +177,7 @@ public class TeamsIntegrationControllerTests
         OrganizationIntegration integration)
     {
         var timeProvider = new FakeTimeProvider(new DateTime(2024, 4, 3, 2, 1, 0, DateTimeKind.Utc));
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -189,6 +197,7 @@ public class TeamsIntegrationControllerTests
         SutProvider<TeamsIntegrationController> sutProvider,
         OrganizationIntegration integration)
     {
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -212,6 +221,7 @@ public class TeamsIntegrationControllerTests
         wrongOrgIntegration.Type = IntegrationType.Teams;
         wrongOrgIntegration.Configuration = null;
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -235,6 +245,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Teams;
         integration.Configuration = ConnectedConfiguration();
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -257,6 +268,7 @@ public class TeamsIntegrationControllerTests
     {
         integration.Type = IntegrationType.Hec;
         integration.Configuration = null;
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -280,6 +292,7 @@ public class TeamsIntegrationControllerTests
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -316,6 +329,7 @@ public class TeamsIntegrationControllerTests
         integration.Type = IntegrationType.Teams;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -346,6 +360,7 @@ public class TeamsIntegrationControllerTests
         integration.Configuration = null;
         integration.Type = IntegrationType.Teams;
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -371,6 +386,7 @@ public class TeamsIntegrationControllerTests
         integration.Type = IntegrationType.Teams;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -397,6 +413,7 @@ public class TeamsIntegrationControllerTests
         integration.Type = IntegrationType.Teams;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -445,6 +462,7 @@ public class TeamsIntegrationControllerTests
         integration.Configuration = null;
         var expectedUrl = "https://localhost/";
 
+        SetBaseServiceUriApi(sutProvider);
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.Sut.Url
             .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
@@ -482,5 +500,62 @@ public class TeamsIntegrationControllerTests
 
         await sutProvider.Sut.IncomingPostAsync();
         await adapter.Received(1).ProcessAsync(Arg.Any<HttpRequest>(), Arg.Any<HttpResponse>(), bot);
+    }
+
+    [Theory]
+    [BitAutoData("https://api.example.com", "https://api.example.com/organizations/integrations/teams/create")]
+    [BitAutoData("https://bitwarden.example.com/api/", "https://bitwarden.example.com/api/organizations/integrations/teams/create")]
+    public async Task RedirectAsync_CallbackUrlUsesConfiguredApiBaseUrl(
+        string apiBaseUrl,
+        string expectedCallbackUrl,
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Configuration = null;
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(apiBaseUrl);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Is<UrlRouteContext>(c => c.RouteName == "TeamsIntegration_Create"))
+            .Returns("/organizations/integrations/teams/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyByOrganizationAsync(integration.OrganizationId)
+            .Returns([]);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .CreateAsync(Arg.Any<OrganizationIntegration>())
+            .Returns(integration);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>())
+            .Returns("https://teams.example.com/authorize");
+
+        var requestAction = await sutProvider.Sut.RedirectAsync(integration.OrganizationId);
+
+        Assert.IsType<RedirectResult>(requestAction);
+        sutProvider.GetDependency<ITeamsService>().Received(1)
+            .GetRedirectUrl(expectedCallbackUrl, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RedirectAsync_ApiBaseUriInvalid_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns(string.Empty);
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.Sut.Url
+            .RouteUrl(Arg.Any<UrlRouteContext>())
+            .Returns("/organizations/integrations/teams/create");
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    private static void SetBaseServiceUriApi(SutProvider<TeamsIntegrationController> sutProvider)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri.Api.Returns("https://api.example.com");
     }
 }

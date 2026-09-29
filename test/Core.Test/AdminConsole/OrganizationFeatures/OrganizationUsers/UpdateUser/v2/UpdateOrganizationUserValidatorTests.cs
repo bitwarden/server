@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.Collections;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -302,10 +303,10 @@ public class UpdateOrganizationUserValidatorTests
         // The escalation decision (and which error to return) lives in the validation service; the validator
         // just forwards whatever it returns. The mapping itself is covered by the service's own unit tests.
         var request = CreateRequest(sutProvider, orgUser, OrganizationUserType.Admin,
-            performedBy: new StandardUser(Guid.NewGuid(), isOrganizationOwner: false, OrganizationUserType.Custom));
+            performedBy: new StandardUser(Guid.NewGuid(), isProvider: false, OrganizationUserType.Custom));
 
         sutProvider.GetDependency<IOrganizationUserValidationService>()
-            .CanManageRoleChangeAsync(Arg.Any<Guid>(), Arg.Any<IOrganizationUserRole>(), Arg.Any<IOrganizationUserRole>(),
+            .CanManageRoleChange(Arg.Any<IActingUser>(), Arg.Any<IOrganizationUserRole>(),
                 Arg.Any<IOrganizationUserRole>())
             .Returns(new CustomUsersCannotManageAdminsOrOwners());
 

@@ -104,7 +104,7 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
 
     [Authorize("Application")]
     [HttpGet("{orgId}/sponsored")]
-    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations(Guid orgId)
+    public async Task<ListResponseModel<OrganizationSponsorshipInvitesResponseModel>> GetSponsoredOrganizations([FromRoute] Guid orgId)
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(orgId);
         if (sponsoringOrg == null)

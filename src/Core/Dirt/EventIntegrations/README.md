@@ -35,7 +35,7 @@ When `EventIntegrationEventWriteService` publishes, it posts to the first tier o
 approach to handling messages. Each tier is represented in the AMQP stack by a separate exchange
 (in RabbitMQ terminology) or topic (in Azure Service Bus).
 
-``` mermaid
+```mermaid
 flowchart TD
     B1[EventService]
     B2[EventIntegrationEventWriteService]
@@ -66,23 +66,24 @@ In the first tier, events are broadcast in a fan-out to a series of listeners. T
 is a JSON representation of an individual `EventMessage` or an array of `EventMessage`. Handlers at
 this level are responsible for handling each event or array of events. There are currently two handlers
 at this level:
-  - `EventRepositoryHandler`
-    - The `EventRepositoryHandler` is responsible for long term storage of events. It receives all events
-      and  stores them via an injected `IEventRepository` into the database.
-    - This mirrors the behavior of when event integrations are turned off - cloud stores to Azure Tables
-      and self-hosted is stored to the database.
-  - `EventIntegrationHandler`
-    - The `EventIntegrationHandler` is a generic class that is customized to each integration (via the
-      configuration details of the integration) and is responsible for determining if there's a configuration
-      for this event / organization / integration, fetching that configuration, and parsing the details of the
-      event into a template string.
-    - The `EventIntegrationHandler` uses the injected `IOrganizationIntegrationConfigurationRepository` to pull
-      the specific set of configuration and template based on the event type, organization, and integration type.
-      This configuration is what determines if an integration should be sent, what details are necessary for sending
-      it, and the actual message to send.
-    - The output of `EventIntegrationHandler` is a new `IntegrationMessage`, with the details of this
-      the configuration necessary to interact with the integration and the message to send (with all the event
-      details incorporated), published to the integration level of the message bus.
+
+- `EventRepositoryHandler`
+  - The `EventRepositoryHandler` is responsible for long term storage of events. It receives all events
+    and stores them via an injected `IEventRepository` into the database.
+  - This mirrors the behavior of when event integrations are turned off - cloud stores to Azure Tables
+    and self-hosted is stored to the database.
+- `EventIntegrationHandler`
+  - The `EventIntegrationHandler` is a generic class that is customized to each integration (via the
+    configuration details of the integration) and is responsible for determining if there's a configuration
+    for this event / organization / integration, fetching that configuration, and parsing the details of the
+    event into a template string.
+  - The `EventIntegrationHandler` uses the injected `IOrganizationIntegrationConfigurationRepository` to pull
+    the specific set of configuration and template based on the event type, organization, and integration type.
+    This configuration is what determines if an integration should be sent, what details are necessary for sending
+    it, and the actual message to send.
+  - The output of `EventIntegrationHandler` is a new `IntegrationMessage`, with the details of this
+    the configuration necessary to interact with the integration and the message to send (with all the event
+    details incorporated), published to the integration level of the message bus.
 
 ### Integration tier
 
@@ -118,7 +119,7 @@ the provided DateTime, but also adding exponential backoff (based on `RetryCount
 the `RetryCount` in the `IntegrationMessage` to see if it's over the `MaxRetries` defined in Global Settings. If it
 is over the `MaxRetries`, the message is sent to the DLQ. Otherwise, it is scheduled for retry.
 
-``` mermaid
+```mermaid
 flowchart TD
 A[Success == false] --> B{Retryable?}
     B -- No --> C[Send to Dead Letter Queue DLQ]
@@ -146,14 +147,74 @@ defaults to `false` which indicates we should use retry queues with a timing che
    - The plugin must be setup and enabled before turning this option on (which is why it defaults to off).
 
 2. Retry queues + timing check
-    - If the delay plugin setting is off, we push the message to a retry queue which has a fixed amount of time before
-      it gets re-published back to the main queue.
-    - When a message comes off the queue, we check to see if the `DelayUntilDate` has already passed.
-      - If it has passed, we then handle the integration normally and retry the request.
-      - If it is still in the future, we put the message back on the retry queue for an additional wait.
-    - While this does use extra processing, it gives us better support for honoring the delays even if the delay plugin
-      isn't enabled. Since this solution is only intended for self-host, it should be a pretty minimal impact with short
-      delays and a small number of retries.
+   - If the delay plugin setting is off, we push the message to a retry queue which has a fixed amount of time before
+     it gets re-published back to the main queue.
+   - When a message comes off the queue, we check to see if the `DelayUntilDate` has already passed.
+     - If it has passed, we then handle the integration normally and retry the request.
+     - If it is still in the future, we put the message back on the retry queue for an additional wait.
+   - While this does use extra processing, it gives us better support for honoring the delays even if the delay plugin
+     isn't enabled. Since this solution is only intended for self-host, it should be a pretty minimal impact with short
+     delays and a small number of retries.
+
+### Dead letter retention
+
+Every dead letter in this architecture is explicit. The listener calls the platform's dead letter path once retries
+are exhausted or the handler reports a non-retryable failure, and both decisions happen within seconds of the first
+attempt. Message expiration therefore plays no part in normal failure handling.
+
+Retention of messages already in a DLQ differs by platform.
+
+RabbitMQ dead letters expire on the queue's own TTL.
+`GlobalSettings.EventLogging.RabbitMq.DeadLetterTimeToLive` supplies it as an `x-message-ttl` queue argument. Zero or
+a negative value omits the argument and the queue retains messages indefinitely, which is the default;
+`RabbitMqService` logs a warning while setting up its connection whenever retention is unset.
+
+A queue keeps the arguments it was declared with, and RabbitMQ rejects any redeclaration that disagrees with them in
+either direction, so this setting only takes effect on a dead letter queue that has yet to be declared. Changing the
+value later, or setting it back to zero, is rejected the same way as setting it for the first time on an existing
+queue. `RabbitMqService` runs each declare on its own channel and treats every rejection as recoverable: it logs a
+warning naming the queue, leaves the queue exactly as it is, and ensures only the binding, so no combination of
+settings and queue state can fail connection setup.
+
+On an instance whose dead letter queue already exists, a broker policy is the route that works. It takes effect
+without redeclaring or deleting the queue and without a deploy:
+
+```
+rabbitmqctl set_policy dlq-ttl "^integration-dead-letter-queue$" '{"message-ttl":604800000}' --apply-to queues
+```
+
+Azure Service Bus dead letters do not expire. TTL does not apply to a `$DeadLetterQueue`, and Azure holds those
+messages until a receiver completes them. `DeadLetterCleanupHostedService` in the events processor is
+what completes them. It receives from each integration subscription's dead letter sub-queue and
+deletes every message enqueued longer ago than `GlobalSettings.EventLogging.AzureServiceBus.DeadLetterRetention`.
+Zero or a negative value disables the sweep and the service exits at startup, which is the default.
+
+`GlobalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval` is how long the service waits between sweeps
+and defaults to one hour. It must be positive and no longer than the 49 days `Task.Delay` accepts; outside that range
+the service logs a warning and sweeps on the default interval instead. Configuration binds a bare number as days, so
+an interval meant as hours needs `hh:mm:ss`.
+
+A sweep stops at the first message inside the retention window, because dead letters are received oldest first.
+
+Adding an integration means adding its subscription to the service's subscription list. That list is covered by a
+test which reflects over every `*IntegrationSubscriptionName` setting and compares the result against the list the
+service actually sweeps, so a missing entry fails the build instead of leaving one dead letter queue to grow
+unnoticed.
+
+### Message expiration
+
+Integration messages published to Azure Service Bus carry a time to live from
+`GlobalSettings.EventLogging.AzureServiceBus.IntegrationMessageTimeToLive`. Zero or a negative value, which is the
+default, leaves the TTL unset so the subscription's `DefaultMessageTimeToLive` applies instead. That subscription
+setting also caps the value, so a longer TTL has no effect.
+
+This only reaches messages that never make it to a listener decision, such as a scheduled retry waiting while
+listeners are down. Each retry is published as a new message, so the TTL bounds a single attempt rather than the retry
+chain. Subscriptions need `DeadLetteringOnMessageExpiration` enabled for an expired message to reach the DLQ; with it
+disabled, Azure Service Bus discards the message silently.
+
+Event tier messages are published without a TTL. That tier feeds `EventRepositoryHandler` and long term event storage,
+so expiring those messages would discard event records.
 
 ## Listener / Handler pattern
 
@@ -204,22 +265,22 @@ Currently, there are integrations / handlers for Slack, webhooks, and HTTP Event
 - The top-level object that enables a specific integration for the organization.
 - Includes any properties that apply to the entire integration across all events.
   - For example, Slack stores the token in the `Configuration` which applies to every event, but stores the
-channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire Slack
-integration, but the channel could be configured differently depending on event type.
+    channel id in the `Configuration` of the `OrganizationIntegrationConfiguration`. The token applies to the entire Slack
+    integration, but the channel could be configured differently depending on event type.
   - See the table below for more examples / details on what is stored at which level.
 
 ### `OrganizationIntegrationConfiguration`
 
 - This contains the configurations specific to each `EventType` for the integration.
 - `Configuration` contains the event-specific configuration.
-    - Any properties at this level override the `Configuration` form the `OrganizationIntegration`.
-    - See the table below for examples of specific integrations.
+  - Any properties at this level override the `Configuration` form the `OrganizationIntegration`.
+  - See the table below for examples of specific integrations.
 - `Template` contains a template string that is expected to be filled in with the contents of the actual event.
-    - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
-    - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
-      the provided `EventMessage`.
-    - The template does not enforce any structure — it could be a freeform text message to send via Slack, or a
-      JSON body to send via webhook; it is simply stored and used as a string for the most flexibility.
+  - The tokens in the string are wrapped in `#` characters. For instance, the UserId would be `#UserId#`.
+  - The `IntegrationTemplateProcessor` does the actual work of replacing these tokens with introspected values from
+    the provided `EventMessage`.
+  - The template does not enforce any structure — it could be a freeform text message to send via Slack, or a
+    JSON body to send via webhook; it is simply stored and used as a string for the most flexibility.
 
 ### `OrganizationIntegrationConfigurationDetails`
 
@@ -239,7 +300,7 @@ property at each level (`OrganizationIntegration` or `OrganizationIntegrationCon
 stored at each status.
 
 | **Integration**  | **OrganizationIntegration**                                                                                                                                                                                                                                                                 | **OrganizationIntegrationConfiguration**                                                                                                           |
-|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CloudBillingSync | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
 | Scim             | **Not Applicable** (not yet used)                                                                                                                                                                                                                                                           | **Not Applicable** (not yet used)                                                                                                                  |
 | Slack            | **Initiated**: `null`<br/>**Completed**:<br/>`{ "Token": "xoxb-token-from-slack" }`                                                                                                                                                                                                         | `{ "channelId": "C123456" }`                                                                                                                       |
@@ -263,7 +324,7 @@ level.
 Logical AND / OR grouping of a number of rules and other subgroups.
 
 | Property      | Description                                                                                                                                                                                                                                                                                                                                                      |
-|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AndOperator` | Indicates whether **all** (`true`) or **any** (`false`) of the `Rules` and `Groups` must be true. This applies to _both_ the inner group and the list of rules; for instance, if this group contained Rule1 and Rule2 as well as Group1 and Group2:<br/><br/>`true`: `Rule1 && Rule2 && Group1 && Group2`<br>`false`: `Rule1 \|\| Rule2 \|\| Group1 \|\| Group2` |
 | `Rules`       | A list of `IntegrationFilterRule`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                                    |
 | `Groups`      | A list of nested `IntegrationFilterGroup`. Can be null or empty, in which case it will return `true`.                                                                                                                                                                                                                                                            |
@@ -274,7 +335,7 @@ The core of the filtering framework to determine if the data in this specific Ev
 matches the data for which the filter is searching.
 
 | Property    | Description                                                                                                                                                                                                                                                 |
-|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Property`  | The property on `EventMessage` to evaluate (e.g., `CollectionId`).                                                                                                                                                                                          |
 | `Operation` | The comparison to perform between the property and `Value`. <br><br>**Supported operations:**<br>• `Equals`: `Guid` equals `Value`<br>• `NotEquals`: logical inverse of `Equals`<br>• `In`: `Guid` is in `Value` list<br>• `NotIn`: logical inverse of `In` |
 | `Value`     | The comparison value. Type depends on `Operation`: <br>• `Equals`, `NotEquals`: `Guid`<br>• `In`, `NotIn`: list of `Guid`                                                                                                                                   |
@@ -293,6 +354,7 @@ graph TD
     C1 -->|Has many| B1_2[IntegrationFilterRule]
     C1 -->|Can contain| C2[IntegrationFilterGroup...]
 ```
+
 ## Caching
 
 To reduce database load and improve performance, event integrations uses its own named extended cache (see
@@ -326,20 +388,20 @@ rather than using a string literal (i.e. "EventIntegrations") in code.
   the organization id and the integration type.
 - This allows us to remove all of a given organization's configuration details for an integration when the admin
   makes changes at the integration level.
-    - For instance, if there were 5 events configured for a given organization's webhook and the admin changed the URL
-      at the integration level, the updates would need to be propagated or else the cache will continue returning the
-      stale URL.
-    - By tagging each of the entries, the API can ask the extended cache to remove all the entries for a given
-      organization integration in one call. The cache will handle dropping / refreshing these entries in a
-      performant way.
+  - For instance, if there were 5 events configured for a given organization's webhook and the admin changed the URL
+    at the integration level, the updates would need to be propagated or else the cache will continue returning the
+    stale URL.
+  - By tagging each of the entries, the API can ask the extended cache to remove all the entries for a given
+    organization integration in one call. The cache will handle dropping / refreshing these entries in a
+    performant way.
 - There are two places in the code that are both aware of the tagging functionality
-    - The `EventIntegrationHandler` must use the tag when fetching relevant configuration details. This tells the cache
-      to store the entry with the tag when it successfully loads from the repository.
-    - The `CreateOrganizationIntegrationCommand`, `UpdateOrganizationIntegrationCommand`, and
-      `DeleteOrganizationIntegrationCommand` commands need to use the tag to remove all the tagged entries when an admin
-      creates, updates, or deletes an integration.
-    - To ensure both places are synchronized on how to tag entries, they both use
-      `EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration` to build the tag.
+  - The `EventIntegrationHandler` must use the tag when fetching relevant configuration details. This tells the cache
+    to store the entry with the tag when it successfully loads from the repository.
+  - The `CreateOrganizationIntegrationCommand`, `UpdateOrganizationIntegrationCommand`, and
+    `DeleteOrganizationIntegrationCommand` commands need to use the tag to remove all the tagged entries when an admin
+    creates, updates, or deletes an integration.
+  - To ensure both places are synchronized on how to tag entries, they both use
+    `EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration` to build the tag.
 
 ### Template Properties
 
@@ -368,16 +430,16 @@ serialized version of the corresponding objects and represent the coonfiguration
 and event type.
 
 1. `ExampleIntegration`
-    - Configuration details for the whole integration (e.g. a token in Slack).
-    - Applies to every event type configuration defined for this integration.
-    - Maps to the JSON structure stored in `Configuration` in ``OrganizationIntegration`.
+   - Configuration details for the whole integration (e.g. a token in Slack).
+   - Applies to every event type configuration defined for this integration.
+   - Maps to the JSON structure stored in `Configuration` in ``OrganizationIntegration`.
 2. `ExampleIntegrationConfiguration`
-    - Configuration details that could change from event to event (e.g. channelId in Slack).
-    - Maps to the JSON structure stored in `Configuration` in `OrganizationIntegrationConfiguration`.
+   - Configuration details that could change from event to event (e.g. channelId in Slack).
+   - Maps to the JSON structure stored in `Configuration` in `OrganizationIntegrationConfiguration`.
 3. `ExampleIntegrationConfigurationDetails`
-    - Combined configuration of both Integration _and_ IntegrationConfiguration.
-    - This will be the deserialized version of the `MergedConfiguration` in
-      `OrganizationIntegrationConfigurationDetails`.
+   - Combined configuration of both Integration _and_ IntegrationConfiguration.
+   - This will be the deserialized version of the `MergedConfiguration` in
+     `OrganizationIntegrationConfigurationDetails`.
 
 A new row with the new integration should be added to this doc in the table above [Existing integrations
 and the configurations at each level](#existing-integrations-and-the-configurations-at-each-level).
@@ -387,16 +449,17 @@ and the configurations at each level](#existing-integrations-and-the-configurati
 1. Add a new case to the switch method in `OrganizationIntegrationRequestModel.Validate`.
    - Additionally, add tests in `OrganizationIntegrationRequestModelTests`
 2. Add a new case to the switch method in `OrganizationIntegrationConfigurationRequestModel.IsValidForType`.
-    - Additionally, add / update tests in `OrganizationIntegrationConfigurationRequestModelTests`
+   - Additionally, add / update tests in `OrganizationIntegrationConfigurationRequestModelTests`
 
 ## Response Model
 
 1. Add a new case to the switch method in `OrganizationIntegrationResponseModel.Status`.
-    - Additionally, add / update tests in `OrganizationIntegrationResponseModelTests`
+   - Additionally, add / update tests in `OrganizationIntegrationResponseModelTests`
 
 ## Integration Handler
 
 e.g. `ExampleIntegrationHandler`
+
 - This is where the actual code will go to perform the integration (i.e. send an HTTP request, etc.).
 - Handlers receive an `IntegrationMessage<T>` where `<T>` is the `ExampleIntegrationConfigurationDetails`
   defined above. This has the Configuration as well as the rendered template message to be sent.
@@ -409,6 +472,7 @@ e.g. `ExampleIntegrationHandler`
 ## GlobalSettings
 
 ### RabbitMQ
+
 Add the queue names for the integration. These are typically set with a default value so
 that they will be created when first accessed in code by RabbitMQ.
 
@@ -417,18 +481,26 @@ that they will be created when first accessed in code by RabbitMQ.
 3. `ExampleIntegrationRetryQueueName`
 
 ### Azure Service Bus
+
 Add the subscription names to use for ASB for this integration. Similar to RabbitMQ a
 default value is provided so that we don't require configuring it in secrets but allow
 it to be overridden. **However**, unlike RabbitMQ these subscriptions must exist prior
 to the code accessing them. They will not be created on the fly. See [Deploying a new
 integration](#deploying-a-new-integration) below
 
-1. `ExmpleEventSubscriptionName`
-2. `ExmpleIntegrationSubscriptionName`
+1. `ExampleEventSubscriptionName`
+2. `ExampleIntegrationSubscriptionName`
+
+Add `ExampleIntegrationSubscriptionName` to the subscription list in
+`DeadLetterCleanupHostedService` as well, so the new integration's dead letter queue gets swept. Skipping this step
+fails `DeadLetterCleanupHostedServiceTests`, which compares that list against the configured subscription settings
+(see [Dead letter retention](#dead-letter-retention)).
 
 #### Service Bus Emulator, local config
+
 In order to create ASB resources locally, we need to also update the `servicebusemulator_config.json` file
 to include any new subscriptions.
+
 - Under the existing event topic (`event-logging`) add a subscription for the event level for this
   new integration (`events-example-subscription`).
 - Under the existing integration topic (`event-integrations`) add a new subscription for the integration
@@ -463,28 +535,27 @@ In `AddEventIntegrationServices`:
 
 1.  Create the singleton for the handler:
 
-``` csharp
+```csharp
         services.TryAddSingleton<IIntegrationHandler<ExampleIntegrationConfigurationDetails>, ExampleIntegrationHandler>();
 ```
 
 2. Create the listener configuration:
 
-``` csharp
+```csharp
         var exampleConfiguration = new ExampleListenerConfiguration(globalSettings);
 ```
 
 3. Add the integration to both the RabbitMQ and ASB specific declarations:
 
-``` csharp
+```csharp
         services.AddRabbitMqIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
 ```
 
 and
 
-``` csharp
+```csharp
         services.AddAzureServiceBusIntegration<ExampleIntegrationConfigurationDetails, ExampleListenerConfiguration>(exampleConfiguration);
 ```
-
 
 # Deploying a new integration
 
@@ -504,22 +575,23 @@ integration must be created in ASB before that code is deployed.
 
 The two subscriptions created above in Global Settings and `servicebusemulator_config.json`
 need to be created in the Azure portal or CLI for the environment before deploying the
-code.
+code. Create the integration subscription with `DeadLetteringOnMessageExpiration` enabled, or expired
+messages will be discarded instead of dead-lettered (see [Message expiration](#message-expiration)).
 
 1. `ExmpleEventSubscriptionName`
-    - This subscription is a fan-out subscription from the main event topic.
-    - As such, it will start receiving all the events as soon as it is declared.
-    - This can create a backlog before the integration-specific handler is declared and deployed.
-    - One strategy to avoid this is to create the subscription with a false filter (e.g. `1 = 0`).
-        - This will create the subscription, but the filter will ensure that no messages
-          actually land in the subscription.
-        - Code can be deployed that references the subscription, because the subscription
-          legitimately exists (it is simply empty).
-        - When the code is in place, and we're ready to start receiving messages on the new
-          integration, we simply remove the filter to return the subscription to receiving
-          all messages via fan-out.
+   - This subscription is a fan-out subscription from the main event topic.
+   - As such, it will start receiving all the events as soon as it is declared.
+   - This can create a backlog before the integration-specific handler is declared and deployed.
+   - One strategy to avoid this is to create the subscription with a false filter (e.g. `1 = 0`).
+     - This will create the subscription, but the filter will ensure that no messages
+       actually land in the subscription.
+     - Code can be deployed that references the subscription, because the subscription
+       legitimately exists (it is simply empty).
+     - When the code is in place, and we're ready to start receiving messages on the new
+       integration, we simply remove the filter to return the subscription to receiving
+       all messages via fan-out.
 2. `ExmpleIntegrationSubscriptionName`
-    - This subscription must be created before the new integration code can be deployed.
-    - However, it is not fan-out, but rather a filter based on the `IntegrationType.ToRoutingKey`.
-    - Therefore, it won't start receiving messages until organizations have active configurations.
-      This means there's no risk of building up a backlog by declaring it ahead of time.
+   - This subscription must be created before the new integration code can be deployed.
+   - However, it is not fan-out, but rather a filter based on the `IntegrationType.ToRoutingKey`.
+   - Therefore, it won't start receiving messages until organizations have active configurations.
+     This means there's no risk of building up a backlog by declaring it ahead of time.

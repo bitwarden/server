@@ -11,6 +11,7 @@ public record OrganizationWarnings
     public record FreeTrialWarning
     {
         public int RemainingTrialDays { get; set; }
+        public bool IsSalesAssisted { get; set; }
     }
 
     public record InactiveSubscriptionWarning

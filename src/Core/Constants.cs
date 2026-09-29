@@ -141,10 +141,10 @@ public static partial class FeatureFlagKeys
     public const string BulkAutoConfirmOnLogin = "pm-35803-browser-auto-confirm-log-in";
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
+    public const string InviteLinkNotification = "pm-39601-invite-link-notification";
     public const string PM35153CollectionSdkDecryption = "pm-35153-collection-sdk-decryption";
+    public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
-    public const string ChangeMemberEmailNoMp = "pm-28365-change-member-email-no-mp";
-    public const string PM34423StagedStatus = "pm-34423-staged-status";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -155,7 +155,6 @@ public static partial class FeatureFlagKeys
 
     /* Auth Team */
     public const string Otp6Digits = "pm-18612-otp-6-digits";
-    public const string PM2035PasskeyUnlock = "pm-2035-passkey-unlock";
     public const string MjmlWelcomeEmailTemplates = "pm-21741-mjml-welcome-email";
     public const string SafariAccountSwitching = "pm-5594-safari-account-switching";
     public const string PM27086_UpdateAuthenticationApisForInputPassword = "pm-27086-update-authentication-apis-for-input-password";
@@ -168,6 +167,7 @@ public static partial class FeatureFlagKeys
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
+    public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -184,7 +184,6 @@ public static partial class FeatureFlagKeys
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
-    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
 
     /* Billing Team */
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
@@ -206,7 +205,6 @@ public static partial class FeatureFlagKeys
     public const string EnrollAeadOnKeyRotation = "enroll-aead-on-key-rotation";
     public const string ForceUpdateKDFSettings = "pm-18021-force-update-kdf-settings";
     public const string UnlockWithMasterPasswordUnlockData = "pm-23246-unlock-with-master-password-unlock-data";
-    public const string LinuxBiometricsV2 = "pm-26340-linux-biometrics-v2";
     public const string NoLogoutOnKdfChange = "pm-23995-no-logout-on-kdf-change";
     public const string V2RegistrationTDEJIT = "pm-27279-v2-registration-tde-jit";
     public const string EnableAccountEncryptionV2KeyConnectorRegistration = "enable-account-encryption-v2-key-connector-registration";
@@ -244,6 +242,7 @@ public static partial class FeatureFlagKeys
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
+    public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
 
     /* Tools Team */
     public const string UseSdkPasswordGenerators = "pm-19976-use-sdk-password-generators";
@@ -288,7 +287,9 @@ public static partial class FeatureFlagKeys
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
-    /* Innovation Team */
+    /* Skunkworks Team */
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
@@ -304,10 +305,7 @@ public static partial class FeatureFlagKeys
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
-
-    /* UIF Team */
-    public const string RouterFocusManagement = "router-focus-management";
-
+    public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";

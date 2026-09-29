@@ -16,8 +16,9 @@ public static class OrganizationSubscriptionEndpointsExtensions
 {
     /// <summary>
     /// Attaches the group's shared cross-cutting chain to an empty group; the host owns the route prefix.
-    /// The group authorizes every endpoint (<see cref="Policies.Application"/> + <see cref="OrganizationBillingRequirement"/>),
-    /// so handlers don't repeat the access check.
+    /// Every endpoint inherits the group baseline (<see cref="Policies.Application"/> +
+    /// <see cref="OrganizationBillingRequirement"/>), so handlers don't repeat that check; an endpoint may
+    /// then narrow it.
     /// </summary>
     public static RouteGroupBuilder MapOrganizationSubscriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -30,7 +31,8 @@ public static class OrganizationSubscriptionEndpointsExtensions
         group.RequireFeature(InvoicingFeatureFlags.PM36631_PreviewDrivenCart);
 
         group.MapGet("preview",
-                async (Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+                async ([FromRoute] Guid organizationId, [FromServices] OrganizationSubscriptionEndpointsHandler handler) => await handler.GetPreviewAsync(organizationId))
+            .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 

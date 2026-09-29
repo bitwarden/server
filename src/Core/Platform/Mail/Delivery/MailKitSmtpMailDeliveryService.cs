@@ -68,6 +68,11 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(message.ReplyToAddress))
+        {
+            mimeMessage.ReplyTo.Add(MailboxAddress.Parse(CoreHelpers.PunyEncode(message.ReplyToAddress)));
+        }
+
         var builder = new BodyBuilder();
         if (!string.IsNullOrWhiteSpace(message.TextContent))
         {

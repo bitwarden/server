@@ -74,6 +74,7 @@ public class GetOrganizationWarningsQueryTests
                     InvoiceSettings = new CustomerInvoiceSettings(),
                     Metadata = new Dictionary<string, string>()
                 },
+                Metadata = new Dictionary<string, string>(),
                 TestClock = new TestClock
                 {
                     FrozenTime = now
@@ -87,7 +88,48 @@ public class GetOrganizationWarningsQueryTests
 
         Assert.True(response is
         {
-            FreeTrial.RemainingTrialDays: 7
+            FreeTrial: { RemainingTrialDays: 7, IsSalesAssisted: false }
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_Has_FreeTrialWarning_SalesAssisted(
+        Organization organization,
+        SutProvider<GetOrganizationWarningsQuery> sutProvider)
+    {
+        var now = DateTime.UtcNow;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Trialing,
+                TrialEnd = now.AddDays(7),
+                Customer = new Customer
+                {
+                    InvoiceSettings = new CustomerInvoiceSettings(),
+                    Metadata = new Dictionary<string, string>()
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    [MetadataKeys.TrialInitiationPath] = TrialInitiationPaths.SalesAssisted
+                },
+                TestClock = new TestClock
+                {
+                    FrozenTime = now
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
+        sutProvider.GetDependency<IHasPaymentMethodQuery>().Run(organization).Returns(false);
+
+        var response = await sutProvider.Sut.Run(organization);
+
+        Assert.True(response is
+        {
+            FreeTrial: { RemainingTrialDays: 7, IsSalesAssisted: true }
         });
     }
 

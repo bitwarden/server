@@ -18,7 +18,9 @@ public class OrganizationSubscriptionEndpointsTests
     {
         var app = WebApplication.CreateBuilder().Build();
 
-        var group = app.MapOrganizationSubscriptionEndpoints();
+        // only organizationId is important for the mapping.
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
         group.MapGet("/__probe", () => Results.Ok());
 
         var endpoint = ((IEndpointRouteBuilder)app).DataSources
@@ -46,5 +48,23 @@ public class OrganizationSubscriptionEndpointsTests
         var groupName = endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>();
         Assert.NotNull(groupName);
         Assert.Equal("internal", groupName!.EndpointGroupName);
+    }
+
+    [Fact]
+    public void MapOrganizationSubscriptionEndpoints_PreviewRequiresStandaloneOrganizationOwner()
+    {
+        var app = WebApplication.CreateBuilder().Build();
+
+        var group = app.MapGroup("/{organizationId:guid}")
+            .MapOrganizationSubscriptionEndpoints();
+
+        var preview = ((IEndpointRouteBuilder)app).DataSources
+            .SelectMany(dataSource => dataSource.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Single(e => e.RoutePattern.RawText!.Contains("preview"));
+
+        var authorizeAttributes = preview.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);
+        Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>);
     }
 }
