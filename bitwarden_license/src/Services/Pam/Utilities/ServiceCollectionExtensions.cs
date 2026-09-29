@@ -43,11 +43,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
+        services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
+        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
 
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
         services.AddScoped<IActivateAccessRequestCommand, ActivateAccessRequestCommand>();
         services.AddScoped<ICancelAccessRequestCommand, CancelAccessRequestCommand>();
+        services.AddScoped<IRequestLeaseExtensionCommand, RequestLeaseExtensionCommand>();
+        services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
 
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
