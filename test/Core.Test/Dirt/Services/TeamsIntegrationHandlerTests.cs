@@ -119,13 +119,14 @@ public class TeamsIntegrationHandlerTests
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden);
 
         sutProvider.GetDependency<ITeamsService>()
             .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
             .ThrowsAsync(new ErrorResponseException("Server error")
             {
                 Response = new HttpResponseMessageWrapper(
-                        new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden),
+                        httpResponse,
                         "Forbidden"
                     )
             }
@@ -149,13 +150,14 @@ public class TeamsIntegrationHandlerTests
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized);
 
         sutProvider.GetDependency<ITeamsService>()
             .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
             .ThrowsAsync(new ErrorResponseException("Server error")
             {
                 Response = new HttpResponseMessageWrapper(
-                        new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized),
+                        httpResponse,
                         "Unauthorized"
                     )
             }
@@ -179,13 +181,14 @@ public class TeamsIntegrationHandlerTests
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests);
 
         sutProvider.GetDependency<ITeamsService>()
             .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
             .ThrowsAsync(new ErrorResponseException("Server error")
             {
                 Response = new HttpResponseMessageWrapper(
-                        new HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests),
+                        httpResponse,
                         "Too Many Requests"
                     )
             }
