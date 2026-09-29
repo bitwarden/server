@@ -2495,15 +2495,11 @@ public class CiphersControllerTests
     }
 
     /// <summary>
-    /// Authorizes the caller for <c>GetAdmin</c> via <c>CanAccessAllCiphersAsync</c>, granting a
-    /// custom role with <c>EditAnyCollection</c> org-wide access to the given cipher.
+    /// Authorizes the caller for <c>GetAdmin</c>, which guards on <c>ICurrentContext.EditAnyCollection</c>.
     /// </summary>
-    private static void AuthorizeGetAdmin(
-        SutProvider<CiphersController> sutProvider, CurrentContextOrganization organization)
+    private static void AuthorizeGetAdmin(SutProvider<CiphersController> sutProvider, Guid organizationId)
     {
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.EditAnyCollection = true;
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organizationId).Returns(true);
     }
 
     private static CipherOrganizationDetailsWithCollections OrganizationCipher(Guid organizationId, string data) =>
@@ -2535,12 +2531,14 @@ public class CiphersControllerTests
             Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
         };
 
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        currentContext.GetOrganization(organization.Id).Returns(organization);
+#pragma warning disable CS0618 // A DeleteAnyCollection-only role passes this deprecated check, which GetAdmin must not honor.
+        currentContext.ViewAllCollections(organization.Id).Returns(true);
+#pragma warning restore CS0618
+        currentContext.EditAnyCollection(organization.Id).Returns(false);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<CollectionCipher>());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAdmin(cipher.Id.ToString()));
     }
@@ -2548,7 +2546,7 @@ public class CiphersControllerTests
     [Theory]
     [BitAutoData(true, false)]
     [BitAutoData(false, true)]
-    public async Task GetAdmin_WithCustomUser_WithAccessImportExportOrAccessReports_ReturnsCipher(
+    public async Task GetAdmin_WithCustomUser_WithAccessImportExportOrAccessReports_ThrowsNotFoundException(
         bool accessImportExport, bool accessReports,
         Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
@@ -2566,16 +2564,15 @@ public class CiphersControllerTests
             Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
         };
 
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        currentContext.GetOrganization(organization.Id).Returns(organization);
+        currentContext.AccessImportExport(organization.Id).Returns(accessImportExport);
+        currentContext.AccessReports(organization.Id).Returns(accessReports);
+        currentContext.EditAnyCollection(organization.Id).Returns(false);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<CollectionCipher>());
 
-        var result = await sutProvider.Sut.GetAdmin(cipher.Id.ToString());
-
-        Assert.NotNull(result.Data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAdmin(cipher.Id.ToString()));
     }
 
     [Theory, BitAutoData]
@@ -2594,36 +2591,13 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        AuthorizeGetAdmin(sutProvider, organization.Id);
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { Id = organization.Id, AllowAdminAccessToAllCollectionItems = false });
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<CollectionCipher>());
-
-        var result = await sutProvider.Sut.GetAdmin(cipher.Id.ToString());
-
-        Assert.NotNull(result.Data);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAdmin_WithProviderUser_ReturnsCipher(
-        Guid userId, Guid organizationId, SutProvider<CiphersController> sutProvider)
-    {
-        var cipher = new CipherOrganizationDetails
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            Type = CipherType.Login,
-            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
-        };
-
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
-        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
-        sutProvider.GetDependency<ICollectionCipherRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
             .Returns(new List<CollectionCipher>());
 
         var result = await sutProvider.Sut.GetAdmin(cipher.Id.ToString());
@@ -2644,7 +2618,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        AuthorizeGetAdmin(sutProvider, organization);
+        AuthorizeGetAdmin(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
@@ -2675,7 +2649,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        AuthorizeGetAdmin(sutProvider, organization);
+        AuthorizeGetAdmin(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
