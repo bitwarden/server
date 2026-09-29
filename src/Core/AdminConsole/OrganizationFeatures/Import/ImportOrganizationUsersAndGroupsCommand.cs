@@ -24,7 +24,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
     private readonly IGroupRepository _groupRepository;
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
-    private readonly IFeatureService _featureService;
     private readonly ICreateStagedOrganizationUsersCommand _createStagedOrganizationUsersCommand;
 
     private readonly EventSystemUser _EventSystemUser = EventSystemUser.PublicApi;
@@ -35,7 +34,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             IGroupRepository groupRepository,
             IEventService eventService,
             IOrganizationService organizationService,
-            IFeatureService featureService,
             ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand)
     {
         _organizationRepository = organizationRepository;
@@ -44,7 +42,6 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
         _groupRepository = groupRepository;
         _eventService = eventService;
         _organizationService = organizationService;
-        _featureService = featureService;
         _createStagedOrganizationUsersCommand = createStagedOrganizationUsersCommand;
     }
 
@@ -201,7 +198,7 @@ public class ImportOrganizationUsersAndGroupsCommand : IImportOrganizationUsersA
             .Where(u => usersToAdd.Contains(u.ExternalId) && !string.IsNullOrWhiteSpace(u.Email))
             .ToList();
 
-        if (!inviteUsersAfterProvisioning && _featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus))
+        if (!inviteUsersAfterProvisioning)
         {
             await StageNewUsers(organization, newUsers, importUserData);
             return;

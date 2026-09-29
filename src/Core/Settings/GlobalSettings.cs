@@ -307,6 +307,7 @@ public class GlobalSettings : IGlobalSettings
         public virtual string ClientId { get; set; }
         public virtual string ClientSecret { get; set; }
         public virtual string Scopes { get; set; }
+        public virtual string TenantId { get; set; }
     }
 
     public class EventLoggingSettings
@@ -318,6 +319,8 @@ public class GlobalSettings : IGlobalSettings
 
         public class AzureServiceBusSettings
         {
+            public static readonly TimeSpan DefaultDeadLetterSweepInterval = TimeSpan.FromHours(1);
+
             private string _connectionString;
             private string _eventTopicName;
             private string _integrationTopicName;
@@ -327,6 +330,7 @@ public class GlobalSettings : IGlobalSettings
 
             public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
             public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterSweepInterval { get; set; } = DefaultDeadLetterSweepInterval;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
@@ -555,6 +559,14 @@ public class GlobalSettings : IGlobalSettings
         ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
+        /// <summary>
+        /// Access token lifetime override in seconds, applied to the interactive static
+        /// clients (web, mobile, browser, desktop, cli). The directory connector is
+        /// deliberately excluded because its headless-service model relies on a longer
+        /// lifetime. API-key providers and the Send client are unaffected. When null,
+        /// each client keeps its built-in default. Must be greater than 0 if set.
+        /// </summary>
+        public int? AccessTokenLifetimeSeconds { get; set; }
     }
 
 #nullable enable
