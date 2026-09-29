@@ -238,7 +238,6 @@ public class Startup
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
-        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(

@@ -17,6 +17,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using StackExchange.Redis;
 using Xunit;
@@ -46,7 +48,6 @@ public class EventIntegrationServiceCollectionExtensionsTests
         _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationRepository>());
         _services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationConfigurationRepository>());
         _services.TryAddScoped(_ => Substitute.For<IOrganizationRepository>());
-        _services.TryAddScoped(_ => Substitute.For<ITeamsService>());
     }
 
     [Fact]
@@ -61,6 +62,9 @@ public class EventIntegrationServiceCollectionExtensionsTests
 
         var validator = provider.GetRequiredService<IOrganizationIntegrationConfigurationValidator>();
         Assert.NotNull(validator);
+
+        var teamsService = provider.GetRequiredService<ITeamsService>();
+        Assert.IsType<NoopTeamsService>(teamsService);
 
         using var scope = provider.CreateScope();
         var sp = scope.ServiceProvider;
@@ -417,6 +421,35 @@ public class EventIntegrationServiceCollectionExtensionsTests
         var httpClientDescriptor = services.FirstOrDefault(s =>
             s.ServiceType == typeof(IHttpClientFactory));
         Assert.NotNull(httpClientDescriptor);
+    }
+
+    [Fact]
+    public void AddTeamsService_MultipleCalls_RegistersHttpClientHandlersOnce()
+    {
+        var globalSettings = CreateGlobalSettings(new Dictionary<string, string?>
+        {
+            ["GlobalSettings:Teams:ClientId"] = "test-client-id",
+            ["GlobalSettings:Teams:ClientSecret"] = "test-client-secret",
+            ["GlobalSettings:Teams:Scopes"] = "test-scopes"
+        });
+
+        var singleCall = new ServiceCollection();
+        singleCall.AddTeamsService(globalSettings);
+
+        var multipleCalls = new ServiceCollection();
+        multipleCalls.AddTeamsService(globalSettings);
+        multipleCalls.AddTeamsService(globalSettings);
+
+        Assert.Single(multipleCalls, s => s.ServiceType == typeof(ITeamsService));
+        Assert.Equal(CountTeamsHttpClientHandlerActions(singleCall), CountTeamsHttpClientHandlerActions(multipleCalls));
+    }
+
+    private static int CountTeamsHttpClientHandlerActions(IServiceCollection services)
+    {
+        using var provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<IOptionsMonitor<HttpClientFactoryOptions>>()
+            .Get(TeamsService.HttpClientName)
+            .HttpMessageHandlerBuilderActions.Count;
     }
 
     [Fact]
