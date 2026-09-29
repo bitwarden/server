@@ -42,19 +42,18 @@ public class OrganizationIntegrationRepository :
         }
     }
 
-    public async Task<OrganizationIntegration?> GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+    public async Task<List<OrganizationIntegration>> GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(
         string tenantId,
         string teamId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery(
+            var query = new OrganizationIntegrationReadManyConnectedByTeamsConfigurationTenantIdTeamIdQuery(
                 tenantId: tenantId,
                 teamId: teamId);
 
-            // FirstOrDefault to match the procedure's SELECT TOP 1, as above.
-            return await query.Run(dbContext).FirstOrDefaultAsync();
+            return await query.Run(dbContext).ToListAsync();
         }
     }
 }

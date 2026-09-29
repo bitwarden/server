@@ -345,8 +345,8 @@ public class TeamsServiceTests
         integration.Configuration = JsonSerializer.Serialize(connectedConfiguration);
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
-            .Returns(integration);
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns([integration]);
 
         OrganizationIntegration? capturedIntegration = null;
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>()
@@ -375,15 +375,57 @@ public class TeamsServiceTests
             Arg.Any<CancellationToken>());
     }
 
+    [Theory, BitAutoData]
+    public async Task HandleAppRemoval_MultipleOrganizationsConnectedToTeam_DisconnectsAll(
+        OrganizationIntegration first,
+        OrganizationIntegration second)
+    {
+        var sutProvider = GetSutProvider();
+        var tenantId = Guid.NewGuid().ToString();
+        var teamId = Guid.NewGuid().ToString();
+        var connectedConfiguration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: tenantId,
+            Teams: [new TeamInfo() { Id = teamId, DisplayName = "test team", TenantId = tenantId }],
+            ChannelId: "channel-id",
+            ServiceUrl: new Uri("https://smba.example.com")
+        ));
+        first.Configuration = connectedConfiguration;
+        second.Configuration = connectedConfiguration;
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns([first, second]);
+
+        await sutProvider.Sut.HandleAppRemovalAsync(teamId: teamId, tenantId: tenantId);
+
+        foreach (var integration in new[] { first, second })
+        {
+            await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
+                .UpsertAsync(Arg.Is<OrganizationIntegration>(x =>
+                    x.Id == integration.Id &&
+                    TeamsIntegration.FromConfiguration(x.Configuration)!.NeedsReconnection));
+
+            await sutProvider.GetDependency<IFusionCache>().Received(1).RemoveByTagAsync(
+                EventIntegrationsCacheConstants.BuildCacheTagForOrganizationIntegration(
+                    integration.OrganizationId,
+                    IntegrationType.Teams),
+                Arg.Any<FusionCacheEntryOptions?>(),
+                Arg.Any<CancellationToken>());
+        }
+    }
+
     [Fact]
     public async Task HandleAppRemoval_NoConnectedIntegrationMatched_DoesNothing()
     {
         var sutProvider = GetSutProvider();
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId")
+            .Returns([]);
 
         await sutProvider.Sut.HandleAppRemovalAsync(teamId: "teamId", tenantId: "tenantId");
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().Received(1)
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId");
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId");
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
             .UpsertAsync(Arg.Any<OrganizationIntegration>());
     }
@@ -401,8 +443,8 @@ public class TeamsServiceTests
         ));
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
-            .Returns(integration);
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns([integration]);
 
         await sutProvider.Sut.HandleAppRemovalAsync(teamId: teamId, tenantId: tenantId);
 
@@ -417,8 +459,8 @@ public class TeamsServiceTests
         integration.Configuration = "{not-valid-json";
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId")
-            .Returns(integration);
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync("tenantId", "teamId")
+            .Returns([integration]);
 
         await sutProvider.Sut.HandleAppRemovalAsync(teamId: "teamId", tenantId: "tenantId");
 
@@ -457,7 +499,7 @@ public class TeamsServiceTests
         await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -493,7 +535,7 @@ public class TeamsServiceTests
         await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -512,7 +554,7 @@ public class TeamsServiceTests
         await sutProvider.Sut.OnTurnAsync(new TurnContext(new TestAdapter(), activity), CancellationToken.None);
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(Arg.Any<string>(), Arg.Any<string>());
     }
 
     private const string _botId = "28:bitwarden-bot";
@@ -543,8 +585,8 @@ public class TeamsServiceTests
         ));
 
         sutProvider.GetDependency<IOrganizationIntegrationRepository>()
-            .GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
-            .Returns(integration);
+            .GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(tenantId, teamId)
+            .Returns([integration]);
     }
 
     [Fact]

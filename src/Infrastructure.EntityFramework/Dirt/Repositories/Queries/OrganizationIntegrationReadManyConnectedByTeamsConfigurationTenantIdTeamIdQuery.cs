@@ -5,12 +5,12 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.Dirt.Repositories.Queries;
 
-public class OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery : IQuery<OrganizationIntegration>
+public class OrganizationIntegrationReadManyConnectedByTeamsConfigurationTenantIdTeamIdQuery : IQuery<OrganizationIntegration>
 {
     private readonly string _tenantId;
     private readonly string _teamId;
 
-    public OrganizationIntegrationReadConnectedByTeamsConfigurationTenantIdTeamIdQuery(string tenantId, string teamId)
+    public OrganizationIntegrationReadManyConnectedByTeamsConfigurationTenantIdTeamIdQuery(string tenantId, string teamId)
     {
         _tenantId = tenantId;
         _teamId = teamId;

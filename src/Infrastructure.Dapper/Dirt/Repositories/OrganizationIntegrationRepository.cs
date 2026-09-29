@@ -44,18 +44,18 @@ public class OrganizationIntegrationRepository : Repository<OrganizationIntegrat
         }
     }
 
-    public async Task<OrganizationIntegration?> GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+    public async Task<List<OrganizationIntegration>> GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(
         string tenantId,
         string teamId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var result = await connection.QueryFirstOrDefaultAsync<OrganizationIntegration>(
-                "[dbo].[OrganizationIntegration_ReadConnectedByTeamsConfigurationTenantIdTeamId]",
+            var results = await connection.QueryAsync<OrganizationIntegration>(
+                "[dbo].[OrganizationIntegration_ReadManyConnectedByTeamsConfigurationTenantIdTeamId]",
                 new { TenantId = tenantId, TeamId = teamId },
                 commandType: CommandType.StoredProcedure);
 
-            return result;
+            return results.ToList();
         }
     }
 }

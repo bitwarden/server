@@ -214,32 +214,45 @@ public class TeamsService(
 
     internal async Task HandleAppRemovalAsync(string teamId, string tenantId)
     {
-        var integration = await integrationRepository.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+        // The app is installed once per team, so its removal takes the channel away from every organization
+        // connected to that team, not just one of them.
+        var integrations = await integrationRepository.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(
             tenantId: tenantId,
             teamId: teamId);
 
-        var teamsConfig = TeamsIntegration.FromConfiguration(integration?.Configuration);
-        if (integration is null || teamsConfig is null || teamsConfig.NeedsReconnection)
+        var disconnectedDate = timeProvider.GetUtcNow().UtcDateTime;
+        var disconnectedCount = 0;
+
+        foreach (var integration in integrations)
+        {
+            var teamsConfig = TeamsIntegration.FromConfiguration(integration.Configuration);
+            if (teamsConfig is null || teamsConfig.NeedsReconnection)
+            {
+                continue;
+            }
+
+            // The tenant and team list are kept so re-installing the app reconnects without a new OAuth flow.
+            integration.Configuration = JsonSerializer.Serialize(teamsConfig with
+            {
+                ChannelId = null,
+                ServiceUrl = null,
+                DisconnectedDate = disconnectedDate
+            });
+
+            await integrationRepository.UpsertAsync(integration);
+            await InvalidateConfigurationCacheAsync(integration.OrganizationId);
+            disconnectedCount++;
+
+            logger.LogInformation(
+                "Teams integration {IntegrationId} marked as needing reconnection after app removal",
+                integration.Id);
+        }
+
+        if (disconnectedCount == 0)
         {
             logger.LogInformation(
                 "Teams app removal received with no matching connected integration; nothing to disconnect");
-            return;
         }
-
-        // The tenant and team list are kept so re-installing the app reconnects without a new OAuth flow.
-        integration.Configuration = JsonSerializer.Serialize(teamsConfig with
-        {
-            ChannelId = null,
-            ServiceUrl = null,
-            DisconnectedDate = timeProvider.GetUtcNow().UtcDateTime
-        });
-
-        await integrationRepository.UpsertAsync(integration);
-        await InvalidateConfigurationCacheAsync(integration.OrganizationId);
-
-        logger.LogInformation(
-            "Teams integration {IntegrationId} marked as needing reconnection after app removal",
-            integration.Id);
     }
 
     private async Task DisconnectFromActivityAsync(IActivity activity)

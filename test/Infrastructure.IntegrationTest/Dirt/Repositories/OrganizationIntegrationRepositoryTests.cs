@@ -17,8 +17,9 @@ namespace Bit.Infrastructure.IntegrationTest.Dirt.Repositories;
 /// </summary>
 public class OrganizationIntegrationRepositoryTests
 {
-    private const string _tenantId = "11111111-2222-3333-4444-555555555555";
-    private const string _teamId = "66666666-7777-8888-9999-000000000000";
+    // Unique per test (xUnit creates a new instance for each) so rows left behind by other tests never match.
+    private readonly string _tenantId = Guid.NewGuid().ToString();
+    private readonly string _teamId = Guid.NewGuid().ToString();
 
     [Theory, DatabaseData]
     public async Task GetByTeamsConfigurationTenantIdTeamId_AwaitingInstall_ReturnsIntegration(
@@ -60,7 +61,7 @@ public class OrganizationIntegrationRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_Connected_ReturnsIntegration(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_Connected_ReturnsIntegration(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
@@ -69,53 +70,52 @@ public class OrganizationIntegrationRepositoryTests
             organizationRepository,
             ConnectedConfiguration());
 
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
 
-        Assert.NotNull(result);
-        Assert.Equal(integration.Id, result.Id);
+        Assert.Equal(integration.Id, Assert.Single(result).Id);
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_AwaitingInstall_ReturnsNull(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_AwaitingInstall_ReturnsEmpty(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
         await CreateTeamsIntegrationAsync(sut, organizationRepository, AwaitingInstallConfiguration());
 
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
 
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_Disconnected_ReturnsNull(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_Disconnected_ReturnsEmpty(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
         await CreateTeamsIntegrationAsync(sut, organizationRepository, DisconnectedConfiguration());
 
         // Already disconnected, so a second removal event has nothing to tear down.
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
 
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_DifferentTeam_ReturnsNull(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_DifferentTeam_ReturnsEmpty(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
         await CreateTeamsIntegrationAsync(sut, organizationRepository, ConnectedConfiguration());
 
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(
             _tenantId,
             "a-different-team-id");
 
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_MatchesTeamOtherThanFirst_ReturnsIntegration(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_MatchesTeamOtherThanFirst_ReturnsIntegration(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
@@ -129,36 +129,61 @@ public class OrganizationIntegrationRepositoryTests
             ChannelId: "channel-id",
             ServiceUrl: new Uri("https://smba.example.com")
         ));
-        await CreateTeamsIntegrationAsync(sut, organizationRepository, configuration);
+        var integration = await CreateTeamsIntegrationAsync(sut, organizationRepository, configuration);
 
         // The team list holds every team the owner belongs to, so the match cannot assume the first entry.
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
 
-        Assert.NotNull(result);
+        Assert.Equal(integration.Id, Assert.Single(result).Id);
     }
 
     [Theory, DatabaseData]
-    public async Task GetConnectedByTeamsConfigurationTenantIdTeamIdAsync_TwoOrganizationsSameTeam_ReturnsOne(
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_TeamListedTwice_ReturnsIntegrationOnce(
         IOrganizationIntegrationRepository sut,
         IOrganizationRepository organizationRepository)
     {
-        await CreateTeamsIntegrationAsync(sut, organizationRepository, ConnectedConfiguration());
-        await CreateTeamsIntegrationAsync(sut, organizationRepository, ConnectedConfiguration());
+        var configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: _tenantId,
+            Teams:
+            [
+                new TeamInfo { Id = _teamId, DisplayName = "Test Team", TenantId = _tenantId },
+                new TeamInfo { Id = _teamId, DisplayName = "Test Team", TenantId = _tenantId }
+            ],
+            ChannelId: "channel-id",
+            ServiceUrl: new Uri("https://smba.example.com")
+        ));
+        var integration = await CreateTeamsIntegrationAsync(sut, organizationRepository, configuration);
 
-        // Nothing stops two organizations connecting the same Teams team. The result is arbitrary, but it must
-        // not throw — which is why both implementations take the first match rather than requiring a single one.
-        var result = await sut.GetConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+        // The team match must not fan out into one row per matching entry in the team list.
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
 
-        Assert.NotNull(result);
+        Assert.Equal(integration.Id, Assert.Single(result).Id);
     }
 
-    private static string AwaitingInstallConfiguration() =>
+    [Theory, DatabaseData]
+    public async Task GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync_TwoOrganizationsSameTeam_ReturnsBoth(
+        IOrganizationIntegrationRepository sut,
+        IOrganizationRepository organizationRepository)
+    {
+        var first = await CreateTeamsIntegrationAsync(sut, organizationRepository, ConnectedConfiguration());
+        var second = await CreateTeamsIntegrationAsync(sut, organizationRepository, ConnectedConfiguration());
+
+        // Nothing stops two organizations connecting the same Teams team, and removing the app from that team
+        // disconnects both, so every match must be returned.
+        var result = await sut.GetManyConnectedByTeamsConfigurationTenantIdTeamIdAsync(_tenantId, _teamId);
+
+        Assert.Equal(
+            new[] { first.Id, second.Id }.Order(),
+            result.Select(integration => integration.Id).Order());
+    }
+
+    private string AwaitingInstallConfiguration() =>
         JsonSerializer.Serialize(new TeamsIntegration(
             TenantId: _tenantId,
             Teams: [new TeamInfo { Id = _teamId, DisplayName = "Test Team", TenantId = _tenantId }]
         ));
 
-    private static string ConnectedConfiguration() =>
+    private string ConnectedConfiguration() =>
         JsonSerializer.Serialize(new TeamsIntegration(
             TenantId: _tenantId,
             Teams: [new TeamInfo { Id = _teamId, DisplayName = "Test Team", TenantId = _tenantId }],
@@ -166,7 +191,7 @@ public class OrganizationIntegrationRepositoryTests
             ServiceUrl: new Uri("https://smba.example.com")
         ));
 
-    private static string DisconnectedConfiguration() =>
+    private string DisconnectedConfiguration() =>
         JsonSerializer.Serialize(new TeamsIntegration(
             TenantId: _tenantId,
             Teams: [new TeamInfo { Id = _teamId, DisplayName = "Test Team", TenantId = _tenantId }],
