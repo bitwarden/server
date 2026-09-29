@@ -19,6 +19,11 @@ public class NoopTeamsService : ITeamsService
         return Task.FromResult<IReadOnlyList<TeamInfo>>(Array.Empty<TeamInfo>());
     }
 
+    public Task<IReadOnlyList<TeamsChannel>> GetStandardChannelsAsync(Uri serviceUri, string teamId)
+    {
+        return Task.FromResult<IReadOnlyList<TeamsChannel>>(Array.Empty<TeamsChannel>());
+    }
+
     public Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
         return Task.CompletedTask;

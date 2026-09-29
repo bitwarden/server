@@ -1,6 +1,9 @@
-﻿using Bit.Core.Dirt.Entities;
+﻿using System.Text.Json;
+using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.EventIntegrations.OrganizationIntegrationConfigurations;
+using Bit.Core.Dirt.Models.Data.EventIntegrations;
+using Bit.Core.Dirt.Models.Data.Teams;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Enums;
@@ -17,6 +20,11 @@ namespace Bit.Core.Test.Dirt.EventIntegrations.OrganizationIntegrationConfigurat
 [SutProviderCustomize]
 public class UpdateOrganizationIntegrationConfigurationCommandTests
 {
+    private const string _teamId = "19:team@thread.tacv2";
+    private const string _standardChannelId = "19:alerts@thread.tacv2";
+    private const string _privateChannelId = "19:private@thread.tacv2";
+    private static readonly Uri _serviceUrl = new("https://smba.example.com/amer/tenant/");
+
     [Theory, BitAutoData]
     public async Task UpdateAsync_Success_UpdatesConfigurationAndInvalidatesCache(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
@@ -335,6 +343,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider)
     {
         integration.OrganizationId = organizationId;
+        integration.Type = IntegrationType.Webhook;
         existingConfiguration.OrganizationIntegrationId = integrationId;
         existingConfiguration.EventType = null; // Wildcard
         updatedConfiguration.EventType = EventType.User_LoggedIn; // Specific
@@ -367,6 +376,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider)
     {
         integration.OrganizationId = organizationId;
+        integration.Type = IntegrationType.Webhook;
         existingConfiguration.OrganizationIntegrationId = integrationId;
         existingConfiguration.EventType = EventType.User_LoggedIn; // Specific
         updatedConfiguration.EventType = null; // Wildcard
@@ -387,5 +397,82 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
                 integration.Type));
         await sutProvider.GetDependency<IFusionCache>().DidNotReceive()
             .RemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_TeamsStandardChannel_Updates(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        SetupStandardChannels(sutProvider);
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+
+        await sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(updatedConfiguration);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_TeamsPrivateChannel_ThrowsBadRequest(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        SetupStandardChannels(sutProvider);
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_privateChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+    }
+
+    private static void SetupTeamsIntegration(OrganizationIntegration integration, Guid organizationId, Guid integrationId)
+    {
+        integration.Id = integrationId;
+        integration.OrganizationId = organizationId;
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [],
+            ChannelId: _teamId,
+            ServiceUrl: _serviceUrl));
+    }
+
+    private static void SetupStandardChannels<T>(SutProvider<T> sutProvider)
+    {
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(_serviceUrl, _teamId)
+            .Returns([
+                new TeamsChannel { Id = _teamId, Type = "standard" },
+                new TeamsChannel { Id = _standardChannelId, Name = "Alerts", Type = "standard" }
+            ]);
     }
 }

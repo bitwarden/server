@@ -35,6 +35,18 @@ public interface ITeamsService
     Task<IReadOnlyList<TeamInfo>> GetJoinedTeamsAsync(string accessToken);
 
     /// <summary>
+    /// Get the standard channels of a team the bot is installed in, via the Bot Framework.
+    /// </summary>
+    /// <remarks>Private and shared channels are excluded: the bot can only post to them after the app is added to
+    /// that specific channel.</remarks>
+    /// <param name="serviceUri">The service URI associated with the Microsoft Bot Framework connector for the target
+    /// team. Obtained via the bot framework callback.</param>
+    /// <param name="teamId">The team's conversation ID, as stored from the bot installation callback.</param>
+    /// <returns>A read-only list of <see cref="TeamsChannel"/> objects for the team's standard channels.
+    /// Returns an empty list if the request fails.</returns>
+    Task<IReadOnlyList<TeamsChannel>> GetStandardChannelsAsync(Uri serviceUri, string teamId);
+
+    /// <summary>
     /// Send a message to a specific channel in Teams.
     /// </summary>
     /// <remarks>This is used primarily by the <see cref="TeamsIntegrationHandler"/> to send events to the

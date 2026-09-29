@@ -97,6 +97,37 @@ public class OrganizationIntegrationConfigurationValidatorTests
     }
 
     [Fact]
+    public void ValidateConfiguration_TeamsWithChannelId_ReturnsTrue()
+    {
+        var config = new OrganizationIntegrationConfiguration
+        {
+            Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(ChannelId: "19:channel@thread.tacv2")),
+            Template = "template"
+        };
+
+        Assert.True(_sut.ValidateConfiguration(IntegrationType.Teams, config));
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"ChannelId\":\"\"}")]
+    [InlineData("{\"ChannelId\":\"   \"}")]
+    [InlineData("{\"ChannelId\":null}")]
+    [InlineData("{\"ChannelId\":123}")]
+    [InlineData("{\"channelId\":\"19:channel@thread.tacv2\"}")]
+    [InlineData("[\"19:channel@thread.tacv2\"]")]
+    public void ValidateConfiguration_TeamsInvalidChannelConfiguration_ReturnsFalse(string configuration)
+    {
+        var config = new OrganizationIntegrationConfiguration
+        {
+            Configuration = configuration,
+            Template = "template"
+        };
+
+        Assert.False(_sut.ValidateConfiguration(IntegrationType.Teams, config));
+    }
+
+    [Fact]
     public void ValidateConfiguration_InvalidJsonConfiguration_ReturnsFalse()
     {
         var config = new OrganizationIntegrationConfiguration
