@@ -261,8 +261,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !(await _currentContext.ProviderUserForOrgAsync(cipher.OrganizationId.Value) ||
-              await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, [cipher.Id])))
+            !await CanAccessAllCiphersAsync(cipher.OrganizationId.Value))
         {
             throw new NotFoundException();
         }
