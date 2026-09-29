@@ -64,6 +64,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
+        services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
+        services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
 
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();

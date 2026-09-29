@@ -27,9 +27,6 @@ public class RequestLeaseExtensionCommandTests
     /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
     private const string _leaseEndedComment = "The lease being extended has ended";
 
-    /// <summary>Pinned rather than shared with the command: the wording is part of what the denial promises.</summary>
-    private const string _leaseEndedComment = "The lease being extended has ended";
-
     [Theory, BitAutoData]
     public async Task ExtendAsync_LeaseMissing_ThrowsNotFound(Guid userId, Guid leaseId)
     {
@@ -345,11 +342,6 @@ public class RequestLeaseExtensionCommandTests
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
         Assert.Null(decision.Comment);
 
-        var decision = Assert.Single(result.Decisions);
-        Assert.Equal(AccessDeciderKind.Automatic, decision.DeciderKind);
-        Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
-        Assert.Null(decision.Comment);
-
         // The repo applies the request + decision + lease bump atomically.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Is<AccessRequest>(r =>
@@ -362,6 +354,12 @@ public class RequestLeaseExtensionCommandTests
                 d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
             _now,
             Arg.Any<string?>());
+
+        // The widened window notifies both approvers and the requester.
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -403,6 +401,30 @@ public class RequestLeaseExtensionCommandTests
         // The repository records the command-supplied comment on the Deny it writes.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, _leaseEndedComment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_AuditsTheDenialAndNotifiesOnlyTheRequester(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
+
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        // Outcome carries the denial, against the lease's own unchanged end.
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.Kind == AccessAuditEventKind.RequestDenied
+                && e.Phase == AccessAuditEventPhase.Outcome
+                && e.AccessLeaseId == lease.Id
+                && e.LeaseNotAfter == lease.NotAfter
+                && e.Detail == _leaseEndedComment));
+
+        // No collection-wide lease state changed; only the requester's own devices are notified.
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1).NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]
