@@ -30,10 +30,10 @@ public class GetUsersListQuery : IGetUsersListQuery
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var predicate = ScimFilterParser.TryGetPredicate<OrganizationUserUserDetails>(filter,
-                new Dictionary<string, Func<OrganizationUserUserDetails, string>>
+                new Dictionary<string, (Func<OrganizationUserUserDetails, string> Selector, StringComparison Comparison)>
                 {
-                    ["username"] = ou => ou.Email,
-                    ["externalid"] = ou => ou.ExternalId
+                    ["username"] = (ou => ou.Email, StringComparison.OrdinalIgnoreCase),
+                    ["externalid"] = (ou => ou.ExternalId, StringComparison.Ordinal)
                 });
 
             filtered = predicate != null

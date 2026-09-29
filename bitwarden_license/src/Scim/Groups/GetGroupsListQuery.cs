@@ -31,10 +31,10 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         if (!string.IsNullOrWhiteSpace(filter))
         {
             var predicate = ScimFilterParser.TryGetPredicate<Group>(filter,
-                new Dictionary<string, Func<Group, string>>
+                new Dictionary<string, (Func<Group, string> Selector, StringComparison Comparison)>
                 {
-                    ["displayname"] = g => g.Name,
-                    ["externalid"] = g => g.ExternalId
+                    ["displayname"] = (g => g.Name, StringComparison.OrdinalIgnoreCase),
+                    ["externalid"] = (g => g.ExternalId, StringComparison.Ordinal)
                 });
 
             filtered = predicate != null

@@ -5,11 +5,11 @@ namespace Bit.Scim.Test.Utilities;
 
 public class ScimFilterParserTests
 {
-    private static readonly Dictionary<string, Func<TestItem, string?>> _selectors = new()
+    private static readonly Dictionary<string, (Func<TestItem, string?> Selector, StringComparison Comparison)> _selectors = new()
     {
-        ["username"] = i => i.UserName,
-        ["externalid"] = i => i.ExternalId,
-        ["displayname"] = i => i.DisplayName
+        ["username"] = (i => i.UserName, StringComparison.OrdinalIgnoreCase),
+        ["externalid"] = (i => i.ExternalId, StringComparison.Ordinal),
+        ["displayname"] = (i => i.DisplayName, StringComparison.OrdinalIgnoreCase)
     };
 
     [Theory]

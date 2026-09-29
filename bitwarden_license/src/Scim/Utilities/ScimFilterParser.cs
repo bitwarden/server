@@ -14,10 +14,10 @@ public static class ScimFilterParser
     /// Returns null if the filter cannot be parsed or the attribute is not in the provided map.
     /// </summary>
     /// <param name="filter">Raw SCIM filter string (e.g., "userName eq \"john\"").</param>
-    /// <param name="attributeSelectors">Map of lowercase attribute names to field selectors.</param>
+    /// <param name="attributeSelectors">Map of lowercase attribute names to (field selector, string comparison) tuples.</param>
     public static Func<T, bool>? TryGetPredicate<T>(
         string? filter,
-        Dictionary<string, Func<T, string?>> attributeSelectors)
+        Dictionary<string, (Func<T, string?> Selector, StringComparison Comparison)> attributeSelectors)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
@@ -39,15 +39,15 @@ public static class ScimFilterParser
         var attribute = parts[0].ToLowerInvariant();
         var filterValue = parts[2].Trim().Trim('"');
 
-        if (!attributeSelectors.TryGetValue(attribute, out var selector))
+        if (!attributeSelectors.TryGetValue(attribute, out var entry))
         {
             return null;
         }
 
-        return item => Matches(selector(item), candidateOp, filterValue);
+        return item => Matches(entry.Selector(item), candidateOp, filterValue, entry.Comparison);
     }
 
-    private static bool Matches(string? fieldValue, string op, string filterValue)
+    private static bool Matches(string? fieldValue, string op, string filterValue, StringComparison comparison)
     {
         if (fieldValue == null)
         {
@@ -56,10 +56,10 @@ public static class ScimFilterParser
 
         return op switch
         {
-            "eq" => string.Equals(fieldValue, filterValue, StringComparison.OrdinalIgnoreCase),
-            "ne" => !string.Equals(fieldValue, filterValue, StringComparison.OrdinalIgnoreCase),
-            "co" => fieldValue.Contains(filterValue, StringComparison.OrdinalIgnoreCase),
-            "sw" => fieldValue.StartsWith(filterValue, StringComparison.OrdinalIgnoreCase),
+            "eq" => string.Equals(fieldValue, filterValue, comparison),
+            "ne" => !string.Equals(fieldValue, filterValue, comparison),
+            "co" => fieldValue.Contains(filterValue, comparison),
+            "sw" => fieldValue.StartsWith(filterValue, comparison),
             _ => false
         };
     }
