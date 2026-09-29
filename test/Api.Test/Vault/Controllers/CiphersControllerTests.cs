@@ -2534,10 +2534,7 @@ public class CiphersControllerTests
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         currentContext.GetOrganization(organization.Id).Returns(organization);
-#pragma warning disable CS0618 // A DeleteAnyCollection-only role passes this deprecated check, which GetAdmin must not honor.
-        currentContext.ViewAllCollections(organization.Id).Returns(true);
-#pragma warning restore CS0618
-        currentContext.EditAnyCollection(organization.Id).Returns(false);
+                  currentContext.EditAnyCollection(organization.Id).Returns(false);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAdmin(cipher.Id.ToString()));
