@@ -154,7 +154,8 @@ public class TeamsIntegrationController(
             throw new BadRequestException("The Bitwarden app has not been added to a team yet.");
         }
 
-        var channels = await teamsService.GetStandardChannelsAsync(serviceUrl, teamId);
+        var channels = await teamsService.GetStandardChannelsAsync(serviceUrl, teamId)
+            ?? throw new BadRequestException("Unable to retrieve the channels for the connected team. Please try again.");
 
         return new ListResponseModel<TeamsChannelResponseModel>(
             channels.Select(channel => new TeamsChannelResponseModel(channel)));

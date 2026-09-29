@@ -207,6 +207,7 @@ public class TeamsServiceTests
 
         var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
 
+        Assert.NotNull(result);
         Assert.Equal(2, result.Count);
         Assert.Contains(result, c => c is { Id: "19:general@thread.tacv2", Name: null });
         Assert.Contains(result, c => c is { Id: "19:alerts@thread.tacv2", Name: "Alerts" });
@@ -244,7 +245,7 @@ public class TeamsServiceTests
     }
 
     [Fact]
-    public async Task GetStandardChannelsAsync_ServerErrorCode_ReturnsEmptyList()
+    public async Task GetStandardChannelsAsync_ServerErrorCode_ReturnsNull()
     {
         var sutProvider = GetSutProvider();
 
@@ -254,8 +255,7 @@ public class TeamsServiceTests
 
         var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
 
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        Assert.Null(result);
     }
 
     [Fact]

@@ -413,6 +413,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         SetupStandardChannels(sutProvider);
         existingConfiguration.Id = configurationId;
         existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.Configuration = null;
         updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
         sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
@@ -440,6 +441,7 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         SetupStandardChannels(sutProvider);
         existingConfiguration.Id = configurationId;
         existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.Configuration = null;
         updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_privateChannelId));
         sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
         sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
@@ -450,6 +452,98 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
 
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_TeamsChannelLookupFails_ThrowsBadRequest(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.Configuration = null;
+        updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(_serviceUrl, _teamId)
+            .Returns((IReadOnlyList<TeamsChannel>?)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
+
+        Assert.Contains("Unable to retrieve the channels", exception.Message);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_TeamsChannelUnchanged_SkipsChannelLookup(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+
+        await sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration);
+
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
+            .GetStandardChannelsAsync(default!, default!);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(updatedConfiguration);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_TeamsChannelChanged_ValidatesNewChannel(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        SetupStandardChannels(sutProvider);
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        updatedConfiguration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_privateChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().GetByIdAsync(configurationId).Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration));
+
+        await sutProvider.GetDependency<ITeamsService>().Received(1)
+            .GetStandardChannelsAsync(_serviceUrl, _teamId);
         await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
     }

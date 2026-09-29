@@ -40,7 +40,7 @@ public class UpdateOrganizationIntegrationConfigurationCommand(
         {
             throw new BadRequestException($"Invalid Configuration and/or Filters for integration type {integration.Type}");
         }
-        await TeamsChannelValidation.EnsureStandardChannelAsync(teamsService, integration, updatedConfiguration);
+        await TeamsChannelValidation.EnsureStandardChannelAsync(teamsService, integration, updatedConfiguration, configuration);
 
         updatedConfiguration.Id = configuration.Id;
         updatedConfiguration.CreationDate = configuration.CreationDate;

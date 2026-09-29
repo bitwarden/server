@@ -112,7 +112,7 @@ public class TeamsService(
         return result?.Value ?? [];
     }
 
-    public async Task<IReadOnlyList<TeamsChannel>> GetStandardChannelsAsync(Uri serviceUri, string teamId)
+    public async Task<IReadOnlyList<TeamsChannel>?> GetStandardChannelsAsync(Uri serviceUri, string teamId)
     {
         // Call the Bot Framework REST endpoint directly rather than through TeamsConnectorClient, which can't use the
         // injected (SSRF-protected) HttpClient.
@@ -129,7 +129,7 @@ public class TeamsService(
         {
             var errorText = await response.Content.ReadAsStringAsync();
             logger.LogError("Get Teams channels request failed: {errorText}", errorText);
-            return [];
+            return null;
         }
 
         var result = await response.Content.ReadFromJsonAsync<TeamsChannelListResponse>();

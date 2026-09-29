@@ -540,6 +540,27 @@ public class TeamsIntegrationControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetChannelsAsync_ChannelLookupFails_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        var serviceUrl = new Uri("https://smba.example.com/amer/tenant/");
+        SetupCompletedTeamsIntegration(integration, "19:team@thread.tacv2", serviceUrl);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(serviceUrl, "19:team@thread.tacv2")
+            .Returns((IReadOnlyList<TeamsChannel>?)null);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id));
+    }
+
+    [Theory, BitAutoData]
     public async Task GetChannelsAsync_NotOrganizationOwner_ThrowsNotFound(
         SutProvider<TeamsIntegrationController> sutProvider,
         Guid organizationId,

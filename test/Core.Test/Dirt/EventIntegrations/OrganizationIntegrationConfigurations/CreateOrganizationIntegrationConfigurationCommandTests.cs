@@ -278,6 +278,32 @@ public class CreateOrganizationIntegrationConfigurationCommandTests
             .CreateAsync(default!);
     }
 
+    [Theory, BitAutoData]
+    public async Task CreateAsync_TeamsChannelLookupFails_ThrowsBadRequest(
+        SutProvider<CreateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration configuration)
+    {
+        SetupTeamsIntegration(integration, organizationId, integrationId);
+        configuration.Configuration = JsonSerializer.Serialize(new TeamsIntegrationConfiguration(_standardChannelId));
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>().GetByIdAsync(integrationId).Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(_serviceUrl, _teamId)
+            .Returns((IReadOnlyList<TeamsChannel>?)null);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAsync(organizationId, integrationId, configuration));
+
+        Assert.Contains("Unable to retrieve the channels", exception.Message);
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
+    }
+
     private static void SetupTeamsIntegration(OrganizationIntegration integration, Guid organizationId, Guid integrationId)
     {
         integration.Id = integrationId;

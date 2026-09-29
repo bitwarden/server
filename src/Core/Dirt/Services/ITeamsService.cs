@@ -43,8 +43,9 @@ public interface ITeamsService
     /// team. Obtained via the bot framework callback.</param>
     /// <param name="teamId">The team's conversation ID, as stored from the bot installation callback.</param>
     /// <returns>A read-only list of <see cref="TeamsChannel"/> objects for the team's standard channels.
-    /// Returns an empty list if the request fails.</returns>
-    Task<IReadOnlyList<TeamsChannel>> GetStandardChannelsAsync(Uri serviceUri, string teamId);
+    /// Returns <c>null</c> if the request fails, so callers can tell a failed lookup apart from a team without a
+    /// matching channel.</returns>
+    Task<IReadOnlyList<TeamsChannel>?> GetStandardChannelsAsync(Uri serviceUri, string teamId);
 
     /// <summary>
     /// Send a message to a specific channel in Teams.
