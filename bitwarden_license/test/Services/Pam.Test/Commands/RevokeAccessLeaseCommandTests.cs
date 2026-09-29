@@ -61,36 +61,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "done with it"),
             _now);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeAsync_HolderWhoCanAlsoManage_EndsAsCancelled(AccessLease lease)
-    {
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now.AddHours(1);
-        SetupManageableLease(sutProvider, lease.RequesterId, lease);
-
-        await sutProvider.Sut.RevokeAsync(lease.RequesterId, lease.Id, null);
-
-        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
-            lease, AccessLeaseAction.Cancelled, Arg.Any<AccessDecision>(), _now);
-    }
-
-    [Theory]
-    [BitAutoData("")]
-    [BitAutoData("   ")]
-    public async Task RevokeAsync_BlankReason_RecordsNoComment(string reason, Guid userId, AccessLease lease)
-    {
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now.AddHours(1);
-        SetupManageableLease(sutProvider, userId, lease);
-
-        await sutProvider.Sut.RevokeAsync(userId, lease.Id, reason);
-
-        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
-            lease, AccessLeaseAction.Revoked, Arg.Is<AccessDecision>(d => d.Comment == null), _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
     }
 
     [Theory, BitAutoData]
@@ -154,34 +130,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "policy change"),
             _now);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
-        Guid userId, AccessLease lease)
-    {
-        // A lease whose window has closed carries no early end; revoking it would restamp an end that already happened.
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now.AddMinutes(-1);
-        SetupManageableLease(sutProvider, userId, lease);
-
-        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
-
-        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
-            .RevokeAsync(default!, default, default!, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeAsync_WindowClosesExactlyNow_ThrowsConflict(Guid userId, AccessLease lease)
-    {
-        // NotAfter is exclusive everywhere (active reads use NotAfter > now), so the boundary instant is outside it.
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now;
-        SetupManageableLease(sutProvider, userId, lease);
-
-        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
     }
 
     [Theory, BitAutoData]

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -12,16 +13,32 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 {
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
+    private readonly ILeaseRevokedMailNotifier _leaseRevokedMailNotifier;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RevokeAccessLeaseCommand> _logger;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
-        TimeProvider timeProvider)
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
+        ILeaseRevokedMailNotifier leaseRevokedMailNotifier,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
+        IHandleAccessGrantEndedCommand handleAccessGrantEndedCommand,
+        TimeProvider timeProvider,
+        ILogger<RevokeAccessLeaseCommand> logger)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
+        _leaseRevokedMailNotifier = leaseRevokedMailNotifier;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
+        _handleAccessGrantEndedCommand = handleAccessGrantEndedCommand;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -63,6 +80,49 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
+        // A holder self-end and an operator revoke both settle to the single LeaseRevoked kind.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseRevoked,
+            OccurredAt = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = lease.AccessRequestId,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+            Detail = string.IsNullOrWhiteSpace(reason) ? null : reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         await _accessLeaseRepository.RevokeAsync(lease, endAction, auditDecision, now);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        // A failure here must never fail the revoke itself, since the lease has already ended, so it is logged
+        // and swallowed.
+        try
+        {
+            await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to trigger the rotation access-end handler for cipher {CipherId} after revoking lease {AccessLeaseId}.",
+                lease.CipherId, lease.Id);
+        }
+
+        // The active lease just drained; tell every approver of this collection to re-fetch.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
+
+        // Tell the lease holder their access ended, so an open cipher re-locks and the badges drop the lease.
+        await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
+        // The same news out of band: the push above only lands on a client that is already open. Every early end is
+        // handed over, and only a revocation is mailed -- a holder is not mailed about ending their own access.
+        await _leaseRevokedMailNotifier.NotifyLeaseEndedAsync(lease, endAction);
     }
 }
