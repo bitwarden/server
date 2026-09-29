@@ -910,20 +910,23 @@ public class CipherService : ICipherService
                 throw new NotFoundException();
             }
 
-            // Adding collections shares the cipher. A cipher that lives in another member's default
-            // collection is personal to them and may not be shared into other collections.
+            // Adding collections shares the cipher. A cipher that lives only in another member's default
+            // collection is personal to them and may not be shared; once it is also in a shared collection
+            // it is already shared and may be assigned to other collections.
             if (!removeCollections && cipher.OrganizationId.HasValue)
             {
-                var cipherDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(
-                        await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id)))
+                var cipherCollections = await _collectionRepository.GetManyByManyIdsAsync(
+                    await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id));
+                var alreadyShared = cipherCollections.Any(c => c.Type != CollectionType.DefaultUserCollection);
+                var foreignDefaultCollectionIds = cipherCollections
                     .Where(c => c.Type == CollectionType.DefaultUserCollection)
                     .Select(c => c.Id)
                     .ToList();
 
-                if (cipherDefaultCollectionIds.Count > 0)
+                if (!alreadyShared && foreignDefaultCollectionIds.Count > 0)
                 {
                     var ownedIds = await GetOwnedDefaultCollectionIdsAsync();
-                    if (cipherDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
+                    if (foreignDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
                     {
                         throw new NotFoundException();
                     }
