@@ -26,19 +26,17 @@ public class GetGroupsListQuery : IGetGroupsListQuery
         string filter = groupQueryParams.Filter;
 
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(organizationId);
-        var groupList = new List<Group>();
-        var totalResults = 0;
-
-        var predicate = ScimFilterParser.TryGetPredicate<Group>(filter,
-            new Dictionary<string, Func<Group, string>>
-            {
-                ["displayname"] = g => g.Name,
-                ["externalid"] = g => g.ExternalId
-            });
 
         IEnumerable<Group> filtered;
         if (!string.IsNullOrWhiteSpace(filter))
         {
+            var predicate = ScimFilterParser.TryGetPredicate<Group>(filter,
+                new Dictionary<string, Func<Group, string>>
+                {
+                    ["displayname"] = g => g.Name,
+                    ["externalid"] = g => g.ExternalId
+                });
+
             filtered = predicate != null
                 ? groups.Where(predicate)
                 : Enumerable.Empty<Group>();
@@ -48,8 +46,8 @@ public class GetGroupsListQuery : IGetGroupsListQuery
             filtered = groups.AsEnumerable();
         }
 
-        totalResults = filtered.Count();
-        groupList = filtered.OrderBy(g => g.Name)
+        var totalResults = filtered.Count();
+        var groupList = filtered.OrderBy(g => g.Name)
             .Skip(startIndex - 1)
             .Take(count)
             .ToList();

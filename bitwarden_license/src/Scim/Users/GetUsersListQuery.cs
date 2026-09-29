@@ -25,19 +25,17 @@ public class GetUsersListQuery : IGetUsersListQuery
         string filter = userQueryParams.Filter;
 
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var userList = new List<OrganizationUserUserDetails>();
-        var totalResults = 0;
-
-        var predicate = ScimFilterParser.TryGetPredicate<OrganizationUserUserDetails>(filter,
-            new Dictionary<string, Func<OrganizationUserUserDetails, string>>
-            {
-                ["username"] = ou => ou.Email,
-                ["externalid"] = ou => ou.ExternalId
-            });
 
         IEnumerable<OrganizationUserUserDetails> filtered;
         if (!string.IsNullOrWhiteSpace(filter))
         {
+            var predicate = ScimFilterParser.TryGetPredicate<OrganizationUserUserDetails>(filter,
+                new Dictionary<string, Func<OrganizationUserUserDetails, string>>
+                {
+                    ["username"] = ou => ou.Email,
+                    ["externalid"] = ou => ou.ExternalId
+                });
+
             filtered = predicate != null
                 ? orgUsers.Where(predicate)
                 : Enumerable.Empty<OrganizationUserUserDetails>();
@@ -47,8 +45,8 @@ public class GetUsersListQuery : IGetUsersListQuery
             filtered = orgUsers.AsEnumerable();
         }
 
-        totalResults = filtered.Count();
-        userList = filtered.OrderBy(ou => ou.Email)
+        var totalResults = filtered.Count();
+        var userList = filtered.OrderBy(ou => ou.Email)
             .Skip(startIndex - 1)
             .Take(count)
             .ToList();
