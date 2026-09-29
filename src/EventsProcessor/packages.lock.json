@@ -10,9 +10,9 @@
       },
       "Bitwarden.Server.Sdk.Features": {
         "type": "Direct",
-        "requested": "[1.4.0, )",
-        "resolved": "1.4.0",
-        "contentHash": "74Ir68CSZSUvZvVkb2CaUNHSAZcFMtZY5pReHz+K1eQX6+Am29iWS1i8DbQWq9F6KmCAEbqcGDyfAo4gRCurbg==",
+        "requested": "[1.5.0, )",
+        "resolved": "1.5.0",
+        "contentHash": "w5Y6vJN0mM73p2mpv2xnviIia/VakRlMvUClywBCqKcQmLfRc8oy4fVycZtFTycK7SAdRUmA29lrIzybQw3r+Q==",
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "0.1.0",
           "LaunchDarkly.ServerSdk": "8.14.1"
@@ -1157,7 +1157,7 @@
           "Azure.Storage.Queues": "[12.27.1, 12.27.1]",
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
-          "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
           "Braintree": "[5.36.0, 5.36.0]",
           "CsvHelper": "[33.1.0, 33.1.0]",
           "Data": "[0.0.1, )",
@@ -1251,7 +1251,7 @@
         "type": "Project",
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
-          "Bitwarden.Server.Sdk.Features": "[1.4.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
           "Core": "[2026.9.2, )",
           "Infrastructure.Dapper": "[2026.9.2, )",
           "Infrastructure.EntityFramework": "[2026.9.2, )",
