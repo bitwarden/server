@@ -259,7 +259,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
         try
         {
-            return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.XChaCha20Poly1305_B64;
+            return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.CoseEncrypt0B64;
         }
         catch (ArgumentException)
         {

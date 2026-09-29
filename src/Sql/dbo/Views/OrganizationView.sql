@@ -67,6 +67,8 @@ SELECT
     [UseMyItems],
     [ExemptFromBillingAutomation],
     [UseInviteLinks],
-    [UsePam]
+    [UsePam],
+    [PamSeats],
+    [MaxAutoscalePamSeats]
 FROM
     [dbo].[Organization]

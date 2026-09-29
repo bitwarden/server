@@ -60,7 +60,7 @@ public class OrganizationSubscriptionEndpointsHandlerTests
         {
             PasswordManager = new PasswordManagerInvoiceItems
             {
-                Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 10m }
+                Seats = new InvoicePreviewItem { Reference = "pm-seat", Quantity = 1, Cost = 10m },
             },
             Cadence = PlanCadenceType.Annually,
             PlanTier = PlanTierType.Teams,

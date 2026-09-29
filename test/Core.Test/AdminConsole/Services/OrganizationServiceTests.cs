@@ -158,6 +158,73 @@ public class OrganizationServiceTests
         Assert.Contains("your account does not have permission to manage users", exception.Message.ToLowerInvariant());
     }
 
+    /// <summary>
+    /// Design approved the seat-count wording for the invite flow only, so the substitution happens here rather
+    /// than in <see cref="OrganizationService.CanScaleAsync"/>. An inviter who can manage billing is told to raise
+    /// the limit themselves; see
+    /// <see cref="InviteUsers_AtSeatCap_WhenInviterCannotManageBilling_TellsThemToContactTheOwner"/> for the other
+    /// branch. The seat cap and Seats differ so the assertion pins which number is reported.
+    /// </summary>
+    [Theory]
+    [OrganizationInviteCustomize(
+        InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner
+    ), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_AtSeatCap_WhenInviterCanManageBilling_TellsThemToIncreaseTheSeatLimit(
+        Organization organization, OrganizationUserInvite invite, OrganizationUser invitor,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        SetupSeatCapInvite(organization, invite, invitor, sutProvider, canManageBilling: true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
+
+        Assert.Equal("Seat limit of 120 has been reached. Increase your seat limit to invite more members.",
+            exception.Message);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(
+        InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Admin
+    ), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_AtSeatCap_WhenInviterCannotManageBilling_TellsThemToContactTheOwner(
+        Organization organization, OrganizationUserInvite invite, OrganizationUser invitor,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        SetupSeatCapInvite(organization, invite, invitor, sutProvider, canManageBilling: false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) }));
+
+        Assert.Equal("Seat limit of 120 has been reached. Contact your organization owner to increase the seat limit.",
+            exception.Message);
+    }
+
+    /// <summary>
+    /// Fills every seat and invites enough members to overshoot the autoscale cap, so the invite trips the seat
+    /// limit guard in <see cref="OrganizationService.CanScaleAsync"/>.
+    /// </summary>
+    private static void SetupSeatCapInvite(Organization organization, OrganizationUserInvite invite,
+        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider, bool canManageBilling)
+    {
+        organization.Seats = 100;
+        organization.MaxAutoscaleSeats = 120;
+        invite.Emails = Enumerable.Range(0, 25).Select(i => $"invitee{i}@example.com").ToArray();
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 100 });
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        currentContext.ManageUsers(organization.Id).Returns(true);
+        currentContext.OrganizationOwner(organization.Id).Returns(true);
+        currentContext.UserId.Returns(invitor.UserId);
+        currentContext.EditSubscription(organization.Id).Returns(canManageBilling);
+    }
+
     [Theory]
     [OrganizationInviteCustomize(
          InviteeUserType = OrganizationUserType.Custom,
@@ -779,7 +846,8 @@ public class OrganizationServiceTests
     [BitAutoData(0, 100, 100, true, "")]
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
-    [BitAutoData(1, 100, 100, false, "Seat limit has been reached")]
+    [BitAutoData(1, 100, 100, false, "Seat limit has been reached.")]
+    [BitAutoData(25, 100, 120, false, "Seat limit has been reached.")]
     public async Task CanScaleAsync(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
@@ -800,6 +868,31 @@ public class OrganizationServiceTests
             Assert.Contains(expectedFailureMessage, failureMessage);
         }
         Assert.Equal(expectedResult, result);
+    }
+
+    /// <summary>
+    /// The seat-count wording was approved for the invite flow only. <see cref="OrganizationService.CanScaleAsync"/>
+    /// also backs member restore, Families sponsorship and SSO just-in-time provisioning, so it must stay neutral
+    /// and must not consult billing permissions.
+    /// </summary>
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_AtSeatCap_ReturnsTheFlowNeutralMessageWithoutConsultingBillingPermissions(
+        Guid callingUserId,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.Seats = 100;
+        organization.MaxAutoscaleSeats = 120;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(callingUserId);
+        sutProvider.GetDependency<ICurrentContext>().EditSubscription(organization.Id).Returns(true);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 25);
+
+        Assert.False(result);
+        Assert.Equal(OrganizationService.SeatLimitHasBeenReachedMessage, failureMessage);
+        Assert.DoesNotContain("invite more members", failureMessage);
+        await sutProvider.GetDependency<ICurrentContext>().DidNotReceive().EditSubscription(Arg.Any<Guid>());
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]

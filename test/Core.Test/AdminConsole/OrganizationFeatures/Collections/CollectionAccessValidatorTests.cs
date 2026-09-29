@@ -150,6 +150,68 @@ public class CollectionAccessValidatorTests
         await AssertDidNotQueryAsync(sutProvider);
     }
 
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public async Task ValidateAsync_WithManageUserAlsoRestricted_ReturnsManageMutuallyExclusiveError(
+        bool readOnly, bool hidePasswords,
+        Guid organizationId,
+        SutProvider<CollectionAccessValidator> sutProvider)
+    {
+        ArrangeUsers(sutProvider, organizationId);
+        var users = new List<CollectionAccessSelection>
+        {
+            new() { Id = Guid.NewGuid(), Manage = true, ReadOnly = readOnly, HidePasswords = hidePasswords }
+        };
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            new CollectionAccessValidationRequest(organizationId, null, users));
+
+        Assert.True(result.IsError);
+        Assert.IsType<ManageMutuallyExclusive>(result.AsError);
+    }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public async Task ValidateAsync_WithManageGroupAlsoRestricted_ReturnsManageMutuallyExclusiveError(
+        bool readOnly, bool hidePasswords,
+        Guid organizationId,
+        SutProvider<CollectionAccessValidator> sutProvider)
+    {
+        ArrangeGroups(sutProvider, organizationId);
+        var groups = new List<CollectionAccessSelection>
+        {
+            new() { Id = Guid.NewGuid(), Manage = true, ReadOnly = readOnly, HidePasswords = hidePasswords }
+        };
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            new CollectionAccessValidationRequest(organizationId, groups, null));
+
+        Assert.True(result.IsError);
+        Assert.IsType<ManageMutuallyExclusive>(result.AsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WithManageAndNoRestrictions_ReturnsValid(
+        Guid organizationId,
+        SutProvider<CollectionAccessValidator> sutProvider)
+    {
+        ArrangeGroups(sutProvider, organizationId);
+        ArrangeUsers(sutProvider, organizationId);
+        List<CollectionAccessSelection> Manage() =>
+        [
+            new() { Id = Guid.NewGuid(), Manage = true, ReadOnly = false, HidePasswords = false }
+        ];
+
+        var result = await sutProvider.Sut.ValidateAsync(
+            new CollectionAccessValidationRequest(organizationId, Manage(), Manage()));
+
+        Assert.True(result.IsValid);
+    }
+
     private static List<CollectionAccessSelection> AccessSelections(int count) =>
         Enumerable.Range(0, count).Select(_ => new CollectionAccessSelection { Id = Guid.NewGuid() }).ToList();
 

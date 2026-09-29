@@ -560,7 +560,7 @@ public static class EventIntegrationsServiceCollectionExtensions
     ///   <item><description>EventLogging.AzureServiceBus.IntegrationTopicName</description></item>
     /// </list>
     /// </remarks>
-    internal static bool IsAzureServiceBusEnabled(GlobalSettings settings)
+    public static bool IsAzureServiceBusEnabled(GlobalSettings settings)
     {
         return CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.ConnectionString) &&
                CoreHelpers.SettingHasValue(settings.EventLogging.AzureServiceBus.EventTopicName) &&

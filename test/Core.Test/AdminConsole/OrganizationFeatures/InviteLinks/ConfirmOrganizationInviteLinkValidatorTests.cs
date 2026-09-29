@@ -185,6 +185,40 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        user.EmailVerified = false;
+
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        var error = Assert.IsType<ConfirmEmailNotVerified>(result.AsError);
+        Assert.IsAssignableFrom<IValidationError>(error);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationEmailAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_WithEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -646,6 +680,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         link.AllowedDomains = "[\"example.com\"]";
         link.SupportsConfirmation = true;
         user.Email = "user@example.com";
+        user.EmailVerified = true;
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(org.Id)

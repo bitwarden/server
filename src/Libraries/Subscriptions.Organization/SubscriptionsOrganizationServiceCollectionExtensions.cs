@@ -1,6 +1,8 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Handlers;
+using Bit.Subscriptions.Organization.Requirements;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -15,6 +17,8 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.AddInvoicing();
         services.AddOrganizationAuthorization();
         services.TryAddScoped<OrganizationSubscriptionEndpointsHandler>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IAuthorizationHandler, StandaloneOrganizationOwnerRequirementHandler>());
         return services;
     }
 }
