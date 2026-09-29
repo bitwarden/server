@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -15,13 +16,16 @@ public class CollectionAuthorizationService(
     private readonly Dictionary<Guid, CollectionAdminDetails?> _detailsByCollectionId = new();
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
-        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate)).Contains(collectionId);
+        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate,
+            excludeDefaultCollections: false)).Contains(collectionId);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess,
+            excludeDefaultCollections: true);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess,
+            excludeDefaultCollections: true);
 
     /// <summary>
     /// Returns the subset of <paramref name="collectionIds"/> that the caller is authorized to operate on.
@@ -31,7 +35,8 @@ public class CollectionAuthorizationService(
     private async Task<IReadOnlySet<Guid>> AuthorizeAsync(
         Guid organizationId,
         IReadOnlyCollection<Guid> collectionIds,
-        Func<CurrentContextOrganization?, OrganizationAbility?, bool> organizationWideRule)
+        Func<CurrentContextOrganization?, OrganizationAbility?, bool> organizationWideRule,
+        bool excludeDefaultCollections)
     {
         if (collectionIds.Count == 0 || !currentContext.UserId.HasValue)
         {
@@ -41,7 +46,9 @@ public class CollectionAuthorizationService(
         await EnsureCollectionDetailsCachedAsync(collectionIds);
 
         var requestedCollectionIds = collectionIds
-            .Where(id => _detailsByCollectionId[id] is { } details && details.OrganizationId == organizationId)
+            .Where(id => _detailsByCollectionId[id] is { } details
+                         && details.OrganizationId == organizationId
+                         && (!excludeDefaultCollections || details.Type != CollectionType.DefaultUserCollection))
             .ToHashSet();
         if (requestedCollectionIds.Count == 0)
         {

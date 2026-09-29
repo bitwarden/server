@@ -283,6 +283,52 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task ModifyAccessOperations_WhenDefaultUserCollection_NoSuccess(
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid collectionId,
+        CurrentContextOrganization organization,
+        Guid userId)
+    {
+        organization.Permissions = new Permissions { EditAnyCollection = true };
+
+        SetupCollections(sutProvider,
+            Details(organizationId, collectionId, manage: true, type: CollectionType.DefaultUserCollection));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
+        Assert.True(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ModifyAccessOperations_WithMixedCollectionTypes_ReturnsOnlySharedCollections(
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid sharedCollectionId,
+        Guid defaultCollectionId,
+        CurrentContextOrganization organization,
+        Guid userId)
+    {
+        organization.Permissions = new Permissions { EditAnyCollection = true };
+
+        SetupCollections(sutProvider,
+            Details(organizationId, sharedCollectionId, manage: true),
+            Details(organizationId, defaultCollectionId, manage: true, type: CollectionType.DefaultUserCollection));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
+
+        var userAccess = await sutProvider.Sut.AuthorizeModifyUserAccessAsync(
+            organizationId, [sharedCollectionId, defaultCollectionId]);
+        var groupAccess = await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(
+            organizationId, [sharedCollectionId, defaultCollectionId]);
+
+        Assert.Equal(Expected(sharedCollectionId), userAccess);
+        Assert.Equal(Expected(sharedCollectionId), groupAccess);
+    }
+
+    [Theory, BitAutoData]
     public async Task AuthorizeModifyUserAccessAsync_WhenEmptyRequest_ReturnsEmpty(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId)
@@ -456,14 +502,16 @@ public class CollectionAuthorizationServiceTests
         Guid collectionId,
         bool manage = false,
         bool assigned = false,
-        bool unmanaged = false) =>
+        bool unmanaged = false,
+        CollectionType type = CollectionType.SharedCollection) =>
         new()
         {
             Id = collectionId,
             OrganizationId = organizationId,
             Manage = manage,
             Assigned = assigned || manage,
-            Unmanaged = unmanaged
+            Unmanaged = unmanaged,
+            Type = type
         };
 
     private static HashSet<Guid> Expected(params Guid[] collectionIds) => [.. collectionIds];

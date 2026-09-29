@@ -16,6 +16,7 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collection.</param>
     /// <param name="collectionId">The ID of the collection to update.</param>
     /// <returns>True if the caller can update the collection's metadata, false if not.</returns>
+    /// <remarks>Unlike the two access methods, this does not reject default user collections.</remarks>
     Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId);
 
     /// <summary>
@@ -24,6 +25,7 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with user access that the caller can modify.</returns>
+    /// <remarks>Default user collections are never returned.</remarks>
     Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 
     /// <summary>
@@ -32,5 +34,6 @@ public interface ICollectionAuthorizationService
     /// <param name="organizationId">The ID of the organization that owns the collections.</param>
     /// <param name="collectionIds">The IDs of the collections to check.</param>
     /// <returns>The subset of <paramref name="collectionIds"/> with group access that the caller can modify.</returns>
+    /// <remarks>Default user collections are never returned.</remarks>
     Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds);
 }
