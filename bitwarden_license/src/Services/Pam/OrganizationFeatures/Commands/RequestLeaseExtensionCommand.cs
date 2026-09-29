@@ -24,7 +24,10 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RequestLeaseExtensionCommand(
@@ -32,14 +35,20 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
         IAccessRequestRepository accessRequestRepository,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         ICurrentContext currentContext,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _resolver = resolver;
         _ruleEngine = ruleEngine;
         _accessRequestRepository = accessRequestRepository;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _currentContext = currentContext;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -140,6 +149,24 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
+        // audit (before/after): records the attempt, then the outcome around the point of no return. Only
+        // AlreadyExtended throws with nothing persisted, leaving the attempt with no outcome.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseExtended,
+            OccurredAt = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotAfter = request.NotAfter,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(
             request, decision, now, LeaseEndedDenialComment);
 
@@ -152,9 +179,28 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         {
             // The lease ran out or was ended under the request. The repository recorded that as a denied request
             // rather than refusing the write, so this is a resolved outcome to report, not an error to throw.
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.RequestDenied,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    LeaseNotAfter = lease.NotAfter,
+                    Detail = LeaseEndedDenialComment,
+                });
+
+            // Only the requester's own devices need this: nothing about the collection's leases changed, so the
+            // approver inbox has nothing to re-fetch.
+            await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
+
             return Project(request, AccessRequestAction.Denied, AccessDecisionVerdict.Deny,
                 LeaseEndedDenialComment, now);
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        // The parent lease's window just grew: notify the collection's approvers and the requester's other devices.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
+        await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
         // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
         // countdown.
