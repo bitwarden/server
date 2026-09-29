@@ -413,5 +413,7 @@ public class Startup
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/billing/subscription")
+            .MapOrganizationSubscriptionPurchaseEndpoints();
     }
 }
