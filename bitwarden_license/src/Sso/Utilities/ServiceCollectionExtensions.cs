@@ -49,13 +49,17 @@ public static class ServiceCollectionExtensions
     /// (discovery metadata, JWKS, token and userinfo).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Those destinations come from the organization's own SSO configuration (Authority /
     /// MetadataAddress), and the discovery fetch is reachable without authentication via
     /// /sso/prevalidate, so on cloud the backchannel is an SSRF sink and is wrapped in the same
     /// SSRF protection applied to the other organization-controlled clients (webhooks, Icons).
+    /// </para>
+    /// <para>
     /// Self-hosted installations are excluded: they routinely run their IdP on an internal address,
     /// and the operator configuring it already owns that network, so there is no tenant boundary
     /// for the guard to protect.
+    /// </para>
     /// </remarks>
     private static IServiceCollection AddOidcBackchannelHttpClient(this IServiceCollection services,
         GlobalSettings globalSettings)

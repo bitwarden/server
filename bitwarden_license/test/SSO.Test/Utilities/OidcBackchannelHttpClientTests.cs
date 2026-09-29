@@ -7,10 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.SSO.Test.Utilities;
 
 /// <summary>
-/// Covers the SSRF guard on the OpenID Connect backchannel. Authority and MetadataAddress come
-/// from the organization's own SSO configuration and the discovery fetch is reachable without
-/// authentication via /sso/prevalidate, so the backchannel must not be able to reach internal
-/// addresses on cloud.
+/// Covers the SSRF guard on the OpenID Connect backchannel; see
+/// <c>AddOidcBackchannelHttpClient</c> for why the backchannel is a sink.
 /// </summary>
 public class OidcBackchannelHttpClientTests
 {
@@ -42,8 +40,7 @@ public class OidcBackchannelHttpClientTests
     [Fact]
     public async Task Cloud_HostnameResolvingToInternalIp_IsBlocked()
     {
-        // The guard resolves DNS itself on every request, so a hostname pointed at an internal
-        // address is blocked just like a literal one. This is what defeats DNS rebinding.
+        // This is what defeats DNS rebinding.
         var client = CreateOidcBackchannel(selfHosted: false);
 
         await Assert.ThrowsAsync<SsrfProtectionException>(
@@ -68,8 +65,7 @@ public class OidcBackchannelHttpClientTests
     [Fact]
     public void MatchesTheBackchannelDefaultsTheFrameworkWouldHaveApplied()
     {
-        // Supplying our own Backchannel skips the client OpenIdConnectPostConfigureOptions would
-        // otherwise build, so its defaults have to be reproduced on the named client.
+        // Defaults reproduced from OpenIdConnectPostConfigureOptions; see AddOidcBackchannelHttpClient.
         var client = CreateOidcBackchannel(selfHosted: false);
 
         Assert.Equal(TimeSpan.FromMinutes(1), client.Timeout);

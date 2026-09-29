@@ -30,7 +30,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
 {
     /// <summary>
     /// Named <see cref="HttpClient"/> used as the backchannel for every dynamically built
-    /// OpenID Connect scheme. Registered by <c>AddSsoServices</c>.
+    /// OpenID Connect scheme. Registered by <c>AddOidcBackchannelHttpClient</c>.
     /// </summary>
     public const string OidcBackchannelHttpClientName = "SsoOidcBackchannel";
 
@@ -325,10 +325,8 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             // Prevents URLs that go beyond 1024 characters which may break for some servers
             AuthenticationMethod = config.RedirectBehavior,
             GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
-            // Authority and MetadataAddress are organization-controlled, so every backchannel
-            // request below (discovery, JWKS, token, userinfo) targets a URL the organization
-            // chose. Assigning our own client keeps those requests on the SSRF-protected
-            // handler instead of the unguarded one the framework would create by default.
+            // Leave this unset and the framework builds its own unguarded backchannel; see
+            // AddOidcBackchannelHttpClient for why these requests need the SSRF guard.
             Backchannel = _httpClientFactory.CreateClient(OidcBackchannelHttpClientName),
         };
         oidcOptions.Scope

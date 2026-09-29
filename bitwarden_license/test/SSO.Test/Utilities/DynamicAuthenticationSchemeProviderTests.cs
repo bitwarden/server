@@ -145,9 +145,7 @@ public class DynamicAuthenticationSchemeProviderTests
         Guid organizationId,
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
     {
-        // Authority and MetadataAddress are organization-controlled, and the discovery fetch is
-        // reachable without authentication via /sso/prevalidate. Leaving Backchannel unset makes
-        // the framework build an unguarded client, which is the SSRF sink this pins shut.
+        // Leaving Backchannel unset makes the framework build an unguarded client.
         var (backchannel, _) = ArrangeOidcScheme(sutProvider, organizationId);
 
         var scheme = await sutProvider.Sut.GetSchemeAsync(organizationId.ToString());
@@ -185,10 +183,6 @@ public class DynamicAuthenticationSchemeProviderTests
         Assert.True(oidcOptions.RequireHttpsMetadata);
     }
 
-    /// <summary>
-    /// Stands in for the SSRF-protected backchannel so tests can observe what the OpenID Connect
-    /// machinery sends through it without touching the network.
-    /// </summary>
     private class RecordingHandler : HttpMessageHandler
     {
         public List<Uri> Requests { get; } = [];
