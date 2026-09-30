@@ -50,6 +50,11 @@ In this scenario the Send is only accessible to owners of specific email address
 #### Email OTP Protected Sends
 - `email` - Email address associated with the send
 - `otp` - One-time password (optional - if missing, OTP is generated and sent)
+- `Device-Identifier` header - Identifier of the requesting device, at most 50 characters. Required on every
+  request, both when requesting an OTP and when submitting one. The OTP is bound to the device that
+  requested it, so only a request carrying the same `Device-Identifier` can redeem it. A request without the
+  header receives `device_identifier_required`, and a request with an over-long header receives
+  `device_identifier_invalid`. In both cases no OTP is sent or validated.
 
 ### Error Responses
 
