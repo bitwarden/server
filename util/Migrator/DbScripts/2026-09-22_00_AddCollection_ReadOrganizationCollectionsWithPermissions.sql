@@ -1,10 +1,4 @@
-IF OBJECT_ID('[dbo].[Collection_ReadOrganizationCollectionsWithPermissions]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadOrganizationCollectionsWithPermissions]
-END
-GO
-
-CREATE PROCEDURE [dbo].[Collection_ReadOrganizationCollectionsWithPermissions]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadOrganizationCollectionsWithPermissions]
     @OrganizationId [UNIQUEIDENTIFIER],
     @UserId [UNIQUEIDENTIFIER]
 AS
