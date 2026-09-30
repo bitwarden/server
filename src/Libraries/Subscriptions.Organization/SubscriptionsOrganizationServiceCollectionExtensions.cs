@@ -1,4 +1,4 @@
-using Bit.Api.AdminConsole.Authorization;
+﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Commands;
 using Bit.Subscriptions.Organization.Handlers;
