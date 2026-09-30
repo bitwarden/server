@@ -66,20 +66,20 @@ public class SendAccessResponseModelTests
     }
 
     [Fact]
-    public void ItemSend_OmitsMetadata()
+    public void ItemSend_ReturnsMetadata()
     {
-        // Recipients must not learn the owner's item id.
+        var itemId = Guid.NewGuid();
         var send = new Send
         {
             Type = SendType.Item,
             Data = JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1, "sealed_blob",
-                new SendItemMetadata { ItemId = Guid.NewGuid() })),
+                new SendItemMetadata { ItemId = itemId })),
         };
 
         var responseModel = new SendAccessResponseModel(send);
 
         Assert.Equal("sealed_blob", responseModel.Data?.Data);
-        Assert.Null(responseModel.Data?.Metadata);
+        Assert.Equal(itemId, responseModel.Data?.Metadata?.ItemId);
     }
 
     [Fact]
