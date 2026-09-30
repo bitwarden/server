@@ -121,5 +121,22 @@ public class ScimFilterParserTests
         Assert.True(predicate(new TestItem(null, null, null)));
     }
 
+    [Fact]
+    public void TryGetPredicate_ExternalId_IsCaseSensitive()
+    {
+        var predicate = ScimFilterParser.TryGetPredicate("externalId eq \"ABC123\"", _selectors)!;
+
+        Assert.True(predicate(new TestItem(null, "ABC123", null)));
+        Assert.False(predicate(new TestItem(null, "abc123", null)));
+    }
+
+    [Fact]
+    public void TryGetPredicate_UserName_IsCaseInsensitive()
+    {
+        var predicate = ScimFilterParser.TryGetPredicate("userName eq \"USER@EXAMPLE.COM\"", _selectors)!;
+
+        Assert.True(predicate(new TestItem("user@example.com", null, null)));
+    }
+
     private record TestItem(string? UserName, string? ExternalId, string? DisplayName);
 }
