@@ -876,16 +876,16 @@ public class CipherService : ICipherService
     {
         // A default ("My Items") collection is personal to its owner. Loaded at most once per request,
         // and only when some default collection is actually implicated.
-        HashSet<Guid>? ownedDefaultCollectionIds = null;
-        async Task<HashSet<Guid>> GetOwnedDefaultCollectionIdsAsync() =>
-            ownedDefaultCollectionIds ??= (await _collectionRepository.GetManyByUserIdAsync(userId))
+        var ownedDefaultCollectionIds = (await _collectionRepository.GetManyByUserIdAsync(userId))
                 .Where(c => c.Type == CollectionType.DefaultUserCollection)
                 .Select(c => c.Id)
                 .ToHashSet();
 
+        var newCollectionIds = collectionIds.ToList();
+
         // The target collection set is identical for every cipher, so resolve it once instead of
         // re-querying it inside the per-cipher validation.
-        var targetDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(collectionIds))
+        var targetDefaultCollectionIds = (await _collectionRepository.GetManyByManyIdsAsync(newCollectionIds))
             .Where(c => c.Type == CollectionType.DefaultUserCollection)
             .Select(c => c.Id)
             .ToList();
@@ -895,8 +895,7 @@ public class CipherService : ICipherService
         {
             // Removal only touches the collections named in the request. Block only when a member is
             // removing a cipher from another member's default collection.
-            var ownedIds = await GetOwnedDefaultCollectionIdsAsync();
-            if (targetDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
+            if (targetDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
             {
                 throw new NotFoundException();
             }
@@ -925,15 +924,14 @@ public class CipherService : ICipherService
 
                 if (!alreadyShared && foreignDefaultCollectionIds.Count > 0)
                 {
-                    var ownedIds = await GetOwnedDefaultCollectionIdsAsync();
-                    if (foreignDefaultCollectionIds.Any(id => !ownedIds.Contains(id)))
+                    if (foreignDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
                     {
                         throw new NotFoundException();
                     }
                 }
             }
 
-            await ValidateChangeInCollectionsAsync(cipher, collectionIds, userId, targetContainsDefault);
+            await ValidateChangeInCollectionsAsync(cipher, newCollectionIds, userId, targetContainsDefault);
         }
     }
 
