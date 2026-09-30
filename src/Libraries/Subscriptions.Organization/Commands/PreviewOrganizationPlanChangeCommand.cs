@@ -91,6 +91,11 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             }
         };
 
+        if (subscriptionId is null)
+        {
+            options.Currency = "usd";
+        }
+
         try
         {
             return await invoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence);
@@ -298,7 +303,12 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             return null;
         }
 
-        var taxIdCode = taxService.GetStripeTaxCode(country, taxId.Value) ?? taxId.Code;
+        var taxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
+
+        if (string.IsNullOrWhiteSpace(taxIdCode))
+        {
+            return null;
+        }
 
         var taxIds = new List<InvoiceCustomerDetailsTaxIdOptions>
         {

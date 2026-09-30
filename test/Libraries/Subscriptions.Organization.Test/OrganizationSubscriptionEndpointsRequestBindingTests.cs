@@ -40,6 +40,21 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.Equal("DE123", command.ReceivedRequest.BillingAddress.TaxId.Value);
     }
 
+    [Fact]
+    public async Task PlanChangePreview_MissingTier_ReturnsBadRequestWithoutCallingCommand()
+    {
+        var organizationId = Guid.NewGuid();
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new OrganizationEntity { Id = organizationId });
+        var command = new FakePreviewOrganizationPlanChangeCommand { Result = SamplePreview() };
+
+        // tier is a required member, so an omitted one fails binding with a 400 rather than defaulting silently.
+        var context = await InvokeAsync(command, organizationId,
+            """{"cadence":"monthly","billingAddress":{"country":"US","postalCode":"12345"}}""");
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.Null(command.ReceivedRequest);
+    }
+
     private async Task<HttpContext> InvokeAsync(
         FakePreviewOrganizationPlanChangeCommand command, Guid organizationId, string json)
     {

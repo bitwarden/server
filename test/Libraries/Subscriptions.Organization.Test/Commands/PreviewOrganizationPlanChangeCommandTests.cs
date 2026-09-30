@@ -63,6 +63,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.Equal("cus_1", options!.Customer);
         Assert.Equal("sub_1", options.Subscription);
         Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, options.SubscriptionDetails.ProrationBehavior);
+        Assert.Equal(StripeConstants.BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type.ToString());
         Assert.True(options.AutomaticTax.Enabled);
         Assert.Equal("US", options.CustomerDetails.Address.Country);
         Assert.Equal("90210", options.CustomerDetails.Address.PostalCode);
@@ -156,7 +157,9 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.NotNull(options);
         Assert.Null(options!.Customer);
         Assert.Null(options.Subscription);
-        Assert.Null(options.SubscriptionDetails.ProrationBehavior);
+        Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, options.SubscriptionDetails.ProrationBehavior);
+        Assert.Equal(StripeConstants.BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type);
+        Assert.Equal("usd", options.Currency);
         Assert.Equal("US", options.CustomerDetails.Address.Country);
         var item = Assert.Single(options.SubscriptionDetails.Items);
         Assert.Equal("price_teams_seat", item.Price);
