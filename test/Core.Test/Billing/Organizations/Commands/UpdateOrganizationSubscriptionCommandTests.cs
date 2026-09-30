@@ -1032,6 +1032,94 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_BusinessPriceIncreaseManagingSystemOnly_SeatChange_UpdatesUpcomingPhase()
+    {
+        // Schedules created since the managing-system marker carry no phase markers.
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var targetSeat = target.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(sourceSeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)],
+            scheduleMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.BusinessPriceIncrease
+            });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(sourceSeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.Any(i => i.Price == sourceSeat && i.Quantity == 10) &&
+                opts.Phases[1].Items.Any(i => i.Price == targetSeat && i.Quantity == 10)));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
+    public async Task Run_PersonalPriceIncreaseManagingSystemOnly_SeatChange_LeavesScheduleUntouched()
+    {
+        // The cohort assignment would route a business price-increase schedule to the phase rewrite,
+        // so only the managing-system marker keeps this schedule out of it.
+        var organization = CreateOrganization();
+        var source = MockPlans.Get(PlanType.EnterpriseAnnually2020);
+        var target = MockPlans.Get(PlanType.EnterpriseAnnually);
+
+        SetupMigration(organization,
+            MigrationPathId.Enterprise2020AnnualToCurrent,
+            PlanType.EnterpriseAnnually2020, source,
+            PlanType.EnterpriseAnnually, target);
+
+        var sourceSeat = source.PasswordManager.StripeSeatPlanId;
+        var targetSeat = target.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(sourceSeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [(sourceSeat, 5)], [(targetSeat, 5)],
+            scheduleMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.PersonalPriceIncrease
+            });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(sourceSeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Any(i => i.Price == sourceSeat && i.Quantity == 10)));
+    }
+
+    [Fact]
     public async Task Run_BusinessMigration_RemoveItem_TranslatesOnPhase2()
     {
         var organization = CreateOrganization();
