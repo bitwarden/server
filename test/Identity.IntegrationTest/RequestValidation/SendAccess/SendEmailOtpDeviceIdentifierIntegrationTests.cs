@@ -15,8 +15,7 @@ namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 /// <summary>
 /// Drives the Send access email code flow through real <c>/connect/token</c> requests, with the real token
-/// provider and cache. Asserts that an emailed code is only redeemable by the device that requested it, and
-/// that a request which does not identify its device is rejected without a code being issued.
+/// provider and cache. 
 /// </summary>
 public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFactory _factory)
     : IClassFixture<IdentityApplicationFactory>
