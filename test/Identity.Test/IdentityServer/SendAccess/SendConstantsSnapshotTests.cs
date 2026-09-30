@@ -60,7 +60,7 @@ public class SendConstantsSnapshotTests
         // Assert
         Assert.Equal("send_access", SendAccessConstants.OtpToken.TokenProviderName);
         Assert.Equal("email_otp", SendAccessConstants.OtpToken.Purpose);
-        Assert.Equal("{0}_{1}", SendAccessConstants.OtpToken.TokenUniqueIdentifier);
+        Assert.Equal("{0}_{1}_{2}", SendAccessConstants.OtpToken.TokenUniqueIdentifier);
     }
 
     [Fact]

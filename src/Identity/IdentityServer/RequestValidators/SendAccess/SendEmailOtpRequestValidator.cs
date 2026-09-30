@@ -1,5 +1,7 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Context;
@@ -72,16 +74,21 @@ public class SendEmailOtpRequestValidator(
 
         // get otp from request
         var requestOtp = request.Get(SendAccessConstants.TokenRequest.Otp);
-        var uniqueIdentifierForTokenCache = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        // Each device has its own pending OTP, so a request from one device never replaces or redeems another
+        // device's OTP.
+        var uniqueIdentifierForTokenCache = string.Format(
+            CultureInfo.InvariantCulture,
+            SendAccessConstants.OtpToken.TokenUniqueIdentifier,
+            sendId,
+            email,
+            HashDeviceIdentifier(deviceIdentifier));
         if (string.IsNullOrEmpty(requestOtp))
         {
-            // Since the request doesn't have an OTP, generate one. It is bound to the requesting device, so
-            // only a request carrying the same device identifier can redeem it.
+            // Since the request doesn't have an OTP, generate one
             var token = await otpTokenProvider.GenerateTokenAsync(
                                     SendAccessConstants.OtpToken.TokenProviderName,
                                     SendAccessConstants.OtpToken.Purpose,
-                                    uniqueIdentifierForTokenCache,
-                                    deviceIdentifier);
+                                    uniqueIdentifierForTokenCache);
 
             // Verify that the OTP is generated
             if (string.IsNullOrEmpty(token))
@@ -103,8 +110,7 @@ public class SendEmailOtpRequestValidator(
                                 requestOtp,
                                 SendAccessConstants.OtpToken.TokenProviderName,
                                 SendAccessConstants.OtpToken.Purpose,
-                                uniqueIdentifierForTokenCache,
-                                deviceIdentifier);
+                                uniqueIdentifierForTokenCache);
 
         // If OTP is invalid return error result
         if (!otpResult)
@@ -113,6 +119,17 @@ public class SendEmailOtpRequestValidator(
         }
 
         return BuildSuccessResult(sendId, email!);
+    }
+
+    /// <summary>
+    /// The identifier is client-supplied and lands in a cache key. In cloud deployments that key is a Cosmos DB item
+    /// id, which disallows '/' and '\' and should be alphanumeric ASCII. Hex SHA-256 always is, at a fixed 64
+    /// characters.
+    /// See <see href="https://learn.microsoft.com/en-us/azure/cosmos-db/concepts-limits#per-item-limits">Cosmos DB per-item limits</see>.
+    /// </summary>
+    private static string HashDeviceIdentifier(string deviceIdentifier)
+    {
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(deviceIdentifier)));
     }
 
     /// <summary>

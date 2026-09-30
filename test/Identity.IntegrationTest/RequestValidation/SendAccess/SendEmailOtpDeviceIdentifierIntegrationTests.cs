@@ -68,7 +68,7 @@ public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFac
     }
 
     [Fact]
-    public async Task SendAccess_EmailOtp_NewRequestFromAnotherDevice_SupersedesPriorCode()
+    public async Task SendAccess_EmailOtp_RequestFromAnotherDevice_DoesNotInvalidateFirstDevicesCode()
     {
         var (client, sendId, email) = ArrangeEmailOtpSend();
 
@@ -80,12 +80,31 @@ public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFac
 
         var firstCodeResponse = await PostSendAccessTokenAsync(
             client, sendId, email, firstCode, RequestingDeviceIdentifier);
-        await AssertRejectedAsync(firstCodeResponse, SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+        await AssertAccessTokenIssuedAsync(firstCodeResponse);
 
-        // The later code still works for the device that requested it, so the rejection above is not a
-        // blanket failure.
         var secondCodeResponse = await PostSendAccessTokenAsync(
             client, sendId, email, secondCode, OtherDeviceIdentifier);
+        await AssertAccessTokenIssuedAsync(secondCodeResponse);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtp_NewRequestFromSameDevice_SupersedesPriorCode()
+    {
+        var (client, sendId, email) = ArrangeEmailOtpSend();
+
+        await PostSendAccessTokenAsync(client, sendId, email, deviceIdentifier: RequestingDeviceIdentifier);
+        var firstCode = _factory.SendAccessEmailOtpCodes[email];
+
+        await PostSendAccessTokenAsync(client, sendId, email, deviceIdentifier: RequestingDeviceIdentifier);
+        var secondCode = _factory.SendAccessEmailOtpCodes[email];
+
+        var firstCodeResponse = await PostSendAccessTokenAsync(
+            client, sendId, email, firstCode, RequestingDeviceIdentifier);
+        await AssertRejectedAsync(firstCodeResponse, SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+
+        // The later code still works, so the rejection above is not a blanket failure.
+        var secondCodeResponse = await PostSendAccessTokenAsync(
+            client, sendId, email, secondCode, RequestingDeviceIdentifier);
         await AssertAccessTokenIssuedAsync(secondCodeResponse);
     }
 

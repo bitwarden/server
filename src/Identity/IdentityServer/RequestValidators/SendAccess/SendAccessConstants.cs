@@ -93,9 +93,9 @@ public static class SendAccessConstants
         public const string TokenProviderName = "send_access";
         public const string Purpose = "email_otp";
         /// <summary>
-        /// This will be send_id {0} and email {1}
+        /// This will be send_id {0}, email {1}, and the hashed device identifier {2}
         /// </summary>
-        public const string TokenUniqueIdentifier = "{0}_{1}";
+        public const string TokenUniqueIdentifier = "{0}_{1}_{2}";
     }
 
     public static class OtpEmail

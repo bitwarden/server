@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Bit.Core.Auth.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -104,14 +103,13 @@ public class SendEmailOtpRequestValidatorTests
         };
         ArrangeDeviceIdentifier(sutProvider);
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .GenerateTokenAsync(
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier)
+                expectedUniqueId)
             .Returns(generatedToken);
 
         emailOtp = emailOtp with { emails = [email] };
@@ -130,8 +128,7 @@ public class SendEmailOtpRequestValidatorTests
             .GenerateTokenAsync(
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier);
+                expectedUniqueId);
 
         // Verify email sending
         await sutProvider.GetDependency<IMailService>()
@@ -193,15 +190,14 @@ public class SendEmailOtpRequestValidatorTests
 
         emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(
                 otp,
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier)
+                expectedUniqueId)
             .Returns(true);
 
         // Act
@@ -220,7 +216,7 @@ public class SendEmailOtpRequestValidatorTests
         // Verify OTP validation was called
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .Received(1)
-            .ValidateTokenAsync(otp, SendAccessConstants.OtpToken.TokenProviderName, SendAccessConstants.OtpToken.Purpose, expectedUniqueId, DeviceIdentifier);
+            .ValidateTokenAsync(otp, SendAccessConstants.OtpToken.TokenProviderName, SendAccessConstants.OtpToken.Purpose, expectedUniqueId);
 
         // Verify no email was sent (validation only)
         await sutProvider.GetDependency<IMailService>()
@@ -252,15 +248,14 @@ public class SendEmailOtpRequestValidatorTests
         emailOtp = emailOtp with { emails = [mixedCaseEmail.Trim()] };
 
         // The OTP cache key is built from the normalized email, so the stub must key off it.
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, normalizedEmail);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, normalizedEmail, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(
                 otp,
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier)
+                expectedUniqueId)
             .Returns(true);
 
         // Act
@@ -276,7 +271,7 @@ public class SendEmailOtpRequestValidatorTests
         // OTP validation ran against the normalized cache key, not the raw mixed-case input.
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .Received(1)
-            .ValidateTokenAsync(otp, SendAccessConstants.OtpToken.TokenProviderName, SendAccessConstants.OtpToken.Purpose, expectedUniqueId, DeviceIdentifier);
+            .ValidateTokenAsync(otp, SendAccessConstants.OtpToken.TokenProviderName, SendAccessConstants.OtpToken.Purpose, expectedUniqueId);
     }
 
     [Theory, BitAutoData]
@@ -298,14 +293,13 @@ public class SendEmailOtpRequestValidatorTests
 
         emailOtp = emailOtp with { emails = [email] };
 
-        var expectedUniqueId = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
+        var expectedUniqueId = SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, DeviceIdentifier);
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
             .ValidateTokenAsync(invalidOtp,
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier)
+                expectedUniqueId)
             .Returns(false);
 
         // Act
@@ -322,8 +316,7 @@ public class SendEmailOtpRequestValidatorTests
             .ValidateTokenAsync(invalidOtp,
                 SendAccessConstants.OtpToken.TokenProviderName,
                 SendAccessConstants.OtpToken.Purpose,
-                expectedUniqueId,
-                DeviceIdentifier);
+                expectedUniqueId);
     }
 
     [Theory]
@@ -442,7 +435,7 @@ public class SendEmailOtpRequestValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateRequestAsync_DeviceIdentifierAtMaxLength_GeneratesOtpBoundToIt(
+    public async Task ValidateRequestAsync_DeviceIdentifierAtMaxLength_GeneratesOtp(
         SutProvider<SendEmailOtpRequestValidator> sutProvider,
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         EmailOtp emailOtp,
@@ -462,7 +455,10 @@ public class SendEmailOtpRequestValidatorTests
         emailOtp = emailOtp with { emails = [email] };
 
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
-            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), maxLengthDeviceIdentifier)
+            .GenerateTokenAsync(
+                SendAccessConstants.OtpToken.TokenProviderName,
+                SendAccessConstants.OtpToken.Purpose,
+                SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, maxLengthDeviceIdentifier))
             .Returns(generatedToken);
 
         // Act
@@ -475,6 +471,40 @@ public class SendEmailOtpRequestValidatorTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendSendEmailOtpEmailAsync(email, generatedToken, Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateRequestAsync_DeviceIdentifierWithReservedCharacters_KeysOtpByHexHash(
+        SutProvider<SendEmailOtpRequestValidator> sutProvider,
+        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        EmailOtp emailOtp,
+        Guid sendId,
+        string email)
+    {
+        // Arrange
+        tokenRequest.Raw = SendAccessTestUtilities.CreateValidatedTokenRequest(sendId, email);
+        var context = new ExtensionGrantValidationContext
+        {
+            Request = tokenRequest
+        };
+        const string reservedCharacterDeviceIdentifier = "device/with\\reserved?#characters";
+        sutProvider.GetDependency<ICurrentContext>().DeviceIdentifier.Returns(reservedCharacterDeviceIdentifier);
+
+        emailOtp = emailOtp with { emails = [email] };
+
+        string? uniqueIdentifier = null;
+        sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Do<string>(id => uniqueIdentifier = id))
+            .Returns("123456");
+
+        // Act
+        await sutProvider.Sut.ValidateRequestAsync(context, emailOtp, sendId);
+
+        // Assert
+        Assert.NotNull(uniqueIdentifier);
+        Assert.DoesNotContain("/", uniqueIdentifier);
+        Assert.DoesNotContain("\\", uniqueIdentifier);
+        Assert.Matches("_[0-9A-F]{64}$", uniqueIdentifier);
     }
 
     [Fact]

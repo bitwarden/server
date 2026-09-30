@@ -268,7 +268,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
             "{0}_{1}_{2}",
             SendAccessConstants.OtpToken.TokenProviderName,
             SendAccessConstants.OtpToken.Purpose,
-            string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email));
+            SendAccessTestUtilities.ExpectedOtpUniqueIdentifier(sendId, email, SendAccessTestUtilities.DeviceIdentifier));
 
         var persistentCache = factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
         await persistentCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(otp));
