@@ -192,6 +192,36 @@ public class SingleOrgPolicyEventHandlerTests
         Assert.True(string.IsNullOrEmpty(result));
     }
 
+    [Theory]
+    [BitAutoData(false, "The Single organization policy is required for organizations that have enabled domain verification.")]
+    [BitAutoData(true, "The Single organization membership policy is required for organizations that have enabled domain verification.")]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_HasVerifiedDomains_ReturnsError(
+        bool vfo1Enabled,
+        string expectedMessage,
+        [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy policy,
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(new SsoConfig { Enabled = false });
+
+        sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
+            .HasVerifiedDomainsAsync(policyUpdate.OrganizationId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VFO1Foundation)
+            .Returns(vfo1Enabled);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.Equal(expectedMessage, result);
+    }
+
     [Theory, BitAutoData]
     public async Task ExecutePreUpsertSideEffectAsync_RevokesNonCompliantUsers(
         [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,

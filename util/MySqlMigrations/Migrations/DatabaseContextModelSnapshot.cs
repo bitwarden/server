@@ -235,6 +235,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
@@ -257,6 +260,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("int");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -2465,6 +2471,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("AccessRequestId")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
 
@@ -2492,9 +2501,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2502,13 +2508,14 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Status");
+                    b.HasIndex("CollectionId", "Action");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("NotAfter", "Action");
 
-                    b.HasIndex("NotAfter", "Status");
+                    b.HasIndex("CipherId", "Action", "NotAfter")
+                        .IsDescending(false, false, true);
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2517,6 +2524,12 @@ namespace Bit.MySqlMigrations.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
+
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime?>("ActionDate")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<Guid>("CipherId")
                         .HasColumnType("char(36)");
@@ -2545,14 +2558,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("RequesterId")
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ResolvedDate")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<Guid?>("RuleId")
                         .HasColumnType("char(36)");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
 
                     b.HasKey("Id");
 
@@ -2560,11 +2567,15 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("RuleId");
 
-                    b.HasIndex("CollectionId", "Status");
+                    b.HasIndex("CollectionId", "CreationDate");
 
-                    b.HasIndex("OrganizationId", "Status");
+                    b.HasIndex("OrganizationId", "Action");
 
-                    b.HasIndex("RequesterId", "CipherId", "Status");
+                    b.HasIndex("RequesterId", "CreationDate");
+
+                    b.HasIndex("CollectionId", "Action", "NotAfter");
+
+                    b.HasIndex("RequesterId", "CipherId", "Action");
 
                     b.ToTable("AccessRequest", (string)null);
                 });

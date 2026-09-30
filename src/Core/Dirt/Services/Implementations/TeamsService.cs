@@ -26,6 +26,7 @@ public class TeamsService(
     private readonly string _clientId = globalSettings.Teams.ClientId;
     private readonly string _clientSecret = globalSettings.Teams.ClientSecret;
     private readonly string _scopes = globalSettings.Teams.Scopes;
+    private readonly string _tenantId = globalSettings.Teams.TenantId;
     private readonly string _graphBaseUrl = globalSettings.Teams.GraphBaseUrl;
     private readonly string _loginBaseUrl = globalSettings.Teams.LoginBaseUrl;
 
@@ -113,7 +114,7 @@ public class TeamsService(
 
     public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
-        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret);
+        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret, _tenantId);
         using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient, disposeHttpClient: false);
 
         var activity = new Activity
