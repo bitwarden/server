@@ -14,6 +14,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,6 +26,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -54,6 +56,9 @@ public class AccountsControllerTests : IDisposable
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly ICurrentContext _currentContext;
+
+    private const string _deviceIdentifier = "device-identifier";
 
     public AccountsControllerTests()
     {
@@ -76,6 +81,8 @@ public class AccountsControllerTests : IDisposable
         _userRepository = Substitute.For<IUserRepository>();
         _rotateUserApiKeyCommand = Substitute.For<IRotateUserApiKeyCommand>();
         _selfServiceChangeEmailCommand = Substitute.For<ISelfServiceChangeEmailCommand>();
+        _currentContext = Substitute.For<ICurrentContext>();
+        _currentContext.DeviceIdentifier = _deviceIdentifier;
 
         _sut = new AccountsController(
             _organizationService,
@@ -96,7 +103,9 @@ public class AccountsControllerTests : IDisposable
             _changeKdfCommand,
             _userRepository,
             _rotateUserApiKeyCommand,
-            _selfServiceChangeEmailCommand
+            _selfServiceChangeEmailCommand,
+            _currentContext,
+            Substitute.For<ILogger<AccountsController>>()
         );
     }
 
@@ -856,7 +865,7 @@ public class AccountsControllerTests : IDisposable
         await _sut.ResendNewDeviceOtpAsync(model);
 
         // Assert
-        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -872,11 +881,11 @@ public class AccountsControllerTests : IDisposable
         await _sut.ResendNewDeviceOtpAsync(model);
 
         // Assert
-        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default);
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_WhenTokenValid_SendsEmail(User user,
+    public async Task ResendNewDeviceVerificationEmail_WhenTokenValid_SendsEmailForRequestingDevice(User user,
         UnauthenticatedSecretVerificationRequestModel model)
     {
         // Arrange
@@ -887,7 +896,150 @@ public class AccountsControllerTests : IDisposable
         await _sut.ResendNewDeviceOtpAsync(model);
 
         // Assert
-        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user);
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user, _deviceIdentifier);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierAtMaxLength_SendsEmailForRequestingDevice(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        var deviceIdentifier = new string('a', Device.MaxIdentifierLength);
+        _currentContext.DeviceIdentifier = deviceIdentifier;
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.Received(1).SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_ThrowsWithoutSendingEmail(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        Assert.NotNull(exception.ModelState);
+        Assert.Contains("Device-Identifier", exception.ModelState.Keys);
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_RejectsBeforeExaminingTheSecret(
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        // No user lookup is stubbed: an over-long identifier must be rejected on the header alone, so the
+        // response cannot differ by whether the account exists or the secret is correct.
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        await _userRepository.DidNotReceiveWithAnyArgs().GetByEmailAsync(default);
+        await _userService.DidNotReceiveWithAnyArgs().VerifySecretAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenDeviceIdentifierTooLong_DoesNotReadThePendingDevice(
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = new string('a', Device.MaxIdentifierLength + 1);
+
+        // Act
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.ResendNewDeviceOtpAsync(model));
+
+        // Assert
+        // The pending device fallback covers clients that send no identifier at all. A client that sends an
+        // over-long one would submit the same value when redeeming, so scoping a code to some other device
+        // would mail a code it still could not redeem — and would overwrite any code already outstanding
+        // for that other device.
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs()
+            .GetPendingNewDeviceVerificationDeviceIdentifierAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData(" ")]
+    public async Task ResendNewDeviceVerificationEmail_WhenNoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail(
+        string deviceIdentifier,
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _currentContext.DeviceIdentifier = deviceIdentifier;
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+        _twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user)
+            .Returns(Task.FromResult((string)null));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.DidNotReceiveWithAnyArgs().SendNewDeviceVerificationEmailAsync(default, default);
+    }
+
+    // TODO: PM-43465 - Delete this test and the PrefersItOverPendingDevice test below once every supported
+    // client version sends the Device-Identifier header on the new device verification resend request. The
+    // WhenNoDeviceIdentifier test above stays, but drop its GetPendingNewDeviceVerificationDeviceIdentifierAsync
+    // stub.
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData(" ")]
+    public async Task ResendNewDeviceVerificationEmail_WhenRequestHasNoDevice_UsesPendingDevice(
+        string deviceIdentifier,
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        var pendingDeviceIdentifier = "pending-device-identifier";
+        _currentContext.DeviceIdentifier = deviceIdentifier;
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+        _twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user)
+            .Returns(Task.FromResult(pendingDeviceIdentifier));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(user, pendingDeviceIdentifier);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_WhenRequestHasDevice_PrefersItOverPendingDevice(
+        User user,
+        UnauthenticatedSecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userRepository.GetByEmailAsync(model.Email).Returns(Task.FromResult(user));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+        _twoFactorEmailService.GetPendingNewDeviceVerificationDeviceIdentifierAsync(user)
+            .Returns(Task.FromResult("pending-device-identifier"));
+
+        // Act
+        await _sut.ResendNewDeviceOtpAsync(model);
+
+        // Assert
+        await _twoFactorEmailService.Received(1)
+            .SendNewDeviceVerificationEmailAsync(user, _deviceIdentifier);
     }
 
     [Theory]

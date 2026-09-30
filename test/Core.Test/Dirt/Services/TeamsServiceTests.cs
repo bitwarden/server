@@ -228,8 +228,11 @@ public class TeamsServiceTests
             .RespondWith(HttpStatusCode.Forbidden)
             .WithContent("application/json", JsonSerializer.Serialize(new { error = new { code = "Forbidden" } }));
 
-        await Assert.ThrowsAsync<ErrorResponseException>(() =>
+        var exception = await Assert.ThrowsAsync<ErrorResponseException>(() =>
             sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "test message"));
+
+        // TeamsIntegrationHandler classifies failures from this status code.
+        Assert.Equal(HttpStatusCode.Forbidden, exception.Response.StatusCode);
 
         Assert.Single(_handler.CapturedRequests);
     }
