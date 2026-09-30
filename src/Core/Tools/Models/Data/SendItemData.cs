@@ -19,14 +19,19 @@ public class SendItemData : SendData
     /// <param name="notes">User-provided private notes of the send.</param>
     /// <param name="encryptionVersion">The version of Send encryption being used</param>
     /// <param name="data">Encrypted Send data</param>
-    public SendItemData(string name, string? notes, SendEncryptionType encryptionVersion, string? data)
+    /// <param name="metadata">Unencrypted Send item metadata</param>
+    public SendItemData(string name, string? notes, SendEncryptionType encryptionVersion, string? data,
+        SendItemMetadata? metadata = null)
         : base(name, notes)
     {
         EncryptionVersion = encryptionVersion;
         Data = data;
+        Metadata = metadata;
     }
 
     public SendEncryptionType EncryptionVersion { get; set; } = SendEncryptionType.V1;
 
     public string? Data { get; set; }
+
+    public SendItemMetadata? Metadata { get; set; }
 }

@@ -99,6 +99,32 @@ public class SendRequestModelTests
     }
 
     [Fact]
+    public void ToSend_Item_StoresMetadata()
+    {
+        var itemId = Guid.NewGuid();
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = DateTime.UtcNow.AddDays(5),
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel
+            {
+                EncryptionVersion = SendEncryptionType.V1,
+                Data = "sealed_blob",
+                Metadata = new SendItemMetadataModel { ItemId = itemId },
+            },
+            Type = SendType.Item,
+        };
+
+        var send = sendRequest.ToSend(Guid.NewGuid(), Substitute.For<ISendAuthorizationService>());
+
+        var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
+        Assert.Equal(itemId, sendItemData.Metadata?.ItemId);
+    }
+
+    [Fact]
     public void ToSend_Item_NullData()
     {
         var deletionDate = DateTime.UtcNow.AddDays(5);

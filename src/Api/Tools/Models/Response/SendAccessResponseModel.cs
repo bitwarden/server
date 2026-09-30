@@ -60,7 +60,8 @@ public class SendAccessResponseModel : ResponseModel
                                                                  "Send Data is required")) ??
                     throw new JsonException("Failed to deserialize send item data.");
                 Name = itemData.Name;
-                Data = new SendDataModel(itemData);
+                // Metadata is owner-only; recipients must not learn the item id.
+                Data = new SendDataModel(itemData) { Metadata = null };
                 break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
