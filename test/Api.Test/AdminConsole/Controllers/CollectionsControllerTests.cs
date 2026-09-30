@@ -874,31 +874,7 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsWithDetails_Unauthorized_ThrowsNotFound(
-        Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
-                        && operation.OrganizationId == organization.Id)))
-            .Returns(AuthorizationResult.Failed());
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id));
-
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceive()
-            .GetManyOrganizationCollectionsWithPermissionsAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsWithDetails_Authorized_ReturnsAllCollections(
+    public async Task GetOrganizationCollectionsWithDetails_ReturnsAllCollections(
         Organization organization, Guid userId, List<CollectionAdminDetails> collections,
         SutProvider<CollectionsController> sutProvider)
     {
@@ -906,16 +882,6 @@ public class CollectionsControllerTests
         collections.ForEach(c => c.OrganizationId = organization.Id);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
-                        && operation.OrganizationId == organization.Id)))
-            .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, userId)
@@ -935,17 +901,6 @@ public class CollectionsControllerTests
         Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
-                        && operation.OrganizationId == organization.Id)))
-            .Returns(AuthorizationResult.Success());
-
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
 
         await sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id);
@@ -960,17 +915,6 @@ public class CollectionsControllerTests
         Organization organization, Guid userId, SutProvider<CollectionsController> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(
-                Arg.Any<ClaimsPrincipal>(),
-                Arg.Any<object>(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
-                    requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadOrganizationDetails)
-                        && operation.OrganizationId == organization.Id)))
-            .Returns(AuthorizationResult.Success());
-
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(false);
 
         await sutProvider.Sut.GetOrganizationCollectionsWithDetails(organization.Id);

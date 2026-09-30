@@ -3,6 +3,7 @@
 
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
@@ -15,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -116,15 +118,9 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("organization-details")]
-    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetOrganizationCollectionsWithDetails(Guid orgId)
+    [Authorize<AccessReportsRequirement>]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetOrganizationCollectionsWithDetails([FromRoute] Guid orgId)
     {
-        var authorized =
-            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadOrganizationDetails(orgId))).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
         var allOrgCollections = await _collectionRepository
             .GetManyOrganizationCollectionsWithPermissionsAsync(orgId, _currentContext.UserId.Value);
 
