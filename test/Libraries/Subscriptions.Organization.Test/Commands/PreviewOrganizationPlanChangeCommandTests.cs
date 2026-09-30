@@ -605,7 +605,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.NotNull(options);
         Assert.Null(options!.SubscriptionDetails.TrialEnd);
     }
-    
+
     [Fact]
     public async Task Run_TaxIdWithBlankValue_SendsNoTaxId()
     {
