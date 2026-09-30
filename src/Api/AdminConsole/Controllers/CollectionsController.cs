@@ -117,9 +117,16 @@ public class CollectionsController : Controller
         ));
     }
 
-    [HttpGet("organization-details")]
+    /// <summary>
+    /// Returns all collections in the organization along with the full list of user and group assignments for each
+    /// collection. Intended for Access Intelligence consumers that need complete member attribution across both shared
+    /// and default collections.
+    /// This endpoint differs from <see cref="GetManyWithDetails"/> in two ways: it always includes default collections
+    /// (Type = 1) and it is restricted to users who can read reports, rather than users who manage collections.
+    /// </summary>
+    [HttpGet("access")]
     [Authorize<AccessReportsRequirement>]
-    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetOrganizationCollectionsWithDetails([FromRoute] Guid orgId)
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetAllWithAccess([FromRoute] Guid orgId)
     {
         var allOrgCollections = await _collectionRepository
             .GetManyOrganizationCollectionsWithPermissionsAsync(orgId, _currentContext.UserId.Value);
