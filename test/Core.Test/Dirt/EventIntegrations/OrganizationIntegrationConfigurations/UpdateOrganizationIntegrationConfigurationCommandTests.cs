@@ -67,6 +67,46 @@ public class UpdateOrganizationIntegrationConfigurationCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task UpdateAsync_Success_ClearsTheBreakerOnTheConfiguration(
+        SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
+        Guid organizationId,
+        Guid integrationId,
+        Guid configurationId,
+        OrganizationIntegration integration,
+        OrganizationIntegrationConfiguration existingConfiguration,
+        OrganizationIntegrationConfiguration updatedConfiguration)
+    {
+        integration.Id = integrationId;
+        integration.OrganizationId = organizationId;
+        integration.Type = IntegrationType.Webhook;
+        existingConfiguration.Id = configurationId;
+        existingConfiguration.OrganizationIntegrationId = integrationId;
+        existingConfiguration.EventType = EventType.User_LoggedIn;
+        updatedConfiguration.Id = configurationId;
+        updatedConfiguration.OrganizationIntegrationId = integrationId;
+        updatedConfiguration.DisabledDate = DateTime.UtcNow;
+        updatedConfiguration.DisabledReason = IntegrationFailureCategory.AuthenticationFailed;
+
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integrationId)
+            .Returns(integration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>()
+            .GetByIdAsync(configurationId)
+            .Returns(existingConfiguration);
+        sutProvider.GetDependency<IOrganizationIntegrationConfigurationValidator>()
+            .ValidateConfiguration(Arg.Any<IntegrationType>(), Arg.Any<OrganizationIntegrationConfiguration>())
+            .Returns(true);
+
+        // Editing a configuration is one of the three recovery paths, and the update writes whatever the entity
+        // carries, so the state has to be cleared before the write rather than by the statement
+        await sutProvider.Sut.UpdateAsync(organizationId, integrationId, configurationId, updatedConfiguration);
+
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .ReplaceAsync(Arg.Is<OrganizationIntegrationConfiguration>(configuration =>
+                configuration.DisabledDate == null && configuration.DisabledReason == null));
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAsync_WildcardSuccess_UpdatesConfigurationAndInvalidatesCache(
         SutProvider<UpdateOrganizationIntegrationConfigurationCommand> sutProvider,
         Guid organizationId,

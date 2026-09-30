@@ -92,7 +92,9 @@ public class OrganizationIntegrationConfigurationDisableTests
         var integration = await CreateIntegrationAsync(integrationRepository, organization.Id);
         var disabled = await CreateConfigurationAsync(sut, integration, EventType.Cipher_Created);
         var enabled = await CreateConfigurationAsync(sut, integration, EventType.Cipher_Deleted);
-        var otherIntegration = await CreateIntegrationAsync(organizationRepository, integrationRepository, organization.Id);
+        // A second integration for the same organization needs a different type: the table is unique on
+        // (OrganizationId, Type)
+        var otherIntegration = await CreateIntegrationAsync(integrationRepository, organization.Id, IntegrationType.Hec);
         var bystander = await CreateConfigurationAsync(sut, otherIntegration, EventType.Cipher_Created);
 
         await sut.DisableAsync(
@@ -167,14 +169,6 @@ public class OrganizationIntegrationConfigurationDisableTests
             Type = type,
             Configuration = "{}",
         });
-
-    // A second integration for the same organization needs a different type: the table is unique on
-    // (OrganizationId, Type)
-    private static async Task<OrganizationIntegration> CreateIntegrationAsync(
-        IOrganizationRepository organizationRepository,
-        IOrganizationIntegrationRepository integrationRepository,
-        Guid organizationId) =>
-        await CreateIntegrationAsync(integrationRepository, organizationId, IntegrationType.Hec);
 
     private static async Task<OrganizationIntegrationConfiguration> CreateConfigurationAsync(
         IOrganizationIntegrationConfigurationRepository sut,
