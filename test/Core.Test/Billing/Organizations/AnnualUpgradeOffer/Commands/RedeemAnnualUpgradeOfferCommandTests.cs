@@ -7,6 +7,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -28,6 +29,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     private readonly IPriceIncreaseScheduler _priceIncreaseScheduler = Substitute.For<IPriceIncreaseScheduler>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ISubscriptionScheduleCreator _subscriptionScheduleCreator = Substitute.For<ISubscriptionScheduleCreator>();
     private readonly ILogger<RedeemAnnualUpgradeOfferCommand> _logger =
         Substitute.For<ILogger<RedeemAnnualUpgradeOfferCommand>>();
     private readonly RedeemAnnualUpgradeOfferCommand _command;
@@ -40,7 +42,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
             _getChurnOfferCohortMembershipQuery,
             _priceIncreaseScheduler,
             _pricingClient,
-            _stripeAdapter);
+            _stripeAdapter,
+            _subscriptionScheduleCreator);
     }
 
     private static Organization CreateOrganization(PlanType planType) => new()
@@ -74,7 +77,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
             .Returns(subscription);
 
         var schedule = new SubscriptionSchedule { Id = "sub_sched_new" };
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(schedule);
 
@@ -101,7 +104,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.True(result.IsT1);
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
         await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
     }
 
@@ -146,7 +149,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
         // ReleaseSchedule -- switching to annual also exits the cohort.
         await _priceIncreaseScheduler.Received(1).ReleaseSchedule(null, organization.Id);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 // Phase 2 starts at the subscription's current period end and runs exactly one annual term.
@@ -182,7 +185,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 4 &&
@@ -216,7 +219,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         // A redemption that cannot be fully mapped must fail before the org's existing
         // schedule and cohort assignment are destroyed.
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -237,7 +240,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -266,7 +269,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Discounts == null),
             Arg.Is(ManagingSystems.AnnualUpgrade),
@@ -299,7 +302,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -335,7 +338,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -357,7 +360,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -378,7 +381,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceive().Release(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid?>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -454,7 +457,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -485,7 +488,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -506,7 +509,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
 
         Assert.True(result.IsT1);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -552,7 +555,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var subscription = SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 1 }]);
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
 
@@ -600,7 +603,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.True(result.IsT1);
         Assert.Equal("Offer is no longer available.", result.AsT1.Response);
         await _priceIncreaseScheduler.DidNotReceiveWithAnyArgs().ReleaseSchedule(default, default);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs().CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -663,7 +666,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(item =>
@@ -688,7 +691,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Items.All(item => item.Discounts == null)),
             Arg.Is(ManagingSystems.AnnualUpgrade),
@@ -712,7 +715,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Discounts == null),
             Arg.Is(ManagingSystems.AnnualUpgrade),
@@ -742,7 +745,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Items.All(item => item.Discounts == null)),
             Arg.Is(ManagingSystems.AnnualUpgrade),
@@ -764,7 +767,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Metadata == null),
             Arg.Is(ManagingSystems.AnnualUpgrade),
@@ -786,7 +789,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var result = await _command.Run(organization);
 
         Assert.True(result.IsT0);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Any<Subscription>(),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Discounts == null),
             Arg.Is(ManagingSystems.AnnualUpgrade),

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Services.Implementations;
+﻿using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
@@ -8,22 +8,21 @@ using Stripe;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 
-namespace Bit.Core.Test.Billing.Services;
+namespace Bit.Core.Test.Billing.Subscriptions.Schedules;
 
-public class StripeSubscriptionScheduleAdapterTests
+public class SubscriptionScheduleCreatorTests
 {
     private static readonly DateTime _phase1Start = new(2026, 7, 6, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _phase1End = new(2026, 8, 6, 0, 0, 0, DateTimeKind.Utc);
 
-    private readonly SubscriptionScheduleService _subscriptionScheduleService =
-        Substitute.For<SubscriptionScheduleService>();
-    private readonly ILogger<StripeSubscriptionScheduleAdapter> _logger =
-        Substitute.For<ILogger<StripeSubscriptionScheduleAdapter>>();
-    private readonly StripeSubscriptionScheduleAdapter _sut;
+    private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ILogger<SubscriptionScheduleCreator> _logger =
+        Substitute.For<ILogger<SubscriptionScheduleCreator>>();
+    private readonly SubscriptionScheduleCreator _sut;
 
-    public StripeSubscriptionScheduleAdapterTests()
+    public SubscriptionScheduleCreatorTests()
     {
-        _sut = new StripeSubscriptionScheduleAdapter(_subscriptionScheduleService, _logger);
+        _sut = new SubscriptionScheduleCreator(_stripeAdapter, _logger);
     }
 
     private static Subscription CreateSubscription(List<Discount>? discounts = null) => new()
@@ -64,8 +63,8 @@ public class StripeSubscriptionScheduleAdapterTests
     };
 
     private void StubCreate(SubscriptionSchedule created) =>
-        _subscriptionScheduleService
-            .CreateAsync(Arg.Any<SubscriptionScheduleCreateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
             .Returns(created);
 
     private async Task<SubscriptionScheduleUpdateOptions> CreateAndCaptureUpdateAsync(
@@ -77,15 +76,13 @@ public class StripeSubscriptionScheduleAdapterTests
     {
         StubCreate(created);
         SubscriptionScheduleUpdateOptions? captured = null;
-        _subscriptionScheduleService
-            .UpdateAsync(
+        _stripeAdapter
+            .UpdateSubscriptionScheduleAsync(
                 Arg.Any<string>(),
-                Arg.Do<SubscriptionScheduleUpdateOptions>(options => captured = options),
-                Arg.Any<RequestOptions>(),
-                Arg.Any<CancellationToken>())
+                Arg.Do<SubscriptionScheduleUpdateOptions>(options => captured = options))
             .Returns(new SubscriptionSchedule { Id = created.Id });
 
-        await _sut.CreateSubscriptionScheduleWithPhasesAsync(subscription, phase2, managingSystem, phaseMetadata);
+        await _sut.CreateWithPhasesAsync(subscription, phase2, managingSystem, phaseMetadata);
 
         Assert.NotNull(captured);
         return captured;
@@ -100,25 +97,23 @@ public class StripeSubscriptionScheduleAdapterTests
             Arg.Any<Func<object, Exception?, string>>());
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_CreatesFromSubscriptionOnly()
+    public async Task CreateWithPhasesAsync_CreatesFromSubscriptionOnly()
     {
         await CreateAndCaptureUpdateAsync(CreateSubscription(), CreatedSchedule(), Phase2(), ManagingSystems.AnnualUpgrade);
 
-        await _subscriptionScheduleService.Received(1).CreateAsync(
+        await _stripeAdapter.Received(1).CreateSubscriptionScheduleAsync(
             Arg.Is<SubscriptionScheduleCreateOptions>(options =>
                 options.FromSubscription == "sub_1" &&
                 options.Metadata == null &&
                 options.Phases == null &&
-                options.EndBehavior == null),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+                options.EndBehavior == null));
     }
 
     [Theory]
     [InlineData(ManagingSystems.AnnualUpgrade)]
     [InlineData(ManagingSystems.BusinessPriceIncrease)]
     [InlineData(ManagingSystems.PersonalPriceIncrease)]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_MarksScheduleWithManagingSystem(string managingSystem)
+    public async Task CreateWithPhasesAsync_MarksScheduleWithManagingSystem(string managingSystem)
     {
         var update = await CreateAndCaptureUpdateAsync(CreateSubscription(), CreatedSchedule(), Phase2(), managingSystem);
 
@@ -128,18 +123,18 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_UpdatesTheCreatedSchedule_ReleasingAfterTwoPhases()
+    public async Task CreateWithPhasesAsync_UpdatesTheCreatedSchedule_ReleasingAfterTwoPhases()
     {
         var update = await CreateAndCaptureUpdateAsync(CreateSubscription(), CreatedSchedule(), Phase2(), ManagingSystems.AnnualUpgrade);
 
-        await _subscriptionScheduleService.Received(1).UpdateAsync(
-            "sub_sched_1", Arg.Any<SubscriptionScheduleUpdateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>());
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            "sub_sched_1", Arg.Any<SubscriptionScheduleUpdateOptions>());
         Assert.Equal(SubscriptionScheduleEndBehavior.Release, update.EndBehavior);
         Assert.Equal(2, update.Phases.Count);
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_Phase1MirrorsTheCreatedSchedule()
+    public async Task CreateWithPhasesAsync_Phase1MirrorsTheCreatedSchedule()
     {
         var update = await CreateAndCaptureUpdateAsync(
             CreateSubscription(),
@@ -158,7 +153,7 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_Phase1CarriesSubscriptionDiscountsById()
+    public async Task CreateWithPhasesAsync_Phase1CarriesSubscriptionDiscountsById()
     {
         var subscription = CreateSubscription(
             [new Discount { Id = "di_live", Source = new DiscountSource { Coupon = new Coupon { Id = "cpn_live" } } }]);
@@ -171,7 +166,7 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_NoDiscounts_LeavesPhase1DiscountsAndItemDiscountsNull()
+    public async Task CreateWithPhasesAsync_NoDiscounts_LeavesPhase1DiscountsAndItemDiscountsNull()
     {
         var update = await CreateAndCaptureUpdateAsync(
             CreateSubscription(discounts: []), CreatedSchedule(), Phase2(), ManagingSystems.AnnualUpgrade);
@@ -181,7 +176,7 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_Phase2IsTheCallersOptions()
+    public async Task CreateWithPhasesAsync_Phase2IsTheCallersOptions()
     {
         var phase2 = Phase2();
 
@@ -191,7 +186,7 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_PhaseMetadataGiven_AppliesToBothPhases()
+    public async Task CreateWithPhasesAsync_PhaseMetadataGiven_AppliesToBothPhases()
     {
         var phaseMetadata = new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort_1" };
 
@@ -203,7 +198,7 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_NoPhaseMetadata_LeavesBothPhasesWithoutMetadata()
+    public async Task CreateWithPhasesAsync_NoPhaseMetadata_LeavesBothPhasesWithoutMetadata()
     {
         var update = await CreateAndCaptureUpdateAsync(
             CreateSubscription(), CreatedSchedule(), Phase2(), ManagingSystems.PersonalPriceIncrease);
@@ -213,15 +208,15 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_ReturnsTheUpdatedSchedule()
+    public async Task CreateWithPhasesAsync_ReturnsTheUpdatedSchedule()
     {
         StubCreate(CreatedSchedule());
         var updated = new SubscriptionSchedule { Id = "sub_sched_1", Status = SubscriptionScheduleStatus.Active };
-        _subscriptionScheduleService
-            .UpdateAsync("sub_sched_1", Arg.Any<SubscriptionScheduleUpdateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .UpdateSubscriptionScheduleAsync("sub_sched_1", Arg.Any<SubscriptionScheduleUpdateOptions>())
             .Returns(updated);
 
-        var result = await _sut.CreateSubscriptionScheduleWithPhasesAsync(
+        var result = await _sut.CreateWithPhasesAsync(
             CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade);
 
         Assert.Same(updated, result);
@@ -231,7 +226,7 @@ public class StripeSubscriptionScheduleAdapterTests
     [InlineData(ManagingSystems.AnnualUpgrade, SubscriptionScheduleOwnership.AnnualUpgrade)]
     [InlineData(ManagingSystems.BusinessPriceIncrease, SubscriptionScheduleOwnership.BusinessPriceIncrease)]
     [InlineData(ManagingSystems.PersonalPriceIncrease, SubscriptionScheduleOwnership.PersonalPriceIncrease)]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_ScheduleItWrites_ClassifiesAsItsManagingSystem(
+    public async Task CreateWithPhasesAsync_ScheduleItWrites_ClassifiesAsItsManagingSystem(
         string managingSystem, SubscriptionScheduleOwnership expected)
     {
         // Round-trips the marker through the mapper so the write and the read cannot drift apart.
@@ -248,92 +243,53 @@ public class StripeSubscriptionScheduleAdapterTests
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_UpdateFails_ReleasesAndRethrows()
+    public async Task CreateWithPhasesAsync_UpdateFails_ReleasesAndRethrows()
     {
         StubCreate(CreatedSchedule());
         var updateFailure = new StripeException("update failed");
-        _subscriptionScheduleService
-            .UpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>())
             .ThrowsAsync(updateFailure);
 
         var thrown = await Assert.ThrowsAsync<StripeException>(() =>
-            _sut.CreateSubscriptionScheduleWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
+            _sut.CreateWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
 
         Assert.Same(updateFailure, thrown);
-        await _subscriptionScheduleService.Received(1).ReleaseAsync(
-            "sub_sched_1", Arg.Any<SubscriptionScheduleReleaseOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>());
+        await _stripeAdapter.Received(1).ReleaseSubscriptionScheduleAsync(
+            "sub_sched_1", Arg.Any<SubscriptionScheduleReleaseOptions>());
         AssertLoggedError("attempting to release orphaned schedule");
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_UpdateAndReleaseFail_LogsReleaseFailureAndRethrowsUpdateFailure()
+    public async Task CreateWithPhasesAsync_UpdateAndReleaseFail_LogsReleaseFailureAndRethrowsUpdateFailure()
     {
         StubCreate(CreatedSchedule());
         var updateFailure = new StripeException("update failed");
-        _subscriptionScheduleService
-            .UpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .UpdateSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>())
             .ThrowsAsync(updateFailure);
-        _subscriptionScheduleService
-            .ReleaseAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .ReleaseSubscriptionScheduleAsync(Arg.Any<string>(), Arg.Any<SubscriptionScheduleReleaseOptions>())
             .ThrowsAsync(new StripeException("release failed"));
 
         var thrown = await Assert.ThrowsAsync<StripeException>(() =>
-            _sut.CreateSubscriptionScheduleWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
+            _sut.CreateWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
 
         Assert.Same(updateFailure, thrown);
         AssertLoggedError("Manual release required");
     }
 
     [Fact]
-    public async Task CreateSubscriptionScheduleWithPhasesAsync_CreateFails_RethrowsWithoutUpdatingOrReleasing()
+    public async Task CreateWithPhasesAsync_CreateFails_RethrowsWithoutUpdatingOrReleasing()
     {
-        _subscriptionScheduleService
-            .CreateAsync(Arg.Any<SubscriptionScheduleCreateOptions>(), Arg.Any<RequestOptions>(), Arg.Any<CancellationToken>())
+        _stripeAdapter
+            .CreateSubscriptionScheduleAsync(Arg.Any<SubscriptionScheduleCreateOptions>())
             .ThrowsAsync(new StripeException("create failed"));
 
         await Assert.ThrowsAsync<StripeException>(() =>
-            _sut.CreateSubscriptionScheduleWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
+            _sut.CreateWithPhasesAsync(CreateSubscription(), Phase2(), ManagingSystems.AnnualUpgrade));
 
-        await _subscriptionScheduleService.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default!, default, default);
-        await _subscriptionScheduleService.DidNotReceiveWithAnyArgs().ReleaseAsync(default!, default, default, default);
-    }
-
-    [Fact]
-    public async Task GetSubscriptionScheduleAsync_ForwardsToStripe()
-    {
-        var options = new SubscriptionScheduleGetOptions();
-        var expected = new SubscriptionSchedule { Id = "sub_sched_1" };
-        _subscriptionScheduleService.GetAsync("sub_sched_1", options, null, default).Returns(expected);
-
-        Assert.Same(expected, await _sut.GetSubscriptionScheduleAsync("sub_sched_1", options));
-    }
-
-    [Fact]
-    public async Task ListSubscriptionSchedulesAsync_ForwardsToStripe()
-    {
-        var options = new SubscriptionScheduleListOptions { Customer = "cus_1" };
-        var expected = new StripeList<SubscriptionSchedule> { Data = [] };
-        _subscriptionScheduleService.ListAsync(options, null, default).Returns(expected);
-
-        Assert.Same(expected, await _sut.ListSubscriptionSchedulesAsync(options));
-    }
-
-    [Fact]
-    public async Task UpdateSubscriptionScheduleAsync_ForwardsToStripe()
-    {
-        var options = new SubscriptionScheduleUpdateOptions();
-        var expected = new SubscriptionSchedule { Id = "sub_sched_1" };
-        _subscriptionScheduleService.UpdateAsync("sub_sched_1", options, null, default).Returns(expected);
-
-        Assert.Same(expected, await _sut.UpdateSubscriptionScheduleAsync("sub_sched_1", options));
-    }
-
-    [Fact]
-    public async Task ReleaseSubscriptionScheduleAsync_ForwardsToStripe()
-    {
-        var expected = new SubscriptionSchedule { Id = "sub_sched_1" };
-        _subscriptionScheduleService.ReleaseAsync("sub_sched_1", null, null, default).Returns(expected);
-
-        Assert.Same(expected, await _sut.ReleaseSubscriptionScheduleAsync("sub_sched_1"));
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionScheduleAsync(default!, default!);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().ReleaseSubscriptionScheduleAsync(default!, default);
     }
 }

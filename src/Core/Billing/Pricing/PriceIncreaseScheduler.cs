@@ -7,6 +7,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -92,6 +93,7 @@ public interface IPriceIncreaseScheduler
 
 public class PriceIncreaseScheduler(
     IStripeAdapter stripeAdapter,
+    ISubscriptionScheduleCreator subscriptionScheduleCreator,
     IFeatureService featureService,
     IPricingClient pricingClient,
     IOrganizationRepository organizationRepository,
@@ -112,7 +114,7 @@ public class PriceIncreaseScheduler(
             return false;
         }
 
-        await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        await subscriptionScheduleCreator.CreateWithPhasesAsync(
             subscription, phase2, ManagingSystems.PersonalPriceIncrease);
         return true;
     }
@@ -177,7 +179,7 @@ public class PriceIncreaseScheduler(
             [MetadataKeys.MigrationCohortName] = cohort.Name
         };
 
-        await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        await subscriptionScheduleCreator.CreateWithPhasesAsync(
             subscription, phase2, ManagingSystems.BusinessPriceIncrease, phaseMetadata);
 
         var assignment = await assignmentRepository.GetByOrganizationIdAsync(organizationId);

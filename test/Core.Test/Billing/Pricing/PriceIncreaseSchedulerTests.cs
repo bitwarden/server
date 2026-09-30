@@ -5,6 +5,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -23,6 +24,7 @@ namespace Bit.Core.Test.Billing.Pricing;
 public class PriceIncreaseSchedulerTests
 {
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
+    private readonly ISubscriptionScheduleCreator _subscriptionScheduleCreator = Substitute.For<ISubscriptionScheduleCreator>();
     private readonly IFeatureService _featureService = Substitute.For<IFeatureService>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IOrganizationRepository _organizationRepository = Substitute.For<IOrganizationRepository>();
@@ -33,7 +35,7 @@ public class PriceIncreaseSchedulerTests
     private readonly ILogger<PriceIncreaseScheduler> _logger = Substitute.For<ILogger<PriceIncreaseScheduler>>();
 
     private PriceIncreaseScheduler CreateSut() =>
-        new(_stripeAdapter, _featureService, _pricingClient, _organizationRepository, _assignmentRepository, _cohortRepository, _logger);
+        new(_stripeAdapter, _subscriptionScheduleCreator, _featureService, _pricingClient, _organizationRepository, _assignmentRepository, _cohortRepository, _logger);
 
     [Fact]
     public async Task SchedulePersonalPriceIncrease_ActiveScheduleAlreadyExists_Skips()
@@ -50,8 +52,8 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -83,7 +85,7 @@ public class PriceIncreaseSchedulerTests
 
         var createdSchedule = CreateScheduleWithPhase("sched_1", "sub_1");
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(createdSchedule);
 
@@ -91,7 +93,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == "premium-new-seat" && i.Quantity == 1) &&
@@ -133,7 +135,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -141,7 +143,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 2 &&
@@ -183,7 +185,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -191,7 +193,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 3 &&
@@ -234,7 +236,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -243,7 +245,7 @@ public class PriceIncreaseSchedulerTests
         await sut.SchedulePersonalPriceIncrease(subscription);
 
         // Customer-level discount is carried into Phase 2 first, then the milestone coupon stacks.
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 2 &&
@@ -289,7 +291,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -298,7 +300,7 @@ public class PriceIncreaseSchedulerTests
         await sut.SchedulePersonalPriceIncrease(subscription);
 
         // Phase 2 re-lists the customer coupon so the milestone coupon doesn't suppress it.
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Any(d => d.Coupon == "retention") &&
@@ -339,7 +341,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -347,7 +349,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 2 &&
@@ -385,7 +387,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -393,7 +395,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 => phase2.Discounts == null || phase2.Discounts.Count > 0),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
@@ -428,7 +430,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -436,7 +438,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 2 &&
@@ -469,7 +471,7 @@ public class PriceIncreaseSchedulerTests
 
         var createdSchedule = CreateScheduleWithPhase("sched_1", "sub_1");
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(createdSchedule);
 
@@ -477,7 +479,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
@@ -512,7 +514,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -520,7 +522,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 2 &&
@@ -555,7 +557,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -563,7 +565,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts.Count == 2 &&
@@ -598,7 +600,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -607,7 +609,7 @@ public class PriceIncreaseSchedulerTests
         await sut.SchedulePersonalPriceIncrease(subscription);
 
         // 2025 plans do not get milestone-3; the customer discount is still carried (and not null).
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -639,7 +641,7 @@ public class PriceIncreaseSchedulerTests
 
         var createdSchedule = CreateScheduleWithPhase("sched_1", "sub_1");
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(createdSchedule);
 
@@ -647,7 +649,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == familiesTarget.PasswordManager.StripePlanId && i.Quantity == 1) &&
@@ -681,7 +683,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -689,7 +691,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -720,7 +722,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -728,7 +730,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 2 &&
@@ -758,7 +760,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .ThrowsAsync(new StripeException("update failed"));
 
@@ -792,8 +794,8 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -824,8 +826,8 @@ public class PriceIncreaseSchedulerTests
 
         await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -847,8 +849,8 @@ public class PriceIncreaseSchedulerTests
 
         await _pricingClient.DidNotReceiveWithAnyArgs().ListPremiumPlans();
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -882,8 +884,8 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -900,8 +902,8 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -1186,8 +1188,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -1212,7 +1214,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1232,7 +1234,7 @@ public class PriceIncreaseSchedulerTests
 
         var expectedPhase2Start = periodStart + periodLength;
         var expectedPhase2End = expectedPhase2Start + periodLength;
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 2 &&
@@ -1268,7 +1270,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1286,7 +1288,7 @@ public class PriceIncreaseSchedulerTests
 
         Assert.True(result);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Any<SubscriptionSchedulePhaseOptions>(),
             Arg.Is(ManagingSystems.BusinessPriceIncrease),
@@ -1316,7 +1318,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1364,7 +1366,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1372,7 +1374,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.SchedulePersonalPriceIncrease(subscription);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Any<SubscriptionSchedulePhaseOptions>(),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
@@ -1397,7 +1399,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1412,7 +1414,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == target.SecretsManager.StripeSeatPlanId && i.Quantity == 4)),
@@ -1442,7 +1444,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1462,7 +1464,7 @@ public class PriceIncreaseSchedulerTests
 
         var expectedPhase2Start = periodStart + periodLength;
         var expectedPhase2End = expectedPhase2Start + periodLength;
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 2 &&
@@ -1503,7 +1505,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1518,7 +1520,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1559,7 +1561,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1574,7 +1576,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1612,7 +1614,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1627,7 +1629,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1666,7 +1668,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1682,7 +1684,7 @@ public class PriceIncreaseSchedulerTests
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         // Regression for the reference-pattern dedup gap: the shared coupon appears exactly once.
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1717,7 +1719,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1732,7 +1734,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1765,7 +1767,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1780,7 +1782,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1817,7 +1819,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1832,7 +1834,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Discounts != null &&
@@ -1866,7 +1868,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1881,7 +1883,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 3 &&
@@ -1915,7 +1917,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -1930,7 +1932,7 @@ public class PriceIncreaseSchedulerTests
 
         await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeStoragePlanId && i.Quantity == 3)),
@@ -1960,7 +1962,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .ThrowsAsync(new StripeException("update failed"));
 
@@ -1996,8 +1998,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -2023,8 +2025,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
         _logger.DidNotReceive().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -2052,7 +2054,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2064,7 +2066,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Any<SubscriptionSchedulePhaseOptions>(),
             Arg.Is(ManagingSystems.BusinessPriceIncrease),
@@ -2107,8 +2109,8 @@ public class PriceIncreaseSchedulerTests
 
         Assert.False(result);
         await _pricingClient.DidNotReceiveWithAnyArgs().GetPlanOrThrow(Arg.Any<PlanType>());
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
         await _assignmentRepository.DidNotReceiveWithAnyArgs()
             .ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
     }
@@ -2130,8 +2132,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
         await _assignmentRepository.DidNotReceiveWithAnyArgs()
             .GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
@@ -2153,8 +2155,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
         await _assignmentRepository.DidNotReceiveWithAnyArgs()
             .GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
@@ -2176,8 +2178,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
         await _assignmentRepository.DidNotReceiveWithAnyArgs()
             .GetByOrganizationIdAsync(Arg.Any<Guid>());
     }
@@ -2209,7 +2211,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2217,7 +2219,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == "premium-new-seat")),
@@ -2256,7 +2258,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2266,7 +2268,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i => i.Price == target.PasswordManager.StripeSeatPlanId)),
@@ -2309,7 +2311,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2317,7 +2319,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2359,7 +2361,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2367,7 +2369,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2411,7 +2413,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2419,7 +2421,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2465,7 +2467,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2473,7 +2475,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2523,7 +2525,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2531,7 +2533,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 // PM seat line raised from 4 occupied to 5 to cover the SM seats.
@@ -2581,7 +2583,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2589,7 +2591,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2637,7 +2639,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2645,7 +2647,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2691,7 +2693,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2699,7 +2701,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2747,7 +2749,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2756,7 +2758,7 @@ public class PriceIncreaseSchedulerTests
 
         Assert.True(result);
         // PM floors on the Stripe SM line (5), not the stale DB SmSeats (3).
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2811,7 +2813,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2819,7 +2821,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Any(i =>
@@ -2849,8 +2851,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -2883,8 +2885,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -2911,8 +2913,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -2937,7 +2939,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -2945,7 +2947,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Any<SubscriptionSchedulePhaseOptions>(),
             Arg.Is(ManagingSystems.PersonalPriceIncrease),
@@ -2965,8 +2967,8 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -2999,8 +3001,8 @@ public class PriceIncreaseSchedulerTests
             new OrganizationPriceIncreaseOptions { SkipIfAlreadyScheduled = true });
 
         Assert.False(result);
-        await _stripeAdapter.DidNotReceiveWithAnyArgs()
-            .CreateSubscriptionScheduleWithPhasesAsync(default!, default!, default!, default);
+        await _subscriptionScheduleCreator.DidNotReceiveWithAnyArgs()
+            .CreateWithPhasesAsync(default!, default!, default!, default);
     }
 
     [Fact]
@@ -3035,7 +3037,7 @@ public class PriceIncreaseSchedulerTests
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
 
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
 
@@ -3043,7 +3045,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleForSubscription(subscription);  // default options
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Any<SubscriptionSchedulePhaseOptions>(),
             Arg.Is(ManagingSystems.BusinessPriceIncrease),
@@ -3096,7 +3098,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
         _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
@@ -3111,7 +3113,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 // exactly one seat line on the target per-seat price, at the resolved quantity
@@ -3154,7 +3156,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
         _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
@@ -3169,7 +3171,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 phase2.Items.Count == 2 &&
@@ -3207,7 +3209,7 @@ public class PriceIncreaseSchedulerTests
 
         _stripeAdapter.ListSubscriptionSchedulesAsync(Arg.Any<SubscriptionScheduleListOptions>())
             .Returns(new StripeList<SubscriptionSchedule> { Data = [] });
-        _stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+        _subscriptionScheduleCreator.CreateWithPhasesAsync(
                 Arg.Any<Subscription>(), Arg.Any<SubscriptionSchedulePhaseOptions>(), Arg.Any<string>(), Arg.Any<Dictionary<string, string>>())
             .Returns(CreateScheduleWithPhase("sched_1", "sub_1"));
         _assignmentRepository.GetByOrganizationIdAsync(orgId).Returns(new OrganizationPlanMigrationCohortAssignment
@@ -3221,7 +3223,7 @@ public class PriceIncreaseSchedulerTests
         var result = await sut.ScheduleBusinessPriceIncrease(subscription, cohort);
 
         Assert.True(result);
-        await _stripeAdapter.Received(1).CreateSubscriptionScheduleWithPhasesAsync(
+        await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
                 // PM seat line raised from 3 occupied to 5 to cover the SM seats.

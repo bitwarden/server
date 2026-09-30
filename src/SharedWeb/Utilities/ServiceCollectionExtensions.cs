@@ -285,8 +285,6 @@ public static class ServiceCollectionExtensions
         // Required for HTTP calls
         services.AddHttpClient();
 
-        services.AddSingleton<Stripe.SubscriptionScheduleService>();
-        services.AddSingleton<IStripeSubscriptionScheduleAdapter, StripeSubscriptionScheduleAdapter>();
         services.AddSingleton<IStripeAdapter, StripeAdapter>();
         services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>
         {

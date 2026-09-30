@@ -21,7 +21,8 @@ public class RedeemAnnualUpgradeOfferCommand(
     IGetChurnOfferCohortMembershipQuery getChurnOfferCohortMembershipQuery,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter)
+    IStripeAdapter stripeAdapter,
+    ISubscriptionScheduleCreator subscriptionScheduleCreator)
     : BaseBillingCommand<RedeemAnnualUpgradeOfferCommand>(logger), IRedeemAnnualUpgradeOfferCommand
 {
     private readonly ILogger<RedeemAnnualUpgradeOfferCommand> _logger = logger;
@@ -118,7 +119,7 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         try
         {
-            schedule = await stripeAdapter.CreateSubscriptionScheduleWithPhasesAsync(
+            schedule = await subscriptionScheduleCreator.CreateWithPhasesAsync(
                 subscription, phase2Options, ManagingSystems.AnnualUpgrade);
         }
         catch (Exception ex)

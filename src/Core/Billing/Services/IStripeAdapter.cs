@@ -58,18 +58,7 @@ public interface IStripeAdapter
     Task<Stripe.BillingPortal.Session> CreateBillingPortalSessionAsync(Stripe.BillingPortal.SessionCreateOptions options);
     Task<Stripe.Checkout.Session> CreateCheckoutSessionAsync(Stripe.Checkout.SessionCreateOptions options);
     Task<Stripe.Checkout.Session> GetCheckoutSessionAsync(string id, Stripe.Checkout.SessionGetOptions options = null);
-
-    /// <summary>
-    /// The only way to create a subscription schedule. Creates a two-phase schedule from
-    /// <paramref name="subscription"/> (phase 1 mirrors the subscription, phase 2 is <paramref name="phase2Options"/>),
-    /// marked with <paramref name="managingSystem"/>, one of <see cref="Bit.Core.Billing.Constants.StripeConstants.ManagingSystems"/>.
-    /// Releases the schedule and rethrows if it cannot be configured.
-    /// </summary>
-    Task<SubscriptionSchedule> CreateSubscriptionScheduleWithPhasesAsync(
-        Subscription subscription,
-        SubscriptionSchedulePhaseOptions phase2Options,
-        string managingSystem,
-        Dictionary<string, string> phaseMetadata = null);
+    Task<SubscriptionSchedule> CreateSubscriptionScheduleAsync(SubscriptionScheduleCreateOptions options);
     Task<SubscriptionSchedule> GetSubscriptionScheduleAsync(string id, SubscriptionScheduleGetOptions options = null);
     Task<StripeList<SubscriptionSchedule>> ListSubscriptionSchedulesAsync(SubscriptionScheduleListOptions options);
     Task<SubscriptionSchedule> UpdateSubscriptionScheduleAsync(string id, SubscriptionScheduleUpdateOptions options);
