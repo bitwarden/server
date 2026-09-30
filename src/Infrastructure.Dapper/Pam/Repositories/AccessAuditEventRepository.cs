@@ -24,37 +24,43 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
 
     public async Task CreateAsync(AccessAuditEventData auditEvent)
     {
+        var parameters = new DynamicParameters(new
+        {
+            Id = CombGuid.Generate(),
+            auditEvent.CorrelationId,
+            auditEvent.OrganizationId,
+            Kind = (byte)auditEvent.Kind,
+            Phase = (byte)auditEvent.Phase,
+            auditEvent.ActorId,
+            auditEvent.RequesterId,
+            auditEvent.CollectionId,
+            auditEvent.CipherId,
+            auditEvent.AccessRequestId,
+            auditEvent.AccessLeaseId,
+            auditEvent.AccessRuleId,
+            auditEvent.RuleName,
+            auditEvent.Detail,
+            auditEvent.TargetSystemId,
+            auditEvent.TargetSystemName,
+            auditEvent.AccessConnectorId,
+            auditEvent.AccessConnectorName,
+            auditEvent.RotationConfigId,
+            auditEvent.RotationJobId,
+            RotationSource = (byte?)auditEvent.RotationSource,
+            SyncState = (byte?)auditEvent.SyncState,
+        });
+
+        // DATETIME2(7) rather than Dapper's default mapping, which sends DATETIME and rounds to about 3ms. The write
+        // has to keep the precision the column holds, or the same event reads back differently here than on the
+        // Entity Framework providers, and the paging cursor is built from a rounded timestamp.
+        parameters.Add("@OccurredDate", auditEvent.OccurredDate, DbType.DateTime2, null, 7);
+        parameters.Add("@LeaseNotBefore", auditEvent.LeaseNotBefore, DbType.DateTime2, null, 7);
+        parameters.Add("@LeaseNotAfter", auditEvent.LeaseNotAfter, DbType.DateTime2, null, 7);
+
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             "[dbo].[AccessAuditEvent_Create]",
-            new
-            {
-                Id = CombGuid.Generate(),
-                auditEvent.CorrelationId,
-                auditEvent.OrganizationId,
-                Kind = (byte)auditEvent.Kind,
-                Phase = (byte)auditEvent.Phase,
-                auditEvent.OccurredDate,
-                auditEvent.ActorId,
-                auditEvent.RequesterId,
-                auditEvent.CollectionId,
-                auditEvent.CipherId,
-                auditEvent.AccessRequestId,
-                auditEvent.AccessLeaseId,
-                auditEvent.AccessRuleId,
-                auditEvent.RuleName,
-                auditEvent.Detail,
-                auditEvent.LeaseNotBefore,
-                auditEvent.LeaseNotAfter,
-                auditEvent.TargetSystemId,
-                auditEvent.TargetSystemName,
-                auditEvent.AccessConnectorId,
-                auditEvent.AccessConnectorName,
-                auditEvent.RotationConfigId,
-                auditEvent.RotationJobId,
-                RotationSource = (byte?)auditEvent.RotationSource,
-                SyncState = (byte?)auditEvent.SyncState,
-            },
+            parameters,
             commandType: CommandType.StoredProcedure);
     }
 

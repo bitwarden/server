@@ -1,6 +1,7 @@
 CREATE TABLE [dbo].[AccessAuditEvent] (
     [Id]                  UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]      UNIQUEIDENTIFIER    NOT NULL,
+    [CorrelationId]       UNIQUEIDENTIFIER    NOT NULL,
     [Kind]                TINYINT             NOT NULL,
     [Phase]               TINYINT             NOT NULL,
     [OccurredDate]        DATETIME2(7)        NOT NULL,
@@ -19,7 +20,6 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
     [RequesterName]       NVARCHAR(50)        NULL,
     [RequesterEmail]      NVARCHAR(256)       NULL,
     [RuleName]            NVARCHAR(256)       NULL,
-    [CorrelationId]       UNIQUEIDENTIFIER    NOT NULL,
     [TargetSystemId]      UNIQUEIDENTIFIER    NULL,
     [TargetSystemName]    NVARCHAR(200)       NULL,
     [AccessConnectorId]   UNIQUEIDENTIFIER    NULL,
@@ -45,11 +45,13 @@ GO
 --
 -- [Id] is the third key column because [OccurredDate] is not unique: an action's Attempt and Outcome share a
 -- timestamp, and a page boundary landing among them cannot be resumed without a tiebreaker. The INCLUDE covers the
--- collapse and AccessAuditEvent_ReadItemsByOrganizationId rather than a second index, which would cost every insert;
--- it has no EF equivalent to mirror onto the other three databases.
+-- collapse, the page read's filters, and AccessAuditEvent_ReadItemsByOrganizationId, so a filtered page tests each
+-- candidate inside the index instead of opening the row. It rides here rather than on a second index, which would
+-- cost every insert, and it has no EF equivalent to mirror onto the other three databases.
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
     ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
-    INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName]);
+    INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName],
+        [Kind], [ActorId], [RequesterId]);
 GO
 
 CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_CorrelationId]

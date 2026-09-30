@@ -12,6 +12,7 @@ BEGIN
     CREATE TABLE [dbo].[AccessAuditEvent] (
         [Id]                  UNIQUEIDENTIFIER    NOT NULL,
         [OrganizationId]      UNIQUEIDENTIFIER    NOT NULL,
+        [CorrelationId]       UNIQUEIDENTIFIER    NOT NULL,
         [Kind]                TINYINT             NOT NULL,
         [Phase]               TINYINT             NOT NULL,
         [OccurredDate]        DATETIME2(7)        NOT NULL,
@@ -30,7 +31,6 @@ BEGIN
         [RequesterName]       NVARCHAR(50)        NULL,
         [RequesterEmail]      NVARCHAR(256)       NULL,
         [RuleName]            NVARCHAR(256)       NULL,
-        [CorrelationId]       UNIQUEIDENTIFIER    NOT NULL,
         [TargetSystemId]      UNIQUEIDENTIFIER    NULL,
         [TargetSystemName]    NVARCHAR(200)       NULL,
         [AccessConnectorId]   UNIQUEIDENTIFIER    NULL,
@@ -46,34 +46,12 @@ BEGIN
 END
 GO
 
--- For a table created by an earlier development cut, which predates the rotation columns. A no-op on a fresh one.
-IF COL_LENGTH('[dbo].[AccessAuditEvent]', 'TargetSystemId') IS NULL
-BEGIN
-    ALTER TABLE [dbo].[AccessAuditEvent] ADD
-        [TargetSystemId]      UNIQUEIDENTIFIER    NULL,
-        [TargetSystemName]    NVARCHAR(200)       NULL,
-        [AccessConnectorId]   UNIQUEIDENTIFIER    NULL,
-        [AccessConnectorName] NVARCHAR(200)       NULL,
-        [RotationConfigId]    UNIQUEIDENTIFIER    NULL,
-        [RotationJobId]       UNIQUEIDENTIFIER    NULL,
-        [RotationSource]      TINYINT             NULL,
-        [SyncState]           TINYINT             NULL;
-END
-GO
-
-IF EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessAuditEvent_OrganizationId_OccurredDate_Id' AND object_id = OBJECT_ID('[dbo].[AccessAuditEvent]'))
-BEGIN
-    -- An earlier development cut created this index without the INCLUDE; rebuild so it matches a fresh database.
-    CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
-        ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
-        INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName])
-        WITH (DROP_EXISTING = ON);
-END
-ELSE
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessAuditEvent_OrganizationId_OccurredDate_Id' AND object_id = OBJECT_ID('[dbo].[AccessAuditEvent]'))
 BEGIN
     CREATE NONCLUSTERED INDEX [IX_AccessAuditEvent_OrganizationId_OccurredDate_Id]
         ON [dbo].[AccessAuditEvent] ([OrganizationId] ASC, [OccurredDate] DESC, [Id] DESC)
-        INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName]);
+        INCLUDE ([CorrelationId], [Phase], [CipherId], [CollectionId], [AccessRuleId], [RuleName],
+            [Kind], [ActorId], [RequesterId]);
 END
 GO
 
@@ -317,14 +295,14 @@ CREATE OR ALTER PROCEDURE [dbo].[AccessAuditEvent_ReadItemsByOrganizationId]
     @EndDate DATETIME2(7)
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
     -- What the trail's Item filter is built from. Neither obvious source works: a page of the trail cannot name
     -- every item in range, and the caller's own vault would offer every credential they hold whether the trail
     -- mentions it or not. No cipher name is returned, because the store holds none; the caller resolves it from its
     -- own vault. Ranked rather than aggregated so each subject carries its most recent context, where MIN/MAX would
     -- pick alphabetically and for a renamed rule that is the wrong name.
-    ;WITH [Ciphers] AS (
+    WITH [Ciphers] AS (
         SELECT
             [CipherId],
             [CollectionId],
