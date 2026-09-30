@@ -28,7 +28,7 @@ public class AddInvoicingTests
     }
 
     [Fact]
-    public void AddInvoicing_RegistersThePreviewQueryAndPlanChangeCommand()
+    public void AddInvoicing_RegistersTheSubscriptionPreviewQuery()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
@@ -40,7 +40,6 @@ public class AddInvoicingTests
         var provider = services.BuildServiceProvider();
 
         Assert.NotNull(provider.GetService<IGetSubscriptionPreviewQuery>());
-        Assert.NotNull(provider.GetService<IGetOrganizationPlanChangePreviewQuery>());
     }
 
     [Fact]

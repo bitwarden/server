@@ -28,7 +28,6 @@ public static class InvoicingServiceCollectionExtensions
         });
         services.AddKnownFeatureFlags(InvoicingFeatureFlags.GetKeys());
         services.TryAddScoped<IGetSubscriptionPreviewQuery, GetSubscriptionPreviewQuery>();
-        services.TryAddScoped<IGetOrganizationPlanChangePreviewQuery, GetOrganizationPlanChangePreviewQuery>();
         return services;
     }
 }

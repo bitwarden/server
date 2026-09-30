@@ -70,7 +70,7 @@ public class OrganizationSubscriptionEndpointsTests
     }
 
     [Fact]
-    public void MapOrganizationSubscriptionEndpoints_PlanChangePreviewIsGetAndRequiresStandaloneOrganizationOwner()
+    public void MapOrganizationSubscriptionEndpoints_PlanChangePreviewIsPostAndRequiresStandaloneOrganizationOwner()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -84,7 +84,7 @@ public class OrganizationSubscriptionEndpointsTests
 
         var methods = planChange.Metadata.GetMetadata<IHttpMethodMetadata>();
         Assert.NotNull(methods);
-        Assert.Contains("GET", methods!.HttpMethods);
+        Assert.Contains("POST", methods!.HttpMethods);
 
         var authorizeAttributes = planChange.Metadata.GetOrderedMetadata<AuthorizeAttribute>();
         Assert.Contains(authorizeAttributes, attribute => attribute is AuthorizeAttribute<OrganizationBillingRequirement>);

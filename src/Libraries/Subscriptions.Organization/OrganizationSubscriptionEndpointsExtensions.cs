@@ -44,11 +44,11 @@ public static class OrganizationSubscriptionEndpointsExtensions
             .WithName("GetOrganizationSubscriptionPreview")
             .WithDescription("Previews the organization's upcoming subscription renewal.");
 
-        group.MapGet("plan-change/preview",
-                async ([FromRoute] Guid organizationId, [AsParameters] GetOrganizationPlanChangePreviewRequest previewRequest,
-                        [FromServices] GetOrganizationPlanChangePreviewHandler handler) => await handler.HandleAsync(organizationId, previewRequest))
+        group.MapPost("plan-change/preview",
+                async ([FromRoute] Guid organizationId, [FromBody] PreviewOrganizationPlanChangeRequest request,
+                        [FromServices] PreviewOrganizationPlanChangeHandler handler) => await handler.HandleAsync(organizationId, request))
             .RequireAuthorization(new AuthorizeAttribute<StandaloneOrganizationOwnerRequirement>())
-            .WithName("GetOrganizationPlanChangePreview")
+            .WithName("PreviewOrganizationPlanChange")
             .WithDescription("Previews the cost of changing the organization's plan.");
 
         return group;
