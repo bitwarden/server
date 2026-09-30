@@ -24,9 +24,12 @@ BEGIN
         V.[Key],
         V.[OrganizationUseTotp],
         V.[CollectionId]  -- For Dapper splitOn parameter
-    FROM [dbo].[OrganizationCipherDetailsCollectionsView] V
-    WHERE V.[OrganizationId] = @OrganizationId
-        AND V.[Type] = 1
-    ORDER BY V.[RevisionDate] DESC;
+    FROM
+        [dbo].[OrganizationCipherDetailsCollectionsView] V
+    WHERE
+        V.[OrganizationId] = @OrganizationId
+        AND V.[Type] = 1 -- Logins
+    ORDER BY
+        V.[RevisionDate] DESC;
 END;
 GO
