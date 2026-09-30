@@ -131,11 +131,45 @@ public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFac
         Assert.False(_factory.SendAccessEmailOtpCodes.ContainsKey(email));
     }
 
+    [Fact]
+    public async Task SendAccess_EmailOtp_CodeRedeemedTwice_IsRejectedTheSecondTime()
+    {
+        var (client, sendId, email) = ArrangeEmailOtpSend();
+
+        await PostSendAccessTokenAsync(client, sendId, email, deviceIdentifier: RequestingDeviceIdentifier);
+        var code = _factory.SendAccessEmailOtpCodes[email];
+
+        var firstResponse = await PostSendAccessTokenAsync(client, sendId, email, code, RequestingDeviceIdentifier);
+        await AssertAccessTokenIssuedAsync(firstResponse);
+
+        var secondResponse = await PostSendAccessTokenAsync(client, sendId, email, code, RequestingDeviceIdentifier);
+        await AssertRejectedAsync(secondResponse, SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+    }
+
+    [Fact]
+    public async Task SendAccess_EmailOtp_CodeRedeemedWithAnotherEmailOnTheSend_IsRejected()
+    {
+        var otherEmail = $"{Guid.NewGuid()}@example.com";
+        var (client, sendId, email) = ArrangeEmailOtpSend(otherEmail);
+
+        await PostSendAccessTokenAsync(client, sendId, email, deviceIdentifier: RequestingDeviceIdentifier);
+        var code = _factory.SendAccessEmailOtpCodes[email];
+
+        var otherEmailResponse = await PostSendAccessTokenAsync(
+            client, sendId, otherEmail, code, RequestingDeviceIdentifier);
+        await AssertRejectedAsync(otherEmailResponse, SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired);
+
+        // The code still works for the email it was sent to, so the rejection above is not a blanket failure.
+        var sameEmailResponse = await PostSendAccessTokenAsync(client, sendId, email, code, RequestingDeviceIdentifier);
+        await AssertAccessTokenIssuedAsync(sameEmailResponse);
+    }
+
     /// <summary>
     /// Arranges an email-protected Send with a unique Send id and email per test, so captured codes from
-    /// other tests sharing the fixture never collide.
+    /// other tests sharing the fixture never collide. Any <paramref name="additionalEmails"/> are also allowed
+    /// on the Send.
     /// </summary>
-    private (HttpClient client, Guid sendId, string email) ArrangeEmailOtpSend()
+    private (HttpClient client, Guid sendId, string email) ArrangeEmailOtpSend(params string[] additionalEmails)
     {
         var sendId = Guid.NewGuid();
         var email = $"{Guid.NewGuid()}@example.com";
@@ -149,7 +183,7 @@ public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(featureService);
 
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
-                sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new EmailOtp([email]));
+                sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new EmailOtp([email, .. additionalEmails]));
                 services.AddSingleton(sendAuthQuery);
 
                 // IOtpTokenProvider is deliberately not substituted: the device binding lives in the real
