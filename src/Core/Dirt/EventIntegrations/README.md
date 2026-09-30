@@ -163,8 +163,8 @@ delivery attempt and a dead letter; `IntegrationCircuitBreaker` bounds that by d
 are clearly not going to resolve on their own.
 
 Detection is [Polly](https://www.pollydocs.org/strategies/circuit-breaker.html) rather than a hand-rolled counter.
-Both integration listeners report every final outcome to the breaker, which replays all of them into a keyed
-`ResiliencePipelineRegistry`, where Polly measures the non-retryable failures over a rolling window:
+Both integration listeners report every final outcome to the breaker, which replays the ones it has an opinion about
+into a keyed `ResiliencePipelineRegistry`, where Polly measures the non-retryable failures over a rolling window:
 
 | Setting | Meaning |
 | --- | --- |
@@ -185,6 +185,11 @@ own and should not cost an organization its integration, while an authentication
 will not recover without someone changing the configuration. Successes are still sampled, which is what dilutes the
 ratio for a busy configuration and what closes a half-open circuit after a break.
 
+Retryable failures are not sampled at all. A listener only reports one once its retries are exhausted and it has been
+dead lettered, and that outcome is not evidence the configuration works. Were it sampled, Polly's binary model would
+have to put it on the healthy side of the window, where it would offset a non-retryable failure and close a half-open
+circuit exactly like a success. The window therefore holds only delivered messages and failures that need a person.
+
 #### Scope
 
 Disabled state lives on `OrganizationIntegrationConfiguration` only. The configuration is the unit that fails, the
@@ -201,13 +206,13 @@ response model carries `DisabledDate` and `DisabledReason` instead.
 Polly's circuit state is per process, and the database row is what holds delivery off, so no shared counter is
 needed. That suits the write-rate guidance in [CACHING](../../Utilities/CACHING.md).
 
-Every outcome is sampled, so the registry holds one pipeline per organization and configuration that delivers events
-in that process. Polly has no eviction API, so those live until the process restarts. Each entry is small, but the
-set grows with active configurations rather than with failing ones, which is the cost of letting successes close a
+Successes are sampled, so the registry holds one pipeline per organization and configuration that delivers events in
+that process. Polly has no eviction API, so those live until the process restarts. Each entry is small, but the set
+grows with active configurations rather than with failing ones, which is the cost of letting successes close a
 half-open circuit.
 
-What gets replayed is `IntegrationOutcome`, a projection of the four fields the pipeline reads, and every one of them
-is a value type. Polly retains the last handled outcome for as long as a circuit stays open, and an open circuit
+What gets replayed is `IntegrationOutcome`, a projection of the three fields the pipeline reads, and every one of
+them is a value type. Polly retains the last handled outcome for as long as a circuit stays open, and an open circuit
 means the configuration is disabled and producing nothing further to replace it, so whatever the replayed value
 reaches stays reachable until the process restarts. An integration message reaches the decrypted credentials of a
 third-party service, and the breaker has no reason to extend how long those live.

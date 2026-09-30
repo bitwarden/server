@@ -17,7 +17,7 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Dirt.Services;
 
-public class IntegrationCircuitBreakerTests
+public class IntegrationCircuitBreakerTests : IDisposable
 {
     private static readonly Guid _organizationId = Guid.Parse("6a3b0e4e-3f2e-4a1b-9b6e-2f5a7c1d8e90");
     private static readonly Guid _configurationId = Guid.Parse("3f1c9d2b-7e8a-4c5d-9a1b-6e2f4c8d0a37");
@@ -27,6 +27,7 @@ public class IntegrationCircuitBreakerTests
         Substitute.For<IOrganizationIntegrationConfigurationRepository>();
     private readonly IFusionCache _cache = Substitute.For<IFusionCache>();
     private readonly FakeTimeProvider _timeProvider = new();
+    private readonly ResiliencePipelineRegistry<IntegrationCircuitBreakerKey> _pipelineRegistry = new();
 
     private readonly GlobalSettings _globalSettings = new();
     private GlobalSettings.EventLoggingSettings _settings => _globalSettings.EventLogging;
@@ -50,11 +51,13 @@ public class IntegrationCircuitBreakerTests
         return new IntegrationCircuitBreaker(
             _configurationRepository,
             _cache,
-            new ResiliencePipelineRegistry<IntegrationCircuitBreakerKey>(),
+            _pipelineRegistry,
             globalSettings,
             _timeProvider,
             logger ?? NullLogger<IntegrationCircuitBreaker>.Instance);
     }
+
+    public void Dispose() => _pipelineRegistry.Dispose();
 
     private static IntegrationMessage BuildMessage(
         string? organizationId = null,
@@ -142,6 +145,44 @@ public class IntegrationCircuitBreakerTests
         await RecordAsync(sut, RetryableFailure(message), _minimumThroughput * 2);
 
         await AssertNotDisabledAsync();
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_ExhaustedRetryableFailures_DoNotDiluteTheFailureRatio()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+
+        await sut.RecordResultAsync(NonRetryableFailure(message));
+        await sut.RecordResultAsync(RetryableFailure(message));
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput - 1);
+
+        // A dead-lettered retryable failure is not evidence the configuration works, so it stays out of the window
+        await _configurationRepository.Received(1).DisableAsync(
+            Arg.Is(_organizationId),
+            Arg.Is(_configurationId),
+            Arg.Any<DateTime>(),
+            Arg.Is(IntegrationFailureCategory.AuthenticationFailed));
+    }
+
+    [Fact]
+    public async Task RecordResultAsync_RetryableFailureAfterTheBreak_LeavesTheCircuitHalfOpen()
+    {
+        var sut = BuildSut();
+        var message = BuildMessage();
+        var window = _settings.IntegrationCircuitBreakerSamplingDuration;
+
+        await RecordAsync(sut, NonRetryableFailure(message), _minimumThroughput);
+        _configurationRepository.ClearReceivedCalls();
+
+        // Unlike a success, a retryable failure must not close the circuit, so the next non-retryable failure
+        // still reopens it rather than having to clear the threshold again
+        _timeProvider.Advance(window + TimeSpan.FromMinutes(1));
+        await sut.RecordResultAsync(RetryableFailure(message));
+        await sut.RecordResultAsync(NonRetryableFailure(message));
+
+        await _configurationRepository.ReceivedWithAnyArgs(1)
+            .DisableAsync(default, default, default, default);
     }
 
     [Fact]

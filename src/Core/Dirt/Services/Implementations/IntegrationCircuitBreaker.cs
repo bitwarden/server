@@ -52,6 +52,14 @@ public class IntegrationCircuitBreaker(
             return;
         }
 
+        // A retryable failure only reaches the breaker once its retries are exhausted and it has been dead lettered,
+        // which says nothing about whether the configuration itself works. Sampling it would put it on the healthy
+        // side of the window, where it would dilute the ratio and close a half-open circuit exactly like a success
+        if (result.Retryable)
+        {
+            return;
+        }
+
         var message = result.Message;
         if (!Guid.TryParse(message.OrganizationId, out var organizationId) ||
             message.ConfigurationId is not Guid configurationId ||
@@ -65,7 +73,6 @@ public class IntegrationCircuitBreaker(
         // outlive the handler that produced it
         var outcome = new IntegrationOutcome(
             Success: result.Success,
-            Retryable: result.Retryable,
             Category: result.Category,
             IntegrationType: message.IntegrationType);
 
@@ -90,10 +97,9 @@ public class IntegrationCircuitBreaker(
         }
     }
 
-    // A rate-limited or unavailable service recovers on its own and should not cost an organization its
-    // integration, while an authentication, configuration, or permanent failure will not recover on its own
-    private static bool CountsTowardBreaking(IntegrationOutcome outcome) =>
-        !outcome.Success && !outcome.Retryable;
+    // Only successes and non-retryable failures are sampled, so every failure that reaches the pipeline is one
+    // that will not recover without someone changing the configuration
+    private static bool CountsTowardBreaking(IntegrationOutcome outcome) => !outcome.Success;
 
     // An out-of-range setting disables the breaker instead of throwing out of the pipeline factory on every
     // message, so it is logged once to keep a misconfigured deployment distinguishable from an unconfigured one
@@ -212,6 +218,5 @@ public readonly record struct IntegrationCircuitBreakerKey(Guid OrganizationId, 
 /// </summary>
 internal readonly record struct IntegrationOutcome(
     bool Success,
-    bool Retryable,
     IntegrationFailureCategory? Category,
     IntegrationType IntegrationType);
