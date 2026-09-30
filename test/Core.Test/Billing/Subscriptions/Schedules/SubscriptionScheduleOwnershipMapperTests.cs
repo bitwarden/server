@@ -213,11 +213,30 @@ public class SubscriptionScheduleOwnershipMapperTests
             SubscriptionScheduleOwnership.PersonalPriceIncrease,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(ManagedSchedule(ManagingSystems.PersonalPriceIncrease))));
 
-    [Fact]
-    public void MapSchedule_UnrecognizedManagingSystem_ReturnsForeign() =>
+    [Theory]
+    [InlineData("some_future_system")]
+    [InlineData("")]
+    public void MapSchedule_UnrecognizedManagingSystem_ReturnsUnrecognized(string managingSystem) =>
         Assert.Equal(
-            SubscriptionScheduleOwnership.Foreign,
-            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule("some_future_system")));
+            SubscriptionScheduleOwnership.Unrecognized,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(managingSystem)));
+
+    [Fact]
+    public void MapSchedule_UnrecognizedManagingSystemAndLegacyPhaseMarker_ReturnsUnrecognized() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Unrecognized,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(
+                "some_future_system",
+                new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort-1" })));
+
+    [Fact]
+    public void ManagingSystemOf_ScheduleWithManagingSystem_ReturnsTheValue() =>
+        Assert.Equal("some_future_system",
+            SubscriptionScheduleOwnershipMapper.ManagingSystemOf(ManagedSchedule("some_future_system")));
+
+    [Fact]
+    public void ManagingSystemOf_ScheduleWithoutMetadata_ReturnsNull() =>
+        Assert.Null(SubscriptionScheduleOwnershipMapper.ManagingSystemOf(new SubscriptionSchedule()));
 
     [Fact]
     public void MapSchedule_ManagingSystemAndConflictingLegacyPhaseMarker_PrefersManagingSystem() =>

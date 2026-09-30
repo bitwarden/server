@@ -82,7 +82,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             })
             .ToList();
 
-        // MapOrNull above already excluded Unexpanded, Foreign, PersonalPriceIncrease, and AnnualUpgrade ownership; only None and BusinessPriceIncrease remain.
+        // MapOrNull above already excluded Unexpanded, Foreign, Unrecognized, PersonalPriceIncrease, and AnnualUpgrade ownership; only None and BusinessPriceIncrease remain.
         var ownership = SubscriptionScheduleOwnershipMapper.Map(subscription);
 
         // Releasing a price-migration schedule is intended: annual-latest is where the migration was
@@ -93,6 +93,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             SubscriptionScheduleOwnership.None or
                 SubscriptionScheduleOwnership.Foreign or
                 SubscriptionScheduleOwnership.PersonalPriceIncrease or
+                SubscriptionScheduleOwnership.Unrecognized or
                 SubscriptionScheduleOwnership.Unexpanded => null,
             SubscriptionScheduleOwnership.AnnualUpgrade or
                 SubscriptionScheduleOwnership.BusinessPriceIncrease => subscription.Schedule

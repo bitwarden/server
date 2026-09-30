@@ -52,6 +52,13 @@ internal static class AnnualUpgradeLineMapper
                     string.Join(", ", SubscriptionScheduleOwnershipMapper.DistinctPhaseMetadataKeys(subscription.Schedule)));
                 return null;
 
+            case SubscriptionScheduleOwnership.Unrecognized:
+                logger.LogWarning(
+                    "{Caller}: Organization ({OrganizationId}) has a schedule ({ScheduleId}) on subscription ({SubscriptionId}) with an unrecognized managing system ({ManagingSystem}); refusing the annual upgrade",
+                    caller, organizationId, subscription.ScheduleId, subscription.Id,
+                    SubscriptionScheduleOwnershipMapper.ManagingSystemOf(subscription.Schedule));
+                return null;
+
             case SubscriptionScheduleOwnership.PersonalPriceIncrease:
                 logger.LogWarning(
                     "{Caller}: Organization ({OrganizationId}) has a pending personal price increase schedule ({ScheduleId}) on subscription ({SubscriptionId}); refusing the annual upgrade",

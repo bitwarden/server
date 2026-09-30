@@ -27,6 +27,8 @@ public class UpdateOrganizationSubscriptionCommandTests
         Substitute.For<IOrganizationPlanMigrationCohortAssignmentRepository>();
     private readonly IOrganizationPlanMigrationCohortRepository _cohortRepository =
         Substitute.For<IOrganizationPlanMigrationCohortRepository>();
+    private readonly ILogger<UpdateOrganizationSubscriptionCommand> _logger =
+        Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>();
     private readonly UpdateOrganizationSubscriptionCommand _command;
 
     public UpdateOrganizationSubscriptionCommandTests()
@@ -36,7 +38,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             .Returns((OrganizationPlanMigrationCohortAssignment?)null);
 
         _command = new UpdateOrganizationSubscriptionCommand(
-            Substitute.For<ILogger<UpdateOrganizationSubscriptionCommand>>(),
+            _logger,
             _assignmentRepository,
             _cohortRepository,
             _pricingClient,
@@ -2268,6 +2270,40 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_UnrecognizedManagingSystemSchedule_LeavesScheduleUntouchedAndLogsWarning()
+    {
+        var organization = CreateOrganization();
+        var subscription = CreateSubscription(items: [("price_seats", "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+        SetupUpdateSubscription(subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [("price_seats", 5)], [("price_seats", 5)],
+            scheduleMetadata: new Dictionary<string, string> { [MetadataKeys.ManagingSystem] = "some_future_system" });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity("price_seats", 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionScheduleAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionScheduleUpdateOptions>());
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id,
+            Arg.Is<SubscriptionUpdateOptions>(o =>
+                o.Items.Any(i => i.Price == "price_seats" && i.Quantity == 10)));
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("unrecognized managing system (some_future_system)")),
+            Arg.Any<Exception>(),
+            Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
     public async Task Run_ScheduleCarryingAnnualSeatPriceWithoutMetadata_DoesNotTakeTheAnnualUpgradePath()
     {
         var organization = CreateOrganization();
@@ -2642,7 +2678,8 @@ public class UpdateOrganizationSubscriptionCommandTests
         (string priceId, long quantity)[] phase1Items,
         (string priceId, long quantity)[]? phase2Items = null,
         bool phase2Active = false,
-        Dictionary<string, string>? phaseMetadata = null)
+        Dictionary<string, string>? phaseMetadata = null,
+        Dictionary<string, string>? scheduleMetadata = null)
     {
         var phase1Start = phase2Active ? DateTime.UtcNow.AddYears(-1) : DateTime.UtcNow;
         var phase1End = phase2Active ? DateTime.UtcNow.AddDays(-1) : DateTime.UtcNow.AddYears(1);
@@ -2681,6 +2718,7 @@ public class UpdateOrganizationSubscriptionCommandTests
             EndBehavior = phase2Items != null
                 ? SubscriptionScheduleEndBehavior.Release
                 : SubscriptionScheduleEndBehavior.Cancel,
+            Metadata = scheduleMetadata,
             Phases = phases
         };
     }

@@ -183,9 +183,19 @@ public class UpdateOrganizationSubscriptionCommand(
                 return subscription;
             }
 
-            _logger.LogInformation(
-                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not an annual-upgrade or business price increase schedule; leaving it untouched and updating the subscription directly",
-                CommandName, activeSchedule.Id, subscription.Id);
+            if (SubscriptionScheduleOwnershipMapper.Map(subscription) == SubscriptionScheduleOwnership.Unrecognized)
+            {
+                _logger.LogWarning(
+                    "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) has an unrecognized managing system ({ManagingSystem}); leaving it untouched and updating the subscription directly",
+                    CommandName, activeSchedule.Id, subscription.Id,
+                    SubscriptionScheduleOwnershipMapper.ManagingSystemOf(activeSchedule));
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not an annual-upgrade or business price increase schedule; leaving it untouched and updating the subscription directly",
+                    CommandName, activeSchedule.Id, subscription.Id);
+            }
         }
 
         var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };

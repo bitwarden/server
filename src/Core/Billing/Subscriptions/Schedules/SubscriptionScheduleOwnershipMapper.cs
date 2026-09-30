@@ -49,7 +49,7 @@ public static class SubscriptionScheduleOwnershipMapper
                 ManagingSystems.AnnualUpgrade => SubscriptionScheduleOwnership.AnnualUpgrade,
                 ManagingSystems.BusinessPriceIncrease => SubscriptionScheduleOwnership.BusinessPriceIncrease,
                 ManagingSystems.PersonalPriceIncrease => SubscriptionScheduleOwnership.PersonalPriceIncrease,
-                _ => SubscriptionScheduleOwnership.Foreign
+                _ => SubscriptionScheduleOwnership.Unrecognized
             };
         }
 
@@ -66,6 +66,13 @@ public static class SubscriptionScheduleOwnershipMapper
 
     private static bool AnyPhaseCarries(SubscriptionSchedule schedule, string metadataKey) =>
         (schedule.Phases ?? []).Any(phase => phase.Metadata?.ContainsKey(metadataKey) == true);
+
+    /// <summary>
+    /// The schedule's raw <see cref="MetadataKeys.ManagingSystem"/> value, or null when it has none. Used to
+    /// log the marker on a schedule classified as <see cref="SubscriptionScheduleOwnership.Unrecognized"/>.
+    /// </summary>
+    public static string? ManagingSystemOf(SubscriptionSchedule? schedule) =>
+        schedule?.Metadata?.GetValueOrDefault(MetadataKeys.ManagingSystem);
 
     /// <summary>
     /// The metadata keys present across a schedule's phases. Values may carry customer detail, so

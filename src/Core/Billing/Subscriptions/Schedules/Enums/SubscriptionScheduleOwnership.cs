@@ -28,5 +28,12 @@ public enum SubscriptionScheduleOwnership
     Unexpanded,
 
     /// <summary>A schedule created by the Premium or Families price increase.</summary>
-    PersonalPriceIncrease
+    PersonalPriceIncrease,
+
+    /// <summary>
+    /// A schedule carrying a managing-system marker we do not recognize: empty, malformed, or written by a
+    /// version of our code this one does not know about. Leave it alone, as with <see cref="Foreign"/>, but
+    /// surface it so the marker can be investigated.
+    /// </summary>
+    Unrecognized
 }
