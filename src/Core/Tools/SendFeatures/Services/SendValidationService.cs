@@ -1,5 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -8,7 +9,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using System.Text.Json;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
