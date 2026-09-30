@@ -133,6 +133,66 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
     [Theory]
     [MemberData(nameof(EditorRoles))]
+    public async Task PostBulkCollections_CanRemoveCipherFromTheirOwnDefaultCollection(OrganizationUserType editorType)
+    {
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var cipherRepository = _factory.GetService<ICipherRepository>();
+        var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
+
+        // Custom members need the EditAnyCollection permission; Owners/Admins rely on the org setting.
+        var permissions = editorType == OrganizationUserType.Custom
+            ? new Permissions { EditAnyCollection = true }
+            : null;
+
+        var (editorEmail, editor) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, editorType, permissions);
+
+        // The editor owns their own default ("My Items") collection containing a cipher.
+        var defaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = "My Items",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null, [new CollectionAccessSelection
+            { Id = editor.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        var cipher = new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = _organization.Id,
+            Data = "{}"
+        };
+        await cipherRepository.CreateAsync(cipher, [defaultCollection.Id]);
+
+        var sharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory, _organization.Id, "Shared Collection",
+            users: [new CollectionAccessSelection { Id = editor.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+            _organization.Id, [cipher.Id], [sharedCollection.Id]);
+
+        // Act: the editor removes the cipher from their own default ("My Items") collection.
+        await _loginHelper.LoginAsync(editorEmail);
+
+        var response = await _client.PostAsJsonAsync("ciphers/bulk-collections", new CipherBulkUpdateCollectionsRequestModel
+        {
+            OrganizationId = _organization.Id,
+            CipherIds = [cipher.Id],
+            CollectionIds = [defaultCollection.Id],
+            RemoveCollections = true
+        });
+
+        // Assert: the removal succeeds; the default is gone and the shared collection is untouched.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var collectionIds = await collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
+        Assert.DoesNotContain(defaultCollection.Id, collectionIds);
+        Assert.Contains(sharedCollection.Id, collectionIds);
+    }
+
+    [Theory]
+    [MemberData(nameof(EditorRoles))]
     public async Task PostBulkCollections_CanRemoveCipherFromSharedCollection_WhenItIsAlsoInAnotherUsersDefaultCollection(OrganizationUserType editorType)
     {
         var collectionCipherRepository = _factory.GetService<ICollectionCipherRepository>();
