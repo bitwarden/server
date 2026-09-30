@@ -12,7 +12,7 @@ public interface IApplyOrganizationUserV2UpgradesCommand
     /// <remarks>
     /// Each update is checked against the key id on the member's user row, so an admin cannot install a key
     /// wrapped against a user key the member no longer holds. An update that fails this check is skipped rather
-    /// than rejected, and the membership stays pending.
+    /// than rejected, and the membership stays pending. Each member who is unenrolled gets a withdrawal event.
     /// </remarks>
     /// <param name="organizationId">The organization the memberships belong to.</param>
     /// <param name="updates">The re-wrapped account recovery keys.</param>

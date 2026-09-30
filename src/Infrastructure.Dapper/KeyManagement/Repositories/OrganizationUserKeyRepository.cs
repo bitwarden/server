@@ -35,18 +35,21 @@ public class OrganizationUserKeyRepository : IOrganizationUserKeyRepository
         return results.ToList();
     }
 
-    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
-        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
+    public async Task<ICollection<Guid>> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
     {
         await using var connection = new SqlConnection(_connectionString);
 
-        await connection.ExecuteAsync(
+        var updatedIds = await connection.QueryAsync<Guid>(
             "[dbo].[OrganizationUser_UpdateManyV2UpgradedAccountRecoveryKeys]",
             new
             {
                 OrganizationId = organizationId,
-                OrganizationUserJson = JsonSerializer.Serialize(updates)
+                OrganizationUserJson = JsonSerializer.Serialize(updates),
+                RevisionDate = revisionDate
             },
             commandType: CommandType.StoredProcedure);
+
+        return updatedIds.ToList();
     }
 }

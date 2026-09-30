@@ -108,15 +108,20 @@ public class OrganizationUserKeyRepositoryTests
         var (user, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
         var before = (await userRepository.GetByIdAsync(user.Id))!.AccountRevisionDate;
+        // Ahead of the member's current account revision date, so the bump is visible
+        var revisionDate = DateTime.UtcNow.AddMinutes(1);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId)]);
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            [Update(organizationUser.Id, _userKeyId)], revisionDate);
 
         // Assert
+        Assert.Equal([organizationUser.Id], updatedIds);
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v2AccountRecoveryKey, written!.ResetPasswordKey);
         Assert.Null(written.V2UpgradeToken);
+        // Databases store fractions of a second with different precision
+        Assert.Equal(revisionDate, written.RevisionDate, TimeSpan.FromSeconds(1));
         // The member's clients resync from this date, so they learn that their enrollment changed
         var after = (await userRepository.GetByIdAsync(user.Id))!.AccountRevisionDate;
         Assert.True(after > before);
@@ -136,7 +141,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)]);
+            [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -159,7 +164,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)]);
+            [Update(organizationUser.Id, _userKeyId, accountRecoveryKey: null)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -180,14 +185,40 @@ public class OrganizationUserKeyRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var (_, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
+        var before = (await organizationUserRepository.GetByIdAsync(organizationUser.Id))!.RevisionDate;
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId)]);
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
+        Assert.Empty(updatedIds);
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.Equal(_v1AccountRecoveryKey, written!.ResetPasswordKey);
+        Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
+        Assert.Equal(before, written.RevisionDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync_MembershipIsNotEnrolled_WritesNothing(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationUserKeyRepository sut)
+    {
+        // Arrange - the member withdrew after the admin read the upgrade, which leaves the token in place
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var (_, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
+            _userKeyId, accountRecoveryKey: null, _v2UpgradeToken);
+
+        // Act
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
+
+        // Assert
+        Assert.Empty(updatedIds);
+        var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        Assert.Null(written!.ResetPasswordKey);
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
     }
 
@@ -206,10 +237,11 @@ public class OrganizationUserKeyRepositoryTests
             _rotatedUserKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
 
         // Act
-        await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(fresh.Id, _userKeyId), Update(stale.Id, _userKeyId)]);
+        var updatedIds = await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
+            [Update(fresh.Id, _userKeyId), Update(stale.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
+        Assert.Equal([fresh.Id], updatedIds);
         var writtenFresh = await organizationUserRepository.GetByIdAsync(fresh.Id);
         Assert.Equal(_v2AccountRecoveryKey, writtenFresh!.ResetPasswordKey);
         Assert.Null(writtenFresh.V2UpgradeToken);
@@ -234,7 +266,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId)]);
+            [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -256,7 +288,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId)]);
+            [Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -277,7 +309,7 @@ public class OrganizationUserKeyRepositoryTests
 
         // Act
         await sut.UpdateManyV2UpgradedAccountRecoveryKeysAsync(organization.Id,
-            [Update(organizationUser.Id, _userKeyId), Update(organizationUser.Id, _userKeyId)]);
+            [Update(organizationUser.Id, _userKeyId), Update(organizationUser.Id, _userKeyId)], DateTime.UtcNow);
 
         // Assert
         var written = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -311,6 +343,8 @@ public class OrganizationUserKeyRepositoryTests
         var organizationUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
         organizationUser.ResetPasswordKey = accountRecoveryKey;
         organizationUser.V2UpgradeToken = v2UpgradeToken;
+        // Dated back, so a test can tell a revision date the write bumped from the one it was created with
+        organizationUser.RevisionDate = DateTime.UtcNow.AddDays(-1);
         await organizationUserRepository.ReplaceAsync(organizationUser);
 
         return (user, organizationUser);

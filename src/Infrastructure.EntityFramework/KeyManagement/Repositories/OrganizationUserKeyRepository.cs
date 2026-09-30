@@ -38,42 +38,44 @@ public class OrganizationUserKeyRepository : BaseEntityFrameworkRepository, IOrg
             }).ToListAsync();
     }
 
-    public async Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
-        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates)
+    public async Task<ICollection<Guid>> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var writtenIds = new List<Guid>();
+        var updatedIds = new List<Guid>();
         foreach (var update in updates)
         {
-            // The key id is checked in the WHERE clause, so a rotation cannot slip in between the check and the
-            // write. A row that no longer matches is skipped and stays pending.
+            // The key id and the enrollment are checked in the WHERE clause, so a rotation or a withdrawal cannot
+            // slip in between the check and the write. A row that no longer matches is skipped.
             var updatedCount = await dbContext.OrganizationUsers
                 .Where(organizationUser => organizationUser.Id == update.OrganizationUserId
                     && organizationUser.OrganizationId == organizationId
                     && organizationUser.V2UpgradeToken != null
+                    && organizationUser.ResetPasswordKey != null
                     && dbContext.Users.Any(user =>
                         user.Id == organizationUser.UserId && user.UserKeyId == update.UserKeyId))
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(organizationUser => organizationUser.ResetPasswordKey, update.AccountRecoveryKey)
                     // The token is consumed, so the upgrade cannot be replayed.
-                    .SetProperty(organizationUser => organizationUser.V2UpgradeToken, (string?)null));
+                    .SetProperty(organizationUser => organizationUser.V2UpgradeToken, (string?)null)
+                    .SetProperty(organizationUser => organizationUser.RevisionDate, revisionDate));
 
             if (updatedCount > 0)
             {
-                writtenIds.Add(update.OrganizationUserId);
+                updatedIds.Add(update.OrganizationUserId);
             }
         }
 
-        // Bump the account revision date of the members whose row was updated. The date comes from the server, not
-        // from the database.
-        var revisionDate = DateTime.UtcNow;
+        // Bump the account revision date of the members whose row was updated.
         await dbContext.Users
             .Where(user => dbContext.OrganizationUsers
-                .Any(organizationUser => writtenIds.Contains(organizationUser.Id)
+                .Any(organizationUser => updatedIds.Contains(organizationUser.Id)
                     && organizationUser.UserId == user.Id))
             .ExecuteUpdateAsync(setters =>
                 setters.SetProperty(user => user.AccountRevisionDate, revisionDate));
+
+        return updatedIds;
     }
 }

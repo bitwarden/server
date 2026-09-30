@@ -19,10 +19,14 @@ public interface IOrganizationUserKeyRepository
     /// with a null key clears the account recovery key too, which unenrolls the member.
     /// </summary>
     /// <remarks>
-    /// A row is written only when it belongs to the organization, still has a V2 upgrade token, and its user row
-    /// still holds the key id given in the update. A row that fails these conditions is skipped, and the rest are
-    /// still written.
+    /// A row is written only when it belongs to the organization, still has a V2 upgrade token, is still enrolled in
+    /// account recovery, and its user row still holds the key id given in the update. A row that fails these
+    /// conditions is skipped, and the rest are still written.
     /// </remarks>
-    Task UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
-        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates);
+    /// <param name="organizationId">The organization the memberships belong to.</param>
+    /// <param name="updates">The re-wrapped account recovery keys.</param>
+    /// <param name="revisionDate">The revision date to set on the updated memberships.</param>
+    /// <returns>The ids of the memberships that were updated.</returns>
+    Task<ICollection<Guid>> UpdateManyV2UpgradedAccountRecoveryKeysAsync(Guid organizationId,
+        IEnumerable<OrganizationUserAccountRecoveryKeyUpdate> updates, DateTime revisionDate);
 }
