@@ -72,7 +72,7 @@ public class SendValidationService : ISendValidationService
             }
         }
 
-        await ValidateItemOwnerAsync(userId, send);
+        await ValidateItemSendAsync(userId, send);
 
         // The nullable userId is intended to support organization-owned Sends (never implemented).
         // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
@@ -140,11 +140,13 @@ public class SendValidationService : ISendValidationService
     }
 
     /// <summary>
-    /// Ensures the item an Item Send references belongs to the Send's owner.
+    /// Validates Item-specific Send saving requirements. There are currently two conditions:
+    /// 1. Ensure the Send owner has access to the item being shared
+    /// 2. Ensure the item being shared is not archived, deleted, or an SSH key
     /// Only a new or changed item id is checked, so saves that keep it (e.g. removing auth after
     /// the item was deleted) still succeed.
     /// </summary>
-    private async Task ValidateItemOwnerAsync(Guid? userId, Send send)
+    private async Task ValidateItemSendAsync(Guid? userId, Send send)
     {
         var itemId = ItemIdOf(send);
         if (!itemId.HasValue)
@@ -162,9 +164,18 @@ public class SendValidationService : ISendValidationService
             }
         }
 
-        // Same error for missing and foreign items, so item ids cannot be probed.
-        var cipher = userId.HasValue ? await _cipherRepository.GetByIdAsync(itemId.Value) : null;
-        if (cipher == null || cipher.UserId != userId)
+        // Same error for missing and restricted items, so item ids cannot be probed.
+        var cipherDetails = userId.HasValue ? await _cipherRepository.GetByIdAsync(itemId.Value, userId.Value) : null;
+        if (cipherDetails == null)
+        {
+            throw new BadRequestException("Item not found.");
+        }
+
+        // User can share a cipher if they own it or if they have edit and view password permissions on a collection it belongs to
+        // The cipher must furthermore not be archived, deleted, or an SSH key
+        var userOwned = cipherDetails.UserId == userId;
+        var orgSharedWithPermissions = cipherDetails.OrganizationId.HasValue && cipherDetails.Edit && cipherDetails.ViewPassword;
+        if (!(userOwned || orgSharedWithPermissions) || cipherDetails.ArchivedDate.HasValue || cipherDetails.DeletedDate.HasValue || cipherDetails.Type == Vault.Enums.CipherType.SSHKey )
         {
             throw new BadRequestException("Item not found.");
         }
