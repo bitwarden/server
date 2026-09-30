@@ -11,12 +11,26 @@ public class TeamsIntegrationHandler(
     public override async Task<IntegrationHandlerResult> HandleAsync(
         IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
+        var channelId = message.Configuration.ChannelId;
+        var serviceUrl = message.Configuration.ServiceUrl;
+
+        // The integration is either awaiting its app install callback or has been disconnected; there is no
+        // channel to deliver to and no amount of retrying will produce one.
+        if (string.IsNullOrEmpty(channelId) || serviceUrl is null)
+        {
+            return IntegrationHandlerResult.Fail(
+                message,
+                IntegrationFailureCategory.ConfigurationError,
+                "Teams integration is not connected to a channel."
+            );
+        }
+
         try
         {
             await teamsService.SendMessageToChannelAsync(
-                serviceUri: message.Configuration.ServiceUrl,
+                serviceUri: serviceUrl,
                 message: message.RenderedTemplate,
-                channelId: message.Configuration.ChannelId
+                channelId: channelId
             );
 
             return IntegrationHandlerResult.Succeed(message);

@@ -397,6 +397,13 @@ public class EventIntegrationServiceCollectionExtensionsTests
         services.TryAddSingleton(globalSettings);
         services.AddLogging();
         services.TryAddScoped(_ => Substitute.For<IOrganizationIntegrationRepository>());
+
+        // Registered in production by AddEventIntegrationsCommandsQueries, which Startup calls first.
+        services.TryAddKeyedSingleton(
+            EventIntegrationsCacheConstants.CacheName,
+            (_, _) => Substitute.For<IFusionCache>());
+        services.TryAddSingleton(TimeProvider.System);
+
         services.AddTeamsService(globalSettings);
 
         var provider = services.BuildServiceProvider();

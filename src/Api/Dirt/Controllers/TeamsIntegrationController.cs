@@ -53,12 +53,12 @@ public class TeamsIntegrationController(
                 Configuration = null,
             });
         }
-        else if (integration.Configuration is not null)
+        else if (IsConnected(integration.Configuration))
         {
             // A Completed (fully configured) Teams integration already exists, throw to prevent overriding
             throw new BadRequestException("There already exists a Teams integration for this organization");
 
-        } // An Initiated teams integration exits, re-use it and kick off a new OAuth flow
+        } // An Initiated, In Progress, or disconnected integration exists, re-use it and kick off a new OAuth flow
 
         var state = IntegrationOAuthState.FromIntegration(integration, timeProvider);
         var redirectUrl = teamsService.GetRedirectUrl(
@@ -84,11 +84,11 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        // Fetch existing Initiated record
+        // Fetch existing record that is not already connected to a channel
         var integration = await integrationRepository.GetByIdAsync(oAuthState.IntegrationId);
         if (integration is null ||
             integration.Type != IntegrationType.Teams ||
-            integration.Configuration is not null)
+            IsConnected(integration.Configuration))
         {
             throw new NotFoundException();
         }
@@ -133,6 +133,13 @@ public class TeamsIntegrationController(
     {
         await adapter.ProcessAsync(Request, Response, bot);
     }
+
+    /// <summary>
+    /// True only when the integration is live on a channel. A record that is still awaiting its app install, or
+    /// whose app has since been removed, is safe to overwrite with a fresh OAuth flow.
+    /// </summary>
+    private static bool IsConnected(string? configuration) =>
+        TeamsIntegration.FromConfiguration(configuration)?.IsCompleted ?? false;
 
     /// <summary>
     /// Builds the OAuth callback URL from the configured API base URL rather than the incoming request.
