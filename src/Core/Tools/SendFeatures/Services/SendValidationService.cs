@@ -175,7 +175,7 @@ public class SendValidationService : ISendValidationService
         // The cipher must furthermore not be archived, deleted, or an SSH key
         var userOwned = cipherDetails.UserId == userId;
         var orgSharedWithPermissions = cipherDetails.OrganizationId.HasValue && cipherDetails.Edit && cipherDetails.ViewPassword;
-        if (!(userOwned || orgSharedWithPermissions) || cipherDetails.ArchivedDate.HasValue || cipherDetails.DeletedDate.HasValue || cipherDetails.Type == Vault.Enums.CipherType.SSHKey )
+        if (!(userOwned || orgSharedWithPermissions) || cipherDetails.ArchivedDate.HasValue || cipherDetails.DeletedDate.HasValue || cipherDetails.Type == Vault.Enums.CipherType.SSHKey)
         {
             throw new BadRequestException("Item not found.");
         }
