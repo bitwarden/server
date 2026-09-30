@@ -184,7 +184,6 @@ public static partial class FeatureFlagKeys
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
-    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
 
     /* Billing Team */
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
@@ -288,7 +287,9 @@ public static partial class FeatureFlagKeys
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
-    /* Innovation Team */
+    /* Skunkworks Team */
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";
