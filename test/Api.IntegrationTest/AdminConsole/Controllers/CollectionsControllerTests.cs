@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Public.Request;
 using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.AdminConsole.Public.Models.Request;
@@ -248,28 +249,30 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
             ]);
 
         // Act
-        var response = await _client.GetFromJsonAsync<Bit.Api.Models.Response.ListResponseModel<Bit.Api.AdminConsole.Models.Response.CollectionAccessDetailsResponseModel>>(
-            $"organizations/{_organization.Id}/collections/access");
+        var httpResponse = await _client.GetAsync($"organizations/{_organization.Id}/collections/access");
 
         // Assert
-        Assert.NotNull(response);
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
 
-        var ids = response.Data.Select(c => c.Id).ToHashSet();
+        using var jsonDoc = JsonDocument.Parse(await httpResponse.Content.ReadAsStringAsync());
+        var data = jsonDoc.RootElement.GetProperty("data").EnumerateArray().ToList();
+
+        var ids = data.Select(c => c.GetProperty("id").GetGuid()).ToHashSet();
         Assert.Contains(sharedCollection.Id, ids);
         Assert.Contains(defaultCollection.Id, ids);
         Assert.Contains(groupOnlyCollection.Id, ids);
 
-        var sharedResult = response.Data.Single(c => c.Id == sharedCollection.Id);
-        Assert.Equal(CollectionType.SharedCollection, sharedResult.Type);
-        Assert.NotEmpty(sharedResult.Users);
+        var sharedResult = data.Single(c => c.GetProperty("id").GetGuid() == sharedCollection.Id);
+        Assert.Equal((int)CollectionType.SharedCollection, sharedResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(sharedResult.GetProperty("users").EnumerateArray());
 
-        var defaultResult = response.Data.Single(c => c.Id == defaultCollection.Id);
-        Assert.Equal(CollectionType.DefaultUserCollection, defaultResult.Type);
-        Assert.NotEmpty(defaultResult.Users);
+        var defaultResult = data.Single(c => c.GetProperty("id").GetGuid() == defaultCollection.Id);
+        Assert.Equal((int)CollectionType.DefaultUserCollection, defaultResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(defaultResult.GetProperty("users").EnumerateArray());
 
-        var groupOnlyResult = response.Data.Single(c => c.Id == groupOnlyCollection.Id);
-        Assert.Equal(CollectionType.SharedCollection, groupOnlyResult.Type);
-        Assert.NotEmpty(groupOnlyResult.Groups);
+        var groupOnlyResult = data.Single(c => c.GetProperty("id").GetGuid() == groupOnlyCollection.Id);
+        Assert.Equal((int)CollectionType.SharedCollection, groupOnlyResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(groupOnlyResult.GetProperty("groups").EnumerateArray());
     }
 
     [Fact]
@@ -285,6 +288,6 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
         var response = await _client.GetAsync(
             $"organizations/{_organization.Id}/collections/access");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
