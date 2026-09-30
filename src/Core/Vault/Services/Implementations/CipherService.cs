@@ -889,16 +889,16 @@ public class CipherService : ICipherService
             .Where(c => c.Type == CollectionType.DefaultUserCollection)
             .Select(c => c.Id)
             .ToList();
+
         var targetContainsDefault = targetDefaultCollectionIds.Count > 0;
 
-        if (removeCollections && targetContainsDefault)
+        // Removal only touches the collections named in the request. Block only when a member is
+        // removing a cipher from another member's default collection.
+        if (removeCollections
+            && targetContainsDefault
+            && targetDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
         {
-            // Removal only touches the collections named in the request. Block only when a member is
-            // removing a cipher from another member's default collection.
-            if (targetDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
         foreach (var cipherId in cipherIds)
@@ -922,12 +922,9 @@ public class CipherService : ICipherService
                     .Select(c => c.Id)
                     .ToList();
 
-                if (!alreadyShared && foreignDefaultCollectionIds.Count > 0)
+                if (!alreadyShared && foreignDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
                 {
-                    if (foreignDefaultCollectionIds.Any(id => !ownedDefaultCollectionIds.Contains(id)))
-                    {
-                        throw new NotFoundException();
-                    }
+                    throw new NotFoundException();
                 }
             }
 

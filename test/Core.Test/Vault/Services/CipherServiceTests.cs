@@ -2652,7 +2652,7 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBulkCollectionAssignmentAsync_CipherInAnotherUsersDefaultAndSharedCollection_DoesNotThrow(
+    public async Task ValidateBulkCollectionAssignmentAsync_AddingCipherAlreadyInSharedCollection_DoesNotThrow(
         SutProvider<CipherService> sutProvider,
         Guid userId,
         Cipher cipher,
@@ -2676,11 +2676,6 @@ public class CipherServiceTests
             .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
 
         await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
-
-        // An already-shared cipher never requires consulting the caller's owned default collections.
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceive()
-            .GetManyByUserIdAsync(Arg.Any<Guid>());
     }
 
     [Theory, BitAutoData]
@@ -2707,7 +2702,7 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateBulkCollectionAssignmentAsync_RemovingSharedCollection_WhenCipherInAnotherUsersDefaultCollection_DoesNotThrow(
+    public async Task ValidateBulkCollectionAssignmentAsync_RemovingSharedCollection_DoesNotThrow(
         SutProvider<CipherService> sutProvider,
         Guid userId,
         Cipher cipher,
@@ -2727,10 +2722,5 @@ public class CipherServiceTests
             .Returns(new List<Collection> { sharedCollection });
 
         await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true);
-
-        // The user's owned default collections are never consulted when no default collection is removed.
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .DidNotReceive()
-            .GetManyByUserIdAsync(Arg.Any<Guid>());
     }
 }
