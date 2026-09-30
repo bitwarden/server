@@ -5,6 +5,7 @@ using Bit.Core.Dirt.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.Bot.Schema;
 using Microsoft.Rest;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -114,17 +115,18 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_HttpExceptionForbidden_ReturnsAuthenticationFailed(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_ErrorResponseForbidden_ReturnsAuthenticationFailed(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden);
 
         sutProvider.GetDependency<ITeamsService>()
             .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
-            .ThrowsAsync(new HttpOperationException("Server error")
+            .ThrowsAsync(new ErrorResponseException("Server error")
             {
                 Response = new HttpResponseMessageWrapper(
-                        new HttpResponseMessage(System.Net.HttpStatusCode.Forbidden),
+                        httpResponse,
                         "Forbidden"
                     )
             }
@@ -144,17 +146,49 @@ public class TeamsIntegrationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleAsync_HttpExceptionTooManyRequests_ReturnsRateLimited(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    public async Task HandleAsync_ErrorResponseUnauthorized_ReturnsAuthenticationFailed(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
     {
         var sutProvider = GetSutProvider();
         message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.Unauthorized);
 
         sutProvider.GetDependency<ITeamsService>()
             .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
-            .ThrowsAsync(new HttpOperationException("Server error")
+            .ThrowsAsync(new ErrorResponseException("Server error")
             {
                 Response = new HttpResponseMessageWrapper(
-                        new HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests),
+                        httpResponse,
+                        "Unauthorized"
+                    )
+            }
+            );
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.AuthenticationFailed, result.Category);
+        Assert.False(result.Retryable);
+        Assert.Equal(result.Message, message);
+
+        await sutProvider.GetDependency<ITeamsService>().Received(1).SendMessageToChannelAsync(
+            Arg.Is(AssertHelper.AssertPropertyEqual(_serviceUrl)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(_channelId)),
+            Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate))
+        );
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_ErrorResponseTooManyRequests_ReturnsRateLimited(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+        using var httpResponse = new HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests);
+
+        sutProvider.GetDependency<ITeamsService>()
+            .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(new ErrorResponseException("Server error")
+            {
+                Response = new HttpResponseMessageWrapper(
+                        httpResponse,
                         "Too Many Requests"
                     )
             }
@@ -172,6 +206,22 @@ public class TeamsIntegrationHandlerTests
             Arg.Is(AssertHelper.AssertPropertyEqual(_channelId)),
             Arg.Is(AssertHelper.AssertPropertyEqual(message.RenderedTemplate))
         );
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleAsync_ErrorResponseWithoutResponse_ReturnsTransientError(IntegrationMessage<TeamsIntegrationConfigurationDetails> message)
+    {
+        var sutProvider = GetSutProvider();
+        message.Configuration = new TeamsIntegrationConfigurationDetails(_channelId, _serviceUrl);
+
+        sutProvider.GetDependency<ITeamsService>()
+            .SendMessageToChannelAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<string>())
+            .ThrowsAsync(new ErrorResponseException("No response"));
+        var result = await sutProvider.Sut.HandleAsync(message);
+
+        Assert.False(result.Success);
+        Assert.Equal(IntegrationFailureCategory.TransientError, result.Category);
+        Assert.True(result.Retryable);
     }
 
     [Theory, BitAutoData]
