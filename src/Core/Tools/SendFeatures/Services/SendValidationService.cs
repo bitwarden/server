@@ -8,9 +8,12 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using System.Text.Json;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Tools.Services;
 
@@ -22,6 +25,7 @@ public class SendValidationService : ISendValidationService
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly ICipherRepository _cipherRepository;
 
     public SendValidationService(
         IUserRepository userRepository,
@@ -29,7 +33,8 @@ public class SendValidationService : ISendValidationService
         IUserService userService,
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        ICipherRepository cipherRepository)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -37,6 +42,7 @@ public class SendValidationService : ISendValidationService
         _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
+        _cipherRepository = cipherRepository;
     }
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
@@ -61,6 +67,8 @@ public class SendValidationService : ISendValidationService
                     "The total number of characters in the Emails field must not exceed 2,500 characters.");
             }
         }
+
+        await ValidateItemOwnerAsync(userId, send);
 
         // The nullable userId is intended to support organization-owned Sends (never implemented).
         // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
@@ -124,6 +132,30 @@ public class SendValidationService : ISendValidationService
                 units += "s";
             }
             throw new BadRequestException($"Due to an Enterprise policy your Sends must have deletion dates no more than {duration} {units} from their creation dates");
+        }
+    }
+
+    /// <summary>
+    /// Ensures the item an Item Send references belongs to the Send's owner.
+    /// </summary>
+    private async Task ValidateItemOwnerAsync(Guid? userId, Send send)
+    {
+        if (send.Type != SendType.Item || string.IsNullOrEmpty(send.Data))
+        {
+            return;
+        }
+
+        var itemId = JsonSerializer.Deserialize<SendItemData>(send.Data)?.Metadata?.ItemId;
+        if (!itemId.HasValue)
+        {
+            return;
+        }
+
+        // Same error for missing and foreign items, so item ids cannot be probed.
+        var cipher = userId.HasValue ? await _cipherRepository.GetByIdAsync(itemId.Value) : null;
+        if (cipher == null || cipher.UserId != userId)
+        {
+            throw new BadRequestException("Item not found.");
         }
     }
 

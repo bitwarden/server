@@ -10,7 +10,10 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -314,5 +317,63 @@ public class SendValidationServiceTests
             Assert.Equal($"Due to an Enterprise policy your Sends must have deletion dates no more than {kvp.Value} from their creation dates", exception.Message);
         }
 
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemNotOwned_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, Cipher cipher)
+    {
+        cipher.UserId = Guid.NewGuid();
+        SetItemId(send, cipher.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemNotFound_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, Guid itemId)
+    {
+        SetItemId(send, itemId);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemWithoutUser_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid itemId)
+    {
+        SetItemId(send, itemId);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(null, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemOwned_Success(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId, Cipher cipher)
+    {
+        cipher.UserId = userId;
+        SetItemId(send, cipher.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
+
+        // No exception implies success
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    private static void SetItemId(Send send, Guid itemId)
+    {
+        send.Type = SendType.Item;
+        send.Emails = null;
+        send.Data = System.Text.Json.JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1,
+            "sealed_blob", new SendItemMetadata { ItemId = itemId }));
     }
 }
