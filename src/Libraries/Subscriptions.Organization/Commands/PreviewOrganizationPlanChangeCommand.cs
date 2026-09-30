@@ -144,7 +144,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         var subscriptionDetails = new InvoiceSubscriptionDetailsOptions
         {
             Items = items,
-            ProrationBehavior = ProrationBehavior.AlwaysInvoice
+            ProrationBehavior = ProrationBehavior.AlwaysInvoice,
+            BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
         };
 
         // A trialing subscription isn't charged for the change now (the proration is $0). End the trial in the
@@ -189,7 +190,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             items.Add(new InvoiceSubscriptionDetailsItemOptions { Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = smSeats });
         }
 
-        return new InvoiceSubscriptionDetailsOptions { Items = items };
+        return new InvoiceSubscriptionDetailsOptions { Items = items, BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }, ProrationBehavior = ProrationBehavior.AlwaysInvoice };
     }
 
     private OrganizationSubscriptionChangeSet BuildPlanChangeSet(OrganizationEntity organization, Plan currentPlan,
@@ -292,7 +293,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
 
     private List<InvoiceCustomerDetailsTaxIdOptions>? ResolveTaxIds(string country, TaxID? taxId)
     {
-        if (taxId == null)
+        if (taxId is null || string.IsNullOrWhiteSpace(taxId.Value))
         {
             return null;
         }
