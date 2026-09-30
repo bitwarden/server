@@ -138,7 +138,8 @@ public class SendsControllerTests : IDisposable
     public async Task Get_WithItemSendFeatureFlagOff_ThrowsException(Guid sendId, Send send)
     {
         send.Type = SendType.Item;
-        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
+            new SendItemMetadata { ItemId = Guid.NewGuid() });
         send.Data = JsonSerializer.Serialize(itemData);
         _sendOwnerQuery.Get(sendId, Arg.Any<ClaimsPrincipal>()).Returns(send);
         _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(false);
@@ -151,7 +152,8 @@ public class SendsControllerTests : IDisposable
     {
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
         send1.Type = SendType.Item;
-        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }");
+        var itemData = new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
+            new SendItemMetadata { ItemId = Guid.NewGuid() });
         send1.Data = JsonSerializer.Serialize(itemData);
         send2.Type = SendType.Text;
         var textData = new SendTextData("Test Send", "Notes", "Sample text", false);
@@ -449,7 +451,7 @@ public class SendsControllerTests : IDisposable
         {
             Type = SendType.Item,
             Key = "key",
-            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() } },
             DeletionDate = DateTime.UtcNow.AddDays(7)
         };
 
@@ -475,7 +477,7 @@ public class SendsControllerTests : IDisposable
         {
             Type = SendType.Item,
             Key = "key",
-            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }" },
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "{ \"name\": \"ENCRYPTED_VALUE\" }", Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() } },
             DeletionDate = DateTime.UtcNow.AddDays(7)
         };
 
@@ -1131,7 +1133,8 @@ public class SendsControllerTests : IDisposable
         {
             Id = sendId,
             Type = SendType.Item,
-            Data = JsonSerializer.Serialize(new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }")),
+            Data = JsonSerializer.Serialize(new SendItemData("Test Send", "Notes", SendEncryptionType.V1, "{ encrypted_field: \"ENCRYPTED_STRING\" }",
+            new SendItemMetadata { ItemId = Guid.NewGuid() })),
             DeletionDate = DateTime.UtcNow.AddDays(7),
             ExpirationDate = null,
             Disabled = false,

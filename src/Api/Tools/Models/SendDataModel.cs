@@ -12,7 +12,7 @@ public class SendDataModel
     {
         EncryptionVersion = data.EncryptionVersion;
         Data = data.Data;
-        Metadata = data.Metadata == null ? null : new SendItemMetadataModel(data.Metadata);
+        Metadata = new SendItemMetadataModel(data.Metadata);
     }
 
     public SendEncryptionType EncryptionVersion { get; set; } = SendEncryptionType.V1;
@@ -20,5 +20,6 @@ public class SendDataModel
     [StringLength(500000)]
     public string? Data { get; set; }
 
+    [Required]
     public SendItemMetadataModel? Metadata { get; set; }
 }

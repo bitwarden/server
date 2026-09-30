@@ -21,7 +21,7 @@ public class SendItemData : SendData
     /// <param name="data">Encrypted Send data</param>
     /// <param name="metadata">Unencrypted Send item metadata</param>
     public SendItemData(string name, string? notes, SendEncryptionType encryptionVersion, string? data,
-        SendItemMetadata? metadata = null)
+        SendItemMetadata metadata)
         : base(name, notes)
     {
         EncryptionVersion = encryptionVersion;
@@ -33,5 +33,5 @@ public class SendItemData : SendData
 
     public string? Data { get; set; }
 
-    public SendItemMetadata? Metadata { get; set; }
+    public SendItemMetadata Metadata { get; set; } = new();
 }

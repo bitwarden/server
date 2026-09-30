@@ -79,7 +79,8 @@ public class SendRequestModelTests
             Data = new SendDataModel
             {
                 EncryptionVersion = SendEncryptionType.V1,
-                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }"
+                Data = "{ \"name\": \"ENCRYPTED_VALUE\" }",
+                Metadata = new SendItemMetadataModel { ItemId = Guid.NewGuid() },
             },
             Type = SendType.Item,
         };
@@ -122,6 +123,38 @@ public class SendRequestModelTests
 
         var sendItemData = JsonSerializer.Deserialize<SendItemData>(send.Data);
         Assert.Equal(itemId, sendItemData.Metadata?.ItemId);
+    }
+
+    [Fact]
+    public void ToSend_Item_NullMetadata()
+    {
+        var sendRequest = new SendRequestModel
+        {
+            AuthType = AuthType.Email,
+            DeletionDate = DateTime.UtcNow.AddDays(5),
+            Key = "encrypted_key",
+            Name = "encrypted_name",
+            Emails = "owner@bitwarden.com",
+            Data = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "sealed_blob" },
+            Type = SendType.Item,
+        };
+
+        var sendAuthorizationService = Substitute.For<ISendAuthorizationService>();
+
+        Assert.Throws<ArgumentNullException>(() => sendRequest.ToSend(Guid.NewGuid(), sendAuthorizationService));
+    }
+
+    [Fact]
+    public void SendDataModel_MissingMetadata_IsInvalid()
+    {
+        var model = new SendDataModel { EncryptionVersion = SendEncryptionType.V1, Data = "sealed_blob" };
+
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        var valid = System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+            model, new System.ComponentModel.DataAnnotations.ValidationContext(model), results, true);
+
+        Assert.False(valid);
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(SendDataModel.Metadata)));
     }
 
     [Fact]

@@ -334,8 +334,10 @@ public class SendRequestModel
     private SendItemData ToSendItemData()
     {
         var data = Data ?? throw new ArgumentNullException(nameof(Data), "Data is required for item sends.");
+        var metadata = data.Metadata ??
+                       throw new ArgumentNullException(nameof(Data.Metadata), "Metadata is required for item sends.");
         return new SendItemData(Name ?? string.Empty, Notes, data.EncryptionVersion, data.Data,
-            data.Metadata?.ToSendItemMetadata());
+            metadata.ToSendItemMetadata());
     }
 }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Tools.Models.Data;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Tools.Models.Data;
 
 namespace Bit.Api.Tools.Models;
 
@@ -11,7 +12,8 @@ public class SendItemMetadataModel
         ItemId = metadata.ItemId;
     }
 
-    public Guid? ItemId { get; set; }
+    [Required]
+    public Guid ItemId { get; set; }
 
     public SendItemMetadata ToSendItemMetadata() => new() { ItemId = ItemId };
 }

@@ -10,5 +10,5 @@ public class SendItemMetadata
     /// <summary>
     /// Id of the vault item (cipher) being sent.
     /// </summary>
-    public Guid? ItemId { get; set; }
+    public Guid ItemId { get; set; }
 }
