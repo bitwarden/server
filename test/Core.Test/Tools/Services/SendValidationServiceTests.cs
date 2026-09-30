@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -367,6 +368,45 @@ public class SendValidationServiceTests
 
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdUnchanged_SkipsOwnershipCheck(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, Guid itemId)
+    {
+        // E.g. removing auth from a Send whose item was later deleted must still succeed.
+        SetItemId(send, itemId);
+        SetItemId(stored, itemId);
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdChanged_NotOwned_Throws(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, Cipher cipher)
+    {
+        cipher.UserId = Guid.NewGuid();
+        SetItemId(send, cipher.Id);
+        SetItemId(stored, Guid.NewGuid());
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ValidateUserCanSaveAsync(userId, send));
+        Assert.Equal("Item not found.", exception.Message);
+    }
+
+    private static void StubPolicies(SutProvider<SendValidationService> sutProvider, Guid userId)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(userId)
+            .Returns(new DisableSendPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(userId)
+            .Returns(new SendOptionsPolicyRequirement());
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendControlsPolicyRequirement>(userId)
+            .Returns(new SendControlsPolicyRequirement { WhoCanAccess = SendWhoCanAccessType.Any });
     }
 
     private static void SetItemId(Send send, Guid itemId)

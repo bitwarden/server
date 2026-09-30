@@ -12,6 +12,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 
@@ -26,6 +27,7 @@ public class SendValidationService : ISendValidationService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
     private readonly ICipherRepository _cipherRepository;
+    private readonly ISendRepository _sendRepository;
 
     public SendValidationService(
         IUserRepository userRepository,
@@ -34,7 +36,8 @@ public class SendValidationService : ISendValidationService
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
         IPricingClient pricingClient,
-        ICipherRepository cipherRepository)
+        ICipherRepository cipherRepository,
+        ISendRepository sendRepository)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -43,6 +46,7 @@ public class SendValidationService : ISendValidationService
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
         _cipherRepository = cipherRepository;
+        _sendRepository = sendRepository;
     }
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
@@ -137,18 +141,25 @@ public class SendValidationService : ISendValidationService
 
     /// <summary>
     /// Ensures the item an Item Send references belongs to the Send's owner.
+    /// Only a new or changed item id is checked, so saves that keep it (e.g. removing auth after
+    /// the item was deleted) still succeed.
     /// </summary>
     private async Task ValidateItemOwnerAsync(Guid? userId, Send send)
     {
-        if (send.Type != SendType.Item || string.IsNullOrEmpty(send.Data))
+        var itemId = ItemIdOf(send);
+        if (!itemId.HasValue)
         {
             return;
         }
 
-        var itemId = JsonSerializer.Deserialize<SendItemData>(send.Data)?.Metadata?.ItemId;
-        if (!itemId.HasValue)
+        // `send` already carries the incoming data; compare against the persisted Send.
+        if (send.Id != default)
         {
-            return;
+            var stored = await _sendRepository.GetByIdAsync(send.Id);
+            if (stored != null && ItemIdOf(stored) == itemId)
+            {
+                return;
+            }
         }
 
         // Same error for missing and foreign items, so item ids cannot be probed.
@@ -157,6 +168,16 @@ public class SendValidationService : ISendValidationService
         {
             throw new BadRequestException("Item not found.");
         }
+    }
+
+    private static Guid? ItemIdOf(Send send)
+    {
+        if (send.Type != SendType.Item || string.IsNullOrEmpty(send.Data))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<SendItemData>(send.Data)?.Metadata?.ItemId;
     }
 
     public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)
