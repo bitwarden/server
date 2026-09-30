@@ -198,4 +198,93 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetAllWithAccess_AsOwner_ReturnsBothSharedAndDefaultCollections()
+    {
+        // Arrange
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var groupRepository = _factory.GetService<IGroupRepository>();
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = $"GetAllWithAccess-Group-{Guid.NewGuid()}",
+            ExternalId = $"GetAllWithAccess-Group-{Guid.NewGuid()}",
+        });
+
+        // Shared collection with a user grant
+        var sharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            $"Shared-{Guid.NewGuid()}",
+            users:
+            [
+                new CollectionAccessSelection { Id = _organizationOwner.Id, ReadOnly = true, HidePasswords = false, Manage = false }
+            ]);
+
+        // Default user collection
+        var defaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Default-{Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null,
+        [
+            new CollectionAccessSelection { Id = _organizationOwner.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Collection reachable only through a group grant
+        var groupOnlyCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            $"GroupOnly-{Guid.NewGuid()}",
+            groups:
+            [
+                new CollectionAccessSelection { Id = group.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+            ]);
+
+        // Act
+        var response = await _client.GetFromJsonAsync<Bit.Api.Models.Response.ListResponseModel<Bit.Api.AdminConsole.Models.Response.CollectionAccessDetailsResponseModel>>(
+            $"organizations/{_organization.Id}/collections/access");
+
+        // Assert
+        Assert.NotNull(response);
+
+        var ids = response.Data.Select(c => c.Id).ToHashSet();
+        Assert.Contains(sharedCollection.Id, ids);
+        Assert.Contains(defaultCollection.Id, ids);
+        Assert.Contains(groupOnlyCollection.Id, ids);
+
+        var sharedResult = response.Data.Single(c => c.Id == sharedCollection.Id);
+        Assert.Equal(CollectionType.SharedCollection, sharedResult.Type);
+        Assert.NotEmpty(sharedResult.Users);
+
+        var defaultResult = response.Data.Single(c => c.Id == defaultCollection.Id);
+        Assert.Equal(CollectionType.DefaultUserCollection, defaultResult.Type);
+        Assert.NotEmpty(defaultResult.Users);
+
+        var groupOnlyResult = response.Data.Single(c => c.Id == groupOnlyCollection.Id);
+        Assert.Equal(CollectionType.SharedCollection, groupOnlyResult.Type);
+        Assert.NotEmpty(groupOnlyResult.Groups);
+    }
+
+    [Fact]
+    public async Task GetAllWithAccess_AsUserWithoutAccessReports_ReturnsUnauthorized()
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            _organization.Id,
+            OrganizationUserType.User);
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/collections/access");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
