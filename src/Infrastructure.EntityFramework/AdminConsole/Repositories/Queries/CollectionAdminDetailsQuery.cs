@@ -66,7 +66,9 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
         if (_organizationId.HasValue)
         {
             baseCollectionQuery = _includeAllTypes
-                ? baseCollectionQuery.Where(x => x.c.OrganizationId == _organizationId)
+                ? baseCollectionQuery.Where(x =>
+                    x.c.OrganizationId == _organizationId &&
+                    (x.c.Type == CollectionType.SharedCollection || x.c.Type == CollectionType.DefaultUserCollection))
                 : baseCollectionQuery.Where(x =>
                     x.c.OrganizationId == _organizationId &&
                     x.c.Type == CollectionType.SharedCollection);
