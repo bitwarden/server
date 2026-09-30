@@ -110,7 +110,7 @@ public class RedeemAnnualUpgradeOfferCommand(
             StartDate = periodEnd,
             EndDate = periodEnd.AddYears(1),
             Items = phase2Items,
-            Discounts = ReusedPhaseDiscounts(subscription),
+            Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
             ProrationBehavior = ProrationBehavior.None
         };
 
@@ -141,10 +141,4 @@ public class RedeemAnnualUpgradeOfferCommand(
 
         return new None();
     });
-
-    // Reuse existing discounts (nothing re-minted); null lets Stripe inherit the customer's at renewal.
-    private static List<SubscriptionSchedulePhaseDiscountOptions>? ReusedPhaseDiscounts(Subscription subscription) =>
-        subscription.Discounts is { Count: > 0 }
-            ? [.. subscription.Discounts.Select(discount => new SubscriptionSchedulePhaseDiscountOptions { Discount = discount.Id })]
-            : null;
 }
