@@ -185,9 +185,14 @@ rabbitmqctl set_policy dlq-ttl "^integration-dead-letter-queue$" '{"message-ttl"
 
 Azure Service Bus dead letters do not expire. TTL does not apply to a `$DeadLetterQueue`, and Azure holds those
 messages until a receiver completes them. `DeadLetterCleanupHostedService` in the events processor is
-what completes them. It sweeps hourly, receiving from each integration subscription's dead letter sub-queue and
-deleting every message enqueued longer ago than `GlobalSettings.EventLogging.AzureServiceBus.DeadLetterRetention`.
+what completes them. It receives from each integration subscription's dead letter sub-queue and
+deletes every message enqueued longer ago than `GlobalSettings.EventLogging.AzureServiceBus.DeadLetterRetention`.
 Zero or a negative value disables the sweep and the service exits at startup, which is the default.
+
+`GlobalSettings.EventLogging.AzureServiceBus.DeadLetterSweepInterval` is how long the service waits between sweeps
+and defaults to one hour. It must be positive and no longer than the 49 days `Task.Delay` accepts; outside that range
+the service logs a warning and sweeps on the default interval instead. Configuration binds a bare number as days, so
+an interval meant as hours needs `hh:mm:ss`.
 
 A sweep stops at the first message inside the retention window, because dead letters are received oldest first.
 

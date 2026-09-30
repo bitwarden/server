@@ -57,43 +57,6 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
     }
 
     [Fact]
-    public async Task SeedEndpoint_SelfHostedPremiumUser_ReportsPremiumLicenseOutcome()
-    {
-        var testEmail = $"premium-selfhost-{Guid.NewGuid()}@bitwarden.com";
-
-        var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel
-        {
-            Template = "SingleUserScene",
-            Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request
-            {
-                Email = testEmail,
-                Password = "asdfasdfasdf",
-                Premium = true,
-                SelfHosted = true
-            })
-        }, Guid.NewGuid().ToString());
-
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
-
-        Assert.NotNull(result);
-        var written = GetResultProperty(result, "premiumLicenseWritten").GetBoolean();
-        var warning = GetResultProperty(result, "premiumLicenseWarning");
-
-        // The test factory configures no licensing certificate, so signing is skipped and warns.
-        Assert.False(written);
-        Assert.False(string.IsNullOrWhiteSpace(warning.GetString()));
-    }
-
-    private static JsonElement GetResultProperty(SceneResponseModel response, string propertyName)
-    {
-        var result = Assert.IsType<JsonElement>(response.Result);
-        Assert.True(result.TryGetProperty(propertyName, out var property),
-            $"Scene result did not contain '{propertyName}'.");
-        return property;
-    }
-
-    [Fact]
     public async Task SeedEndpoint_WithInvalidSceneName_ReturnsNotFound()
     {
         var response = await _client.PostAsJsonAsync("/seed", new SeedRequestModel

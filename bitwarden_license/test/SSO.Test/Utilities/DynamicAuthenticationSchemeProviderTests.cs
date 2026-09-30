@@ -8,6 +8,7 @@ using Bit.Core.Business.Sso;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authentication;
