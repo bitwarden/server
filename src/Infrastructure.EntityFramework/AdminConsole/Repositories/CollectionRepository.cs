@@ -438,12 +438,9 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var dbContext = GetDatabaseContext(scope);
             var query = CollectionAdminDetailsQuery.ByOrganizationIdAllTypes(organizationId, userId).Run(dbContext);
 
-            ICollection<CollectionAdminDetails> collections;
-
             // SQLite does not support the GROUP BY clause
-            if (dbContext.Database.IsSqlite())
-            {
-                collections = (await query.ToListAsync())
+            var collections = dbContext.Database.IsSqlite()
+                ? (await query.ToListAsync())
                     .GroupBy(c => new
                     {
                         c.Id,
@@ -473,44 +470,40 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         Unmanaged = collectionGroup.Key.Unmanaged,
                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
-                    }).ToList();
-            }
-            else
-            {
-                collections = await (from c in query
-                                     group c by new
-                                     {
-                                         c.Id,
-                                         c.OrganizationId,
-                                         c.Name,
-                                         c.CreationDate,
-                                         c.RevisionDate,
-                                         c.ExternalId,
-                                         c.Type,
-                                         c.Unmanaged,
-                                         c.DefaultUserCollectionEmail,
-                                         c.HasEnabledAccessRule
-                                     }
+                    }).ToList()
+                : await (from c in query
+                         group c by new
+                         {
+                             c.Id,
+                             c.OrganizationId,
+                             c.Name,
+                             c.CreationDate,
+                             c.RevisionDate,
+                             c.ExternalId,
+                             c.Type,
+                             c.Unmanaged,
+                             c.DefaultUserCollectionEmail,
+                             c.HasEnabledAccessRule
+                         }
                     into collectionGroup
-                                     select new CollectionAdminDetails
-                                     {
-                                         Id = collectionGroup.Key.Id,
-                                         OrganizationId = collectionGroup.Key.OrganizationId,
-                                         Name = collectionGroup.Key.Name,
-                                         CreationDate = collectionGroup.Key.CreationDate,
-                                         RevisionDate = collectionGroup.Key.RevisionDate,
-                                         ExternalId = collectionGroup.Key.ExternalId,
-                                         Type = collectionGroup.Key.Type,
-                                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
-                                         HidePasswords =
-                                             Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
-                                         Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
-                                         Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
-                                         Unmanaged = collectionGroup.Key.Unmanaged,
-                                         DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
-                                         HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
-                                     }).ToListAsync();
-            }
+                         select new CollectionAdminDetails
+                         {
+                             Id = collectionGroup.Key.Id,
+                             OrganizationId = collectionGroup.Key.OrganizationId,
+                             Name = collectionGroup.Key.Name,
+                             CreationDate = collectionGroup.Key.CreationDate,
+                             RevisionDate = collectionGroup.Key.RevisionDate,
+                             ExternalId = collectionGroup.Key.ExternalId,
+                             Type = collectionGroup.Key.Type,
+                             ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                             HidePasswords =
+                                 Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                             Manage = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Manage))),
+                             Assigned = Convert.ToBoolean(collectionGroup.Max(c => Convert.ToInt32(c.Assigned))),
+                             Unmanaged = collectionGroup.Key.Unmanaged,
+                             DefaultUserCollectionEmail = collectionGroup.Key.DefaultUserCollectionEmail,
+                             HasEnabledAccessRule = collectionGroup.Key.HasEnabledAccessRule
+                         }).ToListAsync();
 
             var collectionIds = collections.Select(c => c.Id).ToHashSet();
 
