@@ -512,36 +512,34 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                      }).ToListAsync();
             }
 
-            var groups = (from c in collections
-                          join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                          group cg by cg.CollectionId into g
-                          select g).ToList();
+            var collectionIds = collections.Select(c => c.Id).ToHashSet();
 
-            var users = (from c in collections
-                         join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                         group cu by cu.CollectionId into u
-                         select u).ToList();
+            var groups = (from cg in dbContext.CollectionGroups
+                          where collectionIds.Contains(cg.CollectionId)
+                          select cg).ToLookup(cg => cg.CollectionId);
+
+            var users = (from cu in dbContext.CollectionUsers
+                         where collectionIds.Contains(cu.CollectionId)
+                         select cu).ToLookup(cu => cu.CollectionId);
 
             foreach (var collection in collections)
             {
-                collection.Groups = groups
-                    .FirstOrDefault(g => g.Key == collection.Id)?
+                collection.Groups = groups[collection.Id]
                     .Select(g => new CollectionAccessSelection
                     {
                         Id = g.GroupId,
                         HidePasswords = g.HidePasswords,
                         ReadOnly = g.ReadOnly,
                         Manage = g.Manage,
-                    }).ToList() ?? new List<CollectionAccessSelection>();
-                collection.Users = users
-                    .FirstOrDefault(u => u.Key == collection.Id)?
+                    }).ToList();
+                collection.Users = users[collection.Id]
                     .Select(c => new CollectionAccessSelection
                     {
                         Id = c.OrganizationUserId,
                         HidePasswords = c.HidePasswords,
                         ReadOnly = c.ReadOnly,
                         Manage = c.Manage
-                    }).ToList() ?? new List<CollectionAccessSelection>();
+                    }).ToList();
             }
 
             return collections;

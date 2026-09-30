@@ -218,32 +218,28 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var allCollections = sharedCollections.Concat(myItemsCollections).ToList();
 
             var groups = (await results.ReadAsync<CollectionGroup>())
-                .GroupBy(g => g.CollectionId)
-                .ToList();
+                .ToLookup(g => g.CollectionId);
             var users = (await results.ReadAsync<CollectionUser>())
-                .GroupBy(u => u.CollectionId)
-                .ToList();
+                .ToLookup(u => u.CollectionId);
 
             foreach (var collection in allCollections)
             {
-                collection.Groups = groups
-                    .FirstOrDefault(g => g.Key == collection.Id)?
+                collection.Groups = groups[collection.Id]
                     .Select(g => new CollectionAccessSelection
                     {
                         Id = g.GroupId,
                         HidePasswords = g.HidePasswords,
                         ReadOnly = g.ReadOnly,
                         Manage = g.Manage
-                    }).ToList() ?? new List<CollectionAccessSelection>();
-                collection.Users = users
-                    .FirstOrDefault(u => u.Key == collection.Id)?
+                    }).ToList();
+                collection.Users = users[collection.Id]
                     .Select(c => new CollectionAccessSelection
                     {
                         Id = c.OrganizationUserId,
                         HidePasswords = c.HidePasswords,
                         ReadOnly = c.ReadOnly,
                         Manage = c.Manage
-                    }).ToList() ?? new List<CollectionAccessSelection>();
+                    }).ToList();
             }
 
             return allCollections;
