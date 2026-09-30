@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Repositories;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Services;
