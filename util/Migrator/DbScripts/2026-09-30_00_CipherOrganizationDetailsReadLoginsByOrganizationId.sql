@@ -28,8 +28,6 @@ BEGIN
         [dbo].[OrganizationCipherDetailsCollectionsView] V
     WHERE
         V.[OrganizationId] = @OrganizationId
-        AND V.[Type] = 1 -- Logins
-    ORDER BY
-        V.[RevisionDate] DESC;
+        AND V.[Type] = 1; -- Logins
 END;
 GO
