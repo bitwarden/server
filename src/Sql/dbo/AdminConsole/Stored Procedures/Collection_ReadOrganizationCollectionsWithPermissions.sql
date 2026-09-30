@@ -5,7 +5,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- STEP 1. Copy the organization id into a local variable for the two loading queries.
+    -- STEP 1. Copy the organization id into a local variable for the loading queries.
     -- SQL Server compiles a procedure the first time it runs and reuses that plan for every
     -- later caller. Filtering the loading queries on a local variable makes SQL Server plan
     -- for the average organization instead of the first caller's size. Do NOT inline @OrgId
@@ -53,49 +53,9 @@ BEGIN
     FROM [dbo].[GroupUser]
     WHERE [OrganizationUserId] = @OrganizationUserId;
 
-    -- STEP 6. Result set 1: shared collections (Type = 0) with the caller's effective permission.
-    SELECT
-        [C].*,
-        MIN(CASE
-            WHEN COALESCE([CU].[ReadOnly], [CG].[ReadOnly], 0) = 0 THEN 0
-            ELSE 1
-        END) AS [ReadOnly],
-        MIN(CASE
-            WHEN COALESCE([CU].[HidePasswords], [CG].[HidePasswords], 0) = 0 THEN 0
-            ELSE 1
-        END) AS [HidePasswords],
-        MAX(CASE
-            WHEN COALESCE([CU].[Manage], [CG].[Manage], 0) = 0 THEN 0
-            ELSE 1
-        END) AS [Manage],
-        MAX(CASE
-            WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN 0
-            ELSE 1
-        END) AS [Assigned],
-        CASE
-            WHEN NOT EXISTS (SELECT 1 FROM #OrgCollectionUser [X] WHERE [X].[CollectionId] = [C].[Id] AND [X].[Manage] = 1)
-                AND NOT EXISTS (SELECT 1 FROM #OrgCollectionGroup [Y] WHERE [Y].[CollectionId] = [C].[Id] AND [Y].[Manage] = 1)
-            THEN 1
-            ELSE 0
-        END AS [Unmanaged],
-        MAX(CASE WHEN [AR].[Enabled] = 1 THEN 1 ELSE 0 END) AS [HasEnabledAccessRule]
-    FROM [dbo].[CollectionView] [C]
-    LEFT JOIN #OrgCollectionUser [CU]
-        ON [CU].[CollectionId] = [C].[Id] AND [CU].[OrganizationUserId] = @OrganizationUserId
-    LEFT JOIN @UserGroups [UG] ON [CU].[CollectionId] IS NULL
-    LEFT JOIN #OrgCollectionGroup [CG]
-        ON [CG].[CollectionId] = [C].[Id] AND [CG].[GroupId] = [UG].[GroupId]
-    LEFT JOIN [dbo].[AccessRule] [AR] ON [AR].[Id] = [C].[AccessRuleId]
-    WHERE [C].[OrganizationId] = @OrganizationId
-      AND [C].[Type] = 0
-    GROUP BY
-        [C].[Id], [C].[OrganizationId], [C].[Name], [C].[CreationDate], [C].[RevisionDate],
-        [C].[ExternalId], [C].[DefaultUserCollectionEmail], [C].[Type], [C].[AccessRuleId];
-
-    -- STEP 7. Result set 2: My Items collections (Type = 1) — always returned.
-    -- Access Intelligence needs these to attribute items in a member's personal vault
-    -- to that member. The existing endpoint omits them; this procedure always includes them.
-    -- Same logic as step 6 with Type = 1 and flags cast to BIT.
+    -- STEP 6. Result set 1: all collections (Type IN (0, 1)) with the caller's effective permission.
+    -- Shared collections (Type = 0) and My Items collections (Type = 1) are returned together.
+    -- Access Intelligence needs My Items collections to attribute items in a member's personal vault.
     SELECT
         [C].*,
         CAST(MIN(CASE
@@ -129,12 +89,12 @@ BEGIN
         ON [CG].[CollectionId] = [C].[Id] AND [CG].[GroupId] = [UG].[GroupId]
     LEFT JOIN [dbo].[AccessRule] [AR] ON [AR].[Id] = [C].[AccessRuleId]
     WHERE [C].[OrganizationId] = @OrganizationId
-      AND [C].[Type] = 1
+      AND [C].[Type] IN (0, 1)
     GROUP BY
         [C].[Id], [C].[OrganizationId], [C].[Name], [C].[CreationDate], [C].[RevisionDate],
         [C].[ExternalId], [C].[DefaultUserCollectionEmail], [C].[Type], [C].[AccessRuleId];
 
-    -- STEP 8. Result sets 3 and 4: who is assigned to each collection.
+    -- STEP 7. Result sets 2 and 3: who is assigned to each collection.
     -- Group grants first, then member grants. The C# reader depends on that order.
     SELECT [CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage]
     FROM #OrgCollectionGroup;

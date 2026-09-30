@@ -213,9 +213,7 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                 new { OrganizationId = organizationId, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            var sharedCollections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
-            var myItemsCollections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
-            var allCollections = sharedCollections.Concat(myItemsCollections).ToList();
+            var allCollections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
 
             var groups = (await results.ReadAsync<CollectionGroup>())
                 .ToLookup(g => g.CollectionId);
