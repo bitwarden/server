@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
@@ -35,6 +36,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(sendAuthQuery);
             });
         }).CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId); // No email
 
@@ -70,7 +72,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 // Mock OTP token provider
                 var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
-                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(generatedToken);
                 services.AddSingleton(otpProvider);
 
@@ -79,6 +81,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(mailService);
             });
         }).CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
@@ -115,7 +118,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 // Mock OTP token provider to validate successfully
                 var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
-                otpProvider.ValidateTokenAsync(otp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                otpProvider.ValidateTokenAsync(otp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(true);
                 services.AddSingleton(otpProvider);
 
@@ -123,6 +126,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(mailService);
             });
         }).CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: otp);
 
@@ -159,7 +163,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 // Mock OTP token provider to validate as false
                 var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
-                otpProvider.ValidateTokenAsync(invalidOtp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                otpProvider.ValidateTokenAsync(invalidOtp, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns(false);
                 services.AddSingleton(otpProvider);
 
@@ -167,6 +171,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(mailService);
             });
         }).CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email, emailOtp: invalidOtp);
 
@@ -201,7 +206,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
 
                 // Mock OTP token provider to fail generation
                 var otpProvider = Substitute.For<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>();
-                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+                otpProvider.GenerateTokenAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
                     .Returns((string)null);
                 services.AddSingleton(otpProvider);
 
@@ -209,6 +214,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
                 services.AddSingleton(mailService);
             });
         }).CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId, email: email); // Email but no OTP
 
@@ -255,6 +261,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         });
 
         var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(RequestHeaderNames.DeviceIdentifier, SendAccessTestUtilities.DeviceIdentifier);
 
         var cacheKey = string.Format(
             CultureInfo.InvariantCulture,

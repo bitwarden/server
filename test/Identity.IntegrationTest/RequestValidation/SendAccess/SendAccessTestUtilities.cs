@@ -9,6 +9,9 @@ namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 public static class SendAccessTestUtilities
 {
+    /// <summary>A valid device identifier for tests that are not about the identifier itself.</summary>
+    public const string DeviceIdentifier = "send-access-test-device-identifier";
+
     public static FormUrlEncodedContent CreateTokenRequestBody(
         Guid sendId,
         string email = null,

@@ -2,6 +2,8 @@
 using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Tools.Models.Data;
 using Bit.Identity.IdentityServer.Enums;
@@ -17,7 +19,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 public class SendEmailOtpRequestValidator(
     ILogger<SendEmailOtpRequestValidator> logger,
     IOtpTokenProvider<DefaultOtpTokenProviderOptions> otpTokenProvider,
-    IMailService mailService) : ISendAuthenticationMethodValidator<EmailOtp>
+    IMailService mailService,
+    ICurrentContext currentContext) : ISendAuthenticationMethodValidator<EmailOtp>
 {
 
     /// <summary>
@@ -26,11 +29,26 @@ public class SendEmailOtpRequestValidator(
     private static readonly Dictionary<string, string> _sendEmailOtpValidatorErrorDescriptions = new()
     {
         { SendAccessConstants.EmailOtpValidatorResults.EmailRequired, $"{SendAccessConstants.TokenRequest.Email} is required." },
-        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." }
+        { SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired, $"{SendAccessConstants.TokenRequest.Email} and {SendAccessConstants.TokenRequest.Otp} are required." },
+        { SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired, $"{RequestHeaderNames.DeviceIdentifier} header is required." },
+        { SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid, $"{RequestHeaderNames.DeviceIdentifier} header is invalid." }
     };
 
     public async Task<GrantValidationResult> ValidateRequestAsync(ExtensionGrantValidationContext context, EmailOtp authMethod, Guid sendId)
     {
+        // Checked before anything about the Send or the email, so the outcome depends only on the request's
+        // own device identifier.
+        var deviceIdentifier = currentContext.DeviceIdentifier;
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired);
+        }
+
+        if (deviceIdentifier.Length > Device.MaxIdentifierLength)
+        {
+            return BuildErrorResult(SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid);
+        }
+
         var request = context.Request.Raw;
         // get email
         var email = request.Get(SendAccessConstants.TokenRequest.Email);
@@ -57,11 +75,13 @@ public class SendEmailOtpRequestValidator(
         var uniqueIdentifierForTokenCache = string.Format(CultureInfo.InvariantCulture, SendAccessConstants.OtpToken.TokenUniqueIdentifier, sendId, email);
         if (string.IsNullOrEmpty(requestOtp))
         {
-            // Since the request doesn't have an OTP, generate one
+            // Since the request doesn't have an OTP, generate one. It is bound to the requesting device, so
+            // only a request carrying the same device identifier can redeem it.
             var token = await otpTokenProvider.GenerateTokenAsync(
                                     SendAccessConstants.OtpToken.TokenProviderName,
                                     SendAccessConstants.OtpToken.Purpose,
-                                    uniqueIdentifierForTokenCache);
+                                    uniqueIdentifierForTokenCache,
+                                    deviceIdentifier);
 
             // Verify that the OTP is generated
             if (string.IsNullOrEmpty(token))
@@ -83,7 +103,8 @@ public class SendEmailOtpRequestValidator(
                                 requestOtp,
                                 SendAccessConstants.OtpToken.TokenProviderName,
                                 SendAccessConstants.OtpToken.Purpose,
-                                uniqueIdentifierForTokenCache);
+                                uniqueIdentifierForTokenCache,
+                                deviceIdentifier);
 
         // If OTP is invalid return error result
         if (!otpResult)
@@ -105,6 +126,8 @@ public class SendEmailOtpRequestValidator(
         {
             case SendAccessConstants.EmailOtpValidatorResults.EmailRequired:
             case SendAccessConstants.EmailOtpValidatorResults.EmailAndOtpRequired:
+            case SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierRequired:
+            case SendAccessConstants.EmailOtpValidatorResults.DeviceIdentifierInvalid:
                 return new GrantValidationResult(TokenRequestErrors.InvalidRequest,
                     errorDescription: _sendEmailOtpValidatorErrorDescriptions[error],
                     new Dictionary<string, object>
