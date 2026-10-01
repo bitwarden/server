@@ -678,7 +678,7 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
-    public async Task Run_TaxIdCodeNotDerivable_SendsNoTaxId()
+    public async Task Run_TaxIdCodeNotDerivable_FallsBackToSubmittedCode()
     {
         var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
 
@@ -694,7 +694,9 @@ public class PreviewOrganizationPlanChangeCommandTests
             taxId: new TaxID("us_ein", "unknown")));
 
         Assert.NotNull(options);
-        Assert.Null(options!.CustomerDetails.TaxIds);
+        var taxId = Assert.Single(options!.CustomerDetails.TaxIds);
+        Assert.Equal("us_ein", taxId.Type);
+        Assert.Equal("unknown", taxId.Value);
     }
 
     private static PreviewOrganizationPlanChangeRequest Request(

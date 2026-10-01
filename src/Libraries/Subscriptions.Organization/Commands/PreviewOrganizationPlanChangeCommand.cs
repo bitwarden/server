@@ -182,7 +182,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             if (organization.Seats is not { } seats)
             {
                 logger.LogError(
-                    "Organization ({OrganizationId}) is missing a seat count required to preview its plan change", organization.Id);
+                    "Organization ({OrganizationId}) is missing a Password Manager seat count required to preview its plan change", organization.Id);
                 throw new ConflictException(InvalidSubscriptionMessage);
             }
 
@@ -194,7 +194,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             if (organization.SmSeats is not { } smSeats)
             {
                 logger.LogError(
-                    "Organization ({OrganizationId}) is missing a seat count required to preview its plan change", organization.Id);
+                    "Organization ({OrganizationId}) is missing a Secrets Manager seat count required to preview its plan change", organization.Id);
                 throw new ConflictException(InvalidSubscriptionMessage);
             }
 
@@ -217,7 +217,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             if (organization.Seats is not { } seats)
             {
                 logger.LogError(
-                    "Organization ({OrganizationId}) is missing a seat count required to preview its plan change", organization.Id);
+                    "Organization ({OrganizationId}) is missing a Password Manager seat count required to preview its plan change", organization.Id);
                 throw new ConflictException(InvalidSubscriptionMessage);
             }
 
@@ -310,7 +310,17 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             return null;
         }
 
-        var taxIdCode = taxService.GetStripeTaxCode(country, taxId.Value);
+        var derivedCode = taxService.GetStripeTaxCode(country, taxId.Value);
+
+        if (derivedCode is null)
+        {
+            //This logs the type of code that is the fallback
+            logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                country, taxId.Code);
+        }
+
+        var taxIdCode = derivedCode ?? taxId.Code;
 
         if (string.IsNullOrWhiteSpace(taxIdCode))
         {
