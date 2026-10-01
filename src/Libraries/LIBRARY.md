@@ -56,12 +56,12 @@ settings class itself with XML doc comments.
 
 ### Endpoints
 
-Endpoints are minimal APIs defined inside the library. The library exposes a
-single `MapFooEndpoints` extension on `IEndpointRouteBuilder`. The host owns
-the route prefix; the library still owns the concerns that describe *what* it
-is — authorization policies, tags, endpoint filters, versioning — and attaches
-them to an empty `MapGroup("")` so every endpoint inside the library inherits
-them uniformly.
+Endpoints are minimal APIs defined inside the library. By default the library
+exposes a single `MapFooEndpoints` extension on `IEndpointRouteBuilder`. The
+host owns the route prefix; the library still owns the concerns that describe
+*what* it is — authorization policies, tags, endpoint filters, versioning —
+and attaches them to an empty `MapGroup("")` so every endpoint inside the
+library inherits them uniformly.
 
 ```csharp
 public static RouteGroupBuilder MapFooEndpoints(this IEndpointRouteBuilder builder)
@@ -87,6 +87,12 @@ library mapped.
 A library may also add a non-empty inner `MapGroup` when it needs a sub-prefix
 shared by all of its endpoints. That is a deliberate choice on top of the empty
 group, not a replacement for the host's outer prefix.
+
+A library may expose more than one `Map...Endpoints` extension when its
+endpoints need groups with different authorization — for example, one group
+that requires an organization role and another that any authenticated user may
+call. Each extension still attaches its own cross-cutting chain to an empty
+`MapGroup("")`, and the host mounts each one at its own prefix.
 
 Endpoint handlers and endpoint filters live inside the library and stay `internal`
 unless another library needs them.
