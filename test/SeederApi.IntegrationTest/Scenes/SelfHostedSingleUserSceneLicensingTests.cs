@@ -22,6 +22,9 @@ public class SelfHostedSingleUserSceneLicensingTests : IAsyncLifetime
         _factory.UpdateConfiguration("globalSettings:selfHosted", "true");
         // AddPush rejects self-hosted startup without an installation id.
         _factory.UpdateConfiguration("globalSettings:installation:id", "10000000-0000-0000-0000-000000000000");
+        // Self-hosted defaults data protection keys to /etc/bitwarden, which is not writable on CI.
+        _factory.UpdateConfiguration("globalSettings:dataProtection:directory",
+            Path.Combine(Path.GetTempPath(), $"seeder-dp-{Guid.NewGuid()}"));
         _client = _factory.CreateClient();
         _client.SetBasicAuthentication(Username, Password);
     }
