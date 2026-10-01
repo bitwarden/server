@@ -68,18 +68,33 @@ public class GetSubscriptionPreviewQuery(
         {
             case SubscriptionStatus.Incomplete:
             case SubscriptionStatus.IncompleteExpired:
-                return preview with { Suspension = subscription.Created.AddHours(23), GracePeriod = 1 };
+                return preview with
+                {
+                    // Only active and trialing subscribers get a next-charge date.
+                    InvoicePreview = invoicePreview with { NextPaymentAttempt = null },
+                    Suspension = subscription.Created.AddHours(23),
+                    GracePeriod = 1
+                };
 
             case SubscriptionStatus.Trialing:
             case SubscriptionStatus.Active:
                 return preview with
                 {
-                    InvoicePreview = invoicePreview with { NextPaymentAttempt = subscription.GetCurrentPeriodEnd() },
+                    // Invoices without a payment date (e.g. an all-proration invoice of pending charges)
+                    // fall back to the date those charges bill, then the current period end.
+                    InvoicePreview = invoicePreview with
+                    {
+                        NextPaymentAttempt = invoicePreview.NextPaymentAttempt
+                            ?? subscription.NextPendingInvoiceItemInvoice
+                            ?? subscription.GetCurrentPeriodEnd()
+                    },
                     CancelAt = subscription.CancelAt
                 };
 
             case SubscriptionStatus.PastDue:
             case SubscriptionStatus.Unpaid:
+                // Only active and trialing subscribers get a next-charge date.
+                preview = preview with { InvoicePreview = invoicePreview with { NextPaymentAttempt = null } };
                 var suspension = await Utilities.GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
                 return suspension == null
                     ? preview

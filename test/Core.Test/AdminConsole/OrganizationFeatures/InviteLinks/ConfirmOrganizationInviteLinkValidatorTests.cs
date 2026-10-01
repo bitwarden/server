@@ -23,6 +23,14 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class ConfirmOrganizationInviteLinkValidatorTests
 {
+    // The two confirmations that consume a seat: a brand-new membership (no existing row), or a Staged row,
+    // which is excluded from the occupied seat count.
+    public static IEnumerable<object?[]> SeatConsumingMemberships() =>
+    [
+        [null],
+        [new OrganizationUser { Status = OrganizationUserStatusType.Staged, Type = OrganizationUserType.User }],
+    ];
+
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
         ConfirmOrganizationInviteLinkValidationRequest request,
@@ -185,6 +193,40 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async Task ValidateAsync_WithUnverifiedEmail_ReturnsEmailNotVerified(
+        Organization organization,
+        OrganizationInviteLink inviteLink,
+        User user,
+        SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
+    {
+        // Arrange
+        SetupHappyPath(organization, inviteLink, user, sutProvider);
+        user.EmailVerified = false;
+
+        var request = new ConfirmOrganizationInviteLinkValidationRequest
+        {
+            OrganizationId = organization.Id,
+            Code = Guid.Parse(inviteLink.Code),
+            User = user,
+        };
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        var error = Assert.IsType<ConfirmEmailNotVerified>(result.AsError);
+        Assert.IsAssignableFrom<IValidationError>(error);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetByOrganizationEmailAsync(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
     public async Task ValidateAsync_WithEmailDomainNotAllowed_ReturnsEmailDomainNotAllowed(
         Organization organization,
         OrganizationInviteLink inviteLink,
@@ -320,6 +362,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Invited)]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Staged)]
     public async Task ValidateAsync_WithUnconfirmedExistingMember_IsAllowed(
         OrganizationUserStatusType status,
         Organization organization,
@@ -348,14 +391,19 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithNewUserAndNoSeatsAvailable_ReturnsOrganizationHasNoAvailableSeats(
+    [Theory]
+    [BitMemberAutoData(nameof(SeatConsumingMemberships))]
+    public async Task ValidateAsync_WithSeatConsumingMembershipAndNoSeatsAvailable_ReturnsOrganizationHasNoAvailableSeats(
+        OrganizationUser? existingOrganizationUser,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(existingOrganizationUser);
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.Seats = 4;
         organization.MaxAutoscaleSeats = 4;
@@ -646,6 +694,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         link.AllowedDomains = "[\"example.com\"]";
         link.SupportsConfirmation = true;
         user.Email = "user@example.com";
+        user.EmailVerified = true;
 
         sutProvider.GetDependency<IOrganizationInviteLinkRepository>()
             .GetByOrganizationIdAsync(org.Id)

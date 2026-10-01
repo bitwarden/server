@@ -17,6 +17,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.IntegrationTestCommon.Fido2;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
@@ -37,6 +38,27 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     const string _testEmail = "test+2farequired@email.com";
     const string _testPassword = "master_password_hash";
     const string _userEmailTwoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
+
+    // WebAuthn keys are persisted through JsonHelpers.LegacySerialize (Newtonsoft), which writes
+    // Descriptor.Id as standard Base64, not Fido2NetLib's Base64Url - this Id contains both '+'
+    // and '/'. Building the login challenge for this provider (WebAuthnTokenProvider.GenerateAsync
+    // -> LoadKeys) decodes it through Fido2's Base64UrlConverter, which v4 tightened to reject
+    // those characters unless relaxed decoding is enabled.
+    private static readonly string _userWebAuthnTwoFactor = BuildUserWebAuthnTwoFactorJson();
+
+    private static string BuildUserWebAuthnTwoFactorJson()
+    {
+        // PublicKey/UserHandle are never cryptographically validated in this flow (no assertion is
+        // verified until the client responds to the challenge) - only their shape matters. Use a
+        // real COSE_Key CBOR-encoded ECDSA P-256 public key (what Fido2NetLib actually stores)
+        // instead of a placeholder, so the fixture matches production data.
+        using var authenticator = new FakeWebAuthnAuthenticator();
+        var publicKey = Convert.ToBase64String(authenticator.GetCosePublicKey());
+        var userHandle = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        return "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"YubiKey\",\"Descriptor\":{\"Id\":\"RtCGgkCX5KOVz/9GaZxzxKHNEDQTW06jb4SlSt96DqA=\",\"Type\":0,\"Transports\":null},"
+            + "\"PublicKey\":\"" + publicKey + "\",\"UserHandle\":\"" + userHandle + "\","
+            + "\"SignatureCounter\":0,\"RegDate\":\"2024-01-01T00:00:00\",\"Migrated\":false,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}";
+    }
 
     private readonly IdentityApplicationFactory _factory;
 
@@ -60,6 +82,29 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
 
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_UserWebAuthnTwoFactorRequired_CredentialIdIsStandardBase64WithPlusAndSlash_ListsProvider()
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        await CreateUserAsync(localFactory, _testEmail, _userWebAuthnTwoFactor);
+
+        // Act
+        var context = await localFactory.ContextFromPasswordAsync(_testEmail, _testPassword);
+
+        // Assert
+        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        // Getting this far - rather than a 500 from an unhandled JsonException while building the
+        // WebAuthn challenge - is the whole point: it proves the stored credential decoded successfully.
+        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        Assert.Equal("Two factor required.", error);
+
+        var providers = AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
+        Assert.True(providers.TryGetProperty("7", out _));
     }
 
     [Fact]

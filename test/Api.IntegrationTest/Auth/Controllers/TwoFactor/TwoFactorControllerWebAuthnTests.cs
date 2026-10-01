@@ -11,6 +11,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
+using Bit.IntegrationTestCommon.Fido2;
 using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
@@ -91,6 +92,32 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
     }
 
     [Fact]
+    public async Task GetWebAuthn_CredentialIdIsStandardBase64WithPlusAndSlash_Succeeds()
+    {
+        // WebAuthn keys are persisted through JsonHelpers.LegacySerialize (Newtonsoft), which
+        // writes Descriptor.Id as standard Base64, not Fido2NetLib's Base64Url - ~74% of random
+        // 32-byte credential IDs contain '+' or '/' in that form. Reading them back constructs
+        // TwoFactorProviderWebAuthnData via Fido2's Base64UrlConverter (see
+        // TwoFactorWebAuthnDetails), which Fido2 v4 tightened to reject those characters unless
+        // relaxed decoding is enabled. This proves the real GET endpoint still reads such a key.
+        const string standardBase64Id = "RtCGgkCX5KOVz/9GaZxzxKHNEDQTW06jb4SlSt96DqA=";
+        await SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, BuildWebAuthnProvidersJsonWithDescriptorId(standardBase64Id));
+
+        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-webauthn",
+            new { MasterPasswordHash = MasterPasswordHash });
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var root = await ReadJsonRootAsync(getResponse);
+        var webAuthn = root.GetProperty("webAuthn");
+        Assert.True(webAuthn.GetProperty("enabled").GetBoolean());
+
+        var keys = webAuthn.GetProperty("keys");
+        Assert.Equal(JsonValueKind.Array, keys.ValueKind);
+        Assert.Equal("TestKey0", keys[0].GetProperty("name").GetString());
+    }
+
+    [Fact]
     public async Task GetWebAuthnChallenge_ValidToken_ReturnsOptionsForPut()
     {
         // get-webauthn mints the UV token; get-webauthn-challenge replays it (no new mint)
@@ -108,12 +135,18 @@ public class TwoFactorControllerWebAuthnTests : IClassFixture<ApiApplicationFact
         var challengeRoot = await ReadJsonRootAsync(challengeResponse);
         Assert.Equal(JsonValueKind.Object, challengeRoot.GetProperty("options").ValueKind);
 
+        // ICompleteTwoFactorWebAuthnRegistrationCommand is substituted to unconditionally succeed,
+        // so the attestation doesn't need to verify against the issued challenge — it only needs to
+        // satisfy AuthenticatorAttestationRawResponse's [Required] fields for model binding to pass.
+        using var authenticator = new FakeWebAuthnAuthenticator();
+        var attestation = authenticator.MakeAttestation(new byte[32], "localhost", "https://localhost:8080");
+
         var putResponse = await _client.PutAsJsonAsync("/two-factor/webauthn",
             new
             {
                 Id = 0,
                 Name = "TestKey",
-                DeviceResponse = new { },
+                DeviceResponse = attestation,
                 UserVerificationToken = uvToken,
             });
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);

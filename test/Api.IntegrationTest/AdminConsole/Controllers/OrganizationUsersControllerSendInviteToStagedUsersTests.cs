@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -12,7 +11,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using NSubstitute.ClearExtensions;
@@ -44,8 +42,6 @@ public class OrganizationUsersControllerSendInviteToStagedUsersTests
     public OrganizationUsersControllerSendInviteToStagedUsersTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-            featureService.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(true));
         _factory.SubstituteService<ISendOrganizationInvitesCommand>(_ => { });
 
         _client = _factory.CreateClient();

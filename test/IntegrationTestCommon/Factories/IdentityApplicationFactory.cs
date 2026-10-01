@@ -15,6 +15,7 @@ using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Test.Common.Helpers;
+using Core.Auth.Enums;
 using LinqToDB;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -37,6 +38,15 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     public ConcurrentDictionary<string, string> RegistrationTokens { get; private set; } = new ConcurrentDictionary<string, string>();
 
+    /// <summary>
+    /// Codes captured from the two-factor email, keyed by the account email they were sent for. Populated
+    /// alongside <see cref="RegistrationTokens"/> because the IMailService can only be substituted once;
+    /// a test that substitutes it again would drop the registration token capture that
+    /// <see cref="RegisterNewIdentityFactoryUserAsync"/> depends on. The latest code for an email wins,
+    /// matching the token provider, which overwrites its cache entry on each generate.
+    /// </summary>
+    public ConcurrentDictionary<string, string> TwoFactorEmailCodes { get; private set; } = new ConcurrentDictionary<string, string>();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // This allows us to use the official registration flow
@@ -51,6 +61,12 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
                         throw new InvalidOperationException("This email was already registered for new user registration.");
                     }
                 });
+
+            service.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+                    Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TwoFactorEmailPurpose>())
+                .ReturnsForAnyArgs(Task.CompletedTask)
+                .AndDoes(call => TwoFactorEmailCodes[call.ArgAt<string>(1)] = call.ArgAt<string>(2));
         });
 
         if (UseMockClientVersionValidator)

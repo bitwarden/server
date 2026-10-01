@@ -26,7 +26,8 @@ public class SendGridMailDeliveryServiceTests : IDisposable
             Mail =
             {
                 SendGridApiKey = "SendGridApiKey",
-                SendGridApiHost = "https://api.sendgrid.com"
+                SendGridApiHost = "https://api.sendgrid.com",
+                ReplyToEmail = "no-reply@bitwarden.com"
             }
         };
 
@@ -81,5 +82,45 @@ public class SendGridMailDeliveryServiceTests : IDisposable
                 msg.Received(1).SetClickTracking(false, false);
                 msg.Received(1).SetOpenTracking(false);
             }));
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WithReplyToAddress_SetsReplyTo()
+    {
+        var captured = await CaptureMessageAsync("support@bitwarden.com");
+
+        Assert.Equal("support@bitwarden.com", captured.ReplyTo.Email);
+        Assert.Equal("no-reply@bitwarden.com", captured.From.Email);
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WithoutReplyToAddress_LeavesReplyToUnset()
+    {
+        var captured = await CaptureMessageAsync(replyToAddress: null);
+
+        Assert.Null(captured.ReplyTo);
+    }
+
+    /// <remarks>
+    /// Captures at call time and asserts outside the callback: an <c>Arg.Do</c> passed to
+    /// <c>Received()</c> never runs, so assertions placed inside one do not execute.
+    /// </remarks>
+    private async Task<SendGridMessage> CaptureMessageAsync(string? replyToAddress)
+    {
+        SendGridMessage? captured = null;
+        _sendGridClient.SendEmailAsync(Arg.Do<SendGridMessage>(m => captured = m))
+            .Returns(new Response(System.Net.HttpStatusCode.OK, null, null));
+
+        await _sut.SendEmailAsync(new MailMessage
+        {
+            ToEmails = new List<string> { "to@example.com" },
+            Subject = "Subject",
+            HtmlContent = "HtmlContent",
+            TextContent = "TextContent",
+            ReplyToAddress = replyToAddress
+        });
+
+        Assert.NotNull(captured);
+        return captured;
     }
 }

@@ -71,11 +71,7 @@ public class StartTwoFactorWebAuthnRegistrationCommandTests
                 : maximumAllowedCredentialsGlobalSetting.NonPremiumMaximumAllowedCredentials - 1);
 
         var mockFido2 = sutProvider.GetDependency<IFido2>();
-        mockFido2.RequestNewCredential(
-                Arg.Any<Fido2User>(),
-                Arg.Any<List<PublicKeyCredentialDescriptor>>(),
-                Arg.Any<AuthenticatorSelection>(),
-                Arg.Any<AttestationConveyancePreference>())
+        mockFido2.RequestNewCredential(Arg.Any<RequestNewCredentialParams>())
             .Returns(new CredentialCreateOptions
             {
                 Challenge = [1, 2, 3],
@@ -126,11 +122,7 @@ public class StartTwoFactorWebAuthnRegistrationCommandTests
                 : maximumAllowedCredentialsGlobalSetting.NonPremiumMaximumAllowedCredentials);
 
         var mockFido2 = sutProvider.GetDependency<IFido2>();
-        mockFido2.RequestNewCredential(
-                Arg.Any<Fido2User>(),
-                Arg.Any<List<PublicKeyCredentialDescriptor>>(),
-                Arg.Any<AuthenticatorSelection>(),
-                Arg.Any<AttestationConveyancePreference>())
+        mockFido2.RequestNewCredential(Arg.Any<RequestNewCredentialParams>())
             .Returns(new CredentialCreateOptions
             {
                 Challenge = [1, 2, 3],

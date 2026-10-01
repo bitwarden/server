@@ -18,7 +18,7 @@ BEGIN
     WHERE
         AR.[RequesterId] = @RequesterId
         AND AR.[CipherId] = @CipherId
-        AND AR.[Status] = 1 -- Approved
+        AND AR.[Action] = 1 -- Approved
         AND AR.[NotAfter] > @Now
         AND AR.[ExtensionOfLeaseId] IS NULL
         AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])

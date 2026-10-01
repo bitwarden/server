@@ -3,6 +3,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Fido2NetLib;
+using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
@@ -30,8 +31,17 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
-        if (success.Result == null)
+        RegisteredPublicKeyCredential success;
+        try
+        {
+            success = await _fido2.MakeNewCredentialAsync(new MakeNewCredentialParams
+            {
+                AttestationResponse = attestationResponse,
+                OriginalOptions = options,
+                IsCredentialIdUniqueToUserCallback = callback
+            });
+        }
+        catch (Fido2VerificationException)
         {
             return null;
         }
@@ -39,11 +49,11 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         var credential = new WebAuthnCredential
         {
             Name = name,
-            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
-            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
-            Type = success.Result.CredType,
-            AaGuid = success.Result.Aaguid,
-            Counter = (int)success.Result.Counter,
+            CredentialId = CoreHelpers.Base64UrlEncode(success.Id),
+            PublicKey = CoreHelpers.Base64UrlEncode(success.PublicKey),
+            Type = success.AttestationFormat,
+            AaGuid = success.AaGuid,
+            Counter = (int)success.SignCount,
             UserId = user.Id,
             SupportsPrf = supportsPrf,
             EncryptedUserKey = encryptedUserKey,

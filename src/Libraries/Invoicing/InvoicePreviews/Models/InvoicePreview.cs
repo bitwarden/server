@@ -31,6 +31,6 @@ public record InvoicePreview
     /// <summary>What the subscriber is actually charged, in dollars. Differs from Total when customer credit applies.</summary>
     public required decimal AmountDue { get; init; }
 
-    /// <summary>Null from the projection; set downstream from the subscription's current period end, not the invoice's next payment attempt (they diverge during dunning).</summary>
+    /// <summary>When the subscriber is next charged.</summary>
     public DateTime? NextPaymentAttempt { get; init; }
 }
