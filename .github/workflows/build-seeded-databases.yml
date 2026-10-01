@@ -223,6 +223,11 @@ jobs:
             | while read -r t; do
                 az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}:${t}" --yes
               done
+          # Clean up untagged references
+          az acr manifest list-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}" --query "[?tags==null].digest" -o tsv \
+            | while read -r d; do
+                az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}@${d}" --yes
+              done
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
