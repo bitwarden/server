@@ -201,3 +201,26 @@ jobs:
             echo "Log in with \`az acr login -n ${_AZ_REGISTRY_NAME}\`, then \`docker pull\` either tag."
             echo "Attachment blobs, when the preset has any, are in this run's artifacts."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log in to Azure for ACR cleanup
+        uses: bitwarden/gh-actions/azure-login@main
+        with:
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID_SEEDER }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID_SEEDER }}
+
+      # Retain the last 2 images
+      - name: Prune old seeded images
+        env:
+          MATRIX_PRESET: ${{ matrix.preset }}
+          MATRIX_DATABASE: ${{ matrix.database }}
+        run: |
+          TAG="${MATRIX_PRESET//./-}"
+          az acr run \
+            --registry "${_AZ_REGISTRY_NAME}" \
+            --timeout 3600 \
+            --cmd "acr purge --filter 'seeded-${MATRIX_DATABASE}:^${TAG}-[0-9a-f]{7}\$' --ago 0d --keep 2 --untagged" \
+            /dev/null
+
+      - name: Log out from Azure
+        uses: bitwarden/gh-actions/azure-logout@main
