@@ -216,11 +216,13 @@ jobs:
           MATRIX_DATABASE: ${{ matrix.database }}
         run: |
           TAG="${MATRIX_PRESET//./-}"
-          az acr run \
-            --registry "${_AZ_REGISTRY_NAME}" \
-            --timeout 3600 \
-            --cmd "acr purge --filter 'seeded-${MATRIX_DATABASE}:^${TAG}-[0-9a-f]{7}\$' --ago 0d --keep 2 --untagged" \
-            /dev/null
+          REPO="seeded-${MATRIX_DATABASE}"
+          az acr repository show-tags -n "${_AZ_REGISTRY_NAME}" --repository "${REPO}" --orderby time_desc -o tsv \
+            | { grep -E "^${TAG}-[0-9a-f]{7}$" || true; } \
+            | tail -n +3 \
+            | while read -r t; do
+                az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}:${t}" --yes
+              done
 
       - name: Log out from Azure
         uses: bitwarden/gh-actions/azure-logout@main
