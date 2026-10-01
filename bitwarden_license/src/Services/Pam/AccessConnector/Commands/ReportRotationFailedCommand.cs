@@ -65,7 +65,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var rejectedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationReportRejected,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
                 AccessConnectorId = daemonId,
@@ -95,7 +95,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var failedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationFailed,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = organizationId,
                 ActorId = null,
                 AccessConnectorId = daemonId,
@@ -115,7 +115,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             var attemptFailedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationAttemptFailed,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = organizationId,
                 ActorId = null,
                 AccessConnectorId = daemonId,

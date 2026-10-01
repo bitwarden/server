@@ -60,7 +60,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
             var audit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationCipherWriteRejected,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
                 AccessConnectorId = daemonId,

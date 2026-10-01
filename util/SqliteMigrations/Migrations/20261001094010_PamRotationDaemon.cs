@@ -10,56 +10,6 @@ public partial class PamRotationDaemon : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<Guid>(
-            name: "DaemonId",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "DaemonName",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            maxLength: 200,
-            nullable: true);
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "RotationConfigId",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            nullable: true);
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "RotationJobId",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            nullable: true);
-
-        migrationBuilder.AddColumn<byte>(
-            name: "RotationSource",
-            table: "AccessAuditEvent",
-            type: "INTEGER",
-            nullable: true);
-
-        migrationBuilder.AddColumn<byte>(
-            name: "SyncState",
-            table: "AccessAuditEvent",
-            type: "INTEGER",
-            nullable: true);
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "TargetSystemId",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            nullable: true);
-
-        migrationBuilder.AddColumn<string>(
-            name: "TargetSystemName",
-            table: "AccessAuditEvent",
-            type: "TEXT",
-            maxLength: 200,
-            nullable: true);
-
         migrationBuilder.CreateTable(
             name: "PamDaemon",
             columns: table => new
@@ -85,6 +35,24 @@ public partial class PamRotationDaemon : Migration
                     name: "FK_PamDaemon_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            });
+
+        migrationBuilder.CreateTable(
+            name: "PamLeaseExpirySweep",
+            columns: table => new
+            {
+                AccessLeaseId = table.Column<Guid>(type: "TEXT", nullable: false),
+                SweptDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_PamLeaseExpirySweep", x => x.AccessLeaseId);
+                table.ForeignKey(
+                    name: "FK_PamLeaseExpirySweep_AccessLease_AccessLeaseId",
+                    column: x => x.AccessLeaseId,
+                    principalTable: "AccessLease",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
             });
@@ -229,24 +197,6 @@ public partial class PamRotationDaemon : Migration
                     principalColumn: "Id");
             });
 
-        migrationBuilder.CreateTable(
-            name: "PamLeaseExpirySweep",
-            columns: table => new
-            {
-                AccessLeaseId = table.Column<Guid>(type: "TEXT", nullable: false),
-                SweptDate = table.Column<DateTime>(type: "TEXT", nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_PamLeaseExpirySweep", x => x.AccessLeaseId);
-                table.ForeignKey(
-                    name: "FK_PamLeaseExpirySweep_AccessLease_AccessLeaseId",
-                    column: x => x.AccessLeaseId,
-                    principalTable: "AccessLease",
-                    principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
-
         migrationBuilder.CreateIndex(
             name: "IX_PamDaemon_ApiKeyId",
             table: "PamDaemon",
@@ -349,37 +299,5 @@ public partial class PamRotationDaemon : Migration
 
         migrationBuilder.DropTable(
             name: "PamTargetSystem");
-
-        migrationBuilder.DropColumn(
-            name: "DaemonId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "DaemonName",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationConfigId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationJobId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationSource",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "SyncState",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "TargetSystemId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "TargetSystemName",
-            table: "AccessAuditEvent");
     }
 }
