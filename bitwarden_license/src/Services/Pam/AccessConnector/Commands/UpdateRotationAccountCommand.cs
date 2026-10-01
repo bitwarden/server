@@ -67,7 +67,7 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationAccountUpdated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = details.CipherId,

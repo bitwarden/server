@@ -91,7 +91,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.ManualRotationDue,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = config.OrganizationId,
             ActorId = null,
             CipherId = config.CipherId,

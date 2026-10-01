@@ -47,7 +47,7 @@ public class ClaimRotationJobCommand : IClaimRotationJobCommand
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationDispatched,
-                    OccurredAt = now,
+                    OccurredDate = now,
                     OrganizationId = daemon?.OrganizationId ?? Guid.Empty,
                     ActorId = null,
                     AccessConnectorId = daemonId,

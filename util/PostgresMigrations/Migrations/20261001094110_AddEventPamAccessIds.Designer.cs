@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260828121006_PamRotationDaemon")]
-    partial class PamRotationDaemon
+    [Migration("20261001094110_AddEventPamAccessIds")]
+    partial class AddEventPamAccessIds
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -240,6 +240,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitItemDeletion")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("MaxAutoscalePamSeats")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
@@ -262,6 +265,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("OwnersNotifiedOfAutoscaling")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("PamSeats")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Plan")
                         .IsRequired()
@@ -1583,6 +1589,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("ActingUserId")
                         .HasColumnType("uuid");
 
@@ -2435,6 +2447,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AccessConnectorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccessConnectorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid?>("AccessLeaseId")
                         .HasColumnType("uuid");
 
@@ -2458,24 +2477,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("CipherId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CipherName")
-                        .HasColumnType("text");
-
                     b.Property<Guid?>("CollectionId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("CollectionName")
-                        .HasColumnType("text");
-
                     b.Property<Guid>("CorrelationId")
                         .HasColumnType("uuid");
-
-                    b.Property<Guid?>("DaemonId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("DaemonName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Detail")
                         .HasColumnType("text");
@@ -2489,7 +2495,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("LeaseNotBefore")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("OccurredAt")
+                    b.Property<DateTime>("OccurredDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("OrganizationId")
@@ -2534,8 +2540,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId", "OccurredAt")
-                        .IsDescending(false, true);
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
+                        .IsDescending(false, true, true);
 
                     b.ToTable("AccessAuditEvent", (string)null);
                 });
@@ -2621,11 +2629,12 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("CipherId", "Action");
-
                     b.HasIndex("CollectionId", "Action");
 
                     b.HasIndex("NotAfter", "Action");
+
+                    b.HasIndex("CipherId", "Action", "NotAfter")
+                        .IsDescending(false, false, true);
 
                     b.HasIndex("RequesterId", "CipherId", "Action");
 
