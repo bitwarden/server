@@ -53,4 +53,43 @@ public class PermissionsTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Fact]
+    public void Includes_WhenOtherIsNull_ReturnsTrue()
+    {
+        Assert.True(new Permissions().Includes(null));
+    }
+
+    [Fact]
+    public void Includes_WhenBothEmpty_ReturnsTrue()
+    {
+        Assert.True(new Permissions().Includes(new Permissions()));
+    }
+
+    [Fact]
+    public void Includes_WhenEqual_ReturnsTrue()
+    {
+        var permissions = new Permissions { EditAnyCollection = true, ManageResetPassword = true };
+        var other = new Permissions { EditAnyCollection = true, ManageResetPassword = true };
+
+        Assert.True(permissions.Includes(other));
+    }
+
+    [Fact]
+    public void Includes_WhenSuperset_ReturnsTrue()
+    {
+        var permissions = new Permissions { EditAnyCollection = true, ManageResetPassword = true };
+        var other = new Permissions { EditAnyCollection = true };
+
+        Assert.True(permissions.Includes(other));
+    }
+
+    [Fact]
+    public void Includes_WhenMissingAPermission_ReturnsFalse()
+    {
+        var permissions = new Permissions { ManageResetPassword = true };
+        var other = new Permissions { ManageResetPassword = true, AccessImportExport = true };
+
+        Assert.False(permissions.Includes(other));
+    }
 }
