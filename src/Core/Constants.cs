@@ -167,6 +167,7 @@ public static partial class FeatureFlagKeys
     public const string PM30806_SelfServiceChangeEmailCommand = "pm-30806-self-service-change-email-command";
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
+    public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -183,7 +184,6 @@ public static partial class FeatureFlagKeys
     public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string WindowsDesktopAutotype = "windows-desktop-autotype";
     public const string WindowsDesktopAutotypeGA = "windows-desktop-autotype-ga";
-    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
 
     /* Billing Team */
     public const string PM23713_PremiumBadgeOpensNewPremiumUpgradeDialog = "pm-23713-premium-badge-opens-new-premium-upgrade-dialog";
@@ -216,6 +216,7 @@ public static partial class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string ForceUpgradeV2Encryption = "force-upgrade-v2-encryption";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -255,21 +256,17 @@ public static partial class FeatureFlagKeys
 
     /* Vault Team */
     public const string CipherKeyEncryption = "cipher-key-encryption";
-    public const string PM19941MigrateCipherDomainToSdk = "pm-19941-migrate-cipher-domain-to-sdk";
-
     public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
     public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
     public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
-    public const string PM29438_WelcomeDialogWithExtensionPrompt = "pm-29438-welcome-dialog-with-extension-prompt";
+
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
     public const string PM31039_ItemActionInExtension = "pm-31039-item-action-in-extension";
-    public const string PM29437_WelcomeDialogNoExtPrompt = "pm-29437-welcome-dialog-no-ext-prompt";
     public const string PM31948_OrgUserNotificationBanner = "pm-31948-org-user-notification-banner";
     public const string PM32009_NewItemTypes = "pm-32009-new-item-types";
     public const string PM34500_StrictCipherDecryption = "pm-34500-strict-cipher-decryption";
@@ -286,7 +283,9 @@ public static partial class FeatureFlagKeys
     /* Secrets Manager Team */
     public const string SecretsVersioning = "sm-1587-secrets-versioning";
 
-    /* Innovation Team */
+    /* Skunkworks Team */
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string WindowsNativeCredentialSync = "windows-native-credential-sync";
 
     /* DIRT Team */
     public const string AccessIntelligenceVersion2 = "pm-31920-access-intelligence-azure-file-storage";

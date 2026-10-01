@@ -1,5 +1,6 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -10,7 +11,10 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Tools.Services;
 
@@ -22,6 +26,8 @@ public class SendValidationService : ISendValidationService
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly ICipherRepository _cipherRepository;
+    private readonly ISendRepository _sendRepository;
 
     public SendValidationService(
         IUserRepository userRepository,
@@ -29,7 +35,9 @@ public class SendValidationService : ISendValidationService
         IUserService userService,
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        ICipherRepository cipherRepository,
+        ISendRepository sendRepository)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -37,6 +45,8 @@ public class SendValidationService : ISendValidationService
         _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
+        _cipherRepository = cipherRepository;
+        _sendRepository = sendRepository;
     }
 
     public async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
@@ -61,6 +71,8 @@ public class SendValidationService : ISendValidationService
                     "The total number of characters in the Emails field must not exceed 2,500 characters.");
             }
         }
+
+        await ValidateItemSendAsync(userId, send);
 
         // The nullable userId is intended to support organization-owned Sends (never implemented).
         // If it's null, we can't enforce policies, because policies are only enforced against a specific user.
@@ -125,6 +137,58 @@ public class SendValidationService : ISendValidationService
             }
             throw new BadRequestException($"Due to an Enterprise policy your Sends must have deletion dates no more than {duration} {units} from their creation dates");
         }
+    }
+
+    /// <summary>
+    /// Validates Item-specific Send saving requirements. There are currently two conditions:
+    /// 1. Ensure the Send owner has access to the item being shared
+    /// 2. Ensure the item being shared is not archived, deleted, or an SSH key
+    /// Only a new or changed item id is checked, so saves that keep it (e.g. removing auth after
+    /// the item was deleted) still succeed.
+    /// </summary>
+    private async Task ValidateItemSendAsync(Guid? userId, Send send)
+    {
+        var itemId = ItemIdOf(send);
+        if (!itemId.HasValue)
+        {
+            return;
+        }
+
+        // `send` already carries the incoming data; compare against the persisted Send.
+        if (send.Id != default)
+        {
+            var stored = await _sendRepository.GetByIdAsync(send.Id);
+            if (stored != null && ItemIdOf(stored) == itemId)
+            {
+                return;
+            }
+        }
+
+        // Same error for missing and restricted items, so item ids cannot be probed.
+        var cipherDetails = userId.HasValue ? await _cipherRepository.GetByIdAsync(itemId.Value, userId.Value) : null;
+        if (cipherDetails == null)
+        {
+            throw new BadRequestException("Item not found.");
+        }
+
+        // User can share a cipher if they own it or if they have edit and view password permissions on a collection it belongs to
+        // The cipher must furthermore not be archived, deleted, or an SSH key
+        var userOwned = cipherDetails.UserId == userId;
+        var orgSharedWithPermissions = cipherDetails.OrganizationId.HasValue && cipherDetails.Edit && cipherDetails.ViewPassword;
+        if (!(userOwned || orgSharedWithPermissions) || cipherDetails.ArchivedDate.HasValue || cipherDetails.DeletedDate.HasValue || cipherDetails.Type == Vault.Enums.CipherType.SSHKey)
+        {
+            throw new BadRequestException("Item not found.");
+        }
+    }
+
+    private static Guid? ItemIdOf(Send send)
+    {
+        if (send.Type != SendType.Item || string.IsNullOrEmpty(send.Data))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<SendItemData>(send.Data)?.Metadata?.ItemId;
     }
 
     public static bool SendAllEmailsHaveAllowedDomains(string? emailsString, string? domainsString)
