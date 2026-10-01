@@ -44,7 +44,7 @@ public class DeleteRotationConfigCommand : IDeleteRotationConfigCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationConfigDeleted,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = details.CipherId,
