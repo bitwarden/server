@@ -17,7 +17,7 @@ public class AccessAuditEventResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(auditEvent);
 
         Kind = AccessAuditEventKindNames.From(auditEvent.Kind);
-        OccurredAt = auditEvent.OccurredAt.AsUtc();
+        OccurredAt = auditEvent.OccurredDate.AsUtc();
         OrganizationId = auditEvent.OrganizationId;
         ActorId = auditEvent.ActorId;
         RequesterId = auditEvent.RequesterId;
@@ -39,8 +39,6 @@ public class AccessAuditEventResponseModel : ResponseModel
         ActorEmail = auditEvent.ActorEmail;
         RequesterName = auditEvent.RequesterName;
         RequesterEmail = auditEvent.RequesterEmail;
-        CipherName = auditEvent.CipherName;
-        CollectionName = auditEvent.CollectionName;
         RuleName = auditEvent.RuleName;
         TargetSystemName = auditEvent.TargetSystemName;
         AccessConnectorName = auditEvent.AccessConnectorName;
@@ -89,10 +87,6 @@ public class AccessAuditEventResponseModel : ResponseModel
     /// <summary>The requester's display name and email (plaintext).</summary>
     public string? RequesterName { get; }
     public string? RequesterEmail { get; }
-
-    /// <summary>The cipher and collection names — encrypted; the client decrypts them.</summary>
-    public string? CipherName { get; }
-    public string? CollectionName { get; }
 
     /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events.</summary>
     public string? RuleName { get; }

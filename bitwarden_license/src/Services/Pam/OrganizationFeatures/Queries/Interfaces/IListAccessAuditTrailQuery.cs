@@ -35,10 +35,7 @@ public class AccessAuditTrailQueryOptions
     public IReadOnlyCollection<Guid> RuleIds { get; init; } = [];
 
     /// <summary>Where the previous page stopped, already read back off the wire. Null starts at the newest event.</summary>
-    public DateTime? BeforeOccurredAt { get; init; }
-
-    /// <summary>The previous page's last row id, paired with <see cref="BeforeOccurredAt"/>.</summary>
-    public Guid? BeforeId { get; init; }
+    public AccessAuditEventCursor? Before { get; init; }
 }
 
 /// <summary>

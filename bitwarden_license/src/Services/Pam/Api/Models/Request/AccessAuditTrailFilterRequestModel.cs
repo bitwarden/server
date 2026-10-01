@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
@@ -110,14 +111,12 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
             }
         }
 
-        DateTime? beforeOccurredAt = null;
-        Guid? beforeId = null;
+        AccessAuditEventCursor? before = null;
         if (!string.IsNullOrEmpty(ContinuationToken))
         {
-            if (AccessAuditTrailContinuationToken.TryParse(ContinuationToken, out var occurredAt, out var id))
+            if (AccessAuditTrailContinuationToken.TryParse(ContinuationToken, out var occurredDate, out var id))
             {
-                beforeOccurredAt = occurredAt;
-                beforeId = id;
+                before = new AccessAuditEventCursor(occurredDate, id);
             }
             else
             {
@@ -136,8 +135,7 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
             RequesterIds = RequesterId ?? [],
             CipherIds = CipherId ?? [],
             RuleIds = RuleId ?? [],
-            BeforeOccurredAt = beforeOccurredAt,
-            BeforeId = beforeId,
+            Before = before,
         };
 
         return errors.Count == 0;

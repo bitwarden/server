@@ -127,7 +127,7 @@ public class CreateAccessRuleCommandTests
             e.Kind == AccessAuditEventKind.RuleCreated && e.Phase == AccessAuditEventPhase.Attempt
             && e.OrganizationId == rule.OrganizationId && e.ActorId == editorId
             && e.RuleName == "Production database" && e.AccessRuleId == null
-            && e.OccurredAt == _now));
+            && e.OccurredDate == _now));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.RuleCreated && e.Phase == AccessAuditEventPhase.Outcome
             && e.AccessRuleId == rule.Id && e.RuleName == "Production database"));

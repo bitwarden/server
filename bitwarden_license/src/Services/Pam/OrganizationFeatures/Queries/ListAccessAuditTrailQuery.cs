@@ -45,8 +45,7 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
                 RequesterIds = options.RequesterIds,
                 CipherIds = options.CipherIds,
                 RuleIds = options.RuleIds,
-                BeforeOccurredAt = options.BeforeOccurredAt,
-                BeforeId = options.BeforeId,
+                Before = options.Before,
             });
 
         var page = new PagedResult<AccessAuditEvent>();

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Exceptions;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Request;
 using Xunit;
 
@@ -26,8 +27,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Empty(options.RequesterIds);
         Assert.Empty(options.CipherIds);
         Assert.Empty(options.RuleIds);
-        Assert.Null(options.BeforeOccurredAt);
-        Assert.Null(options.BeforeId);
+        Assert.Null(options.Before);
     }
 
     // The chips are multi-select, so a dimension carries a list and the values within it are OR-ed.
@@ -89,8 +89,7 @@ public class AccessAuditTrailFilterRequestModelTests
 
         var options = model.ToQueryOptions();
 
-        Assert.Equal(occurredAt, options.BeforeOccurredAt);
-        Assert.Equal(id, options.BeforeId);
+        Assert.Equal(new AccessAuditEventCursor(occurredAt, id), options.Before);
         Assert.Empty(Validate(model));
     }
 

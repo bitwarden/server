@@ -75,7 +75,7 @@ public class DeleteAccessRuleCommandTests
             e.Kind == AccessAuditEventKind.RuleDeleted && e.Phase == AccessAuditEventPhase.Attempt
             && e.OrganizationId == existing.OrganizationId && e.ActorId == actorId
             && e.AccessRuleId == existing.Id && e.RuleName == "Production database"
-            && e.OccurredAt == _now));
+            && e.OccurredDate == _now));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.RuleDeleted && e.Phase == AccessAuditEventPhase.Outcome
             && e.RuleName == "Production database"));

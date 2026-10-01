@@ -50,7 +50,7 @@ public class UnassignAccessConnectorFromTargetCommand : IUnassignAccessConnector
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorUnassignedFromTarget,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             AccessConnectorId = daemon.Id,

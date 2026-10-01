@@ -96,7 +96,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestCancelled,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = request.OrganizationId,
             ActorId = userId,
             RequesterId = request.RequesterId,

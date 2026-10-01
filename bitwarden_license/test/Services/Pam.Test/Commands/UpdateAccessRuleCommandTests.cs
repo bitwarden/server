@@ -180,7 +180,7 @@ public class UpdateAccessRuleCommandTests
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Attempt
             && e.OrganizationId == orgId && e.ActorId == editorId && e.AccessRuleId == existing.Id
-            && e.RuleName == "after" && e.OccurredAt == _now));
+            && e.RuleName == "after" && e.OccurredDate == _now));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.RuleUpdated && e.Phase == AccessAuditEventPhase.Outcome
             && e.AccessRuleId == existing.Id && e.RuleName == "after"));

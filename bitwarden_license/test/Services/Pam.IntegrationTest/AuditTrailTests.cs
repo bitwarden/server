@@ -46,7 +46,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RequestApproved,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = occurredAt,
+            OccurredDate = occurredAt,
             OrganizationId = Organization.Id,
             ActorId = owner!.Id,
             RequesterId = owner.Id,
@@ -79,7 +79,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var completed = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseActivated,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-2),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-2),
             OrganizationId = Organization.Id,
         };
         await repository.CreateAsync(completed with { Phase = AccessAuditEventPhase.Attempt });
@@ -88,7 +88,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.LeaseRevoked,
             Phase = AccessAuditEventPhase.Attempt,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-1),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-1),
             OrganizationId = Organization.Id,
         });
 
@@ -201,7 +201,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var refused = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseActivated,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-2),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-2),
             OrganizationId = Organization.Id,
         };
         await repository.CreateAsync(refused with { Phase = AccessAuditEventPhase.Attempt });
@@ -214,7 +214,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-1),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-1),
             OrganizationId = Organization.Id,
         });
 
@@ -236,7 +236,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddDays(-10),
+            OccurredDate = DateTime.UtcNow.AddDays(-10),
             OrganizationId = Organization.Id,
         });
 
@@ -263,7 +263,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
                 Kind = AccessAuditEventKind.CredentialAccessed,
                 Phase = AccessAuditEventPhase.Outcome,
                 // Same instant for all: the pathological case for a time-only position.
-                OccurredAt = occurredAt,
+                OccurredDate = occurredAt,
                 OrganizationId = Organization.Id,
                 AccessRequestId = requestId,
             });
@@ -295,7 +295,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-1),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-1),
             OrganizationId = Organization.Id,
         });
 
@@ -342,7 +342,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
             {
                 Kind = kind,
                 Phase = AccessAuditEventPhase.Outcome,
-                OccurredAt = DateTime.UtcNow.AddMinutes(-2),
+                OccurredDate = DateTime.UtcNow.AddMinutes(-2),
                 OrganizationId = Organization.Id,
                 CipherId = cipherId,
                 CollectionId = collectionId,
@@ -352,7 +352,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RuleCreated,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-1),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-1),
             OrganizationId = Organization.Id,
             AccessRuleId = ruleId,
             RuleName = "Production database",
@@ -388,7 +388,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
             {
                 Kind = AccessAuditEventKind.LeaseActivated,
                 Phase = AccessAuditEventPhase.Outcome,
-                OccurredAt = occurredAt,
+                OccurredDate = occurredAt,
                 OrganizationId = Organization.Id,
                 CipherId = cipherId,
             });
@@ -414,7 +414,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.LeaseActivated,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-2),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-2),
             OrganizationId = Organization.Id,
             CipherId = cipherId,
         });
@@ -422,7 +422,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RuleCreated,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow.AddMinutes(-1),
+            OccurredDate = DateTime.UtcNow.AddMinutes(-1),
             OrganizationId = Organization.Id,
             AccessRuleId = ruleId,
             RuleName = "Production database",
@@ -431,7 +431,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = DateTime.UtcNow,
+            OccurredDate = DateTime.UtcNow,
             OrganizationId = Organization.Id,
         });
 

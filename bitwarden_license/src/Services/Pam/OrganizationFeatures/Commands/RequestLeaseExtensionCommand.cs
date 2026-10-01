@@ -154,7 +154,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseExtended,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = lease.OrganizationId,
             ActorId = userId,
             RequesterId = lease.RequesterId,

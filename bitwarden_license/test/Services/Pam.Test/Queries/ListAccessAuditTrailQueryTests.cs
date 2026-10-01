@@ -140,11 +140,10 @@ public class ListAccessAuditTrailQueryTests
         var beforeOccurredAt = _now.AddHours(-3);
 
         await sutProvider.Sut.GetTrailAsync(organizationId,
-            new AccessAuditTrailQueryOptions { BeforeOccurredAt = beforeOccurredAt, BeforeId = beforeId });
+            new AccessAuditTrailQueryOptions { Before = new AccessAuditEventCursor(beforeOccurredAt, beforeId) });
 
         var filter = Assert.Single(filters);
-        Assert.Equal(beforeOccurredAt, filter.BeforeOccurredAt);
-        Assert.Equal(beforeId, filter.BeforeId);
+        Assert.Equal(new AccessAuditEventCursor(beforeOccurredAt, beforeId), filter.Before);
     }
 
     // The token names the exact row it stopped on, so a boundary among same-instant events resumes exactly.
@@ -161,7 +160,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.NotNull(result.ContinuationToken);
         Assert.True(AccessAuditTrailContinuationToken.TryParse(
             result.ContinuationToken!, out var occurredAt, out var id));
-        Assert.Equal(page[^1].OccurredAt, occurredAt);
+        Assert.Equal(page[^1].OccurredDate, occurredAt);
         Assert.Equal(page[^1].Id, id);
     }
 
@@ -207,6 +206,6 @@ public class ListAccessAuditTrailQueryTests
         CorrelationId = Guid.NewGuid(),
         Kind = AccessAuditEventKind.RequestApproved,
         Phase = AccessAuditEventPhase.Outcome,
-        OccurredAt = occurredAt,
+        OccurredDate = occurredAt,
     };
 }
