@@ -21,6 +21,10 @@ namespace Bit.Core.Test.Dirt.Services;
 [SutProviderCustomize]
 public class TeamsServiceTests
 {
+    private const string _teamId = "19:team-id@thread.tacv2";
+    private const string _teamsChannelsUrl =
+        "https://smba.example.com/amer/v3/teams/19%3Ateam-id%40thread.tacv2/conversations";
+
     private readonly MockedHttpMessageHandler _handler;
     private readonly HttpClient _httpClient;
 
@@ -181,6 +185,80 @@ public class TeamsServiceTests
     }
 
     [Fact]
+    public async Task GetStandardChannelsAsync_Success_ReturnsOnlyStandardChannels()
+    {
+        var sutProvider = GetSutProvider();
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            conversations = new object[]
+            {
+                new { id = "19:general@thread.tacv2", name = (string?)null, type = "standard" },
+                new { id = "19:alerts@thread.tacv2", name = "Alerts", type = "standard" },
+                new { id = "19:untyped@thread.tacv2", name = "Untyped", type = (string?)null },
+                new { id = "19:private@thread.tacv2", name = "Private", type = "private" },
+                new { id = "19:shared@thread.tacv2", name = "Shared", type = "shared" }
+            }
+        });
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(jsonResponse));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, c => c is { Id: "19:general@thread.tacv2", Name: null });
+        Assert.Contains(result, c => c is { Id: "19:alerts@thread.tacv2", Name: "Alerts" });
+        Assert.All(result, c => Assert.Equal("standard", c.Type));
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServiceUriWithoutTrailingSlash_CallsTeamConversationsEndpoint()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(new { conversations = Array.Empty<object>() })));
+
+        await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer"), _teamId);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(new Uri(_teamsChannelsUrl), request.RequestUri);
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServerReturnsEmpty_ReturnsEmptyList()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(new { conversations = (object?)null })));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServerErrorCode_ReturnsNull()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.Forbidden)
+            .WithContent(new StringContent("Forbidden"));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public async Task SendMessageToChannelAsync_SendsViaInjectedHttpClient()
     {
         var sutProvider = GetSutProvider();
@@ -228,8 +306,11 @@ public class TeamsServiceTests
             .RespondWith(HttpStatusCode.Forbidden)
             .WithContent("application/json", JsonSerializer.Serialize(new { error = new { code = "Forbidden" } }));
 
-        await Assert.ThrowsAsync<ErrorResponseException>(() =>
+        var exception = await Assert.ThrowsAsync<ErrorResponseException>(() =>
             sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "test message"));
+
+        // TeamsIntegrationHandler classifies failures from this status code.
+        Assert.Equal(HttpStatusCode.Forbidden, exception.Response.StatusCode);
 
         Assert.Single(_handler.CapturedRequests);
     }

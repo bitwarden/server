@@ -26,6 +26,7 @@ public class TeamsService(
     private readonly string _clientId = globalSettings.Teams.ClientId;
     private readonly string _clientSecret = globalSettings.Teams.ClientSecret;
     private readonly string _scopes = globalSettings.Teams.Scopes;
+    private readonly string _tenantId = globalSettings.Teams.TenantId;
     private readonly string _graphBaseUrl = globalSettings.Teams.GraphBaseUrl;
     private readonly string _loginBaseUrl = globalSettings.Teams.LoginBaseUrl;
 
@@ -111,9 +112,37 @@ public class TeamsService(
         return result?.Value ?? [];
     }
 
+    public async Task<IReadOnlyList<TeamsChannel>?> GetStandardChannelsAsync(Uri serviceUri, string teamId)
+    {
+        // Call the Bot Framework REST endpoint directly rather than through TeamsConnectorClient, which can't use the
+        // injected (SSRF-protected) HttpClient.
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{serviceUri.ToString().TrimEnd('/')}/v3/teams/{Uri.EscapeDataString(teamId)}/conversations");
+
+        // Adds the bot's bearer token the same way ConnectorClient does.
+        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret, _tenantId);
+        await credentials.ProcessHttpRequestAsync(request, CancellationToken.None);
+
+        using var response = await _httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorText = await response.Content.ReadAsStringAsync();
+            logger.LogError("Get Teams channels request failed: {errorText}", errorText);
+            return null;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<TeamsChannelListResponse>();
+
+        return result?.Conversations?.Where(IsStandardChannel).ToList() ?? [];
+    }
+
+    private static bool IsStandardChannel(TeamsChannel channel) =>
+        string.Equals(channel.Type, "standard", StringComparison.OrdinalIgnoreCase);
+
     public async Task SendMessageToChannelAsync(Uri serviceUri, string channelId, string message)
     {
-        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret);
+        var credentials = new MicrosoftAppCredentials(_clientId, _clientSecret, _tenantId);
         using var connectorClient = new ConnectorClient(serviceUri, credentials, _httpClient, disposeHttpClient: false);
 
         var activity = new Activity

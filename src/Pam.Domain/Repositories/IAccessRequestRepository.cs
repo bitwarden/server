@@ -67,7 +67,8 @@ public interface IAccessRequestRepository
     /// <see cref="IAccessLeaseRepository.CreateFromApprovedRequestAsync"/>. A request whose window has lapsed is
     /// left untouched.
     /// </summary>
-    Task ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now);
+    /// <returns><c>true</c> when this call resolved the request; <c>false</c> when it was no longer open.</returns>
+    Task<bool> ResolveWithDecisionAsync(AccessRequest request, AccessDecision decision, AccessRequestAction action, DateTime now);
 
     /// <summary>
     /// Withdraws a not-yet-activated request on the requester's behalf: records
@@ -75,14 +76,16 @@ public interface IAccessRequestRepository
     /// <see cref="AccessDecision"/> is written, since this isn't an approver verdict. Guarded to stay idempotent
     /// under a race.
     /// </summary>
-    Task CancelAsync(Guid id, DateTime now);
+    /// <returns><c>true</c> when this call withdrew the request; <c>false</c> when it was no longer withdrawable.</returns>
+    Task<bool> CancelAsync(Guid id, DateTime now);
 
     /// <summary>
     /// Retracts a not-yet-activated request on a managing approver's behalf: records
     /// <see cref="AccessRequestAction.Denied"/> and the approver's human Deny <paramref name="decision"/>. Guarded
     /// so a request that has produced a lease or whose window has lapsed is left untouched.
     /// </summary>
-    Task CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
+    /// <returns><c>true</c> when this call retracted the request; <c>false</c> when it was no longer retractable.</returns>
+    Task<bool> CancelWithDecisionAsync(AccessRequest request, AccessDecision decision, DateTime now);
 
     /// <summary>
     /// Returns the number of extension requests recorded against the lease (a lease may be extended once, so this is
