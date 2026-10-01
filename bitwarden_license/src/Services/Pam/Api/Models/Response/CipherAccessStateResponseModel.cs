@@ -1,4 +1,5 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Services.Pam.Models;
 
 namespace Bit.Services.Pam.Api.Models.Response;
 
@@ -12,6 +13,20 @@ public class CipherAccessStateResponseModel : ResponseModel
     public CipherAccessStateResponseModel()
         : base("cipherAccessState")
     {
+    }
+
+    public CipherAccessStateResponseModel(CipherAccessState state)
+        : base("cipherAccessState")
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        CipherId = state.CipherId;
+        // The lease's status derives against the snapshot's own clock -- the same instant that filtered the reads.
+        ActiveLease = state.ActiveLease is null ? null : new AccessLeaseResponseModel(state.ActiveLease, state.AsOf);
+        PendingRequest = state.PendingRequest is null ? null : new AccessRequestDetailsResponseModel(state.PendingRequest);
+        ApprovedRequest = state.ApprovedRequest is null ? null : new AccessRequestDetailsResponseModel(state.ApprovedRequest);
+        ExtensionsAllowed = state.ExtensionsAllowed;
+        MaxExtensionDurationSeconds = state.MaxExtensionDurationSeconds;
     }
 
     public Guid CipherId { get; set; }

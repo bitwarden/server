@@ -61,6 +61,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "done with it"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Cancelled);
     }
 
     [Theory, BitAutoData]
@@ -124,6 +130,12 @@ public class RevokeAccessLeaseCommandTests
                 d.Verdict == AccessDecisionVerdict.Deny &&
                 d.Comment == "policy change"),
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(lease.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(lease.RequesterId);
+        await sutProvider.GetDependency<ILeaseRevokedMailNotifier>().Received(1)
+            .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
     }
 
     [Theory, BitAutoData]
@@ -140,6 +152,8 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .RevokeAsync(default!, default, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory, BitAutoData]

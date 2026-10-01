@@ -57,4 +57,10 @@ public interface IEventService
     Task LogServiceAccountEventAsync(Guid userId, List<ServiceAccount> serviceAccount, EventType type, IdentityClientType identityClientType, DateTime? date = null);
     Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext> organizationContext = null);
+
+    /// <summary>
+    /// Logs one PAM access event to the organization's event log. PAM's own audit store is the system of record;
+    /// this is a derived copy, gated on the organization's event entitlement like every other organization event.
+    /// </summary>
+    Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context);
 }

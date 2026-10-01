@@ -18,7 +18,7 @@ public enum AccessAuditEventKind : byte
     LeaseActivationRejected = 11,
     LeaseExtended = 12,
     LeaseRevoked = 13,
-    LeaseExpired = 14, // not emitted yet
+    LeaseExpired = 14,
 
     // Credential access
     CredentialAccessed = 20, // not emitted yet
@@ -33,4 +33,116 @@ public enum AccessAuditEventKind : byte
     LeasingKillSwitchTriggered = 40, // not emitted yet
     LeasingFreezeEnabled = 41, // not emitted yet
     LeasingFreezeLifted = 42, // not emitted yet
+
+    // Rotation lifecycle
+    /// <summary>A rotation config was created for a cipher. Spec outcome <c>config_created</c>.</summary>
+    RotationConfigCreated = 50,
+
+    /// <summary>A rotation config's schedule/rotate-on-access-end settings were updated. Spec outcome <c>settings_updated</c>.</summary>
+    RotationSettingsUpdated = 51,
+
+    /// <summary>A rotation config's target/account/termination settings were updated. Spec outcome <c>account_updated</c>.</summary>
+    RotationAccountUpdated = 52,
+
+    /// <summary>A rotation config was paused. Spec outcome <c>paused</c>.</summary>
+    RotationPaused = 53,
+
+    /// <summary>A rotation config was resumed. Spec outcome <c>resumed</c>.</summary>
+    RotationResumed = 54,
+
+    /// <summary>A rotation config was deleted. Spec outcome <c>config_deleted</c>.</summary>
+    RotationConfigDeleted = 55,
+
+    /// <summary>A rotation job was created for a config (the single creation point, <c>OfferRotation</c>). Spec outcome <c>offered</c>.</summary>
+    RotationOffered = 56,
+
+    /// <summary>A rotation job was claimed by an access connector. Spec outcome <c>dispatched</c>.</summary>
+    RotationDispatched = 57,
+
+    /// <summary>A rotation job succeeded. Spec outcome <c>succeeded</c>.</summary>
+    RotationSucceeded = 58,
+
+    /// <summary>A rotation attempt failed but the job still has retry budget left. Spec outcome <c>attempt_failed</c>.</summary>
+    RotationAttemptFailed = 59,
+
+    /// <summary>A rotation job failed after exhausting its retry budget. Spec outcome <c>failed</c>.</summary>
+    RotationFailed = 60,
+
+    /// <summary>A claimed rotation job was released back to Pending by the sweep (stale access connector heartbeat past the claim lease). Spec outcome <c>released</c>.</summary>
+    RotationJobReleased = 61,
+
+    /// <summary>A rotation job timed out past its TTL with no successful attempt. Spec outcome <c>timed_out</c>.</summary>
+    RotationJobTimedOut = 62,
+
+    /// <summary>An access connector's cipher write was rejected by the atomic write-capability check. Spec outcome <c>write_rejected</c>.</summary>
+    RotationCipherWriteRejected = 63,
+
+    /// <summary>A stale success/failure report was rejected (attempt no longer executing, or claimant mismatch). Spec outcome <c>report_rejected</c>.</summary>
+    RotationReportRejected = 64,
+
+    /// <summary>A manual-method rotation config's obligation became due. Spec outcome <c>manual_rotation_due</c>.</summary>
+    ManualRotationDue = 65,
+
+    /// <summary>An admin recorded a manual rotation as completed. Spec outcome <c>manual_recorded</c>.</summary>
+    ManualRotationRecorded = 66,
+
+    // 67-69 reserved for rotation-lifecycle growth.
+
+    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or daemon_credential_reissued.
+    // Left unassigned rather than reserved.
+
+    // Fleet / target administration. The spec outcomes here still read daemon_*: the product renamed the
+    // daemon to the access connector, rotation-server.allium has not, and these tokens name the spec's
+    // outcome rather than the product's vocabulary.
+    /// <summary>An access connector was registered. Spec outcome <c>daemon_registered</c>.</summary>
+    AccessConnectorRegistered = 70,
+
+    /// <summary>
+    /// An access connector was revoked. Legacy: the revoke action was replaced by the reversible disable/enable pair
+    /// plus a permanent delete (see <see cref="AccessConnectorDisabled"/>, <see cref="AccessConnectorEnabled"/>,
+    /// <see cref="AccessConnectorDeleted"/>); no action emits this anymore, but it is retained so historical rows still read.
+    /// </summary>
+    AccessConnectorRevoked = 71,
+
+    /// <summary>An access connector was assigned to a target system. Spec outcome <c>daemon_assigned</c>.</summary>
+    AccessConnectorAssignedToTarget = 72,
+
+    /// <summary>An access connector was unassigned from a target system. Spec outcome <c>daemon_unassigned</c>.</summary>
+    AccessConnectorUnassignedFromTarget = 73,
+
+    /// <summary>A target system was registered (automatic or manual). Spec outcome <c>target_registered</c>.</summary>
+    TargetSystemRegistered = 74,
+
+    /// <summary>A target system was disabled. Spec outcome <c>target_disabled</c>.</summary>
+    TargetSystemDisabled = 75,
+
+    /// <summary>A target system was enabled. Spec outcome <c>target_enabled</c>.</summary>
+    TargetSystemEnabled = 76,
+
+    /// <summary>A target system was renamed. Spec outcome <c>target_renamed</c>.</summary>
+    TargetSystemRenamed = 77,
+
+    /// <summary>A target system's password policy or session-termination capability was updated. Spec outcome <c>target_policy_updated</c>.</summary>
+    TargetSystemPolicyUpdated = 78,
+
+    // Access connector lifecycle (continued). The fleet range above (70-73) is full, so the disable/enable/delete kinds that
+    // replaced revoke continue here.
+
+    /// <summary>An access connector was disabled (reversible pause; credential retained).</summary>
+    AccessConnectorDisabled = 79,
+
+    /// <summary>A disabled access connector was re-enabled.</summary>
+    AccessConnectorEnabled = 80,
+
+    /// <summary>An access connector was permanently deleted (row removed and its credential invalidated).</summary>
+    AccessConnectorDeleted = 81,
+
+    // Target administration (continued). The fleet/target range above (74-78) is followed by the access connector lifecycle
+    // kinds, so the target delete kind continues from here.
+
+    /// <summary>
+    /// A target system was permanently deleted, taking its access connector assignments with it. Spec outcome
+    /// <c>target_deleted</c>.
+    /// </summary>
+    TargetSystemDeleted = 82,
 }

@@ -853,6 +853,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        // Writes straight to the repository, so this is the one mutation path the service-level gate doesn't cover.
+        await _cipherLeaseGate.EnsureCanMutateAsync(user.Id, cipher);
+
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 

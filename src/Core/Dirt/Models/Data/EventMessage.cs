@@ -41,4 +41,6 @@ public class EventMessage : IEvent
     public Guid? ServiceAccountId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
     public Guid? SendId { get; set; }
+    public Guid? AccessRequestId { get; set; }
+    public Guid? AccessLeaseId { get; set; }
 }

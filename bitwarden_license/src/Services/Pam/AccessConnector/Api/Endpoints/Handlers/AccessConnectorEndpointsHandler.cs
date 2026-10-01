@@ -1,42 +1,72 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Context;
+using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector.Api.Models.Request;
 using Bit.Services.Pam.AccessConnector.Api.Models.Response;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the <c>organizations/{orgId}/access-connectors</c> resource: fleet registration, enable/disable,
-/// deletion, and target assignment. The Minimal API endpoints (see <c>AccessConnectorEndpoints</c>) resolve this
-/// handler from DI.
+/// deletion, and target assignment. Organization authority is already settled by
+/// <c>ManageAccessConnectorRequirement</c>; the commands underneath still re-verify every id argument belongs to
+/// the route organization (404, never 403).
 /// </summary>
-/// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the
-/// behavior lands with the rest of the rotation feature.
-/// </remarks>
-public class AccessConnectorEndpointsHandler
+public class AccessConnectorEndpointsHandler(
+    ICurrentContext currentContext,
+    IListAccessConnectorsQuery listAccessConnectorsQuery,
+    IGetAccessConnectorDetailsQuery getAccessConnectorDetailsQuery,
+    IRegisterAccessConnectorCommand registerAccessConnectorCommand,
+    ISetAccessConnectorStatusCommand setAccessConnectorStatusCommand,
+    IDeleteAccessConnectorCommand deleteAccessConnectorCommand,
+    IAssignAccessConnectorToTargetCommand assignAccessConnectorToTargetCommand,
+    IUnassignAccessConnectorFromTargetCommand unassignAccessConnectorFromTargetCommand)
 {
-    public Task<ListResponseModel<PamAccessConnectorResponseModel>> GetAll(Guid orgId)
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<PamAccessConnectorResponseModel>> GetAll(Guid orgId)
+    {
+        var connectors = await listAccessConnectorsQuery.ListAsync(orgId);
+        return new ListResponseModel<PamAccessConnectorResponseModel>(
+            connectors.Select(connector => new PamAccessConnectorResponseModel(connector)));
+    }
 
-    public Task<PamAccessConnectorDetailResponseModel> Get(Guid orgId, Guid id)
-        => throw new NotImplementedException();
+    public async Task<PamAccessConnectorDetailResponseModel> Get(Guid orgId, Guid id)
+    {
+        var history = await getAccessConnectorDetailsQuery.GetAsync(orgId, id);
+        return new PamAccessConnectorDetailResponseModel(history);
+    }
 
-    public Task<RegisterAccessConnectorResponseModel> Post(Guid orgId, RegisterAccessConnectorRequestModel model)
-        => throw new NotImplementedException();
+    public async Task<RegisterAccessConnectorResponseModel> Post(Guid orgId, RegisterAccessConnectorRequestModel model)
+    {
+        var result = await registerAccessConnectorCommand.RegisterAsync(
+            orgId, currentContext.UserId!.Value, model.Name, model.EncryptedPayload, model.Key);
+        return new RegisterAccessConnectorResponseModel(result);
+    }
 
-    public Task Enable(Guid orgId, Guid id)
-        => throw new NotImplementedException();
+    public async Task Enable(Guid orgId, Guid id)
+    {
+        await setAccessConnectorStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: true);
+    }
 
-    public Task Disable(Guid orgId, Guid id)
-        => throw new NotImplementedException();
+    public async Task Disable(Guid orgId, Guid id)
+    {
+        await setAccessConnectorStatusCommand.SetStatusAsync(orgId, currentContext.UserId!.Value, id, enable: false);
+    }
 
-    public Task Delete(Guid orgId, Guid id)
-        => throw new NotImplementedException();
+    public async Task Delete(Guid orgId, Guid id)
+    {
+        await deleteAccessConnectorCommand.DeleteAsync(orgId, currentContext.UserId!.Value, id);
+    }
 
-    public Task AssignTarget(Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model)
-        => throw new NotImplementedException();
+    public async Task AssignTarget(Guid orgId, Guid id, AssignAccessConnectorTargetRequestModel model)
+    {
+        await assignAccessConnectorToTargetCommand.AssignAsync(
+            orgId, currentContext.UserId!.Value, id, model.TargetSystemId);
+    }
 
-    public Task UnassignTarget(Guid orgId, Guid id, Guid targetSystemId)
-        => throw new NotImplementedException();
+    public async Task UnassignTarget(Guid orgId, Guid id, Guid targetSystemId)
+    {
+        await unassignAccessConnectorFromTargetCommand.UnassignAsync(
+            orgId, currentContext.UserId!.Value, id, targetSystemId);
+    }
 }
