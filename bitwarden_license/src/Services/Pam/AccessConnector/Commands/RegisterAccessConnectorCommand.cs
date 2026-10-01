@@ -52,7 +52,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorRegistered,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             AccessConnectorName = name,

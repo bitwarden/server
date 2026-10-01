@@ -48,7 +48,7 @@ public class DeleteTargetSystemCommand : IDeleteTargetSystemCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemDeleted,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemId = target.Id,

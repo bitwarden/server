@@ -76,7 +76,7 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorAssignedToTarget,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             AccessConnectorId = daemon.Id,

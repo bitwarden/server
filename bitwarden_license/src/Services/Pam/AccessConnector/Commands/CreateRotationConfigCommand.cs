@@ -108,7 +108,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationConfigCreated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = cipherId,

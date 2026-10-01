@@ -80,7 +80,7 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemRegistered,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemName = name,

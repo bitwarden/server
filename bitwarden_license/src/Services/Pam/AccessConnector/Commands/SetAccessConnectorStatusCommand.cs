@@ -46,7 +46,7 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
         var audit = new AccessAuditEventData
         {
             Kind = enable ? AccessAuditEventKind.AccessConnectorEnabled : AccessAuditEventKind.AccessConnectorDisabled,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             AccessConnectorId = daemon.Id,
