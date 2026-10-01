@@ -27,7 +27,7 @@ public class HubHelpers
 
     public async Task SendNotificationToHubAsync(string notificationJson, CancellationToken cancellationToken = default)
     {
-        var notification = JsonSerializer.Deserialize<ReceivedNotification>(notificationJson, _deserializerOptions);
+        var notification = JsonSerializer.Deserialize<InboundNotification>(notificationJson, _deserializerOptions);
         if (notification is null)
         {
             return;
@@ -41,7 +41,7 @@ public class HubHelpers
             case PushType.SyncCipherDelete:
             case PushType.SyncLoginDelete:
                 var cipherNotification =
-                    notification.ForClients<SyncCipherPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<SyncCipherPushNotification>(_deserializerOptions);
                 if (cipherNotification is null)
                 {
                     break;
@@ -64,7 +64,7 @@ public class HubHelpers
             case PushType.SyncFolderCreate:
             case PushType.SyncFolderDelete:
                 var folderNotification =
-                    notification.ForClients<SyncFolderPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<SyncFolderPushNotification>(_deserializerOptions);
                 if (folderNotification is null)
                 {
                     break;
@@ -80,7 +80,7 @@ public class HubHelpers
             case PushType.SyncSettings:
             case PushType.LogOut:
                 var userNotification =
-                    notification.ForClients<LogOutPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<LogOutPushNotification>(_deserializerOptions);
                 if (userNotification is null)
                 {
                     break;
@@ -93,7 +93,7 @@ public class HubHelpers
             case PushType.SyncSendUpdate:
             case PushType.SyncSendDelete:
                 var sendNotification =
-                    notification.ForClients<SyncSendPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<SyncSendPushNotification>(_deserializerOptions);
                 if (sendNotification is null)
                 {
                     break;
@@ -104,7 +104,7 @@ public class HubHelpers
                 break;
             case PushType.AuthRequestResponse:
                 var authRequestResponseNotification =
-                    notification.ForClients<AuthRequestPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<AuthRequestPushNotification>(_deserializerOptions);
                 if (authRequestResponseNotification is null)
                 {
                     break;
@@ -115,7 +115,7 @@ public class HubHelpers
                 break;
             case PushType.AuthRequest:
                 var authRequestNotification =
-                    notification.ForClients<AuthRequestPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<AuthRequestPushNotification>(_deserializerOptions);
                 if (authRequestNotification is null)
                 {
                     break;
@@ -126,7 +126,7 @@ public class HubHelpers
                 break;
             case PushType.SyncOrganizationStatusChanged:
                 var orgStatusNotification =
-                    notification.ForClients<OrganizationStatusPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<OrganizationStatusPushNotification>(_deserializerOptions);
                 if (orgStatusNotification is null)
                 {
                     break;
@@ -138,7 +138,7 @@ public class HubHelpers
                 break;
             case PushType.SyncOrganizationCollectionSettingChanged:
                 var organizationCollectionSettingsChangedNotification =
-                    notification.ForClients<OrganizationStatusPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<OrganizationStatusPushNotification>(_deserializerOptions);
                 if (organizationCollectionSettingsChangedNotification is null)
                 {
                     break;
@@ -152,7 +152,7 @@ public class HubHelpers
                 break;
             case PushType.OrganizationBankAccountVerified:
                 var organizationBankAccountVerifiedNotification =
-                    notification.ForClients<OrganizationBankAccountVerifiedPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<OrganizationBankAccountVerifiedPushNotification>(_deserializerOptions);
                 if (organizationBankAccountVerifiedNotification is null)
                 {
                     break;
@@ -163,7 +163,7 @@ public class HubHelpers
                 break;
             case PushType.ProviderBankAccountVerified:
                 var providerBankAccountVerifiedNotification =
-                    notification.ForClients<ProviderBankAccountVerifiedPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<ProviderBankAccountVerifiedPushNotification>(_deserializerOptions);
                 if (providerBankAccountVerifiedNotification is null)
                 {
                     break;
@@ -174,7 +174,7 @@ public class HubHelpers
                 break;
             case PushType.Notification:
             case PushType.NotificationStatus:
-                var notificationData = notification.ForClients<NotificationPushNotification>(_deserializerOptions);
+                var notificationData = notification.ToOutbound<NotificationPushNotification>(_deserializerOptions);
                 if (notificationData is null)
                 {
                     break;
@@ -210,7 +210,7 @@ public class HubHelpers
                 break;
             case PushType.RefreshSecurityTasks:
                 var pendingTasksData =
-                    notification.ForClients<UserPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<UserPushNotification>(_deserializerOptions);
                 if (pendingTasksData is null)
                 {
                     break;
@@ -224,7 +224,7 @@ public class HubHelpers
                 break;
             case PushType.AutoConfirm:
                 var autoConfirmNotification =
-                    notification.ForClients<AutoConfirmPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<AutoConfirmPushNotification>(_deserializerOptions);
                 if (autoConfirmNotification is null)
                 {
                     break;
@@ -235,7 +235,7 @@ public class HubHelpers
                 break;
             case PushType.PremiumStatusChanged:
                 var premiumStatusNotification =
-                    notification.ForClients<PremiumStatusPushNotification>(_deserializerOptions);
+                    notification.ToOutbound<PremiumStatusPushNotification>(_deserializerOptions);
                 if (premiumStatusNotification is null)
                 {
                     break;
@@ -251,9 +251,9 @@ public class HubHelpers
     }
 
     private async Task policyChangedNotificationHandler(
-        ReceivedNotification notification, CancellationToken cancellationToken)
+        InboundNotification notification, CancellationToken cancellationToken)
     {
-        var policyData = notification.ForClients<SyncPolicyPushNotification>(_deserializerOptions);
+        var policyData = notification.ToOutbound<SyncPolicyPushNotification>(_deserializerOptions);
         if (policyData is null)
         {
             return;

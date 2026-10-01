@@ -27,6 +27,6 @@ public class InboundNotification
         var payload = Payload.Deserialize<T>(options);
         return payload is null
             ? null
-            : new ClientNotification<T> { Type = Type, Payload = payload, ContextId = ContextId };
+            : new OutboundNotification<T> { Type = Type, Payload = payload, ContextId = ContextId };
     }
 }
