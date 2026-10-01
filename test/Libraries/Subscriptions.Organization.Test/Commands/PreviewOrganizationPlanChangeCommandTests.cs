@@ -628,6 +628,26 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.Null(options!.CustomerDetails.TaxIds);
     }
 
+    [Fact]
+    public async Task Run_TaxIdCodeNotDerivable_SendsNoTaxId()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _taxService.GetStripeTaxCode("US", "unknown").Returns((string?)null);
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
+            taxId: new TaxID("us_ein", "unknown")));
+
+        Assert.NotNull(options);
+        Assert.Null(options!.CustomerDetails.TaxIds);
+    }
+
     private static PreviewOrganizationPlanChangeRequest Request(
         PlanTierType tier, PlanCadenceType cadence, string country = "US", string postalCode = "90210", TaxID? taxId = null) =>
         new()
