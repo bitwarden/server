@@ -216,6 +216,7 @@ public static partial class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string ForceUpgradeV2Encryption = "force-upgrade-v2-encryption";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
