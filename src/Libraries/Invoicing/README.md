@@ -7,8 +7,8 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, and the feature
-flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The public surface is
+`AddInvoicing()` registers the projection service, the `IGetSubscriptionPreviewQuery`, and the
+feature flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The public surface is
 `IInvoicePreviewService`, `IGetSubscriptionPreviewQuery`, and the `InvoicePreview` /
 `SubscriptionPreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
 service, builder, mappers, reference table, and Stripe client are internal.
@@ -19,8 +19,8 @@ a Stripe `InvoiceCreatePreviewOptions` and hand it here to get back the projecte
 
 `IGetSubscriptionPreviewQuery.Run(ISubscriber)` builds the `SubscriptionPreview` for a subscriber's
 upcoming renewal: the invoice preview wrapped in the subscription-level envelope (status, storage,
-cancellation, and suspension). The `Organization` path is wired; the `User`/Premium path is stubbed
-for its own screen slice.
+cancellation, and suspension). Both the `Organization` path and the `User`/Premium path are wired —
+`Bit.Subscriptions.Organization` and `Bit.Subscriptions.User` map renewal preview endpoints onto them.
 
 ## Stripe boundary
 

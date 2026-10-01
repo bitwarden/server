@@ -40,7 +40,7 @@ The organization-scoped group authorizes **every** endpoint — the `Application
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
 
-Individual endpoints may narrow this baseline further. Both endpoints additionally require
+Individual endpoints may narrow this baseline further. Both organization-scoped endpoints additionally require
 `StandaloneOrganizationOwnerRequirement`, so they admit **only** an Owner of a standalone organization:
 an owner of a provider-managed (MSP, reseller, or business unit) organization, and a confirmed provider user, are both
 denied. This is deliberately stricter than legacy `ICurrentContext.EditSubscription`, which still admits
@@ -100,18 +100,22 @@ e.g. `enterprise`/`monthly`) and a `billingAddress` (`country`, `postalCode`, an
 The address is passed to Stripe via `CustomerDetails` so tax can be estimated without a stored customer —
 a Free org has none until it adds a payment method. The tax id sent in the request, or the customer's
 on-file tax id when the request omits one, is forwarded so a VAT-registered business is quoted the tax it
-will actually be charged. It returns the resulting `InvoicePreview` cart.
+will actually be charged. Its Stripe tax-id type is derived from the value with `ITaxService`, falling
+back to the submitted code when it can't be derived. A trialing subscription's change prorates to $0 mid-trial, so the preview ends
+the trial in the hypothetical (`trial_end = now`) and returns what the subscriber pays once it converts.
+It returns the resulting `InvoicePreview` cart.
 
-The command validates itself (the group runs no DataAnnotations filter), and errors split by who can fix
-them. Caller-fixable problems are **400s**: an unrecognized `tier`/`cadence`, the `premium` tier,
-Families on a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a
-plan without Secrets Manager support for an SM-enabled org, an invalid billing address, or a tax
-location Stripe rejects. Data or Stripe state the caller
+A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
+command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
+a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a plan without Secrets Manager
+support for an SM-enabled org, an invalid billing address, or a tax location or tax id Stripe rejects.
+Data or Stripe state the caller
 cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
 subscription, a subscription Stripe no longer has, a subscription in a status other than `trialing`,
 `active`, or `past_due`, a subscription whose line items don't match the current plan, or a missing
 seat count. A missing organization is a **404**. These map from the `BadRequestException`,
 `ConflictException`, and `NotFoundException` types in `Bit.ExceptionHandling`.
+
 ## Stripe boundary
 
 This library **reads** Stripe data directly through `IStripeAdapter` (fetching the organization's
