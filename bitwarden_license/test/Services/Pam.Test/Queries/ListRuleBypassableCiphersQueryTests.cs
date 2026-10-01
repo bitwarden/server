@@ -4,6 +4,7 @@ using Bit.Pam.Entities;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Queries;
+using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -24,31 +25,25 @@ public class ListRuleBypassableCiphersQueryTests
     private static AccessRule DisabledRule(Guid id, Guid organizationId) =>
         new() { Id = id, OrganizationId = organizationId, Enabled = false, Name = "rule" };
 
-    private static Collection GovernedCollection(Guid id, Guid organizationId, Guid? accessRuleId) =>
-        new() { Id = id, OrganizationId = organizationId, AccessRuleId = accessRuleId };
-
     private static CollectionCipher Mapping(Guid collectionId, Guid cipherId) =>
         new() { CollectionId = collectionId, CipherId = cipherId };
 
     /// <summary>
-    /// Wires the three reads the query composes: the rule by id, the organization's rules, and the
-    /// organization's collections and cipher mappings.
+    /// Wires the three reads the query composes: the rule by id, the organization's gating collections, and the
+    /// organization's cipher mappings.
     /// </summary>
     private static void Arrange(
         SutProvider<ListRuleBypassableCiphersQuery> sutProvider,
         Guid organizationId,
         AccessRuleDetails? ruleUnderTest,
         Guid ruleUnderTestId,
-        IEnumerable<AccessRule> organizationRules,
-        IEnumerable<Collection> collections,
+        IEnumerable<Guid> gatingCollectionIds,
         IEnumerable<CollectionCipher> mappings)
     {
         sutProvider.GetDependency<IAccessRuleRepository>()
             .GetDetailsByIdAsync(ruleUnderTestId).Returns(ruleUnderTest);
-        sutProvider.GetDependency<IAccessRuleRepository>()
-            .GetManyByOrganizationIdAsync(organizationId).Returns(organizationRules.ToList());
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organizationId).Returns(collections.ToList());
+        sutProvider.GetDependency<IGatingCollectionResolver>()
+            .GetGatingCollectionIdsAsync(organizationId).Returns(gatingCollectionIds.ToHashSet());
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organizationId).Returns(mappings.ToList());
     }
@@ -61,8 +56,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = EnabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [GovernedCollection(gatedCollectionId, organizationId, ruleId)],
+            [gatedCollectionId],
             [Mapping(gatedCollectionId, cipherId)]);
 
         var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
@@ -81,11 +75,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = EnabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(ungatedCollectionId, organizationId, accessRuleId: null)
-            ],
+            [gatedCollectionId],
             [Mapping(gatedCollectionId, cipherId), Mapping(ungatedCollectionId, cipherId)]);
 
         var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
@@ -98,49 +88,19 @@ public class ListRuleBypassableCiphersQueryTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SharedWithCollectionGatedByAnotherRule_ReturnsEmpty(
-        Guid organizationId, Guid ruleId, Guid otherRuleId,
+        Guid organizationId, Guid ruleId,
         Guid gatedCollectionId, Guid otherGatedCollectionId, Guid cipherId)
     {
         var sutProvider = new SutProvider<ListRuleBypassableCiphersQuery>().Create();
         var rule = EnabledRule(ruleId, organizationId);
-        var otherRule = EnabledRule(otherRuleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule, otherRule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(otherGatedCollectionId, organizationId, otherRuleId)
-            ],
+            [gatedCollectionId, otherGatedCollectionId],
             [Mapping(gatedCollectionId, cipherId), Mapping(otherGatedCollectionId, cipherId)]);
 
         var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
 
         Assert.Empty(result);
-    }
-
-    /// <summary>
-    /// A collection governed by a disabled rule is a gap like any ungated one.
-    /// </summary>
-    [Theory, BitAutoData]
-    public async Task GetUngatedCollectionIdsAsync_SharedWithCollectionGatedByDisabledRule_ReportsIt(
-        Guid organizationId, Guid ruleId, Guid disabledRuleId,
-        Guid gatedCollectionId, Guid disabledCollectionId, Guid cipherId)
-    {
-        var sutProvider = new SutProvider<ListRuleBypassableCiphersQuery>().Create();
-        var rule = EnabledRule(ruleId, organizationId);
-        var disabledRule = DisabledRule(disabledRuleId, organizationId);
-        Arrange(sutProvider, organizationId,
-            AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule, disabledRule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(disabledCollectionId, organizationId, disabledRuleId)
-            ],
-            [Mapping(gatedCollectionId, cipherId), Mapping(disabledCollectionId, cipherId)]);
-
-        var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
-
-        Assert.Equal([disabledCollectionId], result);
     }
 
     /// <summary>
@@ -154,11 +114,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = DisabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(ungatedCollectionId, organizationId, accessRuleId: null)
-            ],
+            [],
             [Mapping(gatedCollectionId, cipherId), Mapping(ungatedCollectionId, cipherId)]);
 
         var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
@@ -178,11 +134,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = EnabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(unrelatedCollectionId, organizationId, accessRuleId: null)
-            ],
+            [gatedCollectionId],
             [Mapping(gatedCollectionId, governedCipherId), Mapping(unrelatedCollectionId, unrelatedCipherId)]);
 
         var result = await sutProvider.Sut.GetUngatedCollectionIdsAsync(organizationId, ruleId);
@@ -202,11 +154,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = EnabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(ungatedCollectionId, organizationId, accessRuleId: null)
-            ],
+            [gatedCollectionId],
             [
                 Mapping(gatedCollectionId, firstCipherId), Mapping(ungatedCollectionId, firstCipherId),
                 Mapping(gatedCollectionId, secondCipherId), Mapping(ungatedCollectionId, secondCipherId)
@@ -229,12 +177,7 @@ public class ListRuleBypassableCiphersQueryTests
         var rule = EnabledRule(ruleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(firstUngatedId, organizationId, accessRuleId: null),
-                GovernedCollection(secondUngatedId, organizationId, accessRuleId: null)
-            ],
+            [gatedCollectionId],
             [
                 Mapping(gatedCollectionId, cipherId),
                 Mapping(firstUngatedId, cipherId),
@@ -253,21 +196,15 @@ public class ListRuleBypassableCiphersQueryTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_IgnoresCollectionsOfProtectedCiphers(
-        Guid organizationId, Guid ruleId, Guid otherRuleId,
+        Guid organizationId, Guid ruleId,
         Guid gatedCollectionId, Guid otherGatedCollectionId, Guid ungatedCollectionId,
         Guid exposedCipherId, Guid protectedCipherId)
     {
         var sutProvider = new SutProvider<ListRuleBypassableCiphersQuery>().Create();
         var rule = EnabledRule(ruleId, organizationId);
-        var otherRule = EnabledRule(otherRuleId, organizationId);
         Arrange(sutProvider, organizationId,
             AccessRuleDetails.From(rule, [gatedCollectionId]), ruleId,
-            [rule, otherRule],
-            [
-                GovernedCollection(gatedCollectionId, organizationId, ruleId),
-                GovernedCollection(otherGatedCollectionId, organizationId, otherRuleId),
-                GovernedCollection(ungatedCollectionId, organizationId, accessRuleId: null)
-            ],
+            [gatedCollectionId, otherGatedCollectionId],
             [
                 Mapping(gatedCollectionId, exposedCipherId), Mapping(ungatedCollectionId, exposedCipherId),
                 // Protected: both paths gated, by two different enabled rules.

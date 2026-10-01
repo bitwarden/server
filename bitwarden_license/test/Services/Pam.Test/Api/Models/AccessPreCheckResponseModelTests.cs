@@ -17,10 +17,10 @@ public class AccessPreCheckResponseModelTests
 
         var model = new AccessPreCheckResponseModel(Guid.NewGuid(), result);
 
-        Assert.NotNull(model.SlotFreesAt);
-        Assert.Equal(DateTimeKind.Utc, model.SlotFreesAt.Value.Kind);
+        var actual = Assert.NotNull(model.SlotFreesAt);
+        Assert.Equal(DateTimeKind.Utc, actual.Kind);
         // Relabelled, not converted: the clock reading must be untouched.
-        Assert.Equal(slotFreesAt.TimeOfDay, model.SlotFreesAt.Value.TimeOfDay);
+        Assert.Equal(slotFreesAt.TimeOfDay, actual.TimeOfDay);
     }
 
     [Fact]

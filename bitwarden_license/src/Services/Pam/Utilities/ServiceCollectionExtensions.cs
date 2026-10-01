@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+        services.AddScoped<IGatingCollectionResolver, GatingCollectionResolver>();
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();

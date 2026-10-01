@@ -27,7 +27,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     private readonly IFeatureService _featureService;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
-    private readonly IAccessRuleRepository _accessRuleRepository;
+    private readonly IGatingCollectionResolver _gatingCollectionResolver;
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICurrentContext _currentContext;
@@ -37,7 +37,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         IFeatureService featureService,
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
-        IAccessRuleRepository accessRuleRepository,
+        IGatingCollectionResolver gatingCollectionResolver,
         ICollectionRepository collectionRepository,
         ICollectionCipherRepository collectionCipherRepository,
         ICurrentContext currentContext,
@@ -46,7 +46,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         _featureService = featureService;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
-        _accessRuleRepository = accessRuleRepository;
+        _gatingCollectionResolver = gatingCollectionResolver;
         _collectionRepository = collectionRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _currentContext = currentContext;
@@ -122,7 +122,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         }
 
         var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
-        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
         return IsGated(collectionIds, leasingCollectionIds) ? null : FullCipherAccess.ForCipher(cipher.Id);
     }
 
@@ -156,6 +156,7 @@ public class CipherLeaseGate : ICipherLeaseGate
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
+            .Where(l => LeaseCanRelease(l.OrganizationId))
             .Select(l => l.CipherId)
             .ToHashSet();
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
@@ -185,7 +186,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         }
 
         var collectionIds = await _collectionCipherRepository.GetCollectionIdsByCipherIdAsync(cipher.Id);
-        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
         if (!IsGated(collectionIds, leasingCollectionIds))
         {
             return FullCipherAccess.ForCipher(cipher.Id);
@@ -211,7 +212,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(organizationId);
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
         if (leasingCollectionIds.Count == 0)
         {
             return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id));
@@ -229,31 +230,6 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
-
-    /// <summary>
-    /// The organization's collection ids gated by a currently-enabled access rule.
-    /// </summary>
-    /// <remarks>
-    /// Resolved from the organization's rules and collections rather than the caller's, so an administrator
-    /// assigned to nothing still resolves the full gated set.
-    /// </remarks>
-    private async Task<ISet<Guid>> GetLeasingCollectionIdsAsync(Guid organizationId)
-    {
-        var enabledRuleIds = (await _accessRuleRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(r => r.Enabled)
-            .Select(r => r.Id)
-            .ToHashSet();
-        if (enabledRuleIds.Count == 0)
-        {
-            return new HashSet<Guid>();
-        }
-
-        var collections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
-        return collections
-            .Where(c => c.AccessRuleId.HasValue && enabledRuleIds.Contains(c.AccessRuleId.Value))
-            .Select(c => c.Id)
-            .ToHashSet();
-    }
 
     /// <summary>
     /// A cipher reachable through <paramref name="collectionIds" /> is gated only if every one of those

@@ -355,8 +355,8 @@ public class CipherLeaseGateTests
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
     }
 
     [Fact]
@@ -607,8 +607,8 @@ public class CipherLeaseGateTests
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
-        await sutProvider.GetDependency<IAccessRuleRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
     }
 
     /// <remarks>
@@ -699,6 +699,19 @@ public class CipherLeaseGateTests
         // A lease that no longer releases the credential does not authorize writing it either.
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.EnsureCanMutateAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateManyAsync_GatedWithActiveLease_Unlicensed_Throws()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLeasesFor(sutProvider, userId, cipherId);
+        Unlicensed(sutProvider);
+
+        // Licensing is read off the lease, so a cipher passed without its organization is still covered.
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId }]));
     }
 
     [Fact]
@@ -800,9 +813,9 @@ public class CipherLeaseGateTests
         var (sutProvider, userId, _) = Setup();
         var organizationId = Guid.NewGuid();
         var cipherId = Guid.NewGuid();
-        sutProvider.GetDependency<IAccessRuleRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
-            .Returns(new List<AccessRule>());
+        sutProvider.GetDependency<IGatingCollectionResolver>()
+            .GetGatingCollectionIdsAsync(organizationId)
+            .Returns(new HashSet<Guid>());
 
         var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, organizationId,
             [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
@@ -813,19 +826,14 @@ public class CipherLeaseGateTests
     }
 
     /// <summary>
-    /// Points the organization-scoped reads at a single collection, governed by a rule per <paramref name="ruleEnabled" />.
+    /// Makes <paramref name="collectionId" /> the organization's only gating collection, or leaves the organization
+    /// with none when its rule is disabled.
     /// </summary>
     private static void OrganizationLeasingCollection(SutProvider<CipherLeaseGate> sutProvider,
-        Guid organizationId, Guid collectionId, bool ruleEnabled = true)
-    {
-        var ruleId = Guid.NewGuid();
-        sutProvider.GetDependency<IAccessRuleRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
-            .Returns(new List<AccessRule> { new() { Id = ruleId, Enabled = ruleEnabled } });
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
-            .Returns(new List<Collection> { new() { Id = collectionId, AccessRuleId = ruleId } });
-    }
+        Guid organizationId, Guid collectionId, bool ruleEnabled = true) =>
+        sutProvider.GetDependency<IGatingCollectionResolver>()
+            .GetGatingCollectionIdsAsync(organizationId)
+            .Returns(ruleEnabled ? new HashSet<Guid> { collectionId } : new HashSet<Guid>());
 
     private static void CipherIsInCollections(SutProvider<CipherLeaseGate> sutProvider, Guid cipherId,
         params Guid[] collectionIds) =>
@@ -868,7 +876,7 @@ public class CipherLeaseGateTests
         params Guid[] cipherIds) =>
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetManyActiveByRequesterIdAsync(userId, Arg.Any<DateTime>())
-            .Returns(cipherIds.Select(id => new AccessLease { CipherId = id }).ToList());
+            .Returns(cipherIds.Select(id => new AccessLease { CipherId = id, OrganizationId = _organizationId }).ToList());
 
     private static void HasNoActiveLeases(SutProvider<CipherLeaseGate> sutProvider, Guid userId) =>
         HasActiveLeasesFor(sutProvider, userId);

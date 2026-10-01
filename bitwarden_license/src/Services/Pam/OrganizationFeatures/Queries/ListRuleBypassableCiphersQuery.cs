@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+using Bit.Services.Pam.Services;
 
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
@@ -8,16 +9,16 @@ namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
 {
     private readonly IAccessRuleRepository _accessRuleRepository;
-    private readonly ICollectionRepository _collectionRepository;
+    private readonly IGatingCollectionResolver _gatingCollectionResolver;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
 
     public ListRuleBypassableCiphersQuery(
         IAccessRuleRepository accessRuleRepository,
-        ICollectionRepository collectionRepository,
+        IGatingCollectionResolver gatingCollectionResolver,
         ICollectionCipherRepository collectionCipherRepository)
     {
         _accessRuleRepository = accessRuleRepository;
-        _collectionRepository = collectionRepository;
+        _gatingCollectionResolver = gatingCollectionResolver;
         _collectionCipherRepository = collectionCipherRepository;
     }
 
@@ -37,7 +38,7 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
             return [];
         }
 
-        var gatingCollectionIds = await GetGatingCollectionIdsAsync(organizationId);
+        var gatingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
         return collectionCiphers
@@ -50,26 +51,5 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
             .Select(cc => cc.CollectionId)
             .Distinct()
             .ToList();
-    }
-
-    /// <summary>
-    /// The organization's collection ids gated by an enabled rule.
-    /// </summary>
-    private async Task<ISet<Guid>> GetGatingCollectionIdsAsync(Guid organizationId)
-    {
-        var enabledRuleIds = (await _accessRuleRepository.GetManyByOrganizationIdAsync(organizationId))
-            .Where(r => r.Enabled)
-            .Select(r => r.Id)
-            .ToHashSet();
-        if (enabledRuleIds.Count == 0)
-        {
-            return new HashSet<Guid>();
-        }
-
-        var collections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
-        return collections
-            .Where(c => c.AccessRuleId.HasValue && enabledRuleIds.Contains(c.AccessRuleId.Value))
-            .Select(c => c.Id)
-            .ToHashSet();
     }
 }
