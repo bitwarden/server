@@ -264,8 +264,7 @@ public class GetCipherAccessStateQueryTests
             .CountExtensionsByLeaseIdAsync(default);
     }
 
-    // PM-43689: an ungoverned path added after the lease was minted makes live resolution return null, which used
-    // to hide the "Extend" control on a lease the extend call would still have accepted.
+    // Live resolution returns null once an ungoverned path exists; eligibility still follows the lease's pinned rule.
     [Theory, BitAutoData]
     public async Task GetStateAsync_UngovernedPathAddedSinceMint_StillReportsExtensionEligibility(
         Guid userId, Guid cipherId, Guid ruleId, AccessLease activeLease)

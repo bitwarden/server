@@ -71,7 +71,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// The ungated collection is the gap, and the rule's own collection is not — it is doing its job.
+    /// The ungated collection is the gap; the rule's own collection is not.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_AlsoInUngatedCollection_ReportsThatCollection(
@@ -94,9 +94,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// The union test spans every enabled rule in the organization, not just the one being viewed —
-    /// a cipher shared with a collection ANOTHER enabled rule governs is still fully gated, and
-    /// reporting it would send an admin chasing a bypass that does not exist.
+    /// A cipher shared with a collection another enabled rule governs is still fully gated.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SharedWithCollectionGatedByAnotherRule_ReturnsEmpty(
@@ -121,7 +119,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A collection governed by a DISABLED rule gates nothing, so it is a gap like any ungated one.
+    /// A collection governed by a disabled rule is a gap like any ungated one.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SharedWithCollectionGatedByDisabledRule_ReportsIt(
@@ -146,8 +144,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A switched-off rule gates nothing at all, so nothing can bypass it. Reporting every collection
-    /// it governs would make the warning pure noise the moment an admin disables a rule.
+    /// A disabled rule gates nothing, so nothing can bypass it.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleDisabled_ReturnsEmpty(
@@ -170,8 +167,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// Only ciphers the rule actually governs are assessed. An exposed credential elsewhere in the
-    /// organization is not this rule's problem to report.
+    /// Only ciphers the rule governs are assessed.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_CipherOutsideTheRule_IsNotReported(
@@ -222,7 +218,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// Every way in is reported, since closing only one of them fixes nothing.
+    /// Every ungated collection is reported.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_SeveralGaps_ReportsAllOfThem(
@@ -253,8 +249,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A gap is only ever taken from a cipher that is actually exposed. A fully gated cipher sharing
-    /// the rule's collection must not drag its own collections into the answer.
+    /// Gaps come only from exposed ciphers; a fully gated cipher's collections are never reported.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_IgnoresCollectionsOfProtectedCiphers(
@@ -300,8 +295,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A rule reached with the wrong organization on the route answers "no gaps" rather than
-    /// assessing it — the query is safe to call directly, not only behind the endpoint's scoping.
+    /// A rule belonging to another organization reports no gaps.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleBelongsToAnotherOrganization_ReturnsEmpty(
@@ -320,8 +314,7 @@ public class ListRuleBypassableCiphersQueryTests
     }
 
     /// <summary>
-    /// A rule governing no collection governs no cipher — and the mapping read is skipped, since the
-    /// answer cannot depend on it.
+    /// A rule governing no collection reports no gaps without reading the mappings.
     /// </summary>
     [Theory, BitAutoData]
     public async Task GetUngatedCollectionIdsAsync_RuleGovernsNoCollection_ReturnsEmptyWithoutReadingMappings(

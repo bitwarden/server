@@ -16,9 +16,7 @@ public class ServiceCollectionExtensionsTests
         new ServiceCollection().AddPamServices();
 
     /// <summary>
-    /// Every PAM-owned dependency of every PAM-registered service must itself be registered. This is the check that
-    /// catches a new constructor parameter added without a matching registration — including the inert seams, which
-    /// no compile step would miss.
+    /// Every PAM-owned dependency of every PAM-registered service must itself be registered.
     /// </summary>
     [Fact]
     public void AddPamServices_RegistersEveryPamOwnedDependency()
@@ -62,9 +60,8 @@ public class ServiceCollectionExtensionsTests
     }
 
     /// <summary>
-    /// The gate override is the one registration here that has to <em>beat</em> another rather than merely exist:
-    /// AddBaseServices already registers the ungating open-source default. A TryAdd here would no-op against it and
-    /// leave every PAM-governed cipher fully readable — silently, with the rest of the feature working.
+    /// AddBaseServices already registers the open-source default; a TryAdd would leave every PAM-governed cipher
+    /// readable.
     /// </summary>
     [Fact]
     public void AddPamServices_OverridesTheDefaultCipherLeaseGate()
@@ -85,9 +82,6 @@ public class ServiceCollectionExtensionsTests
         Assert.Contains(services, d => d.ServiceType == typeof(TimeProvider));
     }
 
-    /// <remarks>
-    /// Discovered by reflection rather than listed by hand, which had drifted stale.
-    /// </remarks>
     public static TheoryData<Type> EndpointHandlers()
     {
         var data = new TheoryData<Type>();

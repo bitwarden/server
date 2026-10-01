@@ -28,8 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
 
-        // Overrides AddBaseServices' open-source UnrestrictedCipherLeaseGate by last-one-wins registration order.
-        // Must stay a plain AddScoped, not TryAdd, or leasing silently goes ungated; see CipherLeaseGateRegistrationTests.
+        // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.

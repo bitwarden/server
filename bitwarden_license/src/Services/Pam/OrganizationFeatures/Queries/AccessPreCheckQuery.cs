@@ -46,11 +46,9 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A caller who already holds an active lease is sent straight to the credential, not prompted to
-        // make a request that SubmitAccessRequestCommand would reject.
+        // A caller who already holds an active lease is sent straight to the credential.
         if (await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now) is not null)
         {
-            // CanStartLease keeps its default true here rather than being computed: nothing to qualify.
             return new AccessPreCheckResult(AccessApprovalMode.Automatic, HasActiveLease: true);
         }
 
@@ -60,15 +58,12 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
             ? AccessApprovalMode.Human
             : AccessApprovalMode.Automatic;
 
-        // Publish the same bounds SubmitAccessRequestCommand enforces, so the duration picker only offers
-        // accepted durations. An ungated cipher falls back to the global bounds, which are inert there.
+        // The same bounds SubmitAccessRequestCommand enforces; an ungated cipher gets the global bounds.
         var maxDurationSeconds = LeaseDurationBounds.EffectiveMax(governingRule?.MaxLeaseDurationSeconds);
         var defaultDurationSeconds =
             LeaseDurationBounds.EffectiveDefault(governingRule?.DefaultLeaseDurationSeconds, maxDurationSeconds);
 
-        // Whether a lease could actually be started right now (the spec's RuleAllowsLease). A hint only: the
-        // mint procedure's UPDLOCK/HOLDLOCK range lock is authoritative and re-checks this at start. The
-        // !applies short-circuit keeps the extra query off the unconstrained path.
+        // A hint only: the mint procedure's range lock re-checks this at start.
         var blockingLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId)
             ? await _accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now)
             : null;

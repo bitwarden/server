@@ -15,9 +15,7 @@ public class AccessPreCheckResponseModel : ResponseModel
     {
     }
 
-    /// <param name="cipherId">
-    /// The cipher the pre-check was run for; <see cref="AccessPreCheckResult"/> carries only the outcome.
-    /// </param>
+    /// <param name="cipherId">The cipher the pre-check was run for.</param>
     /// <param name="result">The resolved approval outcome.</param>
     public AccessPreCheckResponseModel(Guid cipherId, AccessPreCheckResult result)
         : base("accessPreCheck")
@@ -30,7 +28,7 @@ public class AccessPreCheckResponseModel : ResponseModel
         DefaultDurationSeconds = result.DefaultDurationSeconds;
         MaxDurationSeconds = result.MaxDurationSeconds;
         CanStartLease = result.CanStartLease;
-        // AsUtc like every other PAM timestamp: Dapper hands back Kind.Unspecified, which reads as local time.
+        // Dapper hands back Kind.Unspecified, which would serialize as local time.
         SlotFreesAt = result.SlotFreesAt.AsUtc();
     }
 
@@ -55,24 +53,19 @@ public class AccessPreCheckResponseModel : ResponseModel
 
     /// <summary>
     /// The longest duration (automatic path) or window span (human path), in seconds, that a request for this cipher
-    /// may ask for: the governing rule's cap narrowed by the global ceiling. Clients should offer nothing above it —
-    /// submit enforces the same number.
+    /// may ask for: the governing rule's cap narrowed by the global ceiling. Submit enforces the same limit.
     /// </summary>
     public int MaxDurationSeconds { get; set; }
 
     /// <summary>
-    /// Whether access could be started right now, implementing the spec's <c>RuleAllowsLease</c>. False only when the
-    /// per-cipher single-active-lease constraint binds for this caller and another member holds the slot.
-    ///
-    /// A current-state hint, re-checked for real at start; clients that don't understand this field must treat its
-    /// absence as true. Answers about <em>now</em> only — a future window is re-checked at start regardless.
+    /// Whether access could be started right now. False only when the per-cipher single-active-lease constraint
+    /// binds for this caller and another member holds the slot. A hint, re-checked at start; an absent value means
+    /// true.
     /// </summary>
-    // Defaults true so a default-constructed model, e.g. via deserialization, does not read as blocked.
     public bool CanStartLease { get; set; } = true;
 
     /// <summary>
-    /// When the lease holding the slot ends, for a retry time. Null when <see cref="CanStartLease"/> is true.
-    /// Carries no holder identity by design.
+    /// When the lease holding the slot ends. Null when <see cref="CanStartLease"/> is true.
     /// </summary>
     public DateTime? SlotFreesAt { get; set; }
 }

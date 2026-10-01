@@ -37,8 +37,7 @@ internal static class AccessRuleEndpoints
         group.MapGet("{id:guid}", ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.Get(orgId, id))
             .WithName("Pam_AccessRules_Get");
 
-        // Diagnostic, admin-only: names credentials a rule is failing to protect. Carries the write
-        // endpoints' requirement, not the group's weaker MemberRequirement, even though it mutates nothing.
+        // Admin-only: names credentials a rule fails to protect.
         group.MapGet("{id:guid}/bypassable-ciphers",
                 ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.GetBypassableCiphers(orgId, id))
             .WithName("Pam_AccessRules_GetBypassableCiphers")

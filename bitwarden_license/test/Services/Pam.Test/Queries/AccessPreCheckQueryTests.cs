@@ -135,7 +135,7 @@ public class AccessPreCheckQueryTests
     }
 
     [Theory]
-    // The ceiling used to clamp every multi-day cap to 24h before the requester ever saw it.
+    // A multi-day cap is published as-is; only the global ceiling clamps it.
     [BitAutoData(7 * 24 * 60 * 60, 7 * 24 * 60 * 60)]
     [BitAutoData(LeaseDurationBounds.GlobalMaxSeconds + 1, LeaseDurationBounds.GlobalMaxSeconds)]
     public async Task PreCheckAsync_PublishesTheRuleMaxNarrowedByTheGlobalCeiling(

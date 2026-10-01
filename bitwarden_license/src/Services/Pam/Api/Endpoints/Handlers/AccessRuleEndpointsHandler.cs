@@ -67,8 +67,7 @@ public class AccessRuleEndpointsHandler(
 
     /// <summary>Where this rule fails to gate: the collections letting its ciphers through without a lease.</summary>
     /// <remarks>
-    /// Unlike <see cref="Get"/>, this does not 404 a rule belonging to another organization: the query scopes on
-    /// the organization itself and answers "nothing is bypassable".
+    /// Unlike <see cref="Get"/>, a rule belonging to another organization returns an empty list, not 404.
     /// </remarks>
     public async Task<RuleBypassableCiphersResponseModel> GetBypassableCiphers(Guid orgId, Guid id)
     {

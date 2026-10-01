@@ -28,9 +28,7 @@ public class CipherLeaseGateTests
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
-    /// The organization every cipher fixture below belongs to. Only an organization-owned cipher can be reached
-    /// through a governed collection, so a gated fixture without one is not a shape production can produce — and
-    /// per-seat licensing is resolved against it.
+    /// The organization every cipher fixture below belongs to, and the one licensing is resolved against.
     /// </summary>
     private static readonly Guid _organizationId = Guid.NewGuid();
 
@@ -309,9 +307,7 @@ public class CipherLeaseGateTests
     }
 
     /// <remarks>
-    /// The decision this method exists for. A lease widens the single <em>read</em>, and widened the echo of a
-    /// mutation with it until the write-return was split out — landing the full secret in durable client
-    /// state, where it outlived the lease.
+    /// A lease widens the single read, not the echo of a mutation.
     /// </remarks>
     [Fact]
     public async Task AuthorizeWriteReturnAsync_GatedWithActiveLease_Withholds()
@@ -660,7 +656,7 @@ public class CipherLeaseGateTests
         HasActiveLease(sutProvider, userId, cipherId);
         Unlicensed(sutProvider);
 
-        // A lease minted before the seat was withdrawn is not an exemption.
+        // A lease minted before the license was withdrawn is not an exemption.
         Assert.Null(await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
     }
 
@@ -881,8 +877,7 @@ public class CipherLeaseGateTests
         new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = true };
 
     /// <summary>
-    /// A collection associated with a rule the admin has switched off. The association is still recorded, so
-    /// this is exactly the shape that used to gate on the bare <c>AccessRuleId</c>.
+    /// A collection still associated with a rule the admin has switched off.
     /// </summary>
     private static CollectionDetails DisabledRuleCollection(Guid id) =>
         new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = false };

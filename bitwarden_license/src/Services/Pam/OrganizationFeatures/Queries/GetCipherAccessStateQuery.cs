@@ -47,8 +47,7 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
-        // Three independent reads, fetched concurrently. Rule resolution follows them rather than joining them: a
-        // held lease resolves the rule it was granted under, which isn't known until the lease is in hand.
+        // Rule resolution waits for these: a held lease resolves the rule it was granted under.
         var activeLeaseTask = _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         var pendingTask = _accessRequestRepository.GetActivePendingByRequesterIdCipherIdAsync(userId, cipherId, now);
         var approvedTask = _accessRequestRepository.GetActiveApprovedByRequesterIdCipherIdAsync(userId, cipherId, now);
@@ -61,9 +60,8 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         int? maxExtensionDurationSeconds = null;
         if (activeLease is not null)
         {
-            // Extension eligibility drives the banner's "Extend" control: extendable only while the rule opts in
-            // and no extension has been recorded yet. Read off the rule the lease was granted under, as
-            // RequestLeaseExtensionCommand does, so the control matches what the extend call will accept.
+            // Extendable once, while the rule the lease was granted under opts in, as RequestLeaseExtensionCommand
+            // enforces.
             var originatingRequest = await _accessRequestRepository.GetByIdAsync(activeLease.AccessRequestId);
             var rule = originatingRequest?.RuleId is { } ruleId
                 ? await _resolver.ResolvePinnedAsync(ruleId, activeLease.CollectionId)
@@ -78,13 +76,10 @@ public class GetCipherAccessStateQuery : IGetCipherAccessStateQuery
         else if (pending is null && approved is null
                  && await _resolver.ResolveAsync(userId, cipherId, signals) is null)
         {
-            // Nothing to report and the cipher isn't leasing-gated. A lease or request still returns a snapshot
-            // even if the rule was since removed.
+            // Nothing to report and the cipher isn't leasing-gated.
             throw new NotFoundException();
         }
 
-        // The approver identity/comment and inbox display-name fields aren't needed for this caller-scoped
-        // snapshot, so they stay null.
         return new CipherAccessState(
             cipherId,
             now,

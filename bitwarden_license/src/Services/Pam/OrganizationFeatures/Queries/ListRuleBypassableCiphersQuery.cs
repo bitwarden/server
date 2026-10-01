@@ -40,16 +40,12 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
         var gatingCollectionIds = await GetGatingCollectionIdsAsync(organizationId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
-        // Sets, not lists: `Contains` below runs once per mapping, which would be quadratic otherwise.
         return collectionCiphers
             .GroupBy(cc => cc.CipherId)
-            // Under this rule at all: reachable through at least one collection it governs.
+            // Reachable through at least one collection the rule governs…
             .Where(g => g.Any(cc => ruleCollectionIds.Contains(cc.CollectionId)))
-            // …but not actually gated. The negation of `CipherLeaseGate.IsGated`, tested against every
-            // gating collection in the organization rather than only this rule's.
+            // …but not gated, judged against every gating collection in the organization.
             .Where(g => !g.All(cc => gatingCollectionIds.Contains(cc.CollectionId)))
-            // The gaps themselves. Taken from the bypassable ciphers only, so a fully gated cipher's
-            // collections can never appear here.
             .SelectMany(g => g.Where(cc => !gatingCollectionIds.Contains(cc.CollectionId)))
             .Select(cc => cc.CollectionId)
             .Distinct()
@@ -59,11 +55,6 @@ public class ListRuleBypassableCiphersQuery : IListRuleBypassableCiphersQuery
     /// <summary>
     /// The organization's collection ids gated by an enabled rule.
     /// </summary>
-    /// <remarks>
-    /// Derived from the organization's rules and collections the same way
-    /// <c>CipherLeaseGate.GetLeasingCollectionIdsAsync</c> does, since the organization-scoped collection
-    /// read returns <c>Collection</c>, not the computed <c>HasEnabledAccessRule</c> projection.
-    /// </remarks>
     private async Task<ISet<Guid>> GetGatingCollectionIdsAsync(Guid organizationId)
     {
         var enabledRuleIds = (await _accessRuleRepository.GetManyByOrganizationIdAsync(organizationId))

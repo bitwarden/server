@@ -21,7 +21,7 @@ public class CipherAccessStateResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(state);
 
         CipherId = state.CipherId;
-        // The lease's status derives against the snapshot's own clock -- the same instant that filtered the reads.
+        // Derived against the snapshot's clock, the same instant that filtered the reads.
         ActiveLease = state.ActiveLease is null ? null : new AccessLeaseResponseModel(state.ActiveLease, state.AsOf);
         PendingRequest = state.PendingRequest is null ? null : new AccessRequestDetailsResponseModel(state.PendingRequest);
         ApprovedRequest = state.ApprovedRequest is null ? null : new AccessRequestDetailsResponseModel(state.ApprovedRequest);
