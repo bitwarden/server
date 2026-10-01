@@ -157,7 +157,7 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.NotNull(options);
         Assert.Null(options!.Customer);
         Assert.Null(options.Subscription);
-        Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, options.SubscriptionDetails.ProrationBehavior);
+        Assert.Null(options.SubscriptionDetails.ProrationBehavior);
         Assert.Equal(StripeConstants.BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type);
         Assert.Equal("usd", options.Currency);
         Assert.Equal("US", options.CustomerDetails.Address.Country);

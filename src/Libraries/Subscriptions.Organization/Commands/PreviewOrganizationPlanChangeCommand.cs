@@ -195,7 +195,13 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             items.Add(new InvoiceSubscriptionDetailsItemOptions { Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = smSeats });
         }
 
-        return new InvoiceSubscriptionDetailsOptions { Items = items, BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }, ProrationBehavior = ProrationBehavior.AlwaysInvoice };
+        // No Subscription is set on this new-subscription preview, so there is nothing to prorate — only the
+        // billing mode needs pinning (matching the sibling purchase preview).
+        return new InvoiceSubscriptionDetailsOptions
+        {
+            Items = items,
+            BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
+        };
     }
 
     private OrganizationSubscriptionChangeSet BuildPlanChangeSet(OrganizationEntity organization, Plan currentPlan,
