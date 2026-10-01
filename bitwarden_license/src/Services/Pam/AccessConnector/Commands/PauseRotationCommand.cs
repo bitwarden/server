@@ -41,7 +41,7 @@ public class PauseRotationCommand : IPauseRotationCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationPaused,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = config.CipherId,

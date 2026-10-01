@@ -47,7 +47,7 @@ public class RecordManualRotationCommand : IRecordManualRotationCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.ManualRotationRecorded,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = details.CipherId,

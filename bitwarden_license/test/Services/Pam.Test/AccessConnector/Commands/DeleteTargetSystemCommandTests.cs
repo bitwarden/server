@@ -110,7 +110,7 @@ public class DeleteTargetSystemCommandTests
             e.Kind == AccessAuditEventKind.TargetSystemDeleted && e.Phase == AccessAuditEventPhase.Attempt
             && e.OrganizationId == target.OrganizationId && e.ActorId == actingUserId
             && e.TargetSystemId == target.Id && e.TargetSystemName == target.Name
-            && e.OccurredAt == _now));
+            && e.OccurredDate == _now));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.TargetSystemDeleted && e.Phase == AccessAuditEventPhase.Outcome
             && e.TargetSystemId == target.Id && e.TargetSystemName == target.Name));

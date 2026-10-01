@@ -57,7 +57,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
             var rejectedAudit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationReportRejected,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
                 AccessConnectorId = daemonId,
@@ -81,7 +81,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationSucceeded,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = config.OrganizationId,
             ActorId = null,
             AccessConnectorId = daemonId,

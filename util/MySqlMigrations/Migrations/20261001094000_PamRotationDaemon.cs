@@ -10,62 +10,6 @@ public partial class PamRotationDaemon : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<Guid>(
-            name: "DaemonId",
-            table: "AccessAuditEvent",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<string>(
-            name: "DaemonName",
-            table: "AccessAuditEvent",
-            type: "varchar(200)",
-            maxLength: 200,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "RotationConfigId",
-            table: "AccessAuditEvent",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "RotationJobId",
-            table: "AccessAuditEvent",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<byte>(
-            name: "RotationSource",
-            table: "AccessAuditEvent",
-            type: "tinyint unsigned",
-            nullable: true);
-
-        migrationBuilder.AddColumn<byte>(
-            name: "SyncState",
-            table: "AccessAuditEvent",
-            type: "tinyint unsigned",
-            nullable: true);
-
-        migrationBuilder.AddColumn<Guid>(
-            name: "TargetSystemId",
-            table: "AccessAuditEvent",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci");
-
-        migrationBuilder.AddColumn<string>(
-            name: "TargetSystemName",
-            table: "AccessAuditEvent",
-            type: "varchar(200)",
-            maxLength: 200,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
-
         migrationBuilder.CreateTable(
             name: "PamDaemon",
             columns: table => new
@@ -92,6 +36,25 @@ public partial class PamRotationDaemon : Migration
                     name: "FK_PamDaemon_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
+                    principalColumn: "Id",
+                    onDelete: ReferentialAction.Cascade);
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
+
+        migrationBuilder.CreateTable(
+            name: "PamLeaseExpirySweep",
+            columns: table => new
+            {
+                AccessLeaseId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                SweptDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_PamLeaseExpirySweep", x => x.AccessLeaseId);
+                table.ForeignKey(
+                    name: "FK_PamLeaseExpirySweep_AccessLease_AccessLeaseId",
+                    column: x => x.AccessLeaseId,
+                    principalTable: "AccessLease",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
             })
@@ -247,25 +210,6 @@ public partial class PamRotationDaemon : Migration
             })
             .Annotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.CreateTable(
-            name: "PamLeaseExpirySweep",
-            columns: table => new
-            {
-                AccessLeaseId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                SweptDate = table.Column<DateTime>(type: "datetime(6)", nullable: false)
-            },
-            constraints: table =>
-            {
-                table.PrimaryKey("PK_PamLeaseExpirySweep", x => x.AccessLeaseId);
-                table.ForeignKey(
-                    name: "FK_PamLeaseExpirySweep_AccessLease_AccessLeaseId",
-                    column: x => x.AccessLeaseId,
-                    principalTable: "AccessLease",
-                    principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            })
-            .Annotation("MySql:CharSet", "utf8mb4");
-
         migrationBuilder.CreateIndex(
             name: "IX_PamDaemon_ApiKeyId",
             table: "PamDaemon",
@@ -368,37 +312,5 @@ public partial class PamRotationDaemon : Migration
 
         migrationBuilder.DropTable(
             name: "PamTargetSystem");
-
-        migrationBuilder.DropColumn(
-            name: "DaemonId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "DaemonName",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationConfigId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationJobId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "RotationSource",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "SyncState",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "TargetSystemId",
-            table: "AccessAuditEvent");
-
-        migrationBuilder.DropColumn(
-            name: "TargetSystemName",
-            table: "AccessAuditEvent");
     }
 }
