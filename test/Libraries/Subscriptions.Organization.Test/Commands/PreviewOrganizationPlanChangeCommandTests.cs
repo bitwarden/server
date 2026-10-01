@@ -63,7 +63,8 @@ public class PreviewOrganizationPlanChangeCommandTests
         Assert.Equal("cus_1", options!.Customer);
         Assert.Equal("sub_1", options.Subscription);
         Assert.Equal(StripeConstants.ProrationBehavior.AlwaysInvoice, options.SubscriptionDetails.ProrationBehavior);
-        Assert.Equal(StripeConstants.BillingMode.Classic, options.SubscriptionDetails.BillingMode.Type.ToString());
+        Assert.Null(options.SubscriptionDetails.BillingMode);
+        Assert.Null(options.Currency);
         Assert.True(options.AutomaticTax.Enabled);
         Assert.Equal("US", options.CustomerDetails.Address.Country);
         Assert.Equal("90210", options.CustomerDetails.Address.PostalCode);

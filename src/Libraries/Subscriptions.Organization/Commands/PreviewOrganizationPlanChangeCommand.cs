@@ -60,10 +60,13 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             throw new BadRequestException("The selected plan does not support Secrets Manager.");
         }
 
+        var subscriptionId = string.IsNullOrEmpty(organization.GatewaySubscriptionId)
+            ? null
+            : organization.GatewaySubscriptionId;
+
         InvoiceSubscriptionDetailsOptions subscriptionDetails;
-        var subscriptionId = organization.GatewaySubscriptionId;
         TaxID? onFileTaxId = null;
-        if (!string.IsNullOrEmpty(subscriptionId))
+        if (subscriptionId is not null)
         {
             (subscriptionDetails, onFileTaxId) = await BuildPlanChangeDetailsAsync(organization, newPlan);
         }
@@ -91,9 +94,13 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             }
         };
 
+        // Stripe sources currency and billing mode from the existing subscription on a plan change; a purchase
+        // preview has none, so set them explicitly. billing_mode can't be sent alongside a subscription.
         if (subscriptionId is null)
         {
             options.Currency = "usd";
+            options.SubscriptionDetails.BillingMode =
+                new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic };
         }
 
         try
@@ -149,8 +156,7 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
         var subscriptionDetails = new InvoiceSubscriptionDetailsOptions
         {
             Items = items,
-            ProrationBehavior = ProrationBehavior.AlwaysInvoice,
-            BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
+            ProrationBehavior = ProrationBehavior.AlwaysInvoice
         };
 
         // A trialing subscription isn't charged for the change now (the proration is $0). End the trial in the
@@ -195,13 +201,8 @@ internal sealed class PreviewOrganizationPlanChangeCommand(
             items.Add(new InvoiceSubscriptionDetailsItemOptions { Price = newPlan.SecretsManager.StripeSeatPlanId, Quantity = smSeats });
         }
 
-        // No Subscription is set on this new-subscription preview, so there is nothing to prorate — only the
-        // billing mode needs pinning (matching the sibling purchase preview).
-        return new InvoiceSubscriptionDetailsOptions
-        {
-            Items = items,
-            BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = BillingMode.Classic }
-        };
+        // No Subscription is set on this new-subscription preview, so there is nothing to prorate.
+        return new InvoiceSubscriptionDetailsOptions { Items = items };
     }
 
     private OrganizationSubscriptionChangeSet BuildPlanChangeSet(OrganizationEntity organization, Plan currentPlan,
