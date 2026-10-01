@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Sso.Utilities.Saml2;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
@@ -14,6 +15,7 @@ using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
 using Sustainsys.Saml2.Metadata;
 using Sustainsys.Saml2.WebSso;
+using EncryptedXml = System.Security.Cryptography.Xml.EncryptedXml;
 
 namespace Bit.SSO.Test.Utilities;
 
@@ -28,6 +30,127 @@ public class Saml2OptionsExtensionsTests
     private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
+
+    [Fact]
+    public async Task CouldHandleAsync_PathOutsideModulePath_ReturnsFalse()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var context = BuildRawPostContext("SAMLResponse", EncodeBase64(BuildResponseXml(string.Empty)));
+        context.Request.Path = "/unrelated/" + Scheme + "/Acs";
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_NoDefaultIdentityProvider_ReturnsFalse()
+    {
+        var options = new Saml2Options
+        {
+            SPOptions = new SPOptions
+            {
+                EntityId = new EntityId("https://sso.bitwarden.com" + ModulePath),
+                ModulePath = ModulePath,
+            },
+        };
+        var context = BuildRawPostContext("SAMLResponse", EncodeBase64(BuildResponseXml(string.Empty)));
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    /// <summary>
+    /// When the request path is under the module path, a default identity provider exists,
+    /// and the query-provided scheme matches the evaluated scheme,
+    /// CouldHandleAsync should return true before it reads the body,
+    /// even if the body is not in an expected format.
+    /// </summary>
+    /// <seealso cref="CouldHandleAsync_SchemeQueryDoesNotMatchAndBodyIsInvalid_ParsesBodyAndReturnsFalse"/>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CouldHandleAsync_SchemeQueryMatches_ReturnsTrueWithoutParsingBody(bool wantAssertionsSigned)
+    {
+        // Scheme matching behavior holds regardless of assertion signature enforcement.
+        var options = BuildOptions(wantAssertionsSigned: wantAssertionsSigned);
+        // control: A not-base64-encoded body should return false when Scheme does not match.
+        var context = BuildRawPostContext("SAMLResponse", "not-base64-at-all!!");
+        context.Request.QueryString = QueryString.Create("scheme", Scheme);
+        var formFeature = SpyOnForm(context);
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.False(WasFormRead(formFeature));
+    }
+
+    /// <summary>
+    /// When the query-provided scheme does not match the expected value,
+    /// CouldHandleAsync should parse the request body.
+    /// When the body is not in an expected format, it should return false.
+    /// </summary>
+    /// <seealso cref="CouldHandleAsync_SchemeQueryMatches_ReturnsTrueWithoutParsingBody"/>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CouldHandleAsync_SchemeQueryDoesNotMatchAndBodyIsInvalid_ParsesBodyAndReturnsFalse(bool wantAssertionsSigned)
+    {
+        // Scheme matching behavior holds regardless of assertion signature enforcement.
+        var options = BuildOptions(wantAssertionsSigned: wantAssertionsSigned);
+        var context = BuildRawPostContext("SAMLResponse", "not-base64-at-all!!");
+        context.Request.QueryString = QueryString.Create("scheme", "0d3c9a4e-7f21-4b6a-8e5d-2c1f9b7a6e30");
+        var formFeature = SpyOnForm(context);
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(WasFormRead(formFeature));
+    }
+
+    [Theory]
+    [InlineData("SAMLResponse", "", true)]
+    [InlineData("SAMLResponse", "   ", true)]
+    [InlineData("SAMLRequest", "", true)]
+    [InlineData("SAMLRequest", "    ", true)]
+    [InlineData("SAMLResponse", "   ", false)]
+    [InlineData("SAMLResponse", "", false)]
+    [InlineData("SAMLRequest", "", false)]
+    [InlineData("SAMLRequest", "   ", false)]
+    public async Task CouldHandleAsync_BlankSamlMessage_ReturnsFalse(string formField, string value, bool wantAssertionsSigned)
+    {
+        var options = BuildOptions(wantAssertionsSigned: wantAssertionsSigned);
+        var context = BuildRawPostContext(formField, value);
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+    }
+
+    [Theory]
+    [InlineData("not-base64-at-all!!")]
+    [InlineData("bm90IGRlZmxhdGVkIGRhdGE=")]
+    public async Task CouldHandleAsync_GetPayloadIsNotValidDeflate_ReturnsFalse(string payload)
+    {
+        // The first payload is not Base64, which raises the FormatException branch.
+        // The second payload is Base64 of bytes that are not a deflate stream.
+        // Both decline the scheme quietly.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var context = BuildGetContext("SAMLRequest", payload);
+        // The scheme check reads the query on every request. Only the GET branch reads SAMLRequest.
+        var query = Substitute.For<IQueryCollection>();
+        query["SAMLRequest"].Returns(new StringValues(payload));
+        var queryFeature = Substitute.For<IQueryFeature>();
+        queryFeature.Query.Returns(query);
+        context.Features.Set(queryFeature);
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+        _ = query.Received()["SAMLRequest"];
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PayloadWithoutSaml2Envelope_ReturnsFalse()
+    {
+        // Only a form POST or a GET carries a SAML message. Any other request leaves the envelope null.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Path = ModulePath + "/Acs";
+        context.Request.ContentType = "application/json";
+
+        Assert.False(await options.CouldHandleAsync(Scheme, context));
+    }
 
     [Theory]
     [InlineData(true)]
@@ -48,8 +171,11 @@ public class Saml2OptionsExtensionsTests
         Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
-    [Fact]
-    public async Task CouldHandleAsync_EncryptedAndSignedAssertionAndWantAssertionsSigned_DoesNotThrow()
+    [Theory]
+    [InlineData(EncryptedXml.XmlEncRSAOAEPUrl)]
+    [InlineData(EncryptedXml.XmlEncRSA15Url)]
+    public async Task CouldHandleAsync_EncryptedAndSignedAssertionAndWantAssertionsSigned_DoesNotThrow(
+        string keyTransportAlgorithm)
     {
         // The identity provider signs the assertion, then encrypts the whole thing, exactly like a
         // real round trip. The pre-flight check must decrypt before it can see the signature.
@@ -58,16 +184,20 @@ public class Saml2OptionsExtensionsTests
         var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate, signingCertificate);
 
         var signedAssertion = Saml2TestXml.BuildSignedAssertion(signingCertificate);
-        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(signedAssertion.OuterXml, decryptionCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
+            signedAssertion.OuterXml, decryptionCertificate, keyTransportAlgorithm);
 
-        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
         var (context, collector) = testContext;
 
         Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
-    [Fact]
-    public async Task CouldHandleAsync_EncryptedButUnsignedAssertionAndWantAssertionsSigned_Throws()
+    [Theory]
+    [InlineData(EncryptedXml.XmlEncRSAOAEPUrl)]
+    [InlineData(EncryptedXml.XmlEncRSA15Url)]
+    public async Task CouldHandleAsync_EncryptedButUnsignedAssertionAndWantAssertionsSigned_Throws(
+        string keyTransportAlgorithm)
     {
         // Decryption succeeding is not proof of a valid signature. An assertion that decrypts
         // cleanly but was never signed must still be rejected.
@@ -75,9 +205,10 @@ public class Saml2OptionsExtensionsTests
         var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
 
         var unsignedAssertion = Saml2TestXml.BuildAssertionDocument().DocumentElement!;
-        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(unsignedAssertion.OuterXml, decryptionCertificate);
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
+            unsignedAssertion.OuterXml, decryptionCertificate, keyTransportAlgorithm);
 
-        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml));
+        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
         var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
@@ -257,7 +388,10 @@ public class Saml2OptionsExtensionsTests
         "</xenc:EncryptedData>" +
         "</saml:EncryptedAssertion>";
 
-    private static DefaultHttpContext BuildRawPostContext(string responseXml)
+    private static DefaultHttpContext BuildRawPostContext(string responseXml) =>
+        BuildRawPostContext("SAMLResponse", EncodeBase64(responseXml));
+
+    private static DefaultHttpContext BuildRawPostContext(string formField, string value)
     {
         var context = new DefaultHttpContext();
         context.Request.Method = HttpMethods.Post;
@@ -265,10 +399,21 @@ public class Saml2OptionsExtensionsTests
         context.Request.ContentType = "application/x-www-form-urlencoded";
         context.Request.Form = new FormCollection(new Dictionary<string, StringValues>
         {
-            ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
+            [formField] = value,
         });
         return context;
     }
+
+    private static DefaultHttpContext BuildGetContext(string queryField, string value)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Get;
+        context.Request.Path = ModulePath + "/Acs";
+        context.Request.QueryString = QueryString.Create(queryField, value);
+        return context;
+    }
+
+    private static string EncodeBase64(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
 
     // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
     // the PM42982_WantAssertionsSigned feature flag, from the request services.
@@ -297,4 +442,20 @@ public class Saml2OptionsExtensionsTests
     {
         public void Dispose() => Collector.Dispose();
     }
+
+    private static IFormFeature SpyOnForm(HttpContext context)
+    {
+        var form = context.Request.Form;
+        var formFeature = Substitute.For<IFormFeature>();
+        formFeature.HasFormContentType.Returns(true);
+        formFeature.Form.Returns(form);
+        formFeature.ReadForm().Returns(form);
+        formFeature.ReadFormAsync(default).ReturnsForAnyArgs(form);
+        context.Features.Set(formFeature);
+        return formFeature;
+    }
+
+    private static bool WasFormRead(IFormFeature formFeature) =>
+        formFeature.ReceivedCalls().Any(call =>
+            call.GetMethodInfo().Name is nameof(IFormFeature.ReadForm) or nameof(IFormFeature.ReadFormAsync));
 }
