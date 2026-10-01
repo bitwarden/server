@@ -67,6 +67,35 @@ public class OrganizationDomainController : Controller
         return new ListResponseModel<OrganizationDomainResponseModel>(response);
     }
 
+    /// <summary>
+    /// Returns the name and verification status of every domain claimed by the organization. This is available to
+    /// members who can manage users as well as those who can manage SSO, because the member invite flow needs to
+    /// read claimed domains. It omits the DNS verification token and the verification job metadata returned by
+    /// <see cref="GetAll"/>, so it discloses nothing about the organization's SSO configuration.
+    /// </summary>
+    /// <param name="orgId">Organization identifier</param>
+    /// <returns>List of claimed domains for the organization.</returns>
+    [HttpGet("{orgId}/domain/mini")]
+    public async Task<Bit.HttpExtensions.ListResponseModel<OrganizationDomainMiniResponseModel>> GetAllMini(Guid orgId)
+    {
+        if (!await _currentContext.ManageSso(orgId) && !await _currentContext.ManageUsers(orgId))
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var domains = await _getOrganizationDomainByOrganizationIdQuery
+            .GetDomainsByOrganizationIdAsync(orgId);
+
+        return new Bit.HttpExtensions.ListResponseModel<OrganizationDomainMiniResponseModel>(
+            domains.Select(domain => new OrganizationDomainMiniResponseModel(domain)));
+    }
+
     [HttpGet("{orgId}/domain/{id}")]
     public async Task<OrganizationDomainResponseModel> Get(Guid orgId, Guid id)
     {

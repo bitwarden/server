@@ -1108,6 +1108,45 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return result;
     }
 
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyLoginCipherOrganizationDetailsAsync(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from c in dbContext.Ciphers.AsNoTracking()
+                    where c.UserId == null
+                       && c.OrganizationId == organizationId
+                       && c.Type == CipherType.Login
+                    select new CipherOrganizationDetailsWithCollections(
+                        new CipherOrganizationDetails
+                        {
+                            Id = c.Id,
+                            UserId = c.UserId,
+                            OrganizationId = c.OrganizationId,
+                            Type = c.Type,
+                            Data = c.Data,
+                            Favorites = c.Favorites,
+                            Folders = c.Folders,
+                            Attachments = c.Attachments,
+                            CreationDate = c.CreationDate,
+                            RevisionDate = c.RevisionDate,
+                            DeletedDate = c.DeletedDate,
+                            Reprompt = c.Reprompt,
+                            Key = c.Key,
+                            OrganizationUseTotp = c.Organization.UseTotp
+                        },
+                        new Dictionary<Guid, IGrouping<Guid, Bit.Core.Entities.CollectionCipher>>()
+                    )
+                    {
+                        CollectionIds = c.CollectionCiphers
+                            .Select(cc => cc.CollectionId)
+                            .ToArray()
+                    };
+
+        return await query.ToListAsync();
+    }
+
     public async Task UpsertAsync(CipherDetails cipher)
     {
         if (cipher.Id.Equals(default))

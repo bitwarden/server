@@ -521,8 +521,11 @@ public class OrganizationUsersController : BaseAdminConsoleController
         // Authorization check:
         // You must have authorization to ModifyUserAccess for all collections being saved.
         var postedCollections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
-        if (postedCollections.Count != 0 &&
-            !(await _authorizationService.AuthorizeAsync(User, postedCollections, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
+        var collectionsToAuthorize = postedCollections
+            .Where(c => c.Type != CollectionType.DefaultUserCollection)
+            .ToList();
+        if (collectionsToAuthorize.Count != 0 &&
+            !(await _authorizationService.AuthorizeAsync(User, collectionsToAuthorize, BulkCollectionOperations.ModifyUserAccess)).Succeeded)
         {
             throw new NotFoundException();
         }
@@ -893,7 +896,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/accept")]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> AcceptInviteLink([FromBody] AcceptOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -938,7 +940,6 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpPost("/organizations/users/invite-link/invite")]
     [ProducesResponseType(typeof(OrganizationInviteResponseModel), (int)HttpStatusCode.OK)]
-    [RequireFeature(FeatureFlagKeys.GenerateInviteLink)]
     public async Task<IResult> GetInvite([FromBody] GetOrganizationInviteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);

@@ -33,9 +33,6 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         _factory.SubstituteService<IFeatureService>(featureService =>
         {
             featureService
-                .IsEnabled(FeatureFlagKeys.GenerateInviteLink)
-                .Returns(true);
-            featureService
                 .IsEnabled(FeatureFlagKeys.InviteLinkAutoConfirm)
                 .Returns(true);
         });

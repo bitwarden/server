@@ -11,6 +11,7 @@ using Bit.Core.Dirt.Services.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
+using Microsoft.Bot.Schema;
 using NSubstitute;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
@@ -20,6 +21,10 @@ namespace Bit.Core.Test.Dirt.Services;
 [SutProviderCustomize]
 public class TeamsServiceTests
 {
+    private const string _teamId = "19:team-id@thread.tacv2";
+    private const string _teamsChannelsUrl =
+        "https://smba.example.com/amer/v3/teams/19%3Ateam-id%40thread.tacv2/conversations";
+
     private readonly MockedHttpMessageHandler _handler;
     private readonly HttpClient _httpClient;
 
@@ -177,6 +182,137 @@ public class TeamsServiceTests
 
         Assert.NotNull(result);
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_Success_ReturnsOnlyStandardChannels()
+    {
+        var sutProvider = GetSutProvider();
+
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            conversations = new object[]
+            {
+                new { id = "19:general@thread.tacv2", name = (string?)null, type = "standard" },
+                new { id = "19:alerts@thread.tacv2", name = "Alerts", type = "standard" },
+                new { id = "19:untyped@thread.tacv2", name = "Untyped", type = (string?)null },
+                new { id = "19:private@thread.tacv2", name = "Private", type = "private" },
+                new { id = "19:shared@thread.tacv2", name = "Shared", type = "shared" }
+            }
+        });
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(jsonResponse));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, c => c is { Id: "19:general@thread.tacv2", Name: null });
+        Assert.Contains(result, c => c is { Id: "19:alerts@thread.tacv2", Name: "Alerts" });
+        Assert.All(result, c => Assert.Equal("standard", c.Type));
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServiceUriWithoutTrailingSlash_CallsTeamConversationsEndpoint()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(new { conversations = Array.Empty<object>() })));
+
+        await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer"), _teamId);
+
+        var request = Assert.Single(_handler.CapturedRequests);
+        Assert.Equal(new Uri(_teamsChannelsUrl), request.RequestUri);
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServerReturnsEmpty_ReturnsEmptyList()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(JsonSerializer.Serialize(new { conversations = (object?)null })));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetStandardChannelsAsync_ServerErrorCode_ReturnsNull()
+    {
+        var sutProvider = GetSutProvider();
+
+        _handler.When(_teamsChannelsUrl)
+            .RespondWith(HttpStatusCode.Forbidden)
+            .WithContent(new StringContent("Forbidden"));
+
+        var result = await sutProvider.Sut.GetStandardChannelsAsync(new Uri("https://smba.example.com/amer/"), _teamId);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_SendsViaInjectedHttpClient()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+        var channelId = "19:channel-id@thread.tacv2";
+
+        var matcher = _handler
+            .When(_ => true)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent("application/json", JsonSerializer.Serialize(new { id = "activity-id" }));
+
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, channelId, "test message");
+
+        // The ConnectorClient only reaches this handler if it was constructed with the injected
+        // (SSRF-protected) HttpClient rather than creating its own.
+        Assert.Single(_handler.CapturedRequests);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_CalledMultipleTimes_DoesNotDisposeInjectedHttpClient()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+
+        _handler
+            .When(_ => true)
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent("application/json", JsonSerializer.Serialize(new { id = "activity-id" }));
+
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "first message");
+        await sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "second message");
+
+        // Disposing the ConnectorClient must not dispose the shared, factory-provided HttpClient.
+        Assert.Equal(2, _handler.CapturedRequests.Count);
+    }
+
+    [Fact]
+    public async Task SendMessageToChannelAsync_ServerErrorCode_Throws()
+    {
+        var sutProvider = GetSutProvider();
+        var serviceUri = new Uri("https://smba.example.com/amer/");
+
+        _handler
+            .When(_ => true)
+            .RespondWith(HttpStatusCode.Forbidden)
+            .WithContent("application/json", JsonSerializer.Serialize(new { error = new { code = "Forbidden" } }));
+
+        var exception = await Assert.ThrowsAsync<ErrorResponseException>(() =>
+            sutProvider.Sut.SendMessageToChannelAsync(serviceUri, "channel-id", "test message"));
+
+        // TeamsIntegrationHandler classifies failures from this status code.
+        Assert.Equal(HttpStatusCode.Forbidden, exception.Response.StatusCode);
+
+        Assert.Single(_handler.CapturedRequests);
     }
 
     [Theory, BitAutoData]
