@@ -38,7 +38,7 @@ public class DeleteAccessConnectorCommand : IDeleteAccessConnectorCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorDeleted,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             AccessConnectorId = daemon.Id,

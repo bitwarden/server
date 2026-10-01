@@ -54,7 +54,7 @@ public class ResumeRotationCommand : IResumeRotationCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationResumed,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = details.CipherId,
