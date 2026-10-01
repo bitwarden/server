@@ -101,7 +101,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobTimedOut,
-                    OccurredAt = now,
+                    OccurredDate = now,
                     OrganizationId = job.OrganizationId,
                     ActorId = null,
                     CipherId = job.CipherId,
@@ -136,7 +136,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobReleased,
-                    OccurredAt = now,
+                    OccurredDate = now,
                     OrganizationId = job.OrganizationId,
                     ActorId = null,
                     CipherId = job.CipherId,

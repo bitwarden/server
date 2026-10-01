@@ -62,7 +62,7 @@ public class UpdateTargetSystemPolicyCommand : IUpdateTargetSystemPolicyCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemPolicyUpdated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemId = target.Id,
