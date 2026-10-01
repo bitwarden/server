@@ -55,6 +55,20 @@ public class OrganizationSubscriptionEndpointsRequestBindingTests
         Assert.Null(command.ReceivedRequest);
     }
 
+    [Fact]
+    public async Task PlanChangePreview_MissingCadence_ReturnsBadRequestWithoutCallingCommand()
+    {
+        var organizationId = Guid.NewGuid();
+        _organizationRepository.GetByIdAsync(organizationId).Returns(new OrganizationEntity { Id = organizationId });
+        var command = new FakePreviewOrganizationPlanChangeCommand { Result = SamplePreview() };
+
+        var context = await InvokeAsync(command, organizationId,
+            """{"tier":"enterprise","billingAddress":{"country":"US","postalCode":"12345"}}""");
+
+        Assert.Equal((int)HttpStatusCode.BadRequest, context.Response.StatusCode);
+        Assert.Null(command.ReceivedRequest);
+    }
+
     private async Task<HttpContext> InvokeAsync(
         FakePreviewOrganizationPlanChangeCommand command, Guid organizationId, string json)
     {

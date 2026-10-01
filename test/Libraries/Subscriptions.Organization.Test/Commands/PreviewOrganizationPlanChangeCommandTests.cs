@@ -629,6 +629,55 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
+    public async Task Run_PastDueSubscription_IsPreviewable()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(PastDueSubscription());
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Any<InvoiceCreatePreviewOptions>(), Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        var result = await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually));
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public async Task Run_FreeOrganizationWithCustomer_DoesNotReadOnFileTaxId()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            PlanType = PlanType.Free,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually));
+
+        Assert.NotNull(options);
+        Assert.Null(options!.CustomerDetails.TaxIds);
+        await _stripeAdapter.DidNotReceive().GetSubscriptionAsync(Arg.Any<string>(), Arg.Any<SubscriptionGetOptions>());
+    }
+
+    [Fact]
     public async Task Run_TaxIdCodeNotDerivable_SendsNoTaxId()
     {
         var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
@@ -693,6 +742,13 @@ public class PreviewOrganizationPlanChangeCommandTests
     private static Subscription TrialingSubscription() => Subscription.FromJson("""
         {
           "id": "sub_1", "status": "trialing",
+          "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
+        }
+        """);
+
+    private static Subscription PastDueSubscription() => Subscription.FromJson("""
+        {
+          "id": "sub_1", "status": "past_due",
           "items": { "data": [ { "id": "si_pm", "quantity": 5, "price": { "id": "price_teams_seat" } } ] }
         }
         """);
