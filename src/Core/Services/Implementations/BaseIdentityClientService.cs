@@ -54,7 +54,7 @@ public abstract class BaseIdentityClientService : IDisposable
 
     /// <param name="serializerOptions">
     /// Options for serializing <paramref name="requestModel"/>. Defaults to the camelCase web
-    /// conventions of <see cref="JsonContent"/>; pass options when the receiver expects something else.
+    /// conventions of <see cref="JsonContent"/>.
     /// </param>
     protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel,
         JsonSerializerOptions? serializerOptions = null) =>

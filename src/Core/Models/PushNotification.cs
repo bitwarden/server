@@ -5,20 +5,16 @@ using Bit.Core.Platform.Push;
 namespace Bit.Core.Models;
 
 /// <summary>
-/// The envelope a notification is sent to the Notifications service in.
+/// The envelope for a notification sent to the Notifications service.
 /// </summary>
 /// <remarks>
-/// This is the sending half of the contract, so it is deliberately strict. Every property is
-/// required, which means the two engines that build one cannot forget to carry something across
-/// from the <see cref="Platform.Push.PushNotification{T}"/> they were handed -- including a property
-/// added here later, which becomes a compile error at both call sites rather than a silently
-/// defaulted field on the wire. The receiving half is more permissive, because a sender deployed
-/// before a property existed does not send it at all.
-///
-/// <para>The nullable properties are omitted from the serialized envelope rather than written as
-/// null. That is done per property instead of through a serializer-wide ignore condition so it stays
-/// confined to the envelope: the payload is another team's contract and keeps stating its properties
-/// explicitly.</para>
+/// <para>
+/// All properties on this type are required so any <see cref="Platform.Push.Internal.IPushEngine"/> implementations
+/// fail to compile if any property is forgotten when a <see cref="PushNotification{T}"/> is mapped to this type.
+/// </para>
+/// <para>
+/// Nullable properties are omitted when serialized. The properties of the payload itself are not affected.
+/// </para>
 /// </remarks>
 public class PushNotificationData<T>
 {
