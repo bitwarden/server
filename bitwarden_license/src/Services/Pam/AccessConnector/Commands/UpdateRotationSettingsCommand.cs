@@ -48,7 +48,7 @@ public class UpdateRotationSettingsCommand : IUpdateRotationSettingsCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationSettingsUpdated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             CipherId = config.CipherId,

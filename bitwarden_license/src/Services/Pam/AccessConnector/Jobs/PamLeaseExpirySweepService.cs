@@ -43,7 +43,7 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.LeaseExpired,
-                    OccurredAt = now,
+                    OccurredDate = now,
                     OrganizationId = lease.OrganizationId,
                     ActorId = null,
                     RequesterId = lease.RequesterId,

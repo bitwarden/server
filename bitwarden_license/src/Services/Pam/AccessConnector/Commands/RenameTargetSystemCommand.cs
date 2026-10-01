@@ -44,7 +44,7 @@ public class RenameTargetSystemCommand : IRenameTargetSystemCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemRenamed,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemId = target.Id,
