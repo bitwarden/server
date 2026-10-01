@@ -2635,6 +2635,78 @@ public class CiphersControllerTests
             .AuthorizeReadManyAsync(default, default);
     }
 
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_Unauthorized_ThrowsNotFound(
+        Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetOrganizationLoginCiphers(organizationId));
+    }
+
+    /// <remarks>
+    /// The administrative bulk read strips every gated cipher, so an admin holding a valid lease still
+    /// gets the partial shape in the list — full data is only ever released one cipher at a time.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_StripsGatedCiphers(
+        Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Admin;
+
+        var visible = OrganizationCipher(organization.Id, """{"Name":"2.visible|encrypted"}""");
+        var gated = OrganizationCipher(organization.Id,
+            """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""");
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationCiphersQuery>()
+            .GetOrganizationLoginCiphers(organization.Id)
+            .Returns([visible, gated]);
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeAdminReadManyAsync(userId, organization.Id, Arg.Any<IEnumerable<Cipher>>())
+            .Returns(FullCipherAccess.ForCipher(visible.Id));
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
+
+        Assert.Equal(2, result.Data.Count());
+        Assert.NotNull(result.Data.Single(c => c.Id == visible.Id).Data);
+        Assert.Null(result.Data.Single(c => c.Id == gated.Id).Data);
+        Assert.DoesNotContain("2.password|encrypted", result.Data.Single(c => c.Id == gated.Id).PartialData);
+    }
+
+    /// <remarks>
+    /// This endpoint returns the organization's Login ciphers regardless of caller collection assignments,
+    /// so resolving leasing from the caller's own collections would fail open for every cipher outside them.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_DoesNotConsultTheMemberDecision(
+        Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Admin;
+
+        var cipher = OrganizationCipher(organization.Id, "{}");
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationCiphersQuery>()
+            .GetOrganizationLoginCiphers(organization.Id)
+            .Returns([cipher]);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .Received(1)
+            .AuthorizeAdminReadManyAsync(userId, organization.Id, Arg.Any<IEnumerable<Cipher>>());
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs()
+            .AuthorizeReadManyAsync(default, default);
+    }
+
     /// <remarks>
     /// A cipher that did not exist a moment ago can hold no lease, so creating a credential in a
     /// leasing-enabled collection does not confer standing access to it. The create is a write-return, so

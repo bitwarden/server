@@ -168,6 +168,7 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -216,6 +217,7 @@ public static partial class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string ForceUpgradeV2Encryption = "force-upgrade-v2-encryption";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";
@@ -259,7 +261,6 @@ public static partial class FeatureFlagKeys
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
     public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
-    public const string VaultLoadingSkeletons = "pm-25081-vault-skeleton-loaders";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
