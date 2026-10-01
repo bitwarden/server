@@ -29,4 +29,23 @@ public interface IOrganizationIntegrationConfigurationRepository : IRepository<O
     Task<List<OrganizationIntegrationConfigurationDetails>> GetAllConfigurationDetailsAsync();
 
     Task<List<OrganizationIntegrationConfiguration>> GetManyByIntegrationAsync(Guid organizationIntegrationId);
+
+    /// <summary>
+    /// Disables a configuration that is currently enabled, in a single write and without reading it first.
+    /// </summary>
+    Task<bool> DisableAsync(
+        Guid organizationId,
+        Guid id,
+        DateTime disabledDate,
+        IntegrationFailureCategory disabledReason);
+
+    /// <summary>
+    /// Re-enables every configuration under an integration. Credentials live on the integration, so fixing it is
+    /// what recovers the configurations the breaker disabled. Scoped by organization like <see cref="DisableAsync"/>.
+    /// </summary>
+    /// <returns>The number of configurations re-enabled.</returns>
+    Task<int> ClearDisabledByIntegrationAsync(
+        Guid organizationId,
+        Guid organizationIntegrationId,
+        DateTime revisionDate);
 }

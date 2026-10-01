@@ -33,6 +33,7 @@ public class EventIntegrationHandlerTests
     private const string _templateWithUser = "#UserName#, #UserEmail#, #UserType#";
     private const string _templateWithActingUser = "#ActingUserName#, #ActingUserEmail#, #ActingUserType#";
     private static readonly Guid _organizationId = Guid.NewGuid();
+    private static readonly Guid _configurationId = Guid.NewGuid();
     private static readonly Uri _uri = new Uri("https://localhost");
     private static readonly Uri _uri2 = new Uri("https://example.com");
     private readonly IEventIntegrationPublisher _eventIntegrationPublisher = Substitute.For<IEventIntegrationPublisher>();
@@ -65,6 +66,7 @@ public class EventIntegrationHandlerTests
             IntegrationType = IntegrationType.Webhook,
             MessageId = "TestMessageId",
             OrganizationId = _organizationId.ToString(),
+            ConfigurationId = _configurationId,
             Configuration = new WebhookIntegrationConfigurationDetails(_uri),
             RenderedTemplate = template,
             RetryCount = 0,
@@ -80,6 +82,7 @@ public class EventIntegrationHandlerTests
     private static List<OrganizationIntegrationConfigurationDetails> OneConfiguration(string template)
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Id = _configurationId;
         config.Configuration = null;
         config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = template;
@@ -90,10 +93,12 @@ public class EventIntegrationHandlerTests
     private static List<OrganizationIntegrationConfigurationDetails> TwoConfigurations(string template)
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Id = _configurationId;
         config.Configuration = null;
         config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = template;
         var config2 = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config2.Id = _configurationId;
         config2.Configuration = null;
         config2.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri2 });
         config2.Template = template;
@@ -104,6 +109,7 @@ public class EventIntegrationHandlerTests
     private static List<OrganizationIntegrationConfigurationDetails> InvalidFilterConfiguration()
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Id = _configurationId;
         config.Configuration = null;
         config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = _templateBase;
@@ -115,6 +121,7 @@ public class EventIntegrationHandlerTests
     private static List<OrganizationIntegrationConfigurationDetails> ValidFilterConfiguration()
     {
         var config = Substitute.For<OrganizationIntegrationConfigurationDetails>();
+        config.Id = _configurationId;
         config.Configuration = null;
         config.IntegrationConfiguration = JsonSerializer.Serialize(new { Uri = _uri });
         config.Template = _templateBase;
@@ -367,7 +374,6 @@ public class EventIntegrationHandlerTests
         Assert.Equal(userDetails, context.User);
     }
 
-
     [Theory, BitAutoData]
     public async Task BuildContextAsync_UserIdNull_SkipsCache(EventMessage eventMessage)
     {
@@ -405,7 +411,6 @@ public class EventIntegrationHandlerTests
 
         Assert.Null(context.User);
     }
-
 
     [Theory, BitAutoData]
     public async Task BuildContextAsync_UserFactory_CallsOrganizationUserRepository(EventMessage eventMessage, OrganizationUserUserDetails userDetails)
@@ -477,6 +482,18 @@ public class EventIntegrationHandlerTests
         ).Returns(NoConfigurations());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
+        Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventAsync_DisabledConfiguration_DoesNothing(EventMessage eventMessage)
+    {
+        var configurations = OneConfiguration(_templateBase);
+        configurations[0].DisabledDate = DateTime.UtcNow;
+        var sutProvider = GetSutProvider(configurations);
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+
         Assert.Empty(_eventIntegrationPublisher.ReceivedCalls());
     }
 

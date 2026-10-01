@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Dirt.Models.Data.EventIntegrations;
+﻿using Bit.Core.Dirt.Enums;
+
+namespace Bit.Core.Dirt.Models.Data.EventIntegrations;
 
 /// <summary>
 /// Represents the result of an integration handler operation, including success status,

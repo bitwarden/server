@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Dirt.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -14,5 +15,14 @@ public class OrganizationIntegrationConfiguration : ITableObject<Guid>
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public string? Filters { get; set; }
+    public DateTime? DisabledDate { get; set; }
+    public IntegrationFailureCategory? DisabledReason { get; set; }
+
     public void SetNewId() => Id = CoreHelpers.GenerateComb();
+
+    public void ClearDisabled()
+    {
+        DisabledDate = null;
+        DisabledReason = null;
+    }
 }
