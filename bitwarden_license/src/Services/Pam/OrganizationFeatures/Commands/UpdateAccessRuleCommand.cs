@@ -69,7 +69,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleUpdated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = update.LastEditedBy,
             AccessRuleId = id,

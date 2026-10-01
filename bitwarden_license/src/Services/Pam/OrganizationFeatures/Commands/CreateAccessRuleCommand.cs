@@ -43,7 +43,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleCreated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = rule.OrganizationId,
             ActorId = rule.LastEditedBy,
             RuleName = rule.Name,

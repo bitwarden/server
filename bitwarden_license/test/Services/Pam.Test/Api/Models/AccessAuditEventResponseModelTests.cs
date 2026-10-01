@@ -14,7 +14,7 @@ public class AccessAuditEventResponseModelTests
         {
             Kind = AccessAuditEventKind.LeaseRevoked,
             Phase = AccessAuditEventPhase.Outcome,
-            OccurredAt = new DateTime(2026, 8, 18, 9, 30, 0),
+            OccurredDate = new DateTime(2026, 8, 18, 9, 30, 0),
             OrganizationId = Guid.NewGuid(),
             ActorId = Guid.NewGuid(),
             RequesterId = Guid.NewGuid(),
@@ -30,8 +30,6 @@ public class AccessAuditEventResponseModelTests
             ActorEmail = "ada@example.com",
             RequesterName = "Grace",
             RequesterEmail = "grace@example.com",
-            CipherName = "2.encrypted-cipher-name",
-            CollectionName = "2.encrypted-collection-name",
             RuleName = "Production database",
         };
 
@@ -53,8 +51,6 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(auditEvent.ActorEmail, model.ActorEmail);
         Assert.Equal(auditEvent.RequesterName, model.RequesterName);
         Assert.Equal(auditEvent.RequesterEmail, model.RequesterEmail);
-        Assert.Equal(auditEvent.CipherName, model.CipherName);
-        Assert.Equal(auditEvent.CollectionName, model.CollectionName);
         Assert.Equal(auditEvent.RuleName, model.RuleName);
     }
 
@@ -65,7 +61,7 @@ public class AccessAuditEventResponseModelTests
         var model = new AccessAuditEventResponseModel(new AccessAuditEvent
         {
             Kind = AccessAuditEventKind.LeaseActivated,
-            OccurredAt = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Unspecified),
+            OccurredDate = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Unspecified),
             LeaseNotBefore = new DateTime(2026, 8, 18, 9, 0, 0, DateTimeKind.Unspecified),
             LeaseNotAfter = new DateTime(2026, 8, 18, 10, 0, 0, DateTimeKind.Unspecified),
         });
@@ -86,7 +82,7 @@ public class AccessAuditEventResponseModelTests
         var model = new AccessAuditEventResponseModel(new AccessAuditEvent
         {
             Kind = AccessAuditEventKind.RequestDenied,
-            OccurredAt = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Utc),
+            OccurredDate = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Utc),
             ActorId = hasActor ? Guid.NewGuid() : null,
         });
 
@@ -103,7 +99,7 @@ public class AccessAuditEventResponseModelTests
         {
             Kind = AccessAuditEventKind.LeaseExtended,
             Phase = phase,
-            OccurredAt = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Utc),
+            OccurredDate = new DateTime(2026, 8, 18, 9, 30, 0, DateTimeKind.Utc),
         });
 
         Assert.Equal(expected, model.Incomplete);

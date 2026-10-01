@@ -61,7 +61,7 @@ public class AuditEndpointsHandlerTests
                 Kind = AccessAuditEventKind.RequestApproved,
                 Phase = AccessAuditEventPhase.Outcome,
                 OrganizationId = organizationId,
-                OccurredAt = new DateTime(2026, 8, 18, 9, 0, 0, DateTimeKind.Utc),
+                OccurredDate = new DateTime(2026, 8, 18, 9, 0, 0, DateTimeKind.Utc),
             }));
 
         var result = await sutProvider.Sut.GetTrail(organizationId, new AccessAuditTrailFilterRequestModel());

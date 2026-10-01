@@ -97,7 +97,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         var audit = new AccessAuditEventData
         {
             Kind = auditKind,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = request.OrganizationId,
             ActorId = userId,
             RequesterId = request.RequesterId,

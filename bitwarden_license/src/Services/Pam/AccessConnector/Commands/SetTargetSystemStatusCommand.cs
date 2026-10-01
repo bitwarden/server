@@ -44,7 +44,7 @@ public class SetTargetSystemStatusCommand : ISetTargetSystemStatusCommand
         var audit = new AccessAuditEventData
         {
             Kind = enable ? AccessAuditEventKind.TargetSystemEnabled : AccessAuditEventKind.TargetSystemDisabled,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
             TargetSystemId = target.Id,

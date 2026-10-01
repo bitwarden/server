@@ -162,7 +162,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = governingRule.OrganizationId,
             ActorId = userId,
             RequesterId = userId,
@@ -249,7 +249,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = governingRule.OrganizationId,
             ActorId = userId,
             RequesterId = userId,

@@ -63,7 +63,7 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         {
             OrganizationId = auditEvent.OrganizationId,
             // The time PAM recorded the action, not the time this fan-out ran, so both trails agree.
-            Date = auditEvent.OccurredAt,
+            Date = auditEvent.OccurredDate,
             ActingUserId = auditEvent.ActorId,
             UserId = auditEvent.RequesterId,
             // dbo.Event has columns for these two, so a PAM event files under the item's own vault event history.

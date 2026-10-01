@@ -84,7 +84,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseRevoked,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = lease.OrganizationId,
             ActorId = userId,
             RequesterId = lease.RequesterId,

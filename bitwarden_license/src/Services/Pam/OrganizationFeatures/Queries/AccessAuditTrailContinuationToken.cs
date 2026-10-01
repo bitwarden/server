@@ -15,15 +15,15 @@ public static class AccessAuditTrailContinuationToken
 
     /// <summary>The token that resumes after <paramref name="lastRow"/>.</summary>
     public static string From(AccessAuditEvent lastRow) =>
-        string.Create(CultureInfo.InvariantCulture, $"{lastRow.OccurredAt.Ticks}{Separator}{lastRow.Id:N}");
+        string.Create(CultureInfo.InvariantCulture, $"{lastRow.OccurredDate.Ticks}{Separator}{lastRow.Id:N}");
 
     /// <summary>
     /// Reads a token back into a position. False for anything this did not issue; a caller paging through the
     /// trail must not be silently restarted from the beginning.
     /// </summary>
-    public static bool TryParse(string token, out DateTime occurredAt, out Guid id)
+    public static bool TryParse(string token, out DateTime occurredDate, out Guid id)
     {
-        occurredAt = default;
+        occurredDate = default;
         id = default;
 
         var separator = token.IndexOf(Separator);
@@ -45,7 +45,7 @@ public static class AccessAuditTrailContinuationToken
             return false;
         }
 
-        occurredAt = new DateTime(ticks, DateTimeKind.Utc);
+        occurredDate = new DateTime(ticks, DateTimeKind.Utc);
         return true;
     }
 }

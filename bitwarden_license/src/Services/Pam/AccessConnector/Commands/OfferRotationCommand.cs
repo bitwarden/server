@@ -74,7 +74,7 @@ public class OfferRotationCommand : IOfferRotationCommand
             var audit = new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RotationOffered,
-                OccurredAt = now,
+                OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
                 CipherId = config.CipherId,

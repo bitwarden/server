@@ -35,7 +35,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleDeleted,
-            OccurredAt = _timeProvider.GetUtcNow().UtcDateTime,
+            OccurredDate = _timeProvider.GetUtcNow().UtcDateTime,
             OrganizationId = existing.OrganizationId,
             ActorId = userId,
             AccessRuleId = existing.Id,

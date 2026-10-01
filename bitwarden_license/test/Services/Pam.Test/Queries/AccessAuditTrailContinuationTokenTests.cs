@@ -16,13 +16,13 @@ public class AccessAuditTrailContinuationTokenTests
         {
             Id = Guid.NewGuid(),
             // A tick-precision instant, which is what DATETIME2(7) stores and what the token must not round.
-            OccurredAt = new DateTime(638_600_123_456_789_012L, DateTimeKind.Utc),
+            OccurredDate = new DateTime(638_600_123_456_789_012L, DateTimeKind.Utc),
         };
 
         Assert.True(AccessAuditTrailContinuationToken.TryParse(
             AccessAuditTrailContinuationToken.From(row), out var occurredAt, out var id));
 
-        Assert.Equal(row.OccurredAt, occurredAt);
+        Assert.Equal(row.OccurredDate, occurredAt);
         Assert.Equal(DateTimeKind.Utc, occurredAt.Kind);
         Assert.Equal(row.Id, id);
     }
@@ -36,12 +36,12 @@ public class AccessAuditTrailContinuationTokenTests
         var first = AccessAuditTrailContinuationToken.From(new AccessAuditEvent
         {
             Id = Guid.NewGuid(),
-            OccurredAt = occurredAt,
+            OccurredDate = occurredAt,
         });
         var second = AccessAuditTrailContinuationToken.From(new AccessAuditEvent
         {
             Id = Guid.NewGuid(),
-            OccurredAt = occurredAt,
+            OccurredDate = occurredAt,
         });
 
         Assert.NotEqual(first, second);

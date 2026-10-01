@@ -114,7 +114,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseActivated,
-            OccurredAt = now,
+            OccurredDate = now,
             OrganizationId = request.OrganizationId,
             ActorId = userId,
             RequesterId = request.RequesterId,

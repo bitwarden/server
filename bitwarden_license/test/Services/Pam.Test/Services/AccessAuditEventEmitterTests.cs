@@ -25,7 +25,7 @@ public class AccessAuditEventEmitterTests
     {
         Kind = kind,
         Phase = AccessAuditEventPhase.Outcome,
-        OccurredAt = DateTime.UtcNow,
+        OccurredDate = DateTime.UtcNow,
         OrganizationId = organizationId,
     };
 
@@ -103,7 +103,7 @@ public class AccessAuditEventEmitterTests
         var occurredAt = DateTime.UtcNow.AddMinutes(-5);
         var auditEvent = AnEventOfKind(organizationId, AccessAuditEventKind.LeaseRevoked) with
         {
-            OccurredAt = occurredAt,
+            OccurredDate = occurredAt,
             ActorId = actorId,
             RequesterId = requesterId,
             CipherId = cipherId,
