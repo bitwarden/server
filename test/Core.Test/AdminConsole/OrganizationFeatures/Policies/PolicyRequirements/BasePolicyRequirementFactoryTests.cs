@@ -91,6 +91,40 @@ public class BasePolicyRequirementFactoryTests
         Assert.True(sut.Enforce(policy));
     }
 
+    [Theory]
+    [InlineData(OrganizationUserType.Owner, true)]
+    [InlineData(OrganizationUserType.Admin, true)]
+    [InlineData(OrganizationUserType.Custom, false)]
+    [InlineData(OrganizationUserType.User, false)]
+    public void EnforcePreAccess_ExemptRoles_DoesNotEnforceAgainstThoseRoles(
+        OrganizationUserType proposedRole, bool expected)
+    {
+        var sut = new TestPolicyRequirementFactory(
+            // These exempt roles are intentionally unusual to make sure we're properly testing the sut
+            [OrganizationUserType.User, OrganizationUserType.Custom],
+            [],
+            false);
+
+        Assert.Equal(expected, sut.EnforcePreAccess(proposedRole, isProvider: false));
+    }
+
+    [Fact]
+    public void EnforcePreAccess_ExemptProviders_DoesNotEnforceAgainstProviders()
+    {
+        var sut = new TestPolicyRequirementFactory([], [], true);
+
+        Assert.False(sut.EnforcePreAccess(OrganizationUserType.User, isProvider: true));
+        Assert.True(sut.EnforcePreAccess(OrganizationUserType.User, isProvider: false));
+    }
+
+    [Fact]
+    public void EnforcePreAccess_NoExemptions_EnforcesAgainstAdminsAndProviders()
+    {
+        var sut = new TestPolicyRequirementFactory([], [], false);
+
+        Assert.True(sut.EnforcePreAccess(OrganizationUserType.Owner, isProvider: true));
+    }
+
     private class TestPolicyRequirementFactory(
         IEnumerable<OrganizationUserType> exemptRoles,
         IEnumerable<OrganizationUserStatusType> exemptStatuses,

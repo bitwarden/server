@@ -2427,6 +2427,112 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("NotificationStatus", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessConnectorId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AccessConnectorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<Guid?>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessRequestId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("AccessRuleId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ActorEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CollectionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("longtext");
+
+                    b.Property<byte>("Kind")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<DateTime?>("LeaseNotAfter")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LeaseNotBefore")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("OccurredDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<byte>("Phase")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("RequesterEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<Guid?>("RequesterId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("RequesterName")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<Guid?>("RotationConfigId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("RotationJobId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<byte?>("RotationSource")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("RuleName")
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<byte?>("SyncState")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<Guid?>("TargetSystemId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("TargetSystemName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId");
+
+                    b.HasIndex("OrganizationId", "OccurredDate", "Id")
+                        .IsDescending(false, true, true);
+
+                    b.ToTable("AccessAuditEvent", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3713,6 +3819,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Notification");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision", b =>

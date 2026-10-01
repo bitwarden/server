@@ -8,6 +8,7 @@ using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Settings;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
@@ -124,6 +125,40 @@ public class TeamsIntegrationController(
 
         var location = $"/organizations/{integration.OrganizationId}/integrations/{integration.Id}";
         return Created(location, new OrganizationIntegrationResponseModel(integration));
+    }
+
+    [HttpGet("{organizationId:guid}/integrations/{integrationId:guid}/teams/channels")]
+    public async Task<ListResponseModel<TeamsChannelResponseModel>> GetChannelsAsync(
+        Guid organizationId,
+        Guid integrationId)
+    {
+        if (!await currentContext.OrganizationOwner(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration is null ||
+            integration.OrganizationId != organizationId ||
+            integration.Type != IntegrationType.Teams)
+        {
+            throw new NotFoundException();
+        }
+
+        // The install conversation ID is the team's ID for the Bot Framework.
+        var teamsIntegration = integration.Configuration is null
+            ? null
+            : JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration);
+        if (teamsIntegration is not { ChannelId: { } teamId, ServiceUrl: { } serviceUrl })
+        {
+            throw new BadRequestException("The Bitwarden app has not been added to a team yet.");
+        }
+
+        var channels = await teamsService.GetStandardChannelsAsync(serviceUrl, teamId)
+            ?? throw new BadRequestException("Unable to retrieve the channels for the connected team. Please try again.");
+
+        return new ListResponseModel<TeamsChannelResponseModel>(
+            channels.Select(channel => new TeamsChannelResponseModel(channel)));
     }
 
     [Route("integrations/teams/incoming")]
