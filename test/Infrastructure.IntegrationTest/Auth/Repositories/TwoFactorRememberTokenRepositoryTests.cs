@@ -73,7 +73,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R1 — upsert semantics
+    // Upsert semantics
     // -------------------------------------------------------------------------------------------
 
     [Theory, DatabaseData]
@@ -104,7 +104,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R2 — concurrent upsert
+    // Concurrent upsert
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -136,7 +136,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R3, R4 — rotation
+    // Rotation
     // -------------------------------------------------------------------------------------------
 
     [Theory, DatabaseData]
@@ -200,7 +200,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R5, R6 — cascade behavior
+    // Cascade behavior
     // -------------------------------------------------------------------------------------------
 
     [Theory, DatabaseData]
@@ -262,7 +262,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R7 — expiry sweep
+    // Expiry sweep
     // -------------------------------------------------------------------------------------------
 
     [Theory, DatabaseData]
@@ -289,7 +289,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R9 — the unique index exists on every provider
+    // The unique index exists on every provider
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
@@ -352,7 +352,7 @@ public class TwoFactorRememberTokenRepositoryTests
     }
 
     // -------------------------------------------------------------------------------------------
-    // R8 — storage fidelity
+    // Storage fidelity
     // -------------------------------------------------------------------------------------------
 
     /// <summary>
