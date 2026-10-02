@@ -28,7 +28,11 @@ public interface ITwoFactorRememberTokenRepository
     /// The new stamp is generated here rather than by the caller: nothing above this layer needs to
     /// know the value, and generating it in one place keeps every provider writing the same thing.
     /// </remarks>
-    Task RotateStampsByUserIdAsync(Guid userId);
+    /// <param name="revisionDate">
+    /// The value written to <c>RevisionDate</c> on every rotated row, supplied by the caller so that
+    /// every provider writes one instant.
+    /// </param>
+    Task RotateStampsByUserIdAsync(Guid userId, DateTime revisionDate);
 
     /// <summary>
     /// Deletes every row that expired before <paramref name="now"/>. Hygiene only — an expired row is

@@ -113,7 +113,7 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task RotateStampsByUserIdAsync(Guid userId)
+    public async Task RotateStampsByUserIdAsync(Guid userId, DateTime revisionDate)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
@@ -126,7 +126,7 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
                 // implementations write the same shape of value. One stamp covers every row for the
                 // user; see the procedure for why that is safe.
                 Stamp = Guid.NewGuid().ToString(),
-                RevisionDate = DateTime.UtcNow,
+                RevisionDate = revisionDate,
             },
             commandType: CommandType.StoredProcedure);
     }

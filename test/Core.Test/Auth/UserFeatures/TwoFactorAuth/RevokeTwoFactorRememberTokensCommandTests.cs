@@ -2,6 +2,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -10,16 +11,27 @@ namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
 [SutProviderCustomize]
 public class RevokeTwoFactorRememberTokensCommandTests
 {
-    [Theory, BitAutoData]
-    public async Task RevokeAllForUserAsync_RotatesStampsForThatUser(
-        SutProvider<RevokeTwoFactorRememberTokensCommand> sutProvider,
-        Guid userId)
+    private static readonly DateTime _now = new(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
+
+    private static SutProvider<RevokeTwoFactorRememberTokensCommand> GetSutProvider()
     {
+        var sutProvider = new SutProvider<RevokeTwoFactorRememberTokensCommand>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        return sutProvider;
+    }
+
+    [Theory, BitAutoData]
+    public async Task RevokeAllForUserAsync_RotatesStampsForThatUser(Guid userId)
+    {
+        var sutProvider = GetSutProvider();
+
         await sutProvider.Sut.RevokeAllForUserAsync(userId);
 
         await sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .Received(1)
-            .RotateStampsByUserIdAsync(userId);
+            .RotateStampsByUserIdAsync(userId, _now);
     }
 
     /// <summary>
@@ -27,10 +39,10 @@ public class RevokeTwoFactorRememberTokensCommandTests
     /// of when each device was first remembered.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task RevokeAllForUserAsync_DoesNotDeleteRows(
-        SutProvider<RevokeTwoFactorRememberTokensCommand> sutProvider,
-        Guid userId)
+    public async Task RevokeAllForUserAsync_DoesNotDeleteRows(Guid userId)
     {
+        var sutProvider = GetSutProvider();
+
         await sutProvider.Sut.RevokeAllForUserAsync(userId);
 
         await sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
@@ -43,12 +55,11 @@ public class RevokeTwoFactorRememberTokensCommandTests
     /// teardown so that a failure leaves a state the caller can retry.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task RevokeAllForUserAsync_RepositoryThrows_Propagates(
-        SutProvider<RevokeTwoFactorRememberTokensCommand> sutProvider,
-        Guid userId)
+    public async Task RevokeAllForUserAsync_RepositoryThrows_Propagates(Guid userId)
     {
+        var sutProvider = GetSutProvider();
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
-            .RotateStampsByUserIdAsync(userId)
+            .RotateStampsByUserIdAsync(userId, _now)
             .Returns(Task.FromException(new InvalidOperationException("database unavailable")));
 
         await Assert.ThrowsAsync<InvalidOperationException>(

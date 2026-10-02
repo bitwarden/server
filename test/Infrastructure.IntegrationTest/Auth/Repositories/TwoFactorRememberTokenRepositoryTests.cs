@@ -288,7 +288,7 @@ public class TwoFactorRememberTokenRepositoryTests
         Assert.NotNull(beforeOne);
         Assert.NotNull(beforeTwo);
 
-        await sut.RotateStampsByUserIdAsync(user.Id);
+        await sut.RotateStampsByUserIdAsync(user.Id, DateTime.UtcNow);
 
         var afterOne = await sut.GetByUserIdDeviceIdAsync(user.Id, deviceOne.Id);
         var afterTwo = await sut.GetByUserIdDeviceIdAsync(user.Id, deviceTwo.Id);
@@ -322,7 +322,7 @@ public class TwoFactorRememberTokenRepositoryTests
         await sut.UpsertAsync(NewToken(revokedUser.Id, revokedDevice.Id, "stamp-revoked"));
         await sut.UpsertAsync(NewToken(untouchedUser.Id, untouchedDevice.Id, "stamp-untouched"));
 
-        await sut.RotateStampsByUserIdAsync(revokedUser.Id);
+        await sut.RotateStampsByUserIdAsync(revokedUser.Id, DateTime.UtcNow);
 
         var untouched = await sut.GetByUserIdDeviceIdAsync(untouchedUser.Id, untouchedDevice.Id);
 

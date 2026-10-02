@@ -279,7 +279,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
 
         var repository = sutProvider.GetDependency<ITwoFactorRememberTokenRepository>();
         await repository.DidNotReceiveWithAnyArgs().UpsertAsync(default!);
-        await repository.DidNotReceiveWithAnyArgs().RotateStampsByUserIdAsync(default);
+        await repository.DidNotReceiveWithAnyArgs().RotateStampsByUserIdAsync(default, default);
         await repository.DidNotReceiveWithAnyArgs().DeleteExpiredAsync(default);
     }
 }
