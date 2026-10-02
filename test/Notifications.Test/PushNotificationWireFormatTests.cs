@@ -16,7 +16,6 @@ using MessagePack;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
@@ -48,11 +47,6 @@ namespace Notifications.Test;
 /// listed after the engines stop producing it, so test 3 keeps proving the receiver still accepts
 /// what an older sender may still be sending; only tests 1 and 2 track the current output. Add the
 /// new format in one release, switch the engine in a later one.</para>
-///
-/// <para>The ingress formats disagree by convention — the queue writes PascalCase, <c>POST /send</c>
-/// writes camelCase — and both are deserialized case-insensitively into the same CLR types by
-/// <see cref="HubHelpers"/>. A single expected frame per case is therefore an assertion that ingress
-/// conventions never reach clients.</para>
 ///
 /// <para><strong>The frame assertions are stricter than what would actually break a client.</strong>
 /// MessagePack maps are string-keyed, so clients decode by name: reordering properties, or adding one
@@ -267,9 +261,7 @@ public sealed class PushNotificationWireFormatTests
     ];
 
     /// <summary>
-    /// Every payload format the service accepts, one entry each, in two generations: what the engines
-    /// write now, and what senders deployed before this release write. Each section carries the note
-    /// explaining its status.
+    /// Every payload format the service accepts, one entry each.
     ///
     /// <para>A format stays listed after the engine stops producing it, because a sender that has
     /// not been redeployed can still be sending it. That is what lets the sender change ship in one
@@ -331,8 +323,6 @@ public sealed class PushNotificationWireFormatTests
                 services.AddSingleton(anonymousHubContext);
                 services.AddSingleton<HubHelpers>();
                 services.AddHostedService<AzureQueueHostedService>();
-                // So a test can assert on what dequeuing logged.
-                services.AddFakeLogging();
             })
             .UseConsoleLifetime()
             .Build();
@@ -418,9 +408,8 @@ public sealed class PushNotificationWireFormatTests
     }
 
     /// <summary>
-    /// The queue carries bytes, and a test can now queue them directly. Nothing reads a message that
-    /// way yet; this proves the fake supports it, so the reader can change without the harness having
-    /// to change with it.
+    /// The queue carries bytes, and the reader deserializes the message body as bytes. Queuing them
+    /// directly pins that a message is read the same way however it was written.
     /// </summary>
     [Fact]
     public async Task QueueMessageQueuedAsBytes_RoutesLikeAString()
@@ -484,12 +473,11 @@ public sealed class PushNotificationWireFormatTests
 
     private async Task<HubInvocation> DeliverAsync(WireCase wireCase)
     {
-        using var cts = new CancellationTokenSource(_timeout);
-
         if (wireCase.Ingress == Ingress.AzureQueue)
         {
             await _queue.SendMessageAsync(wireCase.Payload);
-            return await _queueRecorder.AwaitNextAsync(cts.Token);
+            using var queueCts = new CancellationTokenSource(_timeout);
+            return await _queueRecorder.AwaitNextAsync(queueCts.Token);
         }
 
         // The factory is shared across this class, so clear anything a previous case left behind.
@@ -500,6 +488,9 @@ public sealed class PushNotificationWireFormatTests
         using var response = await client.PostAsync("/send", content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // Started only now so that the first case's server start-up does not count against it.
+        using var cts = new CancellationTokenSource(_timeout);
         return await _factory.AwaitNextHubInvocationAsync(cts.Token);
     }
 
