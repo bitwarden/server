@@ -56,9 +56,11 @@ public static class ServiceCollectionExtensions
     /// SSRF protection applied to the other organization-controlled clients (webhooks, Icons).
     /// </para>
     /// <para>
-    /// Self-hosted installations are excluded: they routinely run their IdP on an internal address,
-    /// and the operator configuring it already owns that network, so there is no tenant boundary
-    /// for the guard to protect.
+    /// Self-hosted installations are excluded. Their IdP often runs on the same private network as
+    /// the server, and the SSRF guard refuses every private, loopback and link-local address with no
+    /// allowlist, so OIDC discovery and sign-in would fail. The accepted trade-off is that an
+    /// organization admin on a self-hosted server can direct these requests at the operator's
+    /// internal network.
     /// </para>
     /// </remarks>
     private static IServiceCollection AddOidcBackchannelHttpClient(this IServiceCollection services,
