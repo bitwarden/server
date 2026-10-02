@@ -168,6 +168,7 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -216,6 +217,7 @@ public static partial class FeatureFlagKeys
     public const string NoLogoutOnKeyUpgradeRotation = "pm-31050-no-logout-key-upgrade-rotation";
     public const string EnableAccountEncryptionV2JitPasswordRegistration = "enable-account-encryption-v2-jit-password-registration";
     public const string EnableAccountEncryptionV2PasswordRegistration = "pm-27278-v2-password-registration";
+    public const string ForceUpgradeV2Encryption = "force-upgrade-v2-encryption";
 
     /* Mobile Team */
     public const string AndroidImportLoginsFlow = "import-logins-flow";

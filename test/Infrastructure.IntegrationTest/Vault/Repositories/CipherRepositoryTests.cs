@@ -1471,5 +1471,80 @@ public class CipherRepositoryTests
         var remainingCollectionCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(organization.Id);
         Assert.Empty(remainingCollectionCiphers);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyLoginCipherOrganizationDetailsAsync_ReturnsOnlyLoginCiphers(
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
+        ICipherRepository cipherRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test"
+        });
+
+        var defaultCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Default Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        });
+
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Shared Collection",
+            OrganizationId = organization.Id,
+        });
+
+        async Task<Cipher> CreateCipherAsync(CipherType type) => await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = type,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        async Task LinkAsync(Guid cipherId, Guid collectionId) =>
+            await collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+                organization.Id, new[] { cipherId }, new[] { collectionId });
+
+        var loginInSharedCollection = await CreateCipherAsync(CipherType.Login);
+        var loginInDefaultCollection = await CreateCipherAsync(CipherType.Login);
+        var unassignedLogin = await CreateCipherAsync(CipherType.Login);
+        var secureNote = await CreateCipherAsync(CipherType.SecureNote);
+        var card = await CreateCipherAsync(CipherType.Card);
+
+        await LinkAsync(loginInSharedCollection.Id, sharedCollection.Id);
+        await LinkAsync(loginInDefaultCollection.Id, defaultCollection.Id);
+        await LinkAsync(secureNote.Id, sharedCollection.Id);
+        await LinkAsync(card.Id, sharedCollection.Id);
+
+        var result = (await cipherRepository.GetManyLoginCipherOrganizationDetailsAsync(organization.Id)).ToList();
+
+        // Only Login-type ciphers returned
+        Assert.All(result, c => Assert.Equal(CipherType.Login, c.Type));
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, c => c.Id == loginInSharedCollection.Id);
+        Assert.Contains(result, c => c.Id == loginInDefaultCollection.Id);
+        Assert.Contains(result, c => c.Id == unassignedLogin.Id);
+
+        // Non-Login types excluded
+        Assert.DoesNotContain(result, c => c.Id == secureNote.Id);
+        Assert.DoesNotContain(result, c => c.Id == card.Id);
+
+        // Default-collection cipher is included (not excluded unlike ExcludingDefaultCollections)
+        Assert.Contains(result, c => c.Id == loginInDefaultCollection.Id);
+    }
 }
 

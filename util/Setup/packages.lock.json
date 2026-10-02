@@ -21,9 +21,9 @@
       },
       "YamlDotNet": {
         "type": "Direct",
-        "requested": "[11.2.1, 11.2.1]",
-        "resolved": "11.2.1",
-        "contentHash": "tBt8K+korVfrjH9wyDEhiLKxbs8qoLCLIFwvYgkSUuMC9//w3z0cFQ8LQAI/5MCKq+BMil0cfRTRvPeE7eXhQw=="
+        "requested": "[18.1.0, 18.1.0]",
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
       },
       "AdaptiveCards": {
         "type": "Transitive",
