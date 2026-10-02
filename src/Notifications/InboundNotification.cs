@@ -8,9 +8,9 @@ namespace Bit.Notifications;
 /// A notification received from <see cref="AzureQueueHostedService"/> or <see cref="Controllers.SendController"/>.
 /// </summary>
 /// <remarks>
-/// <para>This type is an envelope containing a serialized notification. <see cref="Type"/> identifies which notfication
-/// class has been serialized and stored in <see cref="Payload"/>. The payload contains the information necessary to
-/// route the notification to the appropriate place.
+/// <para>This type is an envelope containing a serialized notification. <see cref="Type"/> identifies which notification
+/// class has been serialized and stored in <see cref="Payload"/>. Routing comes from the envelope's
+/// <see cref="Target"/>, <see cref="TargetId"/> and <see cref="ClientType"/>.
 /// </para>
 /// </remarks>
 public class InboundNotification
@@ -26,8 +26,8 @@ public class InboundNotification
     public ClientType? ClientType { get; init; }
 
     /// <summary>
-    /// Reads the payload as <typeparamref name="T"/> and returns the notification in the shape
-    /// clients receive, or <see langword="null"/> when the payload does not parse as that type.
+    /// Returns the notification in the shape clients receive, with the envelope's routing fields
+    /// removed and the payload passed through unchanged.
     /// </summary>
     public OutboundNotification ToOutbound()
     {
