@@ -14,6 +14,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands;
+using Bit.Core.Vault.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -36,6 +37,7 @@ public class NonAnonymousSendCommandTests
     private readonly ICurrentContext _currentContext;
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
+    private readonly ICipherRepository _cipherRepository;
     private readonly NonAnonymousSendCommand _nonAnonymousSendCommand;
 
     private readonly ILogger<NonAnonymousSendCommand> _logger;
@@ -49,6 +51,7 @@ public class NonAnonymousSendCommandTests
         _currentContext = Substitute.For<ICurrentContext>();
         _sendCoreHelperService = Substitute.For<ISendCoreHelperService>();
         _eventService = Substitute.For<IEventService>();
+        _cipherRepository = Substitute.For<ICipherRepository>();
         _logger = Substitute.For<ILogger<NonAnonymousSendCommand>>();
 
         _nonAnonymousSendCommand = new NonAnonymousSendCommand(
@@ -58,7 +61,8 @@ public class NonAnonymousSendCommandTests
             _sendValidationService,
             _sendCoreHelperService,
             _eventService,
-            _logger
+            _logger,
+            _cipherRepository
         );
     }
 
@@ -1738,5 +1742,82 @@ public class NonAnonymousSendCommandTests
         await _sendRepository.Received(1).DeleteAsync(send);
         await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
         await _eventService.Received(1).LogSendEventAsync(userId, Arg.Any<Guid>(), expectedEventType);
+    }
+
+    [Fact]
+    public async Task DeleteSendsByCiphersAsync_WithLinkedSends_DeletesAllLinkedSends()
+    {
+        // Arrange
+        var cipherId = Guid.NewGuid();
+        var linkedSendId1 = Guid.NewGuid();
+        var linkedSendId2 = Guid.NewGuid();
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
+
+        var linkedSends = new List<Send>
+        {
+            new Send { Id = linkedSendId1, Type = SendType.Item, UserId = userId1, CipherId = cipherId },
+            new Send { Id = linkedSendId2, Type = SendType.Item, UserId = userId2, CipherId = cipherId }
+        };
+
+        _sendRepository.GetManyByCipherIdsAsync([cipherId]).Returns(linkedSends);
+
+        // Act
+        await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync([cipherId]);
+
+        // Assert
+        await _sendRepository.Received(1).GetManyByCipherIdsAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+            ids.Count() == 1 && ids.First() == cipherId));
+
+        // Verify DeleteSendAsync was called for each linked send
+        foreach (var send in linkedSends)
+        {
+            await _sendRepository.Received(1).DeleteAsync(send);
+            await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(
+                n => n.Type == PushType.SyncSendDelete && n.Payload.Id == send.Id));
+            await _eventService.Received(1).LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Deleted_File);
+        }
+    }
+
+    [Fact]
+    public async Task DeleteSendsByCiphersAsync_WithNoLinkedSends_CompletsSuccessfully()
+    {
+        // Arrange
+        var cipherId = Guid.NewGuid();
+        _sendRepository.GetManyByCipherIdsAsync([cipherId]).Returns(new List<Send>());
+
+        // Act
+        await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync([cipherId]);
+
+        // Assert
+        await _sendRepository.Received(1).GetManyByCipherIdsAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+            ids.Count() == 1 && ids.First() == cipherId));
+        // No delete calls should be made if there are no linked sends
+        await _sendRepository.DidNotReceive().DeleteAsync(Arg.Any<Send>());
+    }
+
+    [Fact]
+    public async Task DeleteSendsByCiphersAsync_WithMultipleCipherIds_DeletesAllLinkedSends()
+    {
+        // Arrange
+        var cipherId1 = Guid.NewGuid();
+        var cipherId2 = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var send1 = new Send { Id = Guid.NewGuid(), Type = SendType.Item, UserId = userId, CipherId = cipherId1 };
+        var send2 = new Send { Id = Guid.NewGuid(), Type = SendType.Item, UserId = userId, CipherId = cipherId2 };
+
+        _sendRepository.GetManyByCipherIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns([send1, send2]);
+
+        // Act
+        await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync([cipherId1, cipherId2]);
+
+        // Assert
+        await _sendRepository.Received(1).GetManyByCipherIdsAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+            ids.Count() == 2));
+
+        // Verify both sends were deleted
+        await _sendRepository.Received(1).DeleteAsync(send1);
+        await _sendRepository.Received(1).DeleteAsync(send2);
     }
 }

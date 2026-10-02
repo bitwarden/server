@@ -120,6 +120,11 @@ public class SendRequestModel
     public bool? HideEmail { get; set; }
 
     /// <summary>
+    /// The ID of the Cipher (vault item) this Send is linked to. Only applicable for Item-type Sends.
+    /// </summary>
+    public Guid? CipherId { get; set; }
+
+    /// <summary>
     /// Transforms the request into a send object.
     /// </summary>
     /// <param name="userId">The user that owns the send.</param>
@@ -127,7 +132,7 @@ public class SendRequestModel
     /// <returns>The send object</returns>
     public Send ToSend(Guid userId, ISendAuthorizationService sendAuthorizationService)
     {
-        var send = new Send { Type = Type, UserId = (Guid?)userId };
+        var send = new Send { Type = Type, UserId = (Guid?)userId, CipherId = Type == SendType.Item ? CipherId : null };
         send = UpdateSend(send, sendAuthorizationService);
         return send;
     }
@@ -174,6 +179,11 @@ public class SendRequestModel
                 existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
                 break;
             case SendType.Item:
+                // TODO: We can't require this until our clients are all passing the new field
+                // if (!CipherId.HasValue)
+                // {
+                //     throw new ArgumentNullException(nameof(CipherId), "CipherId is required for item sends.");
+                // }
                 existingSend.Data = JsonSerializer.Serialize(ToSendItemData(), JsonHelpers.IgnoreWritingNull);
                 break;
             default:

@@ -21,13 +21,17 @@
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher] ([Id])
+    CONSTRAINT [FK_Send_Cipher] FOREIGN KEY ([CipherId]) REFERENCES [dbo].[Cipher] ([Id]) ON DELETE CASCADE
 );
 
 
 GO
 CREATE NONCLUSTERED INDEX [IX_Send_UserId_OrganizationId]
     ON [dbo].[Send] ([UserId] ASC, [OrganizationId] ASC);
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Send_CipherId]
+    ON [dbo].[Send] ([CipherId] ASC);
 
 GO
 CREATE NONCLUSTERED INDEX [IX_Send_DeletionDate]

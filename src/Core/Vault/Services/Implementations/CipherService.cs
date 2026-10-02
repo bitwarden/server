@@ -11,6 +11,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
@@ -42,6 +43,7 @@ public class CipherService : ICipherService
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IPricingClient _pricingClient;
+    private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -60,7 +62,8 @@ public class CipherService : ICipherService
         IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        INonAnonymousSendCommand nonAnonymousSendCommand)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -79,6 +82,7 @@ public class CipherService : ICipherService
         _policyRequirementQuery = policyRequirementQuery;
         _organizationAbilityCacheService = organizationAbilityCacheService;
         _pricingClient = pricingClient;
+        _nonAnonymousSendCommand = nonAnonymousSendCommand;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -435,6 +439,7 @@ public class CipherService : ICipherService
 
         var collectionIds = await GetCollectionIdsForPushAsync(cipherDetails);
 
+        await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync([cipherDetails.Id]);
         await _cipherRepository.DeleteAsync(cipherDetails);
         await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
         await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
@@ -452,6 +457,7 @@ public class CipherService : ICipherService
         {
             var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId.Value);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id)).ToList();
+            await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync(deletingCiphers.Select(c => c.Id));
             await _cipherRepository.DeleteByIdsOrganizationIdAsync(deletingCiphers.Select(c => c.Id), organizationId.Value);
         }
         else
@@ -459,6 +465,7 @@ public class CipherService : ICipherService
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             var filteredCiphers = await FilterCiphersByDeletePermission(ciphers, cipherIdsSet, deletingUserId);
             deletingCiphers = filteredCiphers.Select(c => (Cipher)c).ToList();
+            await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync(deletingCiphers.Select(c => c.Id));
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
         }
 
@@ -504,8 +511,11 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-
-        await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
+        // When deleting linked Sends we want to exclude those linked to Ciphers in the
+        // default user collection, since those are also excluded from attachment cleanup
+        var organizationCiphers = await GetApplicableOrganizationCiphers(organizationId, true);
+        await _nonAnonymousSendCommand.DeleteSendsByCiphersAsync(organizationCiphers.Select(c => c.Id));
+        await DeleteAttachmentsForCiphersAsync(organizationCiphers);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
 
@@ -513,6 +523,22 @@ public class CipherService : ICipherService
     }
 
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
+    {
+        var ciphers = await GetApplicableOrganizationCiphers(organizationId, excludeDefaultUserCollectionCiphers);
+        await DeleteAttachmentsForCiphersAsync(ciphers);
+    }
+
+    private async Task DeleteAttachmentsForCiphersAsync(IEnumerable<Cipher> ciphers)
+    {
+        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
+
+        foreach (var cipherId in cipherIdsWithAttachments)
+        {
+            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
+        }
+    }
+
+    private async Task<ICollection<Cipher>> GetApplicableOrganizationCiphers(Guid organizationId, bool excludeDefaultUserCollectionCiphers)
     {
         var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
 
@@ -531,12 +557,7 @@ public class CipherService : ICipherService
             ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
         }
 
-        var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
-
-        foreach (var cipherId in cipherIdsWithAttachments)
-        {
-            await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherId);
-        }
+        return ciphers;
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)

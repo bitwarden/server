@@ -23,6 +23,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -47,6 +48,7 @@ public class SendsControllerTests : IDisposable
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ICipherRepository _cipherRepository;
 
     public SendsControllerTests()
     {
@@ -62,6 +64,7 @@ public class SendsControllerTests : IDisposable
         _eventService = Substitute.For<IEventService>();
         _sendEventClassifier = Substitute.For<ISendEventClassifier>();
         _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
+        _cipherRepository = Substitute.For<ICipherRepository>();
 
         _sut = new SendsController(
             _sendRepository,
@@ -75,7 +78,8 @@ public class SendsControllerTests : IDisposable
             _hasPremiumAccessQuery,
             _eventService,
             _sendEventClassifier,
-            _featureService
+            _featureService,
+            _cipherRepository
         );
     }
 

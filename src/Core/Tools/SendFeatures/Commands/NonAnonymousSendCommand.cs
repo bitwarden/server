@@ -13,6 +13,7 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.SendFeatures.Commands;
@@ -26,6 +27,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
     private readonly ISendCoreHelperService _sendCoreHelperService;
     private readonly IEventService _eventService;
     private readonly ILogger<NonAnonymousSendCommand> _logger;
+    private readonly ICipherRepository _cipherRepository;
 
     public NonAnonymousSendCommand(ISendRepository sendRepository,
         ISendFileStorageService sendFileStorageService,
@@ -33,7 +35,8 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         ISendValidationService sendValidationService,
         ISendCoreHelperService sendCoreHelperService,
         IEventService eventService,
-        ILogger<NonAnonymousSendCommand> logger)
+        ILogger<NonAnonymousSendCommand> logger,
+        ICipherRepository cipherRepository)
     {
         _sendRepository = sendRepository;
         _sendFileStorageService = sendFileStorageService;
@@ -42,6 +45,7 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         _sendCoreHelperService = sendCoreHelperService;
         _eventService = eventService;
         _logger = logger;
+        _cipherRepository = cipherRepository;
     }
 
     public async Task SaveSendAsync(Send send, bool logEvent = true)
@@ -312,5 +316,22 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
         await _sendRepository.ReplaceAsync(send);
         await _pushNotificationService.PushSyncSendUpdateAsync(send);
         return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), SendAccessResult.Granted);
+    }
+
+    public async Task DeleteSendsByCiphersAsync(IEnumerable<Guid> cipherIds)
+    {
+        var linkedSends = await _sendRepository.GetManyByCipherIdsAsync(cipherIds);
+        foreach (var send in linkedSends)
+        {
+            await DeleteSendAsync(send);
+        }
+    }
+
+    public async Task DeleteItemSendsByUserAsync(Guid userId)
+    {
+        // This is only used in the code path used by the personal vault purge,
+        // so we need to exclude any organization ciphers the user has access to.
+        var userCiphers = await _cipherRepository.GetManyByUserIdAsync(userId, false);
+        await DeleteSendsByCiphersAsync(userCiphers.Select(c => c.Id));
     }
 }

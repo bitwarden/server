@@ -4,6 +4,9 @@ using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Infrastructure.IntegrationTest.Comparers;
 using Microsoft.Extensions.Logging;
@@ -211,5 +214,155 @@ public class SendRepositoryTests
         Assert.Single(resultList);
         Assert.Contains(confirmedUserSend.Id, resultList);
         Assert.DoesNotContain(orgOwnedSend.Id, resultList);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByCipherIdsAsync_WithLinkedSends_ReturnsSends(
+        ISendRepository sendRepository,
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var cipher = new Cipher
+        {
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = "{}",
+            Key = "{}"
+        };
+        var createdCipher = await cipherRepository.CreateAsync(cipher);
+
+        var linkedSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Type = SendType.Item,
+            Data = "{}",
+            Key = "{}",
+            CipherId = createdCipher.Id,
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        });
+
+        var unlinkedSend = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Type = SendType.Text,
+            Data = "{\"Text\": \"2.t|t|t\"}",
+            Key = "{}",
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        });
+
+        // Act
+        var sends = await sendRepository.GetManyByCipherIdsAsync([createdCipher.Id]);
+
+        // Assert
+        var sendList = sends.ToList();
+        Assert.Single(sendList);
+        Assert.Equal(linkedSend.Id, sendList[0].Id);
+        Assert.Equal(createdCipher.Id, sendList[0].CipherId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByCipherIdsAsync_WithMultipleCipherIds_ReturnsAllLinkedSends(
+        ISendRepository sendRepository,
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+
+        var cipher1 = await cipherRepository.CreateAsync(new Cipher
+        {
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = "{}",
+            Key = "{}"
+        });
+
+        var cipher2 = await cipherRepository.CreateAsync(new Cipher
+        {
+            UserId = user.Id,
+            Type = CipherType.SecureNote,
+            Data = "{}",
+            Key = "{}"
+        });
+
+        var send1 = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Type = SendType.Item,
+            Data = "{}",
+            Key = "{}",
+            CipherId = cipher1.Id,
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        });
+
+        var send2 = await sendRepository.CreateAsync(new Send
+        {
+            UserId = user.Id,
+            Type = SendType.Item,
+            Data = "{}",
+            Key = "{}",
+            CipherId = cipher2.Id,
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        });
+
+        // Act
+        var sends = await sendRepository.GetManyByCipherIdsAsync([cipher1.Id, cipher2.Id]);
+
+        // Assert
+        var sendList = sends.ToList();
+        Assert.Equal(2, sendList.Count);
+        Assert.Contains(send1.Id, sendList.Select(s => s.Id));
+        Assert.Contains(send2.Id, sendList.Select(s => s.Id));
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithCipherId_StoresCipherIdSuccessfully(
+        ISendRepository sendRepository,
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            UserId = user.Id,
+            Type = CipherType.Login,
+            Data = "{}",
+            Key = "{}"
+        });
+
+        var send = new Send
+        {
+            UserId = user.Id,
+            Type = SendType.Item,
+            Data = "{}",
+            Key = "{}",
+            CipherId = cipher.Id,
+            DeletionDate = DateTime.UtcNow.AddDays(7)
+        };
+
+        // Act
+        var createdSend = await sendRepository.CreateAsync(send);
+
+        // Assert
+        Assert.NotNull(createdSend.CipherId);
+        Assert.Equal(cipher.Id, createdSend.CipherId);
+
+        var retrievedSend = await sendRepository.GetByIdAsync(createdSend.Id);
+        Assert.NotNull(retrievedSend);
+        Assert.Equal(cipher.Id, retrievedSend.CipherId);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByCipherIdsAsync_WithoutCipherIds_ReturnsEmpty(
+        ISendRepository sendRepository)
+    {
+        // Act
+        var sends = await sendRepository.GetManyByCipherIdsAsync([Guid.NewGuid()]);
+
+        // Assert
+        Assert.Empty(sends);
     }
 }

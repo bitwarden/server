@@ -228,6 +228,18 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
         return results.Where(UnprotectData).ToList();
     }
 
+    public async Task<ICollection<Send>> GetManyByCipherIdsAsync(IEnumerable<Guid> cipherIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<Send>(
+            $"[{Schema}].[Send_ReadByCipherIds]",
+            new { CipherIds = cipherIds.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+        // Don't filter or decrypt here — the cleanup job needs to see every row
+        // (including unrecoverable ones) so it can delete them.
+        return [.. results];
+    }
+
     private async Task ProtectDataAndSaveAsync(Send send, Func<Task> saveTask)
     {
         if (send == null)
