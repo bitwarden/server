@@ -44,6 +44,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
             .Build();
+        var everyFridayAt10pmTwoFactorRememberTokensTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryFridayAt10pmTwoFactorRememberTokensTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 22 ? * FRI", x => x.InTimeZone(timeZone))
+            .Build();
         var everySaturdayAtMidnightTrigger = TriggerBuilder.Create()
             .WithIdentity("EverySaturdayAtMidnightTrigger")
             .StartNow()
@@ -88,7 +93,7 @@ public class JobsHostedService : BaseJobsHostedService
         {
             new Tuple<Type, ITrigger>(typeof(DeleteSendsJob), everyFiveMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredGrantsJob), everyFridayAt10pmTrigger),
-            new Tuple<Type, ITrigger>(typeof(DeleteExpiredTwoFactorRememberTokensJob), everyFridayAt10pmTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteExpiredTwoFactorRememberTokensJob), everyFridayAt10pmTwoFactorRememberTokensTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
