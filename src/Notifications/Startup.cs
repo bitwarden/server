@@ -50,7 +50,9 @@ public class Startup
         var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
         {
             options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
-                .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
+                .WithResolver(MessagePack.Resolvers.CompositeResolver.Create(
+                    JsonElementResolver.Instance,
+                    MessagePack.Resolvers.ContractlessStandardResolver.Instance));
         });
         if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
         {

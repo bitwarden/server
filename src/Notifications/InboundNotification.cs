@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Platform.Push;
 
 namespace Bit.Notifications;
 
@@ -14,19 +15,27 @@ namespace Bit.Notifications;
 /// </remarks>
 public class InboundNotification
 {
-    public PushType Type { get; set; }
-    public JsonElement Payload { get; set; }
+    /// <summary>
+    /// Backing type for the PushType enum.
+    /// </summary>
+    public required byte Type { get; set; }
+    public required JsonElement Payload { get; set; }
     public string? ContextId { get; set; }
+    public required NotificationTarget Target { get; init; }
+    public required Guid TargetId { get; init; }
+    public ClientType? ClientType { get; init; }
 
     /// <summary>
     /// Reads the payload as <typeparamref name="T"/> and returns the notification in the shape
     /// clients receive, or <see langword="null"/> when the payload does not parse as that type.
     /// </summary>
-    public OutboundNotification<T>? ToOutbound<T>(JsonSerializerOptions options)
+    public OutboundNotification ToOutbound()
     {
-        var payload = Payload.Deserialize<T>(options);
-        return payload is null
-            ? null
-            : new OutboundNotification<T> { Type = Type, Payload = payload, ContextId = ContextId };
+        return new OutboundNotification
+        {
+            Type = Type,
+            Payload = Payload,
+            ContextId = ContextId,
+        };
     }
 }

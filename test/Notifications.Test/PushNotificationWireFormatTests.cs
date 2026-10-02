@@ -18,7 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
@@ -302,33 +301,6 @@ public sealed class PushNotificationWireFormatTests
         new("Notification/Installation/Browser", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":null,"OrganizationId":null,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","TaskId":null,"Title":null,"Body":null,"CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00","ReadDate":null,"DeletedDate":null},"Target":2,"TargetId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","ClientType":2}"""),
         new("AuthRequestResponse/AnonymousHub", Ingress.SendEndpoint, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id","Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}"""),
         new("Notification/User/RealisticValues", Ingress.SendEndpoint, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","OrganizationId":null,"InstallationId":null,"TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z","DeletedDate":null},"Target":0,"TargetId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","ClientType":0}"""),
-
-        // What senders deployed before that release write, and so what this service must keep
-        // accepting until none of them are left: PascalCase with null-valued properties omitted
-        // on the queue, camelCase on the endpoint, and no envelope routing on either -- these
-        // route by payload inspection. Delete this section one release after the one above
-        // ships, along with the payload-derived fallback in HubHelpers.
-        new("LogOut/User", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"}}"""),
-        new("LogOut/User/ExcludedContext", Ingress.AzureQueue, """{"Type":11,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c"},"ContextId":"test-device-id"}"""),
-        new("OrganizationStatus/Organization", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true}}"""),
-        new("OrganizationStatus/Organization/ExcludedContext", Ingress.AzureQueue, """{"Type":18,"Payload":{"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","Enabled":true},"ContextId":"test-device-id"}"""),
-        new("Notification/Installation/AllClients", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":0,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
-        new("Notification/User/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
-        new("Notification/Organization/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"OrganizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
-        new("Notification/Installation/Browser", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":0,"Global":false,"ClientType":2,"InstallationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","CreationDate":"0001-01-01T00:00:00","RevisionDate":"0001-01-01T00:00:00"}}"""),
-        new("AuthRequestResponse/AnonymousHub", Ingress.AzureQueue, """{"Type":16,"Payload":{"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","Id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"ContextId":"test-device-id"}"""),
-        new("Notification/User/RealisticValues", Ingress.AzureQueue, """{"Type":20,"Payload":{"Id":"cccccccc-cccc-cccc-cccc-cccccccccccc","Priority":3,"Global":false,"ClientType":0,"UserId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","TaskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","Title":"Test title","Body":"Test body","CreationDate":"2026-08-20T12:34:56Z","RevisionDate":"2026-08-20T12:34:56.1234567Z","ReadDate":"2026-08-21T08:00:00Z"}}"""),
-
-        new("LogOut/User", Ingress.SendEndpoint, """{"type":11,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","reason":null},"contextId":null}"""),
-        new("LogOut/User/ExcludedContext", Ingress.SendEndpoint, """{"type":11,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","reason":null},"contextId":"test-device-id"}"""),
-        new("OrganizationStatus/Organization", Ingress.SendEndpoint, """{"type":18,"payload":{"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","enabled":true},"contextId":null}"""),
-        new("OrganizationStatus/Organization/ExcludedContext", Ingress.SendEndpoint, """{"type":18,"payload":{"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","enabled":true},"contextId":"test-device-id"}"""),
-        new("Notification/Installation/AllClients", Ingress.SendEndpoint, """{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":0,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}"""),
-        new("Notification/User/Browser", Ingress.SendEndpoint, """{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":2,"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","organizationId":null,"installationId":null,"taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}"""),
-        new("Notification/Organization/Browser", Ingress.SendEndpoint, """{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":2,"userId":null,"organizationId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","installationId":null,"taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}"""),
-        new("Notification/Installation/Browser", Ingress.SendEndpoint, """{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":0,"global":false,"clientType":2,"userId":null,"organizationId":null,"installationId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","taskId":null,"title":null,"body":null,"creationDate":"0001-01-01T00:00:00","revisionDate":"0001-01-01T00:00:00","readDate":null,"deletedDate":null},"contextId":null}"""),
-        new("AuthRequestResponse/AnonymousHub", Ingress.SendEndpoint, """{"type":16,"payload":{"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","id":"dddddddd-dddd-dddd-dddd-dddddddddddd"},"contextId":"test-device-id"}"""),
-        new("Notification/User/RealisticValues", Ingress.SendEndpoint, """{"type":20,"payload":{"id":"cccccccc-cccc-cccc-cccc-cccccccccccc","priority":3,"global":false,"clientType":0,"userId":"d2ea5b72-6d47-4d20-b5a3-b7a6e89d8e7c","organizationId":null,"installationId":null,"taskId":"eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee","title":"Test title","body":"Test body","creationDate":"2026-08-20T12:34:56Z","revisionDate":"2026-08-20T12:34:56.1234567Z","readDate":"2026-08-21T08:00:00Z","deletedDate":null},"contextId":null}"""),
     ];
 
     private readonly NotificationsApplicationFactory _factory;
@@ -443,71 +415,6 @@ public sealed class PushNotificationWireFormatTests
 
         // And the bytes are the pinned ones, down to the MessagePack type of every value.
         Assert.Equal(expected.ExpectedFrameHex, Convert.ToHexString(frame));
-    }
-
-    /// <summary>
-    /// A queued message may be base64-encoded rather than plain text, and the service accepts either.
-    /// Pinned before anything reads the message as bytes, because <c>DecodeMessageText</c> is what
-    /// provides the tolerance today: deserializing the body directly would accept only plain text, and
-    /// this is the test that would notice.
-    /// </summary>
-    [Theory]
-    [MemberData(nameof(QueueCaseArgs))]
-    public async Task Base64EncodedQueueMessage_RoutesLikePlainText(string scenario, int index)
-    {
-        var wireCase = WireCases[index];
-        var expected = GetScenario(scenario);
-
-        await _queue.SendMessageAsync(
-            BinaryData.FromBytes(Encoding.UTF8.GetBytes(Convert.ToBase64String(
-                Encoding.UTF8.GetBytes(wireCase.Payload)))));
-
-        using var cts = new CancellationTokenSource(_timeout);
-        var invocation = await _queueRecorder.AwaitNextAsync(cts.Token);
-
-        Assert.Equal(expected.ExpectedHub, invocation.Hub);
-        Assert.Equal(expected.ExpectedDestination, invocation.Destination);
-        Assert.Equal(expected.ExpectedFrameHex, Convert.ToHexString(_factory.EncodeForClients(invocation)));
-    }
-
-    /// <summary>
-    /// Dequeuing says so when it had to base64-decode a message. Nothing writes base64 any more, so
-    /// this is how we find out whether the tolerance is still load-bearing before removing it -- which
-    /// only works if the log actually fires, hence this test and the one below it.
-    /// </summary>
-    [Fact]
-    public async Task Base64EncodedQueueMessage_IsLogged()
-    {
-        var wireCase = WireCases.First(c => c.Ingress == Ingress.AzureQueue);
-
-        await _queue.SendMessageAsync(BinaryData.FromString(
-            Convert.ToBase64String(Encoding.UTF8.GetBytes(wireCase.Payload))));
-
-        using var cts = new CancellationTokenSource(_timeout);
-        await _queueRecorder.AwaitNextAsync(cts.Token);
-
-        Assert.Contains(
-            _queueHost.Services.GetRequiredService<FakeLogCollector>().GetSnapshot(),
-            record => record.Level == LogLevel.Warning && record.Message.Contains("base64-encoded"));
-    }
-
-    /// <summary>
-    /// The counterpart: a plain message says nothing, so the warning means what it says rather than
-    /// firing on everything.
-    /// </summary>
-    [Fact]
-    public async Task PlainTextQueueMessage_IsNotLoggedAsBase64()
-    {
-        var wireCase = WireCases.First(c => c.Ingress == Ingress.AzureQueue);
-
-        await _queue.SendMessageAsync(wireCase.Payload);
-
-        using var cts = new CancellationTokenSource(_timeout);
-        await _queueRecorder.AwaitNextAsync(cts.Token);
-
-        Assert.DoesNotContain(
-            _queueHost.Services.GetRequiredService<FakeLogCollector>().GetSnapshot(),
-            record => record.Message.Contains("base64-encoded"));
     }
 
     /// <summary>
