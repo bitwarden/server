@@ -36,9 +36,6 @@ team and expected payload type are. Then you may inject
 [`IPushNotificationService`](./IPushNotificationService.cs) into your own service and call its
 `PushAsync` method.
 
-You also need to add code to [`HubHelpers`](../../../Notifications/HubHelpers.cs) to read your
-payload body and select the appropriate group or user to send the notification to.
-
 You should NOT add tests for your specific notification type in any of the `IPushEngine`
 implementations. They do currently have tests for many of the notification types but those will
 eventually be deleted and no new ones need to be added.
