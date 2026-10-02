@@ -5,6 +5,8 @@ namespace Bit.Seeder.Factories;
 
 internal static class OrganizationDomainSeeder
 {
+    private const int VerificationIntervalHours = 12;
+
     internal static OrganizationDomain Create(Guid organizationId, string domainName)
     {
         var domain = new OrganizationDomain
@@ -18,7 +20,6 @@ internal static class OrganizationDomainSeeder
 
         domain.SetVerifiedDate();
         domain.SetLastCheckedDate();
-        // Without this NextRunDate stays at 0001-01-01 and overflows SQL Server's datetime range on insert.
         domain.SetNextRunDate(12);
 
         return domain;
