@@ -35,38 +35,119 @@ public class TwoFactorRememberTokenableTests
             DeviceIdentifier = deviceIdentifier,
             Stamp = stamp,
             SecurityStamp = securityStamp,
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
         };
 
     /// <summary>
-    /// A freshly constructed token must be valid. If <c>ExpirationDate</c> were left at its default,
-    /// every token would be unusable the instant it was minted, which presents as a validation
-    /// problem everywhere downstream rather than as a problem with this class.
+    /// A token constructed without going through the factory has no expiry, so it is expired and never
+    /// valid. Callers that bypass the factory fail closed instead of getting an ad-hoc lifetime.
     /// </summary>
     [Fact]
-    public void Constructor_AfterInitialization_TokenIsValid()
+    public void Constructor_WithoutFactory_IsExpiredAndInvalid()
     {
-        var token = NewTokenable();
+        var token = new TwoFactorRememberTokenable();
 
-        Assert.False(token.IsExpired);
-        Assert.True(token.Valid);
+        Assert.Equal(default, token.ExpirationDate);
+        Assert.True(token.IsExpired);
+        Assert.False(token.Valid);
     }
 
     [Fact]
-    public void Constructor_AfterInitialization_ExpirationSetToExpectedDuration()
+    public void InternalConstructor_ValidArguments_BindsEveryField()
     {
-        var before = DateTime.UtcNow;
-        var token = new TwoFactorRememberTokenable();
-        var after = DateTime.UtcNow;
+        var userId = Guid.NewGuid();
+        var deviceId = Guid.NewGuid();
 
-        Assert.InRange(
-            token.ExpirationDate,
-            before + TwoFactorRememberTokenable.GetTokenLifetime(),
-            after + TwoFactorRememberTokenable.GetTokenLifetime());
+        var token = new TwoFactorRememberTokenable(userId, deviceId, "device-identifier", "row-stamp", "user-stamp");
+
+        Assert.Equal(userId, token.UserId);
+        Assert.Equal(deviceId, token.DeviceId);
+        Assert.Equal("device-identifier", token.DeviceIdentifier);
+        Assert.Equal("row-stamp", token.Stamp);
+        Assert.Equal("user-stamp", token.SecurityStamp);
+        Assert.Equal(TwoFactorRememberTokenable.TokenIdentifier, token.Identifier);
+    }
+
+    [Fact]
+    public void InternalConstructor_DefaultUserId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TwoFactorRememberTokenable(default, Guid.NewGuid(), "device-identifier", "row-stamp", "user-stamp"));
+    }
+
+    [Fact]
+    public void InternalConstructor_DefaultDeviceId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TwoFactorRememberTokenable(Guid.NewGuid(), default, "device-identifier", "row-stamp", "user-stamp"));
+    }
+
+    [Theory]
+    [InlineData("", "row-stamp", "user-stamp")]
+    [InlineData(" ", "row-stamp", "user-stamp")]
+    [InlineData("device-identifier", "", "user-stamp")]
+    [InlineData("device-identifier", " ", "user-stamp")]
+    [InlineData("device-identifier", "row-stamp", "")]
+    [InlineData("device-identifier", "row-stamp", " ")]
+    public void InternalConstructor_BlankStringArgument_Throws(
+        string deviceIdentifier, string stamp, string securityStamp)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TwoFactorRememberTokenable(Guid.NewGuid(), Guid.NewGuid(), deviceIdentifier, stamp, securityStamp));
+    }
+
+    [Fact]
+    public void ValidateTwoFactorRememberToken_ValidToken_ReturnsNullAndTheToken()
+    {
+        var factory = GetSigningFactory();
+        var token = NewTokenable();
+
+        var error = TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(
+            factory, factory.Protect(token), out var recovered);
+
+        Assert.Null(error);
+        Assert.NotNull(recovered);
+        Assert.Equal(token.UserId, recovered.UserId);
+    }
+
+    [Fact]
+    public void ValidateTwoFactorRememberToken_UnprotectFails_ReturnsInvalidToken()
+    {
+        var error = TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(
+            GetSigningFactory(), "not-a-token", out var recovered);
+
+        Assert.Equal(TokenableValidationError.InvalidToken, error);
+        Assert.Null(recovered);
+    }
+
+    [Fact]
+    public void ValidateTwoFactorRememberToken_ExpiredToken_ReturnsExpired()
+    {
+        var factory = GetSigningFactory();
+        var token = NewTokenable();
+        token.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
+
+        var error = TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(
+            factory, factory.Protect(token), out _);
+
+        Assert.Equal(TokenableValidationError.ExpiringTokenables.Expired, error);
+    }
+
+    [Fact]
+    public void ValidateTwoFactorRememberToken_MissingField_ReturnsInvalidToken()
+    {
+        var factory = GetSigningFactory();
+        var token = NewTokenable(stamp: " ");
+
+        var error = TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(
+            factory, factory.Protect(token), out _);
+
+        Assert.Equal(TokenableValidationError.InvalidToken, error);
     }
 
     /// <summary>
-    /// Deserialization runs the constructor first and then overwrites <c>ExpirationDate</c> from the
-    /// payload, which is what stops a round trip from granting a fresh lifetime.
+    /// The binding properties have internal setters, so this round trip is also what proves
+    /// <c>[JsonInclude]</c> is doing its job: without it every field would come back as its default.
     /// </summary>
     [Fact]
     public void ProtectUnprotect_ValidToken_PreservesDataAndExpiration()

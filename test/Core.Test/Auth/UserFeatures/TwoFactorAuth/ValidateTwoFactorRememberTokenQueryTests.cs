@@ -42,6 +42,8 @@ public class ValidateTwoFactorRememberTokenQueryTests
             DeviceIdentifier = _deviceIdentifier,
             Stamp = stamp,
             SecurityStamp = user.SecurityStamp,
+            // Real clock: ExpiringTokenable reads DateTime.UtcNow directly.
+            ExpirationDate = DateTime.UtcNow.AddDays(30),
         };
 
     private static TwoFactorRememberToken Row(User user, Guid deviceId, string stamp) =>

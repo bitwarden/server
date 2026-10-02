@@ -14,6 +14,24 @@ namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
 [SutProviderCustomize]
 public class IssueTwoFactorRememberTokenCommandTests
 {
+    private static readonly DateTime _expiration = new(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>
+    /// Stands in for the real factory: binds the user and device it is given, carries whatever stamp the
+    /// command generated, and expires at a fixed instant.
+    /// </summary>
+    private static void ArrangeFactory(
+        SutProvider<IssueTwoFactorRememberTokenCommand> sutProvider, User user, Device device)
+    {
+        sutProvider.GetDependency<ITwoFactorRememberTokenableFactory>()
+            .CreateToken(user, device, Arg.Any<string>())
+            .Returns(c => new TwoFactorRememberTokenable(
+                user.Id, device.Id, device.Identifier, c.ArgAt<string>(2), user.SecurityStamp)
+            {
+                ExpirationDate = _expiration,
+            });
+    }
+
     /// <summary>
     /// The stamp written to the row is the stamp embedded in the token, or validation could
     /// never succeed.
@@ -25,6 +43,7 @@ public class IssueTwoFactorRememberTokenCommandTests
         Device device)
     {
         device.UserId = user.Id;
+        ArrangeFactory(sutProvider, user, device);
         TwoFactorRememberToken? saved = null;
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .UpsertAsync(Arg.Do<TwoFactorRememberToken>(t => saved = t))
@@ -60,6 +79,7 @@ public class IssueTwoFactorRememberTokenCommandTests
         Device device)
     {
         device.UserId = user.Id;
+        ArrangeFactory(sutProvider, user, device);
         var stamps = new List<string>();
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .UpsertAsync(Arg.Do<TwoFactorRememberToken>(t => stamps.Add(t.Stamp)))
@@ -73,7 +93,7 @@ public class IssueTwoFactorRememberTokenCommandTests
     }
 
     /// <summary>
-    /// The row and the token expire together, both derived from the one lifetime constant.
+    /// The row takes its expiry from the minted token, so the two lapse at the same instant.
     /// </summary>
     [Theory, BitAutoData]
     public async Task IssueAsync_RowAndTokenShareExpiration(
@@ -82,6 +102,7 @@ public class IssueTwoFactorRememberTokenCommandTests
         Device device)
     {
         device.UserId = user.Id;
+        ArrangeFactory(sutProvider, user, device);
         TwoFactorRememberToken? saved = null;
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .UpsertAsync(Arg.Do<TwoFactorRememberToken>(t => saved = t))
@@ -92,17 +113,12 @@ public class IssueTwoFactorRememberTokenCommandTests
             .Protect(Arg.Do<TwoFactorRememberTokenable>(t => minted = t))
             .Returns("protected-token");
 
-        var before = DateTime.UtcNow;
         await sutProvider.Sut.IssueAsync(user, device);
-        var after = DateTime.UtcNow;
 
         Assert.NotNull(saved);
         Assert.NotNull(minted);
-        Assert.InRange(
-            saved.ExpirationDate,
-            before + TwoFactorRememberTokenable.GetTokenLifetime(),
-            after + TwoFactorRememberTokenable.GetTokenLifetime());
-        Assert.Equal(saved.ExpirationDate, minted.ExpirationDate, TimeSpan.FromSeconds(1));
+        Assert.Equal(_expiration, saved.ExpirationDate);
+        Assert.Equal(_expiration, minted.ExpirationDate);
     }
 
     /// <summary>
@@ -116,6 +132,7 @@ public class IssueTwoFactorRememberTokenCommandTests
         Device device)
     {
         device.UserId = user.Id;
+        ArrangeFactory(sutProvider, user, device);
         TwoFactorRememberToken? saved = null;
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .UpsertAsync(Arg.Do<TwoFactorRememberToken>(t => saved = t))

@@ -14,9 +14,8 @@ public class ValidateTwoFactorRememberTokenQuery(
 {
     public async Task<bool> ValidateAsync(User user, string deviceIdentifier, string token)
     {
-        // Covers tampering, a wrong data-protection purpose, the token's own expiry, and the
-        // presence checks on its fields.
-        if (!tokenFactory.TryUnprotect(token, out var tokenable) || tokenable is null || !tokenable.Valid)
+        if (TwoFactorRememberTokenable.ValidateTwoFactorRememberToken(tokenFactory, token, out var tokenable) != null
+            || tokenable is null)
         {
             return false;
         }

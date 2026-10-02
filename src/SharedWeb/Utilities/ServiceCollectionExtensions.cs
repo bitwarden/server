@@ -267,6 +267,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
         services.AddSingleton<ITwoFactorUserVerificationTokenableFactory, TwoFactorUserVerificationTokenableFactory>();
+        services.AddSingleton<ITwoFactorRememberTokenableFactory, TwoFactorRememberTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<TwoFactorUserVerificationTokenable>(
                 TwoFactorUserVerificationTokenable.ClearTextPrefix,
