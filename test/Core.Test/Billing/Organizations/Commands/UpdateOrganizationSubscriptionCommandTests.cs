@@ -1076,6 +1076,50 @@ public class UpdateOrganizationSubscriptionCommandTests
     }
 
     [Fact]
+    public async Task Run_AnnualUpgradeManagingSystemOnly_SeatChange_UpdatesAnnualQuantityInPhase2()
+    {
+        // Schedules created since the managing-system marker carry no phase markers.
+        var organization = CreateOrganization();
+        organization.PlanType = PlanType.EnterpriseMonthly;
+
+        var currentPlan = MockPlans.Get(PlanType.EnterpriseMonthly);
+        var annualPlan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly).Returns(currentPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(annualPlan);
+
+        var monthlySeat = currentPlan.PasswordManager.StripeSeatPlanId;
+        var annualSeat = annualPlan.PasswordManager.StripeSeatPlanId;
+
+        var subscription = CreateSubscription(items: [(monthlySeat, "si_1", 5)]);
+        SetupGetSubscription(organization, subscription);
+
+        var schedule = CreateMockSchedule(subscription.Id, [(monthlySeat, 5)], [(annualSeat, 5)],
+            scheduleMetadata: new Dictionary<string, string>
+            {
+                [MetadataKeys.ManagingSystem] = ManagingSystems.AnnualUpgrade
+            });
+        subscription.ScheduleId = schedule.Id;
+        subscription.Schedule = schedule;
+
+        var changeSet = new OrganizationSubscriptionChangeSet
+        {
+            Changes = [new UpdateItemQuantity(monthlySeat, 10)]
+        };
+
+        var result = await _command.Run(organization, changeSet);
+
+        Assert.True(result.Success);
+        await _stripeAdapter.Received(1).UpdateSubscriptionScheduleAsync(
+            schedule.Id,
+            Arg.Is<SubscriptionScheduleUpdateOptions>(opts =>
+                opts.Phases[0].Items.Any(i => i.Price == monthlySeat && i.Quantity == 10) &&
+                opts.Phases[1].Items.Any(i => i.Price == annualSeat && i.Quantity == 10) &&
+                opts.Phases[1].Items.All(i => i.Price != monthlySeat)));
+        await _stripeAdapter.DidNotReceive().UpdateSubscriptionAsync(
+            Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Fact]
     public async Task Run_PersonalPriceIncreaseManagingSystemOnly_SeatChange_LeavesScheduleUntouched()
     {
         // The cohort assignment would route a business price-increase schedule to the phase rewrite,
