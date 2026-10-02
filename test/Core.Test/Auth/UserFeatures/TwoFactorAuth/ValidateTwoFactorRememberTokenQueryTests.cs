@@ -23,6 +23,17 @@ public class ValidateTwoFactorRememberTokenQueryTests
     private const string _deviceIdentifier = "device-identifier";
     private const string _token = "protected-token";
 
+    private static readonly DateTime _now = new(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
+
+    private static SutProvider<ValidateTwoFactorRememberTokenQuery> GetSutProvider()
+    {
+        var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>()
+            .WithFakeTimeProvider()
+            .Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        return sutProvider;
+    }
+
     private static TwoFactorRememberTokenable Tokenable(User user, Guid deviceId, string stamp) =>
         new()
         {
@@ -40,7 +51,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
             UserId = user.Id,
             DeviceId = deviceId,
             Stamp = stamp,
-            ExpirationDate = DateTime.UtcNow.AddDays(1),
+            ExpirationDate = _now.AddDays(1),
         };
 
     /// <summary>
@@ -72,8 +83,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>The happy path.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_EverythingMatches_ReturnsTrue(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
 
         Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
@@ -82,8 +94,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>The targeted revocation: the device's row stamp has been rotated.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowStampRotated_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
         row.Stamp = "rotated-stamp";
 
@@ -93,8 +106,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>The account-wide check inherited from the previous design.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserSecurityStampRotated_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
         tokenable.SecurityStamp = "a-different-security-stamp";
 
@@ -107,8 +121,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserHasNoTwoFactorEnabled_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user)
@@ -123,8 +138,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserHasNoTwoFactorEnabled_DoesNotReadRow(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(user)
@@ -140,8 +156,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>A token issued to a different user.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserIdMismatch_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
         tokenable.UserId = Guid.NewGuid();
 
@@ -151,8 +168,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>The device binding.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_DeviceIdentifierMismatch_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, "a-different-device", _token));
@@ -164,8 +182,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// </summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_DeviceIdentifierDiffersOnlyByCase_ReturnsTrue(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
 
         Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier.ToUpperInvariant(), _token));
@@ -174,8 +193,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>No row for this device.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowMissing_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
         sutProvider.GetDependency<ITwoFactorRememberTokenRepository>()
             .GetByUserIdDeviceIdAsync(user.Id, deviceId)
@@ -187,10 +207,11 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>The row outlived its expiry but the sweep has not reached it.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowExpired_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
-        row.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
+        row.ExpirationDate = _now.AddMinutes(-1);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
@@ -202,11 +223,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowExpiresExactlyNow_ReturnsTrue(User user, Guid deviceId)
     {
-        var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>().WithFakeTimeProvider().Create();
-        var now = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+        var sutProvider = GetSutProvider();
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
-        row.ExpirationDate = now;
+        row.ExpirationDate = _now;
 
         Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
@@ -214,19 +233,18 @@ public class ValidateTwoFactorRememberTokenQueryTests
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowExpiredOneTickAgo_ReturnsFalse(User user, Guid deviceId)
     {
-        var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>().WithFakeTimeProvider().Create();
-        var now = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
-        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+        var sutProvider = GetSutProvider();
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
-        row.ExpirationDate = now.AddTicks(-1);
+        row.ExpirationDate = _now.AddTicks(-1);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_TokenCannotBeUnprotected_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user)
+        User user)
     {
+        var sutProvider = GetSutProvider();
         sutProvider.GetDependency<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>()
             .TryUnprotect(_token, out Arg.Any<TwoFactorRememberTokenable>())
             .Returns(c => { c[1] = null!; return false; });
@@ -236,9 +254,12 @@ public class ValidateTwoFactorRememberTokenQueryTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_TokenItselfExpired_ReturnsFalse(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         var (tokenable, _) = ArrangeValid(sutProvider, user, deviceId);
+        // Real clock on purpose: ExpiringTokenable.IsExpired reads DateTime.UtcNow directly, so the
+        // injected TimeProvider cannot reach it.
         tokenable.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
@@ -247,8 +268,9 @@ public class ValidateTwoFactorRememberTokenQueryTests
     /// <summary>Validation reads; it must never write.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_Always_DoesNotWrite(
-        SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
+        User user, Guid deviceId)
     {
+        var sutProvider = GetSutProvider();
         ArrangeValid(sutProvider, user, deviceId);
 
         await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token);
