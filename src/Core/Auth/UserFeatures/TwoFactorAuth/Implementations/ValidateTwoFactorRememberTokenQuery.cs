@@ -63,6 +63,6 @@ public class ValidateTwoFactorRememberTokenQuery(
             return false;
         }
 
-        return row.ExpirationDate > timeProvider.GetUtcNow().UtcDateTime;
+        return row.ExpirationDate >= timeProvider.GetUtcNow().UtcDateTime;
     }
 }
