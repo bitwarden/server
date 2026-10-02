@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
+using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
@@ -23,7 +24,7 @@ public static class SendAccessTestUtilities
     }
 
     /// <summary>A valid device identifier for tests that are not about the identifier itself.</summary>
-    public const string DeviceIdentifier = "send-access-test-device-identifier";
+    public const string DeviceIdentifier = IdentityApplicationFactory.DefaultDeviceIdentifier;
 
     public static FormUrlEncodedContent CreateTokenRequestBody(
         Guid sendId,

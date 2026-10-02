@@ -21,10 +21,10 @@ public class SendEmailOtpDeviceIdentifierIntegrationTests(IdentityApplicationFac
     : IClassFixture<IdentityApplicationFactory>
 {
     /// <summary>The device that requests the code.</summary>
-    private const string RequestingDeviceIdentifier = "requesting-device-identifier";
+    private const string RequestingDeviceIdentifier = "04f8a5ef-d905-446c-811d-b2a70f15388d";
 
     /// <summary>A second device, used to submit a code it did not request.</summary>
-    private const string OtherDeviceIdentifier = "other-device-identifier";
+    private const string OtherDeviceIdentifier = "194d0a4a-4cfd-4fcc-be93-fb68bf1ac25a";
 
     [Fact]
     public async Task SendAccess_EmailOtp_CodeFromSameDevice_ReturnsAccessToken()
