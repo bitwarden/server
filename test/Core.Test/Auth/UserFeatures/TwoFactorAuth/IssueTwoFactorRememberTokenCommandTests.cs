@@ -15,7 +15,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.TwoFactorAuth;
 public class IssueTwoFactorRememberTokenCommandTests
 {
     /// <summary>
-    /// U1 — the stamp written to the row is the stamp embedded in the token, or validation could
+    /// The stamp written to the row is the stamp embedded in the token, or validation could
     /// never succeed.
     /// </summary>
     [Theory, BitAutoData]
@@ -50,7 +50,7 @@ public class IssueTwoFactorRememberTokenCommandTests
     }
 
     /// <summary>
-    /// U2 — re-remembering a device writes a different stamp, which is what orphans the token that
+    /// Re-remembering a device writes a different stamp, which is what orphans the token that
     /// device was holding.
     /// </summary>
     [Theory, BitAutoData]
@@ -73,7 +73,7 @@ public class IssueTwoFactorRememberTokenCommandTests
     }
 
     /// <summary>
-    /// U3 — the row and the token expire together, both derived from the one lifetime constant.
+    /// The row and the token expire together, both derived from the one lifetime constant.
     /// </summary>
     [Theory, BitAutoData]
     public async Task IssueAsync_RowAndTokenShareExpiration(

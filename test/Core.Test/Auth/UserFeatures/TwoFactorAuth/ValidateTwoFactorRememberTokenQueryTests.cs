@@ -68,7 +68,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         return (tokenable, row);
     }
 
-    /// <summary>U4 — the happy path.</summary>
+    /// <summary>The happy path.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_EverythingMatches_ReturnsTrue(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -78,7 +78,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>U5 — the targeted revocation: the device's row stamp has been rotated.</summary>
+    /// <summary>The targeted revocation: the device's row stamp has been rotated.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowStampRotated_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -89,7 +89,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>U6 — the account-wide check inherited from the previous design.</summary>
+    /// <summary>The account-wide check inherited from the previous design.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserSecurityStampRotated_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -101,7 +101,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
     }
 
     /// <summary>
-    /// U7 — a remember token cannot stand in as a second factor for an account that currently has no
+    /// A remember token cannot stand in as a second factor for an account that currently has no
     /// second factor configured.
     /// </summary>
     [Theory, BitAutoData]
@@ -136,7 +136,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
             .GetByUserIdDeviceIdAsync(default, default);
     }
 
-    /// <summary>U8 — a token issued to a different user.</summary>
+    /// <summary>A token issued to a different user.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_UserIdMismatch_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -147,7 +147,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>U9 — the device binding.</summary>
+    /// <summary>The device binding.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_DeviceIdentifierMismatch_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -158,7 +158,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
     }
 
     /// <summary>
-    /// U9 — identifiers are matched the way SQL collation matches them, so a case difference must
+    /// Identifiers are matched the way SQL collation matches them, so a case difference must
     /// not cause a spurious challenge.
     /// </summary>
     [Theory, BitAutoData]
@@ -170,7 +170,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier.ToUpperInvariant(), _token));
     }
 
-    /// <summary>U10 — no row for this device.</summary>
+    /// <summary>No row for this device.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowMissing_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
@@ -183,7 +183,7 @@ public class ValidateTwoFactorRememberTokenQueryTests
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
 
-    /// <summary>U11 — the row outlived its expiry but the sweep has not reached it.</summary>
+    /// <summary>The row outlived its expiry but the sweep has not reached it.</summary>
     [Theory, BitAutoData]
     public async Task ValidateAsync_RowExpired_ReturnsFalse(
         SutProvider<ValidateTwoFactorRememberTokenQuery> sutProvider, User user, Guid deviceId)
