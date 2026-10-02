@@ -122,9 +122,9 @@ public class SendEmailOtpRequestValidator(
     }
 
     /// <summary>
-    /// The identifier is client-supplied and lands in a cache key. In cloud deployments that key is a Cosmos DB item
-    /// id, which disallows '/' and '\' and should be alphanumeric ASCII. Hex SHA-256 always is, at a fixed 64
-    /// characters.
+    /// The identifier is client-supplied and lands in a cache key. Hex SHA-256 is always fixed-length (64 characters)
+    /// alphanumeric ASCII, so the key is valid for any cache backend, whatever the client sends. For example, Cosmos
+    /// DB item ids disallow '/' and '\'.
     /// See <see href="https://learn.microsoft.com/en-us/azure/cosmos-db/concepts-limits#per-item-limits">Cosmos DB per-item limits</see>.
     /// </summary>
     private static string HashDeviceIdentifier(string deviceIdentifier)
