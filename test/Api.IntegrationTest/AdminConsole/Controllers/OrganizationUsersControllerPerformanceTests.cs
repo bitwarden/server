@@ -218,7 +218,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     }
 
     /// <summary>
-    /// Tests POST /organizations/{orgId}/users/remove
+    /// Tests DELETE /organizations/{orgId}/users
     /// </summary>
     [Theory(Skip = "Performance test")]
     [InlineData(10)]
@@ -251,11 +251,15 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         var requestContent = new StringContent(JsonSerializer.Serialize(removeRequest), Encoding.UTF8, "application/json");
 
-        var response = await client.PostAsync($"/organizations/{orgId}/users/remove", requestContent);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"/organizations/{orgId}/users")
+        {
+            Content = requestContent
+        };
+        var response = await client.SendAsync(message);
 
         stopwatch.Stop();
 
-        testOutputHelper.WriteLine($"POST /users/remove - Users: {usersToRemove.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+        testOutputHelper.WriteLine($"DELETE /users - Users: {usersToRemove.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }
@@ -355,7 +359,7 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
     }
 
     /// <summary>
-    /// Tests POST /organizations/{orgId}/users/delete-account
+    /// Tests DELETE /organizations/{orgId}/users/delete-account
     /// </summary>
     [Theory(Skip = "Performance test")]
     [InlineData(10)]
@@ -396,11 +400,15 @@ public class OrganizationUsersControllerPerformanceTests(ITestOutputHelper testO
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var response = await client.PostAsync($"/organizations/{orgId}/users/delete-account", requestContent);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"/organizations/{orgId}/users/delete-account")
+        {
+            Content = requestContent
+        };
+        var response = await client.SendAsync(message);
 
         stopwatch.Stop();
 
-        testOutputHelper.WriteLine($"POST /users/delete-account - Users: {usersToDelete.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
+        testOutputHelper.WriteLine($"DELETE /users/delete-account - Users: {usersToDelete.Count}; Request duration: {stopwatch.ElapsedMilliseconds} ms; Status: {response.StatusCode}");
 
         Assert.True(response.IsSuccessStatusCode);
     }

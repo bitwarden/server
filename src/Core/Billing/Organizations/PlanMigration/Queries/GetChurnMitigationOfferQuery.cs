@@ -38,11 +38,9 @@ public class GetChurnMitigationOfferQuery(
         Organization organization,
         string churnDiscountCouponCode)
     {
-        // `test_clock` is included so the migration-cohort current_phase check is honest
-        // against test customers; `discount`/`discounts.coupon` give us the churn-only
-        // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -114,11 +112,9 @@ public class GetChurnMitigationOfferQuery(
             return null;
         }
 
-        // `test_clock` is included so the migration-cohort current_phase check is honest
-        // against test customers; `discount`/`discounts.coupon` give us the churn-only
-        // ineligibility surfaces without a second round-trip.
         var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
-            stripeAdapter, logger, organization, ["customer", "test_clock", "discounts.coupon"]);
+            stripeAdapter, logger, organization,
+            ["customer.discount.source.coupon", "test_clock", "discounts.source.coupon"]);
         if (subscription is null)
         {
             return null;
@@ -127,14 +123,14 @@ public class GetChurnMitigationOfferQuery(
         // Churn-only branch never writes Customer.Discount -- it's managed elsewhere (manual
         // ops adjustments, audience filters via SubscriptionDiscountService). We still inspect
         // it here so an org already carrying this coupon at the customer layer is ineligible.
-        if (subscription.Customer?.Discount?.Coupon?.Id is { Length: > 0 } customerCouponId
+        if (subscription.Customer?.Discount?.Source?.Coupon?.Id is { Length: > 0 } customerCouponId
             && string.Equals(customerCouponId, churnDiscountCouponCode, StringComparison.Ordinal))
         {
             return null;
         }
 
         if (subscription.Discounts is { Count: > 0 }
-            && subscription.Discounts.Any(d => string.Equals(d.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
+            && subscription.Discounts.Any(d => string.Equals(d.Source?.Coupon?.Id, churnDiscountCouponCode, StringComparison.Ordinal)))
         {
             return null;
         }

@@ -4,7 +4,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -49,7 +51,7 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
             .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]
@@ -177,7 +179,7 @@ public class ImportCiphersAsyncCommandTests
                 newFolders.Count() == folders.Count() - 1 &&
                 !newFolders.Any(folder => folder.Id == folders[0].Id) // Check that the folder that already existed for the importing user was not added
             ));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]
@@ -334,7 +336,7 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus => !cus.Any()),
             Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
 
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]

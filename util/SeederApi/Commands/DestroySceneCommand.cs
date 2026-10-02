@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.SeederApi.Commands.Interfaces;
 using Bit.SeederApi.Services;
@@ -12,7 +13,8 @@ public class DestroySceneCommand(
     IUserRepository userRepository,
     IPlayItemRepository playItemRepository,
     IProviderRepository providerRepository,
-    IOrganizationRepository organizationRepository) : IDestroySceneCommand
+    IOrganizationRepository organizationRepository,
+    IGlobalSettings globalSettings) : IDestroySceneCommand
 {
     public async Task<object?> DestroyAsync(string playId)
     {
@@ -58,6 +60,8 @@ public class DestroySceneCommand(
         {
             var users = databaseContext.Users.Where(u => userIds.Contains(u.Id));
             await userRepository.DeleteManyAsync(users);
+
+            DeleteSeededUserLicenseFiles(userIds, playId);
         }
 
         if (organizationIds.Count > 0)
@@ -86,5 +90,38 @@ public class DestroySceneCommand(
         logger.LogInformation("Successfully destroyed seeded data with ID {PlayId}", playId);
 
         return new { PlayId = playId };
+    }
+
+    /// <summary>
+    /// Best-effort removal of the premium license files the seeder writes for seeded users. File errors
+    /// are logged and swallowed so cleanup never aborts the database teardown.
+    /// </summary>
+    /// <remarks>
+    /// Path convention duplicated from <c>LicensingService.WriteUserLicenseAsync</c>
+    /// (<c>{LicenseDirectory}/user/{userId}.json</c>); keep the two in sync.
+    /// </remarks>
+    private void DeleteSeededUserLicenseFiles(List<Guid?> userIds, string playId)
+    {
+        if (string.IsNullOrEmpty(globalSettings.LicenseDirectory))
+        {
+            return;
+        }
+
+        foreach (var userId in userIds.Where(id => id.HasValue))
+        {
+            var filePath = Path.Combine(globalSettings.LicenseDirectory, "user", $"{userId!.Value}.json");
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to delete seeded user license file {FilePath} for seed ID {PlayId}", filePath, playId);
+            }
+        }
     }
 }

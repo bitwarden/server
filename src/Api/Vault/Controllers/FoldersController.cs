@@ -6,6 +6,8 @@ using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -20,15 +22,21 @@ public class FoldersController : Controller
     private readonly IFolderRepository _folderRepository;
     private readonly ICipherService _cipherService;
     private readonly IUserService _userService;
+    private readonly IDeleteManyFoldersCommand _deleteManyFoldersCommand;
+    private readonly GlobalSettings _globalSettings;
 
     public FoldersController(
         IFolderRepository folderRepository,
         ICipherService cipherService,
-        IUserService userService)
+        IUserService userService,
+        IDeleteManyFoldersCommand deleteManyFoldersCommand,
+        GlobalSettings globalSettings)
     {
         _folderRepository = folderRepository;
         _cipherService = cipherService;
         _userService = userService;
+        _deleteManyFoldersCommand = deleteManyFoldersCommand;
+        _globalSettings = globalSettings;
     }
 
     [HttpGet("{id}")]
@@ -101,6 +109,18 @@ public class FoldersController : Controller
     public async Task PostDelete(string id)
     {
         await Delete(id);
+    }
+
+    [HttpDelete("")]
+    public async Task DeleteMany([FromBody] FolderBulkDeleteRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only delete up to 500 folders at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        await _deleteManyFoldersCommand.DeleteManyAsync(model.Ids, userId);
     }
 
     [HttpDelete("all")]

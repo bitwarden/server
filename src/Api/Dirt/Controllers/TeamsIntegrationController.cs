@@ -7,6 +7,8 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Exceptions;
+using Bit.Core.Settings;
+using Bit.HttpExtensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
@@ -22,6 +24,7 @@ public class TeamsIntegrationController(
     IBot bot,
     IBotFrameworkHttpAdapter adapter,
     ITeamsService teamsService,
+    IGlobalSettings globalSettings,
     TimeProvider timeProvider) : Controller
 {
     [HttpGet("{organizationId:guid}/integrations/teams/redirect")]
@@ -32,12 +35,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        var callbackUrl = Url.RouteUrl(
-            routeName: "TeamsIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        var callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
             throw new BadRequestException("Unable to build callback Url");
@@ -102,12 +100,7 @@ public class TeamsIntegrationController(
             throw new NotFoundException();
         }
 
-        var callbackUrl = Url.RouteUrl(
-            routeName: "TeamsIntegration_Create",
-            values: null,
-            protocol: currentContext.HttpContext.Request.Scheme,
-            host: currentContext.HttpContext.Request.Host.ToUriComponent()
-        );
+        var callbackUrl = BuildCallbackUrl();
         if (string.IsNullOrEmpty(callbackUrl))
         {
             throw new BadRequestException("Unable to build callback Url");
@@ -134,11 +127,63 @@ public class TeamsIntegrationController(
         return Created(location, new OrganizationIntegrationResponseModel(integration));
     }
 
+    [HttpGet("{organizationId:guid}/integrations/{integrationId:guid}/teams/channels")]
+    public async Task<ListResponseModel<TeamsChannelResponseModel>> GetChannelsAsync(
+        Guid organizationId,
+        Guid integrationId)
+    {
+        if (!await currentContext.OrganizationOwner(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var integration = await integrationRepository.GetByIdAsync(integrationId);
+        if (integration is null ||
+            integration.OrganizationId != organizationId ||
+            integration.Type != IntegrationType.Teams)
+        {
+            throw new NotFoundException();
+        }
+
+        // The install conversation ID is the team's ID for the Bot Framework.
+        var teamsIntegration = integration.Configuration is null
+            ? null
+            : JsonSerializer.Deserialize<TeamsIntegration>(integration.Configuration);
+        if (teamsIntegration is not { ChannelId: { } teamId, ServiceUrl: { } serviceUrl })
+        {
+            throw new BadRequestException("The Bitwarden app has not been added to a team yet.");
+        }
+
+        var channels = await teamsService.GetStandardChannelsAsync(serviceUrl, teamId)
+            ?? throw new BadRequestException("Unable to retrieve the channels for the connected team. Please try again.");
+
+        return new ListResponseModel<TeamsChannelResponseModel>(
+            channels.Select(channel => new TeamsChannelResponseModel(channel)));
+    }
+
     [Route("integrations/teams/incoming")]
     [AllowAnonymous]
     [HttpPost]
     public async Task IncomingPostAsync()
     {
         await adapter.ProcessAsync(Request, Response, bot);
+    }
+
+    /// <summary>
+    /// Builds the OAuth callback URL from the configured API base URL rather than the incoming request.
+    /// In cloud, TLS terminates before the request reaches the API, so the request scheme is "http" and
+    /// Microsoft Entra ID rejects the redirect URI. Self-hosted instances also need the "/api" prefix that the
+    /// reverse proxy strips before the request reaches the API.
+    /// </summary>
+    private string? BuildCallbackUrl()
+    {
+        var apiBaseUrl = globalSettings.BaseServiceUri.Api;
+        var callbackPath = Url.RouteUrl(routeName: "TeamsIntegration_Create", values: null);
+        if (string.IsNullOrEmpty(apiBaseUrl) || string.IsNullOrEmpty(callbackPath))
+        {
+            return null;
+        }
+
+        return $"{apiBaseUrl.TrimEnd('/')}{callbackPath}";
     }
 }

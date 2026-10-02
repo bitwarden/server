@@ -10,23 +10,38 @@ namespace Bit.SharedWeb.Swagger;
 /// </summary>
 public class Base64UrlSchemaFilter : ISchemaFilter
 {
+    /// <summary>
+    /// Properties carrying <c>Base64UrlConverter</c>, keyed by declaring type. The converter accepts
+    /// only the URL-safe alphabet without padding, so a generator that assumes standard Base64
+    /// produces payloads the server rejects.
+    /// </summary>
+    private static readonly Dictionary<Type, string[]> _base64UrlProperties = new()
+    {
+        [typeof(AssertionOptions)] = ["challenge"],
+        [typeof(CredentialCreateOptions)] = ["challenge"],
+        [typeof(Fido2User)] = ["id"],
+        [typeof(PublicKeyCredentialDescriptor)] = ["id"],
+        [typeof(AuthenticatorAttestationRawResponse)] = ["rawId"],
+        [typeof(AuthenticatorAttestationRawResponse.AttestationResponse)] =
+            ["attestationObject", "clientDataJSON"],
+        [typeof(AuthenticatorAssertionRawResponse)] = ["rawId"],
+        [typeof(AuthenticatorAssertionRawResponse.AssertionResponse)] =
+            ["authenticatorData", "signature", "clientDataJSON", "userHandle"],
+        [typeof(AuthenticationExtensionsPRFValues)] = ["first", "second"],
+        [typeof(AuthenticationExtensionsLargeBlobInputs)] = ["write"],
+        [typeof(AuthenticationExtensionsLargeBlobOutputs)] = ["blob"],
+    };
+
     public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
-        if (context.Type == typeof(AssertionOptions))
+        if (!_base64UrlProperties.TryGetValue(context.Type, out var properties))
         {
-            MarkPropertyAsBase64Url(schema, "challenge");
+            return;
         }
-        else if (context.Type == typeof(CredentialCreateOptions))
+
+        foreach (var property in properties)
         {
-            MarkPropertyAsBase64Url(schema, "challenge");
-        }
-        else if (context.Type == typeof(Fido2User))
-        {
-            MarkPropertyAsBase64Url(schema, "id");
-        }
-        else if (context.Type == typeof(PublicKeyCredentialDescriptor))
-        {
-            MarkPropertyAsBase64Url(schema, "id");
+            MarkPropertyAsBase64Url(schema, property);
         }
     }
 

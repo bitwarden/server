@@ -92,6 +92,35 @@ public class OrganizationCiphersQueryTests
 
 
     [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_ReturnsCiphersFromRepository(
+         Guid organizationId,
+         SutProvider<OrganizationCiphersQuery> sutProvider)
+    {
+        var item1 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+        var item2 = new CipherOrganizationDetailsWithCollections(
+            new CipherOrganizationDetails { Id = Guid.NewGuid(), OrganizationId = organizationId },
+            new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+
+        var repo = sutProvider.GetDependency<ICipherRepository>();
+        repo.GetManyLoginCipherOrganizationDetailsAsync(organizationId)
+            .Returns(Task.FromResult<IEnumerable<CipherOrganizationDetailsWithCollections>>(
+                new[] { item1, item2 }));
+
+        var actual = (await sutProvider.Sut
+            .GetOrganizationLoginCiphers(organizationId))
+            .ToList();
+
+        Assert.Equal(2, actual.Count);
+        Assert.Same(item1, actual[0]);
+        Assert.Same(item2, actual[1]);
+
+        await repo.Received(1)
+            .GetManyLoginCipherOrganizationDetailsAsync(organizationId);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAllOrganizationCiphersExcludingDefaultUserCollections_DelegatesToRepository(
          Guid organizationId,
          SutProvider<OrganizationCiphersQuery> sutProvider)

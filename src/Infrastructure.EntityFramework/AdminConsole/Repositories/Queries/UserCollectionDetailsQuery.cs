@@ -61,7 +61,9 @@ public class UserCollectionDetailsQuery : IQuery<CollectionDetails>
             ReadOnly = (bool?)row.cu.ReadOnly ?? (bool?)row.cg.ReadOnly ?? false,
             HidePasswords = (bool?)row.cu.HidePasswords ?? (bool?)row.cg.HidePasswords ?? false,
             Manage = (bool?)row.cu.Manage ?? (bool?)row.cg.Manage ?? false,
-            Type = row.c.Type
+            Type = row.c.Type,
+            // A disabled rule gates nothing, so the association alone is not enough.
+            HasEnabledAccessRule = dbContext.AccessRules.Any(ar => ar.Id == row.c.AccessRuleId && ar.Enabled)
         });
     }
 }

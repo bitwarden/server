@@ -48,4 +48,9 @@ public record IndividualUserOptions
     /// Required for self-hosted instances that validate premium status by reading the license file.
     /// </summary>
     public bool SelfHosted { get; init; }
+
+    /// <summary>
+    /// Backdates the account by this many days (CreationDate = now - N). 0 (default) seeds a present-day account.
+    /// </summary>
+    public int AccountAgeDays { get; init; }
 }

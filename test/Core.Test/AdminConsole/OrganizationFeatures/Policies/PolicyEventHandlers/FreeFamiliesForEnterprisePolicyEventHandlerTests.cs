@@ -39,7 +39,7 @@ public class FreeFamiliesForEnterprisePolicyEventHandlerTests
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
-            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(organizationSponsorships[0].FriendlyName, organizationSponsorships[0].ValidUntil.ToString(),
+            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(organizationSponsorships[0].FriendlyName,
                 organizationSponsorships[0].SponsoredOrganizationId.ToString(), organization.DisplayName());
     }
 
@@ -66,9 +66,8 @@ public class FreeFamiliesForEnterprisePolicyEventHandlerTests
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
 
         // Assert
-        var offerAcceptanceDate = organizationSponsorships[0].ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(organizationSponsorships[0].FriendlyName, offerAcceptanceDate,
+            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(organizationSponsorships[0].FriendlyName,
                 organizationSponsorships[0].SponsoredOrganizationId.ToString(), organization.Name);
 
     }
@@ -98,7 +97,7 @@ public class FreeFamiliesForEnterprisePolicyEventHandlerTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(default, default, default, default);
+            .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -124,12 +123,10 @@ public class FreeFamiliesForEnterprisePolicyEventHandlerTests
 
         await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(savePolicyModel, policy);
 
-        var offerAcceptanceDate = organizationSponsorships[0].ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(
                 organizationSponsorships[0].FriendlyName,
-                offerAcceptanceDate,
                 organizationSponsorships[0].SponsoredOrganizationId.ToString(),
                 organization.Name);
     }

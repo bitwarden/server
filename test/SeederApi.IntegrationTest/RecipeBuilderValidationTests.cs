@@ -1,12 +1,7 @@
-﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Models.Business;
-using Bit.Core.Billing.Organizations.Models;
-using Bit.Core.Billing.Services;
-using Bit.Core.Entities;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Billing.Services;
 using Bit.Seeder;
 using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 using Bit.Seeder.Services;
 using Bit.Seeder.Steps;
@@ -149,6 +144,34 @@ public class RecipeBuilderValidationTests
     }
 
     [Fact]
+    public void Validate_BillingWithoutOrganization_Throws()
+    {
+        // The billing step reads context.Organization, so an individual-user recipe could only
+        // fail at run time — after the commit — without this guard.
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.CreateIndividualUser("solo@bw.example", premium: true, maxStorageGb: 1);
+        builder.WithStripeBilling(new StripeBillingOptions());
+
+        var ex = Assert.Throws<InvalidOperationException>(() => builder.Validate());
+        Assert.Contains("Stripe billing requires an organization", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_BillingWithOrganization_Succeeds()
+    {
+        var services = new ServiceCollection();
+        var builder = services.AddRecipe("test");
+
+        builder.UseOrganization("test");
+        builder.AddOwner();
+        builder.WithStripeBilling(new StripeBillingOptions());
+
+        builder.Validate();
+    }
+
+    [Fact]
     public void StepsExecuteInRegistrationOrder()
     {
         var services = new ServiceCollection();
@@ -183,7 +206,12 @@ public class RecipeBuilderValidationTests
         var builder = services.AddRecipe("test");
 
         builder.CreateIndividualUser("user@example.com", true, 1, true);
-        services.AddSingleton<ILicensingService, StubLicensingService>();
+        services.AddLogging();
+        services.AddSingleton<ILicensingService>(
+            new LicenseTestHelpers.StubLicensingService((_, _) => Task.CompletedTask));
+        services.AddSingleton<ISeederLicenseSigner>(
+            new LicenseTestHelpers.StubSeederLicenseSigner(
+                _ => Task.FromResult(LicenseSigningResult.Skipped("no signing certificate configured"))));
 
         using var provider = services.BuildServiceProvider();
         var steps = provider.GetKeyedServices<OrderedStep>("test")
@@ -253,24 +281,6 @@ public class RecipeBuilderValidationTests
 
     private static readonly ISeedReader _stubReader = new StubSeedReader(hasOwner: false);
     private static readonly ISeedReader _stubReaderWithOwner = new StubSeedReader(hasOwner: true);
-
-    /// <summary>
-    /// Stub reader for builder validation tests that don't need real fixture data.
-    /// </summary>
-    private sealed class StubLicensingService : ILicensingService
-    {
-        public Task ValidateOrganizationsAsync() => throw new NotImplementedException();
-        public Task ValidateUsersAsync() => throw new NotImplementedException();
-        public Task<bool> ValidateUserPremiumAsync(User user) => throw new NotImplementedException();
-        public bool VerifyLicense(ILicense license) => throw new NotImplementedException();
-        public byte[] SignLicense(ILicense license) => throw new NotImplementedException();
-        public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Organization organization) => throw new NotImplementedException();
-        public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Guid organizationId) => throw new NotImplementedException();
-        public ClaimsPrincipal? GetClaimsPrincipalFromLicense(ILicense license) => throw new NotImplementedException();
-        public Task<string?> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
-        public Task<string?> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo) => throw new NotImplementedException();
-        public Task WriteUserLicenseAsync(User user, UserLicense license) => throw new NotImplementedException();
-    }
 
     private sealed class StubSeedReader(bool hasOwner) : ISeedReader
     {

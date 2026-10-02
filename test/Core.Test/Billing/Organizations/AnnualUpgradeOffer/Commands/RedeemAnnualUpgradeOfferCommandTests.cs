@@ -148,8 +148,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
         Assert.True(result.IsT0);
         await _stripeAdapter.Received(1).GetSubscriptionAsync(organization.GatewaySubscriptionId,
             Arg.Is<SubscriptionGetOptions>(o =>
-                o.Expand.Contains("discounts.coupon") &&
-                o.Expand.Contains("items.data.discounts.coupon") &&
+                o.Expand.Contains("discounts.source.coupon") &&
+                o.Expand.Contains("items.data.discounts.source") &&
                 o.Expand.Contains("schedule")));
         // Passing organization.Id (not null) is what drops the org's cohort assignment inside
         // ReleaseSchedule -- switching to annual also exits the cohort.
@@ -241,8 +241,8 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var (_, schedule) = SetupRedeemableSubscription(
             organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            subscriptionDiscounts: [new Discount { Id = "di_own", Coupon = new Coupon { Id = "promo-coupon" } }],
-            customer: new Customer { Discount = new Discount { Id = "di_customer", Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } } });
+            subscriptionDiscounts: [new Discount { Id = "di_own", Source = new DiscountSource { CouponId = "promo-coupon" } }],
+            customer: new Customer { Discount = new Discount { Id = "di_customer", Source = new DiscountSource { CouponId = "customer-coupon" } } });
 
         var result = await _command.Run(organization);
 
@@ -271,7 +271,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         var (_, schedule) = SetupRedeemableSubscription(
             organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            customer: new Customer { Discount = new Discount { Id = "di_customer", Coupon = new Coupon { Id = "customer-coupon", Duration = CouponDurations.Forever } } });
+            customer: new Customer { Discount = new Discount { Id = "di_customer", Source = new DiscountSource { CouponId = "customer-coupon" } } });
 
         var result = await _command.Run(organization);
 
@@ -359,7 +359,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         // drop a subscription-level coupon, so redemption refuses instead.
         SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            subscriptionDiscounts: [new Discount { Coupon = null }]);
+            subscriptionDiscounts: [new Discount { Source = new DiscountSource() }]);
 
         var result = await _command.Run(organization);
 
@@ -377,11 +377,10 @@ public class RedeemAnnualUpgradeOfferCommandTests
         _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(monthlyPlan);
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(annualPlan);
 
-        // Same failure mode as the null-coupon case above, but with a coupon object present and
-        // an empty ID -- the "?." on Coupon alone would not have caught this.
+        // Same failure mode as the null case above, but with an empty coupon id.
         SetupRedeemableSubscription(organization,
             [new SubscriptionItem { Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }],
-            subscriptionDiscounts: [new Discount { Coupon = new Coupon { Id = "" } }]);
+            subscriptionDiscounts: [new Discount { Source = new DiscountSource { CouponId = "" } }]);
 
         var result = await _command.Run(organization);
 
@@ -680,7 +679,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
         {
             Price = new Price { Id = monthlyPlan.PasswordManager.StripeSeatPlanId },
             Quantity = 10,
-            Discounts = [new Discount { Id = "di_1", Coupon = new Coupon { Id = "sm_half_off" } }]
+            Discounts = [new Discount { Id = "di_1", Source = new DiscountSource { CouponId = "sm_half_off" } }]
         };
         var (_, schedule) = SetupRedeemableSubscription(organization, [seatItem]);
 

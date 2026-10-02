@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -130,9 +129,9 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
+    public DatabaseTransactionAction UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (connection, transaction) =>
         {
             const string sql = @"
                 UPDATE D

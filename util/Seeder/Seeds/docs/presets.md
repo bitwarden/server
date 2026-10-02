@@ -2,6 +2,8 @@
 
 Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to avoid collisions with existing data.
 
+Some of these presets make up the default build list in `.github/workflows/build-seeded-databases.yml` under the`_DEFAULT_PRESETS` variable. Removing one requires updating that list with the same change.
+
 ## Cipher generation knobs
 
 These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.
@@ -9,6 +11,27 @@ These options apply to any preset that uses generated (count-based) ciphers — 
 | Knob                     | Type    | Default | Description                                                                                                                                   |
 | ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
+
+## Developer
+
+Day-to-day local development: one org with memorable role-based logins, production-shaped collections, and a realistic vault. No attachments, so no Azurite required.
+
+```bash
+dotnet run -- preset --name dev.playground
+```
+
+| Preset     | Org Fixture | Roster    | Ciphers        | Use Case                                    |
+| ---------- | ----------- | --------- | -------------- | ------------------------------------------- |
+| playground | dev-org     | dev-roles | dev-playground | Convenient logins over production-like data |
+
+The four role accounts use the roster `email` override (`roster.schema.json`), so the login is the role — password `asdfasdfasdf` unless overridden:
+
+| Login               | Role   | What they see                                                                                   |
+| ------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| `owner@bw.example`  | Owner  | Everything — direct Can Manage on every collection                                              |
+| `admin@bw.example`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
+| `custom@bw.example` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)                  |
+| `user@bw.example`   | User   | Company-Wide plus the Engineering collections, with folders and favorites                       |
 
 ## Features
 

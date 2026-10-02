@@ -1,135 +1,48 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Enums;
-using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.Platform.Push;
 
 namespace Bit.Core.Models;
 
-// New push notification payload models should not be defined in this file
-// they should instead be defined in file owned by your team.
-
+/// <summary>
+/// The envelope for a notification sent to the Notifications service.
+/// </summary>
+/// <remarks>
+/// <para>
+/// All properties on this type are required so any <see cref="Platform.Push.Internal.IPushEngine"/> implementations
+/// fail to compile if any property is forgotten when a <see cref="PushNotification{T}"/> is mapped to this type.
+/// </para>
+/// <para>
+/// Nullable properties are omitted when serialized. The properties of the payload itself are not affected.
+/// </para>
+/// </remarks>
 public class PushNotificationData<T>
 {
-    public PushNotificationData(PushType type, T payload, string? contextId)
-    {
-        Type = type;
-        Payload = payload;
-        ContextId = contextId;
-    }
+    /// <inheritdoc cref="Platform.Push.PushNotification{T}.Type"/>
+    public required PushType Type { get; init; }
 
-    public PushType Type { get; set; }
-    public T Payload { get; set; }
-    public string? ContextId { get; set; }
-}
+    /// <inheritdoc cref="Platform.Push.PushNotification{T}.Payload"/>
+    public required T Payload { get; init; }
 
-public class SyncCipherPushNotification
-{
-    public Guid Id { get; set; }
-    public Guid? UserId { get; set; }
-    public Guid? OrganizationId { get; set; }
-    public IEnumerable<Guid>? CollectionIds { get; set; }
-    public DateTime RevisionDate { get; set; }
-}
+    /// <summary>
+    /// The device the notification originated from, when it should not be handled there.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public required string? ContextId { get; init; }
 
-public class SyncFolderPushNotification
-{
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public DateTime RevisionDate { get; set; }
+    /// <inheritdoc cref="Platform.Push.PushNotification{T}.Target"/>
+    public required NotificationTarget Target { get; init; }
+
+    /// <inheritdoc cref="Platform.Push.PushNotification{T}.TargetId"/>
+    public required Guid TargetId { get; init; }
+
+    /// <inheritdoc cref="Platform.Push.PushNotification{T}.ClientType"/>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public required ClientType? ClientType { get; init; }
 }
 
 public class UserPushNotification
 {
     public Guid UserId { get; set; }
     public DateTime Date { get; set; }
-}
-
-public class SyncSendPushNotification
-{
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public DateTime RevisionDate { get; set; }
-}
-
-public class NotificationPushNotification
-{
-    public Guid Id { get; set; }
-    public Priority Priority { get; set; }
-    public bool Global { get; set; }
-    public ClientType ClientType { get; set; }
-    public Guid? UserId { get; set; }
-    public Guid? OrganizationId { get; set; }
-    public Guid? InstallationId { get; set; }
-    public Guid? TaskId { get; set; }
-    public string? Title { get; set; }
-    public string? Body { get; set; }
-    public DateTime CreationDate { get; set; }
-    public DateTime RevisionDate { get; set; }
-    public DateTime? ReadDate { get; set; }
-    public DateTime? DeletedDate { get; set; }
-}
-
-public class AuthRequestPushNotification
-{
-    public Guid UserId { get; set; }
-    public Guid Id { get; set; }
-}
-
-public class OrganizationStatusPushNotification
-{
-    public Guid OrganizationId { get; set; }
-    public bool Enabled { get; set; }
-}
-
-public class OrganizationCollectionManagementPushNotification
-{
-    public Guid OrganizationId { get; init; }
-    public bool LimitCollectionCreation { get; init; }
-    public bool LimitCollectionDeletion { get; init; }
-    public bool LimitItemDeletion { get; init; }
-}
-
-public class OrganizationBankAccountVerifiedPushNotification
-{
-    public Guid OrganizationId { get; set; }
-}
-
-public class ProviderBankAccountVerifiedPushNotification
-{
-    public Guid ProviderId { get; set; }
-    public Guid AdminId { get; set; }
-}
-
-public class LogOutPushNotification
-{
-    public Guid UserId { get; set; }
-    public PushNotificationLogOutReason? Reason { get; set; }
-}
-
-public class SyncPolicyPushNotification
-{
-    public Guid OrganizationId { get; set; }
-    public required Policy Policy { get; set; }
-}
-
-public class AutoConfirmPushNotification
-{
-    /// <summary>
-    /// The admin/owner receiving this notification
-    /// </summary>
-    public Guid UserId { get; set; }
-
-    /// <summary>
-    /// The organization the user accepted an invite to
-    /// </summary>
-    public Guid OrganizationId { get; set; }
-
-    /// <summary>
-    /// The user id who accepted the organization invite (Needed for key-exchange on the client)
-    /// </summary>
-    public Guid TargetUserId { get; set; }
-    ///
-    /// <summary>
-    /// The organization user id who accepted the organization invite (will be auto-confirmed)
-    /// </summary>
-    public Guid TargetOrganizationUserId { get; set; }
 }

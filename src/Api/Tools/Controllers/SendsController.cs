@@ -40,6 +40,7 @@ public class SendsController : Controller
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -52,7 +53,8 @@ public class SendsController : Controller
         IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
-        ISendEventClassifier sendEventClassifier
+        ISendEventClassifier sendEventClassifier,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService
     )
     {
         _sendRepository = sendRepository;
@@ -66,6 +68,7 @@ public class SendsController : Controller
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _eventService = eventService;
         _sendEventClassifier = sendEventClassifier;
+        _featureService = featureService;
     }
 
     #region Anonymous endpoints
@@ -95,7 +98,9 @@ public class SendsController : Controller
                             return;
                         }
 
-                        await _nonAnonymousSendCommand.ConfirmFileSize(send);
+                        // This finalizes the upload begun by PostFile, which already logged Send_Created_*;
+                        // don't log a second, redundant Send_Edited_* for what the user experiences as one creation.
+                        await _nonAnonymousSendCommand.ConfirmFileSize(send, logEvent: false);
                     }
                     catch (Exception e)
                     {
@@ -118,6 +123,10 @@ public class SendsController : Controller
     {
         var sendId = new Guid(id);
         var send = await _sendOwnerQuery.Get(sendId, User);
+        if (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new NotFoundException();
+        }
         return new SendResponseModel(send);
     }
 
@@ -125,10 +134,13 @@ public class SendsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<SendResponseModel>> GetAll()
     {
-        var sends = await _sendOwnerQuery.GetOwned(User);
+        var sends = (await _sendOwnerQuery.GetOwned(User)).AsEnumerable();
+        if (!_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            sends = sends.Where(s => s.Type != SendType.Item);
+        }
         var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
-
         return result;
     }
 
@@ -146,7 +158,7 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
+        if (!INonAnonymousSendCommand.SendCanBeAccessed(send) || (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing)))
         {
             throw new NotFoundException();
         }
@@ -194,7 +206,7 @@ public class SendsController : Controller
     [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth(string fileId)
+    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth([FromRoute] string fileId)
     {
         var sendId = User.GetSendId();
         var send = await _sendRepository.GetByIdAsync(sendId);
@@ -233,7 +245,15 @@ public class SendsController : Controller
     {
         model.ValidateCreation();
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
 
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
@@ -287,7 +307,7 @@ public class SendsController : Controller
 
     [Authorize(Policies.Application)]
     [HttpGet("{id}/file/{fileId}")]
-    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, string fileId)
+    public async Task<SendFileUploadDataResponseModel> RenewFileUpload(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var sendId = new Guid(id);
@@ -315,7 +335,7 @@ public class SendsController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
-    public async Task PostFileForExistingSend(string id, string fileId)
+    public async Task PostFileForExistingSend(string id, [FromRoute] string fileId)
     {
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         if (!Request?.ContentType?.Contains("multipart/") ?? true)
@@ -340,9 +360,17 @@ public class SendsController : Controller
     public async Task<SendResponseModel> Put(string id, [FromBody] SendRequestModel model)
     {
         model.ValidateEdit();
+        if (model.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing))
+        {
+            throw new BadRequestException("Item type Sends are not yet enabled");
+        }
         var userId = _userService.GetProperUserId(User) ?? throw new InvalidOperationException("User ID not found");
         var hasPremium = await _hasPremiumAccessQuery.HasPremiumAccessAsync(userId);
 
+        if (!hasPremium && model.Type == SendType.Item)
+        {
+            throw new BadRequestException("Item type Sends require a premium membership");
+        }
         if (!hasPremium && !string.IsNullOrWhiteSpace(model.Emails))
         {
             throw new BadRequestException("Email verified Sends require a premium membership");
@@ -352,6 +380,10 @@ public class SendsController : Controller
         if (send == null || send.UserId != userId)
         {
             throw new NotFoundException();
+        }
+        if (send.Type != model.Type)
+        {
+            throw new BadRequestException("Cannot change a Send's type");
         }
 
         await _nonAnonymousSendCommand.SaveSendAsync(model.UpdateSend(send, _sendAuthorizationService));

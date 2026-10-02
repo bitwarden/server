@@ -1,7 +1,9 @@
 ﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -69,5 +71,58 @@ public class OrganizationUserResponseModelTests
         var result = new OrganizationUserUserDetailsResponseModel((orgUser, false, true));
 
         Assert.Equal(orgUser.CreationDate, result.CreationDate);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public void Constructor_OrganizationUser_NonCustomRole_OmitsPermissions(OrganizationUserType type,
+        OrganizationUser orgUser)
+    {
+        orgUser.Type = type;
+        orgUser.SetPermissions(new Permissions { ManageUsers = true });
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.Null(result.Permissions);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public void Constructor_OrganizationUserUserDetails_NonCustomRole_OmitsPermissions(OrganizationUserType type,
+        OrganizationUserUserDetails orgUser)
+    {
+        orgUser.Type = type;
+        orgUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions { ManageUsers = true });
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.Null(result.Permissions);
+    }
+
+    [Theory, BitAutoData]
+    public void Constructor_OrganizationUser_CustomRole_ReturnsPermissions(OrganizationUser orgUser)
+    {
+        orgUser.Type = OrganizationUserType.Custom;
+        orgUser.SetPermissions(new Permissions { ManageUsers = true });
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.True(result.Permissions.ManageUsers);
+    }
+
+    [Theory, BitAutoData]
+    public void Constructor_OrganizationUserUserDetails_CustomRole_ReturnsPermissions(
+        OrganizationUserUserDetails orgUser)
+    {
+        orgUser.Type = OrganizationUserType.Custom;
+        orgUser.Permissions = CoreHelpers.ClassToJsonData(new Permissions { ManageUsers = true });
+
+        var result = new OrganizationUserResponseModel(orgUser);
+
+        Assert.True(result.Permissions.ManageUsers);
     }
 }

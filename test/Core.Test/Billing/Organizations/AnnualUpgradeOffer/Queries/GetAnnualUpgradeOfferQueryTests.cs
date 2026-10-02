@@ -121,8 +121,8 @@ public class GetAnnualUpgradeOfferQueryTests
 
                 var amountOff = (options.Discounts ?? [])
                     .Sum(discount => subscription.Discounts?
-                        .FirstOrDefault(d => d.Coupon?.Id == discount.Coupon)
-                        ?.Coupon?.AmountOff ?? 0);
+                        .FirstOrDefault(d => d.Source?.Coupon?.Id == discount.Coupon)
+                        ?.Source?.Coupon?.AmountOff ?? 0);
 
                 return Task.FromResult(new Invoice
                 {
@@ -457,11 +457,9 @@ public class GetAnnualUpgradeOfferQueryTests
             Arg.Is<SubscriptionGetOptions>(options =>
                 options.Expand.Contains("schedule") &&
                 options.Expand.Contains("customer") &&
-                options.Expand.Contains("customer.discount.coupon") &&
-                options.Expand.Contains("discounts.coupon") &&
-                options.Expand.Contains("items.data.discounts.coupon") &&
-                // Nothing reads Coupon.AppliesTo any more; Stripe evaluates product scope inside
-                // the previews. Leaving the expansion in place would suggest otherwise.
+                options.Expand.Contains("customer.discount.source.coupon") &&
+                options.Expand.Contains("discounts.source.coupon") &&
+                options.Expand.Contains("items.data.discounts.source") &&
                 !options.Expand.Any(expansion => expansion.EndsWith("applies_to"))));
     }
 
@@ -605,7 +603,11 @@ public class GetAnnualUpgradeOfferQueryTests
             new Discount
             {
                 Id = "di_big",
-                Coupon = new Coupon { Id = "big", AmountOff = 10_000, Duration = "forever", Currency = "usd" }
+                Source = new DiscountSource
+                {
+                    CouponId = "big",
+                    Coupon = new Coupon { Id = "big", AmountOff = 10_000, Duration = "forever", Currency = "usd" }
+                }
             }
         ];
         // Pre-discount, annual is comfortably cheaper (1800 vs. 1200 annualized); the $100 coupon

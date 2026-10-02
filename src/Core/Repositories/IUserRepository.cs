@@ -2,7 +2,6 @@
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
 namespace Bit.Core.Repositories;
@@ -60,9 +59,9 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="user">The user to update</param>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+        IEnumerable<DatabaseTransactionAction> updateDataActions);
     Task UpdateUserKeyAndEncryptedDataV2Async(User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+        IEnumerable<DatabaseTransactionAction> updateDataActions);
     /// <summary>
     /// Sets the account cryptographic state to a user in a single transaction. The provided
     /// MUST be a V2 encryption state. Passing in a V1 encryption state will throw.

@@ -35,6 +35,12 @@ public class OrganizationBillingService(
     ISubscriptionDiscountService subscriptionDiscountService,
     ITaxService taxService) : IOrganizationBillingService
 {
+    // Must match `InitiationPath.SalesAssistedTrialFromAdminPortal` in the clients repo.
+    private const string _salesAssistedTrialInitiationPath = "Sales assisted trial from admin portal";
+
+    // Matched as a substring of the client's `InitiationPath` marketing-trial values.
+    private const string _marketingTrialInitiationPathSegment = "trial from marketing website";
+
     public async Task Finalize(OrganizationSale sale)
     {
         var (organization, customerSetup, subscriptionSetup, owner) = sale;
@@ -446,23 +452,34 @@ public class OrganizationBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
-            Discounts = coupons.Count > 0 ? coupons.Select(c => new SubscriptionDiscountOptions { Coupon = c }).ToList() : null,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                ["organizationId"] = organization.Id.ToString(),
-                ["trialInitiationPath"] = !string.IsNullOrEmpty(subscriptionSetup.InitiationPath) &&
-                                          subscriptionSetup.InitiationPath.Contains("trial from marketing website")
-                    ? "marketing-initiated"
-                    : "product-initiated"
+                [StripeConstants.MetadataKeys.OrganizationId] = organization.Id.ToString(),
+                [StripeConstants.MetadataKeys.TrialInitiationPath] = subscriptionSetup.InitiationPath switch
+                {
+                    var path when !string.IsNullOrEmpty(path) && path.Contains(_marketingTrialInitiationPathSegment)
+                        => StripeConstants.TrialInitiationPaths.MarketingInitiated,
+                    _salesAssistedTrialInitiationPath
+                        => StripeConstants.TrialInitiationPaths.SalesAssisted,
+                    _ => StripeConstants.TrialInitiationPaths.ProductInitiated
+                }
             },
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial
                 ? 0
                 : subscriptionSetup.TrialLength ?? plan.TrialPeriodDays
         };
+
+        if (coupons.Count > 0)
+        {
+            subscriptionCreateOptions.Discounts = coupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
+        }
 
         var hasPaymentMethod = await hasPaymentMethodQuery.Run(organization);
 
@@ -491,7 +508,6 @@ public class OrganizationBillingService(
 
         return subscription;
     }
-
 
     #endregion
 }

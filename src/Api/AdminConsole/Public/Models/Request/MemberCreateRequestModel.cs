@@ -4,7 +4,6 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -20,12 +19,7 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
     [Required]
     [StringLength(256)]
     [StrictEmailAddress]
-    public string Email { get; set; }
-
-    public override OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
-    {
-        throw new NotImplementedException();
-    }
+    public new string Email { get; set; }
 
     public InviteOrganizationUsersRequest ToInviteRequest(
         Organization organization,

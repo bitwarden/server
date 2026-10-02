@@ -273,7 +273,7 @@ public class ProviderBillingControllerTests
                     State = "NY"
                 },
                 Balance = -100000,
-                Discount = new Discount { Coupon = new Coupon { PercentOff = 10 } },
+                Discount = new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 10 } } },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Value = "123456789" }] }
             },
             Items = new StripeList<SubscriptionItem>
@@ -297,7 +297,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         var daysInLastMonth = DateTime.DaysInMonth(oneMonthAgo.Year, oneMonthAgo.Month);
@@ -359,7 +359,7 @@ public class ProviderBillingControllerTests
 
         Assert.Equal(subscription.Status, response.Status);
         Assert.Equal(subscription.GetCurrentPeriodEnd(), response.CurrentPeriodEndDate);
-        Assert.Equal(subscription.Customer!.Discount!.Coupon!.PercentOff, response.DiscountPercentage);
+        Assert.Equal(subscription.Customer!.Discount!.Source?.Coupon?.PercentOff, response.DiscountPercentage);
         Assert.Equal(subscription.CollectionMethod, response.CollectionMethod);
 
         var teamsPlan = MockPlans.Get(PlanType.TeamsMonthly);
@@ -432,7 +432,7 @@ public class ProviderBillingControllerTests
             },
             Discounts =
             [
-                new Discount { Coupon = new Coupon { PercentOff = 15 } } // Subscription-level discount
+                new Discount { Source = new DiscountSource { Coupon = new Coupon { PercentOff = 15 } } } // Subscription-level discount
             ],
             Items = new StripeList<SubscriptionItem>
             {
@@ -455,7 +455,7 @@ public class ProviderBillingControllerTests
         stripeAdapter.GetSubscriptionAsync(provider.GatewaySubscriptionId, Arg.Is<SubscriptionGetOptions>(
             options =>
                 options.Expand.Contains("customer.tax_ids") &&
-                options.Expand.Contains("discounts") &&
+                options.Expand.Contains("discounts.source.coupon") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
         stripeAdapter.SearchInvoiceAsync(Arg.Is<InvoiceSearchOptions>(

@@ -1,12 +1,10 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -153,14 +151,14 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid grantorId, IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccessKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (connection, transaction) =>
         {
             var newKeys = emergencyAccessKeys.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var userEmergencyAccess = await GetDbSet(dbContext)
                 .Where(ea => ea.GrantorId == grantorId)
                 .ToListAsync();

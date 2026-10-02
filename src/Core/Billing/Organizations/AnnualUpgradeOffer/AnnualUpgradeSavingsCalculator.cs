@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Stripe;
 
@@ -27,8 +28,8 @@ internal static class AnnualUpgradeSavingsCalculator
     /// Builds the monthly and annual preview payloads.
     /// </summary>
     /// <remarks>
-    /// The caller must load the subscription with <c>customer</c>, <c>discounts.coupon</c>,
-    /// <c>customer.discount.coupon</c>, and <c>items.data.discounts.coupon</c> expanded.
+    /// The caller must load the subscription with <c>customer</c>, <c>discounts.source.coupon</c>,
+    /// <c>customer.discount.source.coupon</c>, and <c>items.data.discounts.source</c> expanded.
     /// </remarks>
     public static AnnualUpgradePreviewRequests BuildPreviewRequests(
         Subscription subscription, IReadOnlyList<AnnualUpgradeLine> lines)
@@ -51,6 +52,7 @@ internal static class AnnualUpgradeSavingsCalculator
             // No Subscription set on purpose. Passing one would price with prorations, not the full term.
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
+                BillingMode = new InvoiceSubscriptionDetailsBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Items = [.. lines.Select(line => new InvoiceSubscriptionDetailsItemOptions
                 {
                     Price = annual ? line.TargetPriceId : line.Item.Price.Id,
@@ -67,11 +69,11 @@ internal static class AnnualUpgradeSavingsCalculator
     {
         var discounts = (line.Item.Discounts ?? [])
             .Where(discount =>
-                (discount?.Coupon).IsForever() &&
-                !string.IsNullOrEmpty(discount!.Coupon.Id))
+                (discount?.Source?.Coupon).IsForever() &&
+                !string.IsNullOrEmpty(discount!.Source?.Coupon?.Id))
             .Select(discount => new InvoiceSubscriptionDetailsItemDiscountOptions
             {
-                Coupon = discount.Coupon.Id
+                Coupon = discount.Source?.Coupon?.Id
             })
             .ToList();
 
@@ -102,8 +104,8 @@ internal static class AnnualUpgradeSavingsCalculator
     private static IReadOnlyList<Coupon> InvoiceLevelCoupons(Subscription subscription)
     {
         var subscriptionCoupons = (subscription.Discounts ?? [])
-            .Where(discount => discount?.Coupon is not null)
-            .Select(discount => discount.Coupon)
+            .Where(discount => discount?.Source?.Coupon is not null)
+            .Select(discount => discount.Source!.Coupon)
             .ToList();
 
         if (subscriptionCoupons.Count > 0)
@@ -111,7 +113,7 @@ internal static class AnnualUpgradeSavingsCalculator
             return subscriptionCoupons;
         }
 
-        var customerCoupon = subscription.Customer?.Discount?.Coupon;
+        var customerCoupon = subscription.Customer?.Discount?.Source?.Coupon;
         return customerCoupon is null ? [] : [customerCoupon];
     }
 

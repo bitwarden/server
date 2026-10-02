@@ -68,4 +68,10 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     {
         return (await _cipherRepository.GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(orgId)).ToList();
     }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetOrganizationLoginCiphers(Guid orgId)
+    {
+        return (await _cipherRepository.GetManyLoginCipherOrganizationDetailsAsync(orgId)).ToList();
+    }
 }
