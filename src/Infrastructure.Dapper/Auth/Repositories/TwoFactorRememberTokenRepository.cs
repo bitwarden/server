@@ -22,7 +22,8 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(Guid userId, Guid deviceId)
+    // Virtual so tests can simulate a stale read, which is what the fallbacks in UpsertAsync handle.
+    public virtual async Task<TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(Guid userId, Guid deviceId)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
@@ -36,14 +37,69 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
 
     public async Task<TwoFactorRememberToken> UpsertAsync(TwoFactorRememberToken token)
     {
-        // BaseRepository does not assign ids the way the generic repository does, and the procedure
-        // needs one for the insert branch. SetNewId only fills an unset id, so an update is unaffected.
+        var existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
+        if (existing != null && await TryUpdateAsync(token, existing))
+        {
+            return token;
+        }
+
+        // Either there is no row, or it was removed between the read and the update (the expiry
+        // sweep can do that). BaseRepository does not assign ids the way the generic repository does,
+        // and the procedure needs one for the insert.
         token.SetNewId();
 
+        try
+        {
+            await CreateAsync(token);
+        }
+        catch (SqlException e) when (e.Number is 2601 or 2627)
+        {
+            // Unique-index backstop ([IX_TwoFactorRememberToken_UserId_DeviceId]): a concurrent
+            // remember-login on the same device inserted the row between our read and our insert.
+            // Update the winner's row instead of failing the login.
+            existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
+            if (existing == null || !await TryUpdateAsync(token, existing))
+            {
+                throw;
+            }
+        }
+
+        return token;
+    }
+
+    private async Task<bool> TryUpdateAsync(TwoFactorRememberToken token, TwoFactorRememberToken existing)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var rowsUpdated = await connection.ExecuteScalarAsync<int>(
+            "[dbo].[TwoFactorRememberToken_Update]",
+            new
+            {
+                existing.Id,
+                token.Stamp,
+                token.RevisionDate,
+                token.ExpirationDate,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        if (rowsUpdated == 0)
+        {
+            return false;
+        }
+
+        // CreationDate stays as first written, so the row still records when the device was first
+        // remembered; the update procedure does not write it.
+        token.Id = existing.Id;
+        token.CreationDate = existing.CreationDate;
+        return true;
+    }
+
+    private async Task CreateAsync(TwoFactorRememberToken token)
+    {
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[TwoFactorRememberToken_Save]",
+            "[dbo].[TwoFactorRememberToken_Create]",
             new
             {
                 token.Id,
@@ -55,8 +111,6 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
                 token.ExpirationDate,
             },
             commandType: CommandType.StoredProcedure);
-
-        return token;
     }
 
     public async Task RotateStampsByUserIdAsync(Guid userId)
