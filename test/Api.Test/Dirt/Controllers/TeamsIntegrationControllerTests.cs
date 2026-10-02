@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Text.Json;
 using Bit.Api.Dirt.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Dirt.Entities;
@@ -501,6 +502,178 @@ public class TeamsIntegrationControllerTests
             .Returns(true);
 
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.RedirectAsync(organizationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_CompletedIntegration_ReturnsStandardChannels(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        var serviceUrl = new Uri("https://smba.example.com/amer/tenant/");
+        SetupCompletedTeamsIntegration(integration, "19:team@thread.tacv2", serviceUrl);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(serviceUrl, "19:team@thread.tacv2")
+            .Returns([
+                new TeamsChannel { Id = "19:team@thread.tacv2", Name = null, Type = "standard" },
+                new TeamsChannel { Id = "19:alerts@thread.tacv2", Name = "Alerts", Type = "standard" }
+            ]);
+
+        var result = await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id);
+
+        Assert.Collection(result.Data,
+            general =>
+            {
+                Assert.Equal("19:team@thread.tacv2", general.Id);
+                Assert.Null(general.Name);
+            },
+            alerts =>
+            {
+                Assert.Equal("19:alerts@thread.tacv2", alerts.Id);
+                Assert.Equal("Alerts", alerts.Name);
+            });
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_ChannelLookupFails_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        var serviceUrl = new Uri("https://smba.example.com/amer/tenant/");
+        SetupCompletedTeamsIntegration(integration, "19:team@thread.tacv2", serviceUrl);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+        sutProvider.GetDependency<ITeamsService>()
+            .GetStandardChannelsAsync(serviceUrl, "19:team@thread.tacv2")
+            .Returns((IReadOnlyList<TeamsChannel>?)null);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_NotOrganizationOwner_ThrowsNotFound(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        Guid organizationId,
+        Guid integrationId)
+    {
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(organizationId, integrationId));
+        await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_IntegrationNotFound_ThrowsNotFound(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        Guid organizationId,
+        Guid integrationId)
+    {
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integrationId)
+            .Returns((OrganizationIntegration?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(organizationId, integrationId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_IntegrationInOtherOrganization_ThrowsNotFound(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration,
+        Guid otherOrganizationId)
+    {
+        SetupCompletedTeamsIntegration(integration, "19:team@thread.tacv2", new Uri("https://smba.example.com/"));
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(otherOrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(otherOrganizationId, integration.Id));
+        await sutProvider.GetDependency<ITeamsService>().DidNotReceiveWithAnyArgs()
+            .GetStandardChannelsAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_NonTeamsIntegration_ThrowsNotFound(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Slack;
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_IntegrationNotCompleted_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = JsonSerializer.Serialize(new TeamsIntegration(TenantId: "tenant", Teams: []));
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetChannelsAsync_IntegrationInitiated_ThrowsBadRequest(
+        SutProvider<TeamsIntegrationController> sutProvider,
+        OrganizationIntegration integration)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = null;
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(integration.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationIntegrationRepository>()
+            .GetByIdAsync(integration.Id)
+            .Returns(integration);
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.GetChannelsAsync(integration.OrganizationId, integration.Id));
+    }
+
+    private static void SetupCompletedTeamsIntegration(OrganizationIntegration integration, string teamId, Uri serviceUrl)
+    {
+        integration.Type = IntegrationType.Teams;
+        integration.Configuration = JsonSerializer.Serialize(new TeamsIntegration(
+            TenantId: "tenant",
+            Teams: [],
+            ChannelId: teamId,
+            ServiceUrl: serviceUrl));
     }
 
     private static void SetBaseServiceUriApi(SutProvider<TeamsIntegrationController> sutProvider)

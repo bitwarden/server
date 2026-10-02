@@ -238,7 +238,6 @@ public class Startup
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);
         services.AddSlackService(globalSettings);
-        services.AddTeamsService(globalSettings);
     }
 
     public void Configure(
@@ -413,5 +412,7 @@ public class Startup
             .MapUserSubscriptionEndpoints();
         endpoints.MapGroup("/organizations/{organizationId:guid}/billing/subscription")
             .MapOrganizationSubscriptionEndpoints();
+        endpoints.MapGroup("/organizations/billing/subscription")
+            .MapOrganizationSubscriptionPurchaseEndpoints();
     }
 }
