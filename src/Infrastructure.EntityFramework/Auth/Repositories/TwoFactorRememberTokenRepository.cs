@@ -106,7 +106,7 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
         _ => false,
     };
 
-    public async Task RotateStampsByUserIdAsync(Guid userId)
+    public async Task RotateStampsByUserIdAsync(Guid userId, DateTime revisionDate)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -115,7 +115,6 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
         // the MSSQL procedure write identical values. Rows are located by (UserId, DeviceId), so the
         // stamp never selects a row and a token naming one device cannot match another's.
         var stamp = Guid.NewGuid().ToString();
-        var revisionDate = DateTime.UtcNow;
 
         await dbContext.TwoFactorRememberTokens
             .Where(t => t.UserId == userId)
