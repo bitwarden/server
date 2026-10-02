@@ -657,7 +657,7 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]
@@ -683,7 +683,7 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]
@@ -854,7 +854,7 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]
@@ -881,7 +881,7 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _organizationRepository.Received(1).GetByIdAsync(orgId);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]
@@ -932,7 +932,7 @@ public class CollectControllerTests
 
         Assert.IsType<OkResult>(result);
         await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]
@@ -963,7 +963,7 @@ public class CollectControllerTests
         Assert.IsType<OkResult>(result);
         await _organizationUserRepository.Received(1).GetByOrganizationAsync(orgId, userId);
         await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
-        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default, default, default);
+        await _eventService.DidNotReceiveWithAnyArgs().LogOrganizationEventAsync(default(Organization), default, default);
     }
 
     [Theory]

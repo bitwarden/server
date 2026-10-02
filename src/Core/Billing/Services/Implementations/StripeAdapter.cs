@@ -19,6 +19,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly CustomerService _customerService;
     private readonly SubscriptionService _subscriptionService;
     private readonly InvoiceService _invoiceService;
+    private readonly InvoiceLineItemService _invoiceLineItemService;
     private readonly PaymentMethodService _paymentMethodService;
     private readonly TaxIdService _taxIdService;
     private readonly ChargeService _chargeService;
@@ -41,6 +42,7 @@ public class StripeAdapter : IStripeAdapter
         _customerService = new CustomerService();
         _subscriptionService = new SubscriptionService();
         _invoiceService = new InvoiceService();
+        _invoiceLineItemService = new InvoiceLineItemService();
         _paymentMethodService = new PaymentMethodService();
         _taxIdService = new TaxIdService();
         _chargeService = new ChargeService();
@@ -140,6 +142,21 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options) =>
         _invoiceService.CreatePreviewAsync(options);
+
+    public async Task<List<InvoiceLineItem>> ListInvoiceLineItemsAsync(string invoiceId,
+        InvoiceLineItemListOptions options)
+    {
+        options.Limit = 100;
+
+        var lineItems = new List<InvoiceLineItem>();
+
+        await foreach (var lineItem in _invoiceLineItemService.ListAutoPagingAsync(invoiceId, options))
+        {
+            lineItems.Add(lineItem);
+        }
+
+        return lineItems;
+    }
 
     public async Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options) =>
         (await _invoiceService.SearchAsync(options)).Data;

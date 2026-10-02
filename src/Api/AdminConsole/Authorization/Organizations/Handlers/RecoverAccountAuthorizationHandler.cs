@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -21,7 +23,7 @@ public class RecoverAccountAuthorizationRequirement : IAuthorizationRequirement;
 /// </summary>
 /// <remarks>
 /// This prevents privilege escalation by ensuring that a user cannot recover the account of
-/// another user with a higher role or with provider membership.
+/// another user with a higher role, in either the organization or a provider.
 /// </remarks>
 public class RecoverAccountAuthorizationHandler(
     IOrganizationContext organizationContext,
@@ -30,7 +32,7 @@ public class RecoverAccountAuthorizationHandler(
     : AuthorizationHandler<RecoverAccountAuthorizationRequirement, OrganizationUser>
 {
     public const string FailureReason = "You are not permitted to recover this user's account.";
-    public const string ProviderFailureReason = "You are not permitted to recover a Provider member's account.";
+    public const string ProviderFailureReason = "You are not permitted to recover this Provider member's account.";
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         RecoverAccountAuthorizationRequirement requirement,
@@ -49,7 +51,8 @@ public class RecoverAccountAuthorizationHandler(
         }
 
         // Step 2: check that the User has permissions with respect to any provider the target user is a member of.
-        // This prevents an organization admin performing privilege escalation into an unrelated provider.
+        // This prevents an organization admin performing privilege escalation into an unrelated provider,
+        // and prevents a provider member escalating into a higher role within their own provider.
         var canRecoverProviderMember = await CanRecoverProviderAsync(targetOrganizationUser);
         if (!canRecoverProviderMember)
         {
@@ -99,11 +102,24 @@ public class RecoverAccountAuthorizationHandler(
         var targetUserProviderUsers =
             await providerUserRepository.GetManyByUserAsync(targetOrganizationUser.UserId.Value);
 
-        // If the target user belongs to any provider that the current user is not a member of,
-        // deny the action to prevent privilege escalation from organization to provider.
+        // The current user must be able to recover the target user in every provider the target belongs to.
         // Note: we do not expect that a user is a member of more than 1 provider, but there is also no guarantee
         // against it; this returns a sequence, so we handle the possibility.
-        var authorized = targetUserProviderUsers.All(providerUser => currentContext.ProviderUser(providerUser.ProviderId));
+        var authorized = targetUserProviderUsers.All(AuthorizeProviderMember);
+        return authorized;
+    }
+
+    private bool AuthorizeProviderMember(ProviderUser targetProviderUser)
+    {
+        // Current user must be a member of the provider with equal or greater permissions than the user
+        // account being recovered. Membership alone is not enough: a Service User recovering a Provider admin
+        // would escalate into the higher role.
+        var authorized = targetProviderUser.Type switch
+        {
+            ProviderUserType.ProviderAdmin => currentContext.ProviderProviderAdmin(targetProviderUser.ProviderId),
+            _ => currentContext.ProviderUser(targetProviderUser.ProviderId)
+        };
+
         return authorized;
     }
 }

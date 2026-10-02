@@ -467,43 +467,6 @@ public class OrganizationReportsController : Controller
         return File(stream, "application/octet-stream", fileData.FileName);
     }
 
-    private async Task AuthorizeAsync(Guid organizationId)
-    {
-        if (!await _currentContext.AccessReports(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (orgAbility is null || !orgAbility.UseRiskInsights)
-        {
-            throw new BadRequestException("Your organization's plan does not support this feature.");
-        }
-    }
-
-    private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)
-    {
-        if (organizationId == Guid.Empty)
-        {
-            throw new BadRequestException("OrganizationId is required.");
-        }
-
-        if (reportId.HasValue && reportId.Value == Guid.Empty)
-        {
-            throw new BadRequestException("ReportId is required.");
-        }
-    }
-
-    private async Task<OrganizationReport> GetAuthorizedReportAsync(Guid organizationId, Guid reportId)
-    {
-        EnsureValidIds(organizationId, reportId);
-        await AuthorizeAsync(organizationId);
-        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
-        if (report.OrganizationId != organizationId) throw new BadRequestException("Invalid report ID");
-        return report;
-    }
-
-
     // Is being used by client on V2
 
     [HttpGet("{organizationId}/data/summary/{reportId}")]
@@ -575,5 +538,41 @@ public class OrganizationReportsController : Controller
         var response = new OrganizationReportResponseModel(updatedReport);
 
         return Ok(response);
+    }
+
+    private async Task AuthorizeAsync(Guid organizationId)
+    {
+        if (!await _currentContext.AccessReports(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAbility = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
+        if (orgAbility is null || !orgAbility.UseRiskInsights)
+        {
+            throw new BadRequestException("Your organization's plan does not support this feature.");
+        }
+    }
+
+    private static void EnsureValidIds(Guid organizationId, Guid? reportId = null)
+    {
+        if (organizationId == Guid.Empty)
+        {
+            throw new BadRequestException("OrganizationId is required.");
+        }
+
+        if (reportId.HasValue && reportId.Value == Guid.Empty)
+        {
+            throw new BadRequestException("ReportId is required.");
+        }
+    }
+
+    private async Task<OrganizationReport> GetAuthorizedReportAsync(Guid organizationId, Guid reportId)
+    {
+        EnsureValidIds(organizationId, reportId);
+        await AuthorizeAsync(organizationId);
+        var report = await _getOrganizationReportQuery.GetOrganizationReportAsync(reportId);
+        if (report.OrganizationId != organizationId) throw new BadRequestException("Invalid report ID");
+        return report;
     }
 }

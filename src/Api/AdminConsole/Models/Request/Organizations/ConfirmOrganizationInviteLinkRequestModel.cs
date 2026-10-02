@@ -6,6 +6,9 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 public class ConfirmOrganizationInviteLinkRequestModel
 {
     [Required]
+    public required Guid OrganizationId { get; set; }
+
+    [Required]
     public required Guid Code { get; set; }
 
     /// <summary>
@@ -17,6 +20,8 @@ public class ConfirmOrganizationInviteLinkRequestModel
     /// <summary>
     /// The user's account recovery key, supplied when the organization enforces automatic enrollment.
     /// </summary>
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string? ResetPasswordKey { get; set; }
 
     /// <summary>

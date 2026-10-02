@@ -53,6 +53,7 @@ public class ProfileOrganizationResponseModelTests
             UseOrganizationDomains = organization.UseOrganizationDomains,
             UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies,
             UseAutomaticUserConfirmation = organization.UseAutomaticUserConfirmation,
+            UsePam = organization.UsePam,
             SelfHost = organization.SelfHost,
             Seats = organization.Seats,
             MaxCollections = organization.MaxCollections,
@@ -84,6 +85,7 @@ public class ProfileOrganizationResponseModelTests
             Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.Owner,
             AccessSecretsManager = true,
+            AccessPam = true,
             SmSeats = 5,
             SmServiceAccounts = 10
         };
@@ -142,6 +144,8 @@ public class ProfileOrganizationResponseModelTests
         Assert.NotNull(result.Permissions);
         Assert.True(result.ResetPasswordEnrolled);
         Assert.Equal(organizationDetails.AccessSecretsManager, result.AccessSecretsManager);
+        Assert.Equal(organization.UsePam, result.UsePam);
+        Assert.Equal(organizationDetails.AccessPam, result.AccessPam);
         Assert.Equal(organizationDetails.FamilySponsorshipFriendlyName, result.FamilySponsorshipFriendlyName);
         Assert.Equal(organizationDetails.FamilySponsorshipLastSyncDate, result.FamilySponsorshipLastSyncDate);
         Assert.Equal(organizationDetails.FamilySponsorshipToDelete, result.FamilySponsorshipToDelete);

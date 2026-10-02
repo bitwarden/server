@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -64,6 +63,11 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
+    /// <summary>
+    /// The batch form of <see cref="GetByOrganizationEmailAsync"/>. Matches on OrganizationUser.Email, which
+    /// only members without a linked account (staged, invited) have.
+    /// </summary>
+    Task<ICollection<OrganizationUser>> GetManyByOrganizationEmailsAsync(Guid organizationId, IEnumerable<string> emails);
     Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids);
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
     /// <summary>
@@ -80,6 +84,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="status">The status to restore the user to (their status prior to being revoked).</param>
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetOccupiedPamSeatCountByOrganizationIdAsync(Guid organizationId);
     Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds);
 
     /// <summary>
@@ -87,7 +92,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="resetPasswordKeys">A list of organization users with updated reset password keys</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<OrganizationUser> resetPasswordKeys);
 
     /// <summary>
@@ -171,4 +176,21 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <param name="organizationUser">The organization user entity with updated properties (status, userId, key)</param>
     /// <returns>An action that can be executed within a transaction</returns>
     Func<DbConnection, DbTransaction, Task> BuildConfirmOwnerAction(OrganizationUser organizationUser);
+
+    /// <summary>
+    /// Returns a delegate that updates the status, key, and revision date of the given
+    /// organization user.
+    /// </summary>
+    /// <param name="id">Id of the organization user to update</param>
+    /// <param name="status">The status to set</param>
+    /// <param name="key">The key to set</param>
+    /// <param name="revisionDate">The revision date to set</param>
+    DatabaseTransactionAction UpdateStatusAndKeyById(Guid id,
+        OrganizationUserStatusType status, string? key, DateTime revisionDate);
+
+    /// <summary>
+    /// Returns a delegate that deletes organization users and their associated data.
+    /// </summary>
+    /// <param name="ids">Ids of the organization users to delete</param>
+    DatabaseTransactionAction DeleteManyByIds(IEnumerable<Guid> ids);
 }

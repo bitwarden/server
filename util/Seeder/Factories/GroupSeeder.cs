@@ -9,7 +9,7 @@ internal static class GroupSeeder
     {
         return new Group
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             Name = name
         };

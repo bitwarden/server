@@ -6,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
 using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 
@@ -67,26 +68,23 @@ public class SingleOrganizationScene(
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         var organization = OrganizationSeeder.Create(
-            request.Name,
-            request.Domain,
-            request.Seats,
-            manglerService,
-            orgKeys.PublicKey,
-            orgKeys.PrivateKey,
-            request.PlanType);
-
-        PlanFeatures.ApplyOrganizationOverrides(organization, request.Overrides);
-
-        OrganizationSeeder.ApplyBilling(
-            organization,
-            request.Gateway,
-            request.GatewayCustomerId,
-            request.GatewaySubscriptionId);
-
-        if (request.EnableSecretsManager)
-        {
-            PlanFeatures.EnableSecretsManager(organization, request.SmSeats, request.SmServiceAccounts);
-        }
+            new OrganizationSeed
+            {
+                Name = request.Name,
+                Domain = request.Domain,
+                Seats = request.Seats,
+                PlanType = request.PlanType,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey,
+                Overrides = request.Overrides,
+                Gateway = request.Gateway,
+                GatewayCustomerId = request.GatewayCustomerId,
+                GatewaySubscriptionId = request.GatewaySubscriptionId,
+                EnableSecretsManager = request.EnableSecretsManager,
+                SmSeats = request.SmSeats,
+                SmServiceAccounts = request.SmServiceAccounts
+            },
+            manglerService);
 
         await organizationRepository.CreateAsync(organization);
 
@@ -103,7 +101,7 @@ public class SingleOrganizationScene(
 
         var apiKey = new OrganizationApiKey
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             Type = OrganizationApiKeyType.Default,
             ApiKey = CoreHelpers.SecureRandomString(30),

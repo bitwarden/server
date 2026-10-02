@@ -120,6 +120,49 @@ public class SubscriptionInfoTests
     }
 
     [Fact]
+    public void BillingSubscriptionItem_FromSchedulePhaseItem_MapsPriceFields()
+    {
+        var item = new SubscriptionSchedulePhaseItem
+        {
+            Quantity = 3,
+            Price = new Price
+            {
+                Id = "price_annual_seat",
+                ProductId = "prod_teams",
+                Nickname = "Teams Annual Seat",
+                UnitAmount = 4800,
+                Recurring = new PriceRecurring { Interval = "year" },
+                Metadata = new Dictionary<string, string> { ["isAddOn"] = "true" }
+            }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(item);
+
+        Assert.Equal("price_annual_seat", result.PriceId);
+        Assert.Equal("prod_teams", result.ProductId);
+        Assert.Equal("Teams Annual Seat", result.Name);
+        Assert.Equal(48M, result.Amount);
+        Assert.Equal("year", result.Interval);
+        Assert.Equal(3, result.Quantity);
+        Assert.True(result.AddonSubscriptionItem);
+    }
+
+    [Fact]
+    public void BillingSubscriptionItem_FromSchedulePhaseItem_MissingMetadata_LeavesAddonFalse()
+    {
+        var item = new SubscriptionSchedulePhaseItem
+        {
+            Quantity = 1,
+            Price = new Price { Id = "price_seat", UnitAmount = 1000 }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription.BillingSubscriptionItem(item);
+
+        Assert.False(result.AddonSubscriptionItem);
+        Assert.Equal(10M, result.Amount);
+    }
+
+    [Fact]
     public void BillingUpcomingInvoice_ZeroAmountDue_ConvertsToZero()
     {
         // Arrange - Invoice with zero AmountDue
@@ -167,11 +210,14 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = end,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                PercentOff = 10m,
-                Duration = "repeating",
-                DurationInMonths = 12
+                Coupon = new Coupon
+                {
+                    PercentOff = 10m,
+                    Duration = "repeating",
+                    DurationInMonths = 12
+                }
             }
         };
 
@@ -192,10 +238,13 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = null,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                PercentOff = 10m,
-                Duration = "forever"
+                Coupon = new Coupon
+                {
+                    PercentOff = 10m,
+                    Duration = "forever"
+                }
             }
         };
 
@@ -235,12 +284,15 @@ public class SubscriptionInfoTests
         var discount = new Discount
         {
             End = end,
-            Coupon = new Coupon
+            Source = new DiscountSource
             {
-                AmountOff = 1500, // $15.00
-                PercentOff = null,
-                Duration = "repeating",
-                DurationInMonths = 6
+                Coupon = new Coupon
+                {
+                    AmountOff = 1500, // $15.00
+                    PercentOff = null,
+                    Duration = "repeating",
+                    DurationInMonths = 6
+                }
             }
         };
 
@@ -253,6 +305,33 @@ public class SubscriptionInfoTests
         Assert.Equal(end, result.End);
         Assert.Equal(6, result.DurationInMonths);
         Assert.False(result.Active);
+    }
+
+    [Fact]
+    public void BillingSubscription_CopiesScheduleId_FromStripeSubscription()
+    {
+        var subscription = new Subscription
+        {
+            ScheduleId = "sub_sched_123",
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription(subscription);
+
+        Assert.Equal("sub_sched_123", result.ScheduleId);
+    }
+
+    [Fact]
+    public void BillingSubscription_ScheduleIdNull_WhenNoScheduleAttached()
+    {
+        var subscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem> { Data = [] }
+        };
+
+        var result = new SubscriptionInfo.BillingSubscription(subscription);
+
+        Assert.Null(result.ScheduleId);
     }
 }
 

@@ -203,6 +203,47 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task<ICollection<CollectionAdminDetails>> GetManyOrganizationCollectionsWithPermissionsAsync(
+        Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryMultipleAsync(
+                $"[{Schema}].[Collection_ReadOrganizationCollectionsWithPermissions]",
+                new { OrganizationId = organizationId, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            var allCollections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();
+
+            var groups = (await results.ReadAsync<CollectionGroup>())
+                .ToLookup(g => g.CollectionId);
+            var users = (await results.ReadAsync<CollectionUser>())
+                .ToLookup(u => u.CollectionId);
+
+            foreach (var collection in allCollections)
+            {
+                collection.Groups = groups[collection.Id]
+                    .Select(g => new CollectionAccessSelection
+                    {
+                        Id = g.GroupId,
+                        HidePasswords = g.HidePasswords,
+                        ReadOnly = g.ReadOnly,
+                        Manage = g.Manage
+                    }).ToList();
+                collection.Users = users[collection.Id]
+                    .Select(c => new CollectionAccessSelection
+                    {
+                        Id = c.OrganizationUserId,
+                        HidePasswords = c.HidePasswords,
+                        ReadOnly = c.ReadOnly,
+                        Manage = c.Manage
+                    }).ToList();
+            }
+
+            return allCollections;
+        }
+    }
+
     public async Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -224,6 +265,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    /// <remarks>
+    /// Upholds the interface's <see cref="Collection.AccessRuleId"/> contract through the stored procedure: the
+    /// serialization round-trip copies the property onto the wrapper and Dapper binds it, but
+    /// <c>[dbo].[Collection_Create]</c> accepts <c>@AccessRuleId</c> and deliberately ignores it.
+    /// </remarks>
     public async Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         obj.SetNewId();
@@ -242,6 +288,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    /// <remarks>
+    /// Upholds the interface's <see cref="Collection.AccessRuleId"/> contract through the stored procedures: every
+    /// branch below routes into <c>[dbo].[Collection_Update]</c>, which accepts <c>@AccessRuleId</c> and deliberately
+    /// ignores it.
+    /// </remarks>
     public async Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -324,6 +375,24 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task SetAccessRuleAssociationsAsync(Guid organizationId, Guid accessRuleId,
+        IEnumerable<Guid> collectionIdsToAssign, IEnumerable<Guid> collectionIdsToClear)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_SetAccessRuleAssociations]",
+                new
+                {
+                    AccessRuleId = accessRuleId,
+                    OrganizationId = organizationId,
+                    ToAssign = collectionIdsToAssign.ToGuidIdArrayTVP(),
+                    ToClear = collectionIdsToClear.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task CreateUserAsync(Guid collectionId, Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -364,6 +433,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
             var results = await connection.QueryAsync<CollectionAccessSelection>(
                 $"[{Schema}].[CollectionUser_ReadByCollectionId]",
                 new { CollectionId = id },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetManagingUserIdsAsync(Guid collectionId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Guid>(
+                $"[{Schema}].[Collection_ReadManagingUserIds]",
+                new { CollectionId = collectionId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
@@ -474,6 +556,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         public CollectionWithGroupsAndUsers() { }
 
+        /// <remarks>
+        /// Copies <paramref name="collection"/> property by property, deliberately omitting
+        /// <see cref="Collection.AccessRuleId"/> — do not add it. Dapper binds the inherited property as NULL, and
+        /// <c>[dbo].[Collection_Update]</c> ignores <c>@AccessRuleId</c> either way.
+        /// </remarks>
         public CollectionWithGroupsAndUsers(Collection collection,
             IEnumerable<CollectionAccessSelection> groups,
             IEnumerable<CollectionAccessSelection> users)
@@ -500,6 +587,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         public CollectionWithGroups() { }
 
+        /// <remarks>
+        /// Copies <paramref name="collection"/> property by property, deliberately omitting
+        /// <see cref="Collection.AccessRuleId"/> — do not add it. Dapper binds the inherited property as NULL, and
+        /// <c>[dbo].[Collection_Update]</c> ignores <c>@AccessRuleId</c> either way.
+        /// </remarks>
         public CollectionWithGroups(Collection collection, IEnumerable<CollectionAccessSelection> groups)
         {
             Id = collection.Id;
@@ -521,6 +613,11 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         public CollectionWithUsers() { }
 
+        /// <remarks>
+        /// Copies <paramref name="collection"/> property by property, deliberately omitting
+        /// <see cref="Collection.AccessRuleId"/> — do not add it. Dapper binds the inherited property as NULL, and
+        /// <c>[dbo].[Collection_Update]</c> ignores <c>@AccessRuleId</c> either way.
+        /// </remarks>
         public CollectionWithUsers(Collection collection, IEnumerable<CollectionAccessSelection> users)
         {
 

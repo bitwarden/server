@@ -14,7 +14,6 @@ public static class SendServiceCollectionExtension
     public static void AddSendServices(this IServiceCollection services)
     {
         services.AddScoped<INonAnonymousSendCommand, NonAnonymousSendCommand>();
-        services.AddScoped<IAnonymousSendCommand, AnonymousSendCommand>();
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<ISendValidationService, SendValidationService>();
         services.AddScoped<ISendCoreHelperService, SendCoreHelperService>();

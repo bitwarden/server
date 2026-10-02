@@ -10,7 +10,7 @@ internal static class CollectionSeeder
     {
         return new Collection
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organizationId,
             Name = RustSdkService.EncryptString(name, orgKey),
             CreationDate = DateTime.UtcNow,

@@ -45,7 +45,7 @@ public class CreateOrganizationInviteLinkCommandTests
         var link = result.AsSuccess;
         Assert.Equal(organization.Id, link.OrganizationId);
         Assert.NotEqual(Guid.Empty, link.Id);
-        Assert.NotEqual(Guid.Empty, link.Code);
+        Assert.True(Guid.TryParse(link.Code, out var parsedCode) && parsedCode != Guid.Empty);
         Assert.Equal(request.Invite, link.Invite);
         Assert.Equal(request.SupportsConfirmation, link.SupportsConfirmation);
 

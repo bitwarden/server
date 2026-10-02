@@ -2,6 +2,8 @@
 
 Complete catalog of all seeder presets, organized by purpose. Use `--mangle` to avoid collisions with existing data.
 
+Some of these presets make up the default build list in `.github/workflows/build-seeded-databases.yml` under the`_DEFAULT_PRESETS` variable. Removing one requires updating that list with the same change.
+
 ## Cipher generation knobs
 
 These options apply to any preset that uses generated (count-based) ciphers — QA, Scale, and Individual alike. Add them to the `"ciphers"` or `"personalCiphers"` block in the preset JSON. Schema reference: `Seeds/schemas/preset.schema.json`.
@@ -9,6 +11,27 @@ These options apply to any preset that uses generated (count-based) ciphers — 
 | Knob                     | Type    | Default | Description                                                                                                                                   |
 | ------------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `repromptEveryNthCipher` | integer | 0       | Set `Reprompt=Password` on every Nth generated cipher. `0` = disabled. Example: `5` flags ciphers at indices 0, 5, 10, … ≈ 20% reprompt rate. |
+
+## Developer
+
+Day-to-day local development: one org with memorable role-based logins, production-shaped collections, and a realistic vault. No attachments, so no Azurite required.
+
+```bash
+dotnet run -- preset --name dev.playground
+```
+
+| Preset     | Org Fixture | Roster    | Ciphers        | Use Case                                    |
+| ---------- | ----------- | --------- | -------------- | ------------------------------------------- |
+| playground | dev-org     | dev-roles | dev-playground | Convenient logins over production-like data |
+
+The four role accounts use the roster `email` override (`roster.schema.json`), so the login is the role — password `asdfasdfasdf` unless overridden:
+
+| Login               | Role   | What they see                                                                                   |
+| ------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| `owner@bw.example`  | Owner  | Everything — direct Can Manage on every collection                                              |
+| `admin@bw.example`  | Admin  | Company-Wide, Break Glass, plus read-only Leadership views (CI & Releases, Vendors & Contracts) |
+| `custom@bw.example` | Custom | Company-Wide, CI & Releases (read-only), Finance (read-only, hidden passwords)                  |
+| `user@bw.example`   | User   | Company-Wide plus the Engineering collections, with folders and favorites                       |
 
 ## Features
 
@@ -18,13 +41,16 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- preset --name features.{name} --mangle
 ```
 
-| Preset            | Features Enabled                                   | Org Fixture      | Roster       | Ciphers   |
-| ----------------- | -------------------------------------------------- | ---------------- | ------------ | --------- |
-| sso-enterprise    | SSO (OIDC, masterPassword) + requireSso policy     | verdant-health   | starter-team | sso-vault |
-| tde-enterprise    | SSO (OIDC, trustedDevices/TDE) + requireSso policy | obsidian-labs    | starter-team | tde-vault |
-| policy-enterprise | All policies except requireSso and require2fa      | pinnacle-designs | starter-team | —         |
+| Preset            | Features Enabled                                                    | Org Fixture      | Roster           | Ciphers          |
+| ----------------- | ------------------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
+| sso-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | verdant-health   | starter-team     | enterprise-basic |
+| tde-enterprise    | requireSso policy (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
+| local-sso         | SSO (SAML 2.0, masterPassword) — local-IdP login org                | verdant-health   | enterprise-basic | enterprise-basic |
+| policy-enterprise | All policies except requireSso and require2fa                       | pinnacle-designs | starter-team     | —                |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
+
+`local-sso` is a clean-slate SAML 2.0 SSO org wired to the bundled SimpleSAMLphp IdP. Each seed generates a **fresh org GUID**, which the CLI prints in an "SSO wiring" block — relay its `IDP_SP_ENTITY_ID` / `IDP_SP_ACS_URL` values into `dev/.env` and restart the IdP (`docker compose --profile idp up -d`). Add `--mangle` to seed multiple SSO orgs without collisions; `--org-name` overrides the org display name and `--owner-email` overrides the owner login email (both compose with `--mangle`). Log in via the IdP as `owner` / `password` → `dana.whitfield@verdant.example` (the roster owner), who owns the department collections so the vault is populated on first login. A single no-mangle seed still matches the default `dana.whitfield@verdant.example` entry in `dev/authsources.php.example`, so only the GUID must be relayed; a mangled seed (or `--owner-email` override) prints its own authsources snippet to paste. Because the `enterprise-basic` cipher fixture carries attachments, Azurite (or a local attachment dir) must be configured to seed it. Wiring: `dev/authsources.php.example`, `dev/.env.example`.
 
 ## QA
 
@@ -34,15 +60,15 @@ Known users, groups, collections, and permissions you can point a client to.
 dotnet run -- preset --name qa.{name} --mangle
 ```
 
-| Preset                            | Org Fixture          | Roster                 | Ciphers                 | Use Case                                          |
-| --------------------------------- | -------------------- | ---------------------- | ----------------------- | ------------------------------------------------- |
-| enterprise-basic                  | redwood-analytics    | enterprise-basic       | enterprise-basic        | Standard enterprise org                           |
-| collection-permissions-enterprise | cobalt-logistics     | collection-permissions | collection-permissions  | Permission edge cases                             |
-| dunder-mifflin-enterprise-full    | dunder-mifflin       | dunder-mifflin         | autofill-testing        | Large handcrafted org                             |
-| families-basic                    | adams-family         | family                 | 150 generated           | Families plan with personal vaults + reprompt     |
-| stark-free-basic                  | stark-industries     | 1 generated user       | autofill-testing        | Free plan personal vault                          |
-| zero-knowledge-labs-enterprise    | zero-knowledge-labs  | zero-knowledge-labs    | zero-knowledge-labs     | Full ZKL org with named folders + favorites       |
-| paper-trail-partners-team         | paper-trail-partners | paper-trail-partners   | encryption-modes (34)   | Teams org: encryption modes across a shared vault |
+| Preset                            | Org Fixture          | Roster                 | Ciphers                | Use Case                                          |
+| --------------------------------- | -------------------- | ---------------------- | ---------------------- | ------------------------------------------------- |
+| enterprise-basic                  | redwood-analytics    | enterprise-basic       | enterprise-basic       | Standard enterprise org                           |
+| collection-permissions-enterprise | cobalt-logistics     | collection-permissions | collection-permissions | Permission edge cases                             |
+| dunder-mifflin-enterprise-full    | dunder-mifflin       | dunder-mifflin         | autofill-testing       | Large handcrafted org                             |
+| families-basic                    | adams-family         | family                 | 150 generated          | Families plan with personal vaults + reprompt     |
+| stark-free-basic                  | stark-industries     | 1 generated user       | autofill-testing       | Free plan personal vault                          |
+| zero-knowledge-labs-enterprise    | zero-knowledge-labs  | zero-knowledge-labs    | zero-knowledge-labs    | Full ZKL org with named folders + favorites       |
+| paper-trail-partners-team         | paper-trail-partners | paper-trail-partners   | encryption-modes (34)  | Teams org: encryption modes across a shared vault |
 
 `families-basic` and `stark-free-basic` mix fixtures with generated data (ciphers and personal ciphers).
 

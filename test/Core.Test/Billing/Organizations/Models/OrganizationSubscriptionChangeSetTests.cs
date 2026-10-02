@@ -185,6 +185,56 @@ public class OrganizationSubscriptionChangeSetBuilderTests
         Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
     }
 
+    // Regression (PM-40866): Teams 2019 is a packaged base+overage plan. Above its included seats the
+    // collapse repoints the base line to the target seat price at the given count and removes the overage line.
+    [Fact]
+    public void ChangePackagedPasswordManagerPrice_AboveBaseSeats_RepointsBaseAndRemovesOverage()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually2019);   // BaseSeats = 5
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangePackagedPasswordManagerPrice(targetPlan, seatCount: 10)
+            .Build();
+
+        var priceChange = changeSet.Changes.Where(c => c.IsT1).Select(c => c.AsT1).Single();
+        Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);
+        Assert.Equal(targetPlan.PasswordManager.StripeSeatPlanId, priceChange.UpdatedPriceId);
+        Assert.Equal(10, priceChange.Quantity);
+
+        var removeItem = changeSet.Changes.Where(c => c.IsT2).Select(c => c.AsT2).Single();
+        Assert.Equal(currentPlan.PasswordManager.StripeSeatPlanId, removeItem.PriceId);
+    }
+
+    // At/under its included seats there is no overage line, so nothing is removed.
+    [Fact]
+    public void ChangePackagedPasswordManagerPrice_AtBaseSeats_RepointsBaseWithoutRemovingOverage()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually2019);   // BaseSeats = 5
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        var changeSet = OrganizationSubscriptionChangeSet.Builder(currentPlan)
+            .ChangePackagedPasswordManagerPrice(targetPlan, seatCount: 5)
+            .Build();
+
+        var priceChange = changeSet.Changes.Where(c => c.IsT1).Select(c => c.AsT1).Single();
+        Assert.Equal(currentPlan.PasswordManager.StripePlanId, priceChange.CurrentPriceId);
+        Assert.Equal(5, priceChange.Quantity);
+        Assert.DoesNotContain(changeSet.Changes, c => c.IsT2);
+    }
+
+    // The collapse is only valid for a packaged base+overage plan; a pure seat-based plan is rejected.
+    [Fact]
+    public void ChangePackagedPasswordManagerPrice_NonPackagedPlan_Throws()
+    {
+        var currentPlan = GetPlan(PlanType.TeamsAnnually);   // pure seat-based, no base price
+        var targetPlan = GetPlan(PlanType.EnterpriseAnnually);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            OrganizationSubscriptionChangeSet.Builder(currentPlan)
+                .ChangePackagedPasswordManagerPrice(targetPlan, seatCount: 10));
+    }
+
     [Fact]
     public void ChangeStoragePrice_SetsChargeImmediately()
     {

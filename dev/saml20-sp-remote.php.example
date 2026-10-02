@@ -1,0 +1,26 @@
+<?php
+/**
+ * SAML 2.0 remote SP metadata for SimpleSAMLphp.
+ *
+ * Assertion encryption will default to FALSE. Change assertion.encryption to TRUE
+ * and paste your certificate data to 'certData' below to enable.
+ *
+ * Get certData with:
+ *   openssl x509 -in dev/identity_server_dev.crt -outform der | base64 | tr -d '\n'
+ *
+ * See: https://simplesamlphp.org/docs/stable/simplesamlphp-reference-sp-remote
+ */
+
+if (!getenv('SIMPLESAMLPHP_SP_ENTITY_ID')) {
+    throw new UnexpectedValueException('SIMPLESAMLPHP_SP_ENTITY_ID is not defined as an environment variable.');
+}
+if (!getenv('SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE')) {
+    throw new UnexpectedValueException('SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE is not defined as an environment variable.');
+}
+
+$metadata[getenv('SIMPLESAMLPHP_SP_ENTITY_ID')] = array(
+    'AssertionConsumerService' => getenv('SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE'),
+    'SingleLogoutService' => getenv('SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE'),
+    'assertion.encryption' => FALSE,
+    'certData' => 'PASTE_BASE64_DER_CERTIFICATE_HERE',
+);

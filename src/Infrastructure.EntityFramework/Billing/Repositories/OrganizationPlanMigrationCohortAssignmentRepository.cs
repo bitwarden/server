@@ -108,6 +108,35 @@ public class OrganizationPlanMigrationCohortAssignmentRepository(
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<CoreEntities.OrganizationPlanMigrationCohortAssignment>>
+        GetSendInvoiceCandidatesInWindowAsync(int minDays, int maxDays)
+    {
+        if (minDays > maxDays)
+        {
+            throw new ArgumentException("minDays must be less than or equal to maxDays.");
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var now = DateTime.UtcNow;
+        var results = await (
+            from cma in dbContext.OrganizationPlanMigrationCohortAssignments.AsNoTracking()
+            join c in dbContext.OrganizationPlanMigrationCohorts on cma.CohortId equals c.Id
+            join o in dbContext.Organizations on cma.OrganizationId equals o.Id
+            where c.IsActive
+                  && cma.MigratedDate == null
+                  && (cma.ScheduledDate == null || cma.RenewalNotificationSentDate == null)
+                  && o.GatewayCustomerId != null
+                  && o.GatewaySubscriptionId != null
+                  && o.ExpirationDate != null
+                  && o.ExpirationDate >= now.AddDays(minDays)
+                  && o.ExpirationDate <= now.AddDays(maxDays)
+            select cma
+        ).ToListAsync();
+
+        return Mapper.Map<List<CoreEntities.OrganizationPlanMigrationCohortAssignment>>(results);
+    }
+
     public Task<CohortBulkAssignmentSummary> SyncManyAsync(
         IEnumerable<ResolvedCohortBulkAssignmentRow> rows) =>
         throw new NotSupportedException(

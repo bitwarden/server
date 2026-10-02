@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -21,7 +22,8 @@ public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
     ISendRepository sendRepository,
-    IFeatureService featureService) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
+    IFeatureService featureService,
+    IOrganizationUserRepository orgUserRepository) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
     public PolicyType Type => PolicyType.SendControls;
 
@@ -88,6 +90,9 @@ public class SendControlsSyncPolicyEvent(
     private async Task UpdateSendsByPolicyAsync(Policy postUpsertedPolicyState, SendControlsPolicyData sendControlsPolicyData)
     {
         var orgSendIds = await sendRepository.GetIdsByOrganizationIdAsync(postUpsertedPolicyState.OrganizationId);
+        // We fetch all of the owners and admins in the org so we can ignore their Sends when enforcing policy compliance
+        // This could be a heavy call in theory but in practice owners and admins should be a minority of org users
+        var orgOwnerAndAdminUserIds = (await orgUserRepository.GetManyByMinimumRoleAsync(postUpsertedPolicyState.OrganizationId, Core.Enums.OrganizationUserType.Admin)).Select(oud => oud.GetUserId());
         foreach (var sendIdsChunk in orgSendIds.Chunk(50))
         {
             var enabled = new List<Guid>();
@@ -97,7 +102,8 @@ public class SendControlsSyncPolicyEvent(
             {
                 if (
                     // If the policy is disabled then we want to re-enable any Sends that were previously disabled
-                    postUpsertedPolicyState.Enabled && SendIsNonCompliant(send, sendControlsPolicyData))
+                    // If the Send was created by an Owner or an Admin in the organization we ignore it
+                    postUpsertedPolicyState.Enabled && !orgOwnerAndAdminUserIds.Contains(send.UserId) && SendIsNonCompliant(send, sendControlsPolicyData))
                 {
                     disabled.Add(send.Id);
                 }

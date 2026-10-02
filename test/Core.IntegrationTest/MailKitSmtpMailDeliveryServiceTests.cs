@@ -6,6 +6,7 @@ using Bit.Core.Settings;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using MimeKit;
 using Rnwood.SmtpServer;
 using Rnwood.SmtpServer.Extensions.Auth;
 using Xunit.Abstractions;
@@ -160,6 +161,50 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         // Wait for email
         await tcs.Task;
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WithReplyToAddress_WritesReplyToHeaderAndLeavesFromAlone()
+    {
+        var port = RandomPort();
+        var behavior = new DefaultServerBehaviour(false, port, _selfSignedCert);
+        using var smtpServer = new SmtpServer(behavior);
+        smtpServer.Start();
+
+        var globalSettings = GetSettings(gs =>
+        {
+            gs.Mail.Smtp.Port = port;
+            gs.Mail.Smtp.Ssl = true;
+            gs.Mail.Smtp.TrustServer = true;
+        });
+
+        var mailKitDeliveryService = new MailKitSmtpMailDeliveryService(
+            globalSettings,
+            NullLogger<MailKitSmtpMailDeliveryService>.Instance
+        );
+
+        var received = new TaskCompletionSource<MimeMessage>();
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        cts.Token.Register(() => _ = received.TrySetCanceled());
+
+        behavior.MessageReceivedEventHandler += async (sender, args) =>
+        {
+            await using var data = await args.Message.GetData();
+            received.TrySetResult(await MimeMessage.LoadAsync(data));
+        };
+
+        await mailKitDeliveryService.SendEmailAsync(new MailMessage
+        {
+            Subject = "Test",
+            ToEmails = ["test1@example.com"],
+            TextContent = "Hi",
+            ReplyToAddress = "support@bitwarden.com",
+        }, cts.Token);
+
+        var message = await received.Task;
+
+        Assert.Equal("support@bitwarden.com", Assert.Single(message.ReplyTo.Mailboxes).Address);
+        Assert.Equal("test@example.com", Assert.Single(message.From.Mailboxes).Address);
     }
 
     [Fact]

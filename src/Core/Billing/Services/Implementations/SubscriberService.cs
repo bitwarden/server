@@ -12,7 +12,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Braintree;
@@ -28,7 +27,6 @@ using static StripeConstants;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
-    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     IOrganizationRepository organizationRepository,
@@ -228,14 +226,10 @@ public class SubscriberService(
         SubscriptionCancellationDetailsOptions? cancellationDetails,
         Dictionary<string, string>? cancellingUserMetadata)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+        if (activeSchedule != null)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
-            if (activeSchedule != null)
-            {
-                await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
-            }
+            await priceIncreaseScheduler.Release(subscription.CustomerId, subscription.Id);
         }
 
         if (cancellingUserMetadata != null && subscription.Metadata.ContainsKey(MetadataKeys.OrganizationId))
@@ -261,27 +255,27 @@ public class SubscriberService(
         {
             CancelAtPeriodEnd = true,
             CancellationDetails = cancellationDetails,
-            Metadata = cancellingUserMetadata
         };
-
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal) ||
-            featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        // Only set metadata if provided to prevent clearing existing metadata on the subscription.
+        if (cancellingUserMetadata != null)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            updateOptions.Metadata = cancellingUserMetadata;
+        }
 
-            if (activeSchedule is { Phases.Count: > 0 })
+        var activeSchedule = await GetActiveScheduleAsync(subscription);
+
+        if (activeSchedule is { Phases.Count: > 0 })
+        {
+            logger.LogInformation(
+                "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
+                GetType().Name, activeSchedule.Id, subscription.Id);
+
+            await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
+
+            updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
             {
-                logger.LogInformation(
-                    "{Service}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), releasing schedule before cancellation",
-                    GetType().Name, activeSchedule.Id, subscription.Id);
-
-                await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
-
-                updateOptions.Metadata = new Dictionary<string, string>(cancellingUserMetadata ?? [])
-                {
-                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
-                };
-            }
+                [MetadataKeys.CancelledDuringDeferredPriceIncrease] = "true"
+            };
         }
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, updateOptions);
@@ -555,7 +549,7 @@ public class SubscriberService(
     public async Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber)
     {
         var subscription = await GetSubscription(subscriber,
-            new SubscriptionGetOptions { Expand = ["customer.discount", "discounts"] });
+            new SubscriptionGetOptions { Expand = ["customer.discount.source.coupon", "discounts.source.coupon"] });
 
         if (subscription is null ||
             subscription.Status != SubscriptionStatus.Unpaid ||

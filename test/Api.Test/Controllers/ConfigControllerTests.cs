@@ -2,6 +2,7 @@
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
 using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
@@ -13,16 +14,19 @@ public class ConfigControllerTests : IDisposable
     private readonly ConfigController _sut;
     private readonly GlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
+    private readonly IBitwardenEnvironment _bitwardenEnvironment;
 
     public ConfigControllerTests()
     {
         _globalSettings = new GlobalSettings();
         _featureService = Substitute.For<IFeatureService>();
         _featureService.GetAll().Returns(new Dictionary<string, JsonValue>());
+        _bitwardenEnvironment = Substitute.For<IBitwardenEnvironment>();
 
         _sut = new ConfigController(
             _globalSettings,
-            _featureService
+            _featureService,
+            _bitwardenEnvironment
         );
     }
 

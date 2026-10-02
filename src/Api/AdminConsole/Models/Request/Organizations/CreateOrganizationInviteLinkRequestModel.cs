@@ -15,7 +15,7 @@ public class CreateOrganizationInviteLinkRequestModel
     public required IEnumerable<string> AllowedDomains { get; set; }
 
     /// <summary>
-    /// An opaque cryptographic blob. The server only stores and transports it, so its format is not
+    /// An opaque cryptographic invite. The server only stores and transports it, so its format is not
     /// validated here.
     /// </summary>
     [Required]
@@ -23,7 +23,7 @@ public class CreateOrganizationInviteLinkRequestModel
     public required string Invite { get; set; }
 
     /// <summary>
-    /// Indicates if the link supports user auto confirmation (not supported yet).
+    /// Whether this invite link can be used to confirm a user.
     /// </summary>
     [Required]
     public required bool SupportsConfirmation { get; set; }

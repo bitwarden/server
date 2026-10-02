@@ -1,4 +1,4 @@
-﻿@using static Bit.Core.Utilities.AssemblyHelpers;
+﻿@inject Bitwarden.Server.Sdk.Environment.IBitwardenEnvironment BitwardenEnvironment
 
 <!DOCTYPE html>
 <html lang="en">
@@ -30,7 +30,7 @@
             </div>
             <div class="col text-center"></div>
             <div class="col text-right">
-                Version @GetVersion()
+                Version @BitwardenEnvironment.Version
             </div>
         </div>
     </div>

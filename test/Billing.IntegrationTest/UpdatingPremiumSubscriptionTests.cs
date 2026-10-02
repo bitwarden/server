@@ -26,6 +26,25 @@ public class UpdatingPremiumSubscriptionTests(StripeTestsFixture fixture) : ICla
     }
 
     [BillingFact]
+    public async Task Storage_WhenUpdated_PreservesSubscriptionMetadata()
+    {
+        // The SDK-bump audit verified update flows don't clear metadata they don't explicitly set.
+        // The premium subscription carries a `userId` metadata key from creation; a storage update
+        // (a subscription update) must not wipe it. Guards against a flow passing Metadata = {} on update.
+        const string email = "premium-metadata-preserve@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+
+        var response = await client.PutAsJsonAsync(
+            "/account/billing/vnext/subscription/storage",
+            new { AdditionalStorageGb = (short)1 });
+        await Assert.SuccessResponseAsync(response);
+
+        var subscriptionId = await fixture.GetUserGatewaySubscriptionIdByEmailAsync(email);
+        var metadata = await fixture.GetSubscriptionMetadataAsync(subscriptionId);
+        Assert.Contains("userId", metadata.Keys);
+    }
+
+    [BillingFact]
     public async Task UpgradePreview_ToFamiliesPlan_ReturnsTheProratedPricing()
     {
         var client = await fixture.PreparePremiumUserAsync("premium-upgrade-preview@example.com");
@@ -46,4 +65,36 @@ public class UpdatingPremiumSubscriptionTests(StripeTestsFixture fixture) : ICla
         Assert.NotNull(preview["newPlanProratedAmount"]);
         Assert.NotNull(preview["credit"]);
     }
+
+    [BillingFact]
+    public async Task UpgradePreview_WithCustomerLevelCoupon_ReturnsProratedPricing()
+    {
+        // Drives PreviewPremiumUpgradeProrationCommand with a customer-level
+        // discount in the graph. The command's own expand list doesn't touch
+        // Customer.Discount directly — it hands the customer to Stripe's invoice
+        // preview endpoint, which applies any active customer discount server-side.
+        // Guards against a future regression where the command starts reading
+        // Customer.Discount.Source.Coupon without the corresponding expand
+        // (the class of bug the SDK bump introduced in PreviewOrganizationTaxCommand).
+        const string email = "premium-upgrade-preview-customer-coupon@example.com";
+        var client = await fixture.PreparePremiumUserAsync(email);
+
+        var customerId = await fixture.GetUserGatewayCustomerIdByEmailAsync(email);
+        var couponId = $"cust_prem_upg_{Guid.NewGuid():N}";
+        await fixture.SeedAndAttachCustomerCouponAsync(customerId, couponId, percentOff: 25);
+
+        var response = await client.PostAsJsonAsync(
+            "/billing/preview-invoice/premium/subscriptions/upgrade",
+            new
+            {
+                TargetProductTierType = "Families",
+                BillingAddress = new { Country = "US", PostalCode = "43432" },
+            });
+        await Assert.SuccessResponseAsync(response);
+
+        var preview = (await response.Content.ReadFromJsonAsync<JsonObject>())!;
+        Assert.NotNull(preview["newPlanProratedAmount"]);
+        Assert.NotNull(preview["credit"]);
+    }
+
 }

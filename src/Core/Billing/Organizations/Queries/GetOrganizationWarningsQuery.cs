@@ -11,7 +11,6 @@ using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
-using Bit.Core.Billing.Tax.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Services;
 using Stripe;
@@ -103,7 +102,12 @@ public class GetOrganizationWarningsQuery(
 
         var remainingTrialDays = (int)Math.Ceiling((subscription.TrialEnd.Value - now).TotalDays);
 
-        return new FreeTrialWarning { RemainingTrialDays = remainingTrialDays };
+        var isSalesAssisted = subscription.Metadata.TryGetValue(
+                                  StripeConstants.MetadataKeys.TrialInitiationPath,
+                                  out var trialInitiationPath) &&
+                              trialInitiationPath == StripeConstants.TrialInitiationPaths.SalesAssisted;
+
+        return new FreeTrialWarning { RemainingTrialDays = remainingTrialDays, IsSalesAssisted = isSalesAssisted };
     }
 
     private async Task<InactiveSubscriptionWarning?> GetInactiveSubscriptionWarningAsync(
@@ -253,24 +257,14 @@ public class GetOrganizationWarningsQuery(
         Customer customer,
         Provider? provider)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax))
+        if (customer.TaxExempt != TaxExempt.None)
         {
-            if (customer.TaxExempt != TaxExempt.None)
-            {
-                return null;
-            }
-
-            if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
-            {
-                return null;
-            }
+            return null;
         }
-        else
+
+        if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
         {
-            if (TaxHelpers.IsDirectTaxCountry(customer.Address?.Country))
-            {
-                return null;
-            }
+            return null;
         }
 
         var productTier = organization.PlanType.GetProductTier();

@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
 
+        ValidateAccessTokenLifetimeOverride(globalSettings);
         services.AddSingleton<StaticClientStore>();
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
@@ -31,7 +32,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<ILoginApprovingClientTypes, LoginApprovingClientTypes>();
         services.AddTransient<ISendAuthenticationMethodValidator<ResourcePassword>, SendPasswordRequestValidator>();
         services.AddTransient<ISendAuthenticationMethodValidator<EmailOtp>, SendEmailOtpRequestValidator>();
-        services.AddTransient<ISendAuthenticationMethodValidator<NeverAuthenticate>, SendNeverAuthenticateRequestValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -96,5 +96,15 @@ public static class ServiceCollectionExtensions
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
+    }
+
+    internal static void ValidateAccessTokenLifetimeOverride(GlobalSettings globalSettings)
+    {
+        var seconds = globalSettings.IdentityServer.AccessTokenLifetimeSeconds;
+        if (seconds.HasValue && seconds.Value <= 0)
+        {
+            throw new InvalidOperationException(
+                $"globalSettings:identityServer:accessTokenLifetimeSeconds must be greater than 0. Got {seconds.Value}.");
+        }
     }
 }

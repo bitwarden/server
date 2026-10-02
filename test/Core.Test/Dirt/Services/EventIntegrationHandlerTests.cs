@@ -9,6 +9,7 @@ using Bit.Core.Dirt.Models.Data.EventIntegrations;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Dirt.Services;
 using Bit.Core.Dirt.Services.Implementations;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -773,7 +774,7 @@ public class EventIntegrationHandlerTests
                 ""actingUserId"": ""{eventMessage.ActingUserId}"",
                 ""installationId"": ""{eventMessage.InstallationId}"",
                 ""date"": ""{eventMessage.Date.ToString("o")}"",
-                ""deviceType"": ""{eventMessage.DeviceType}"",
+                ""deviceType"": ""{eventMessage.DeviceType?.GetDisplayName()}"",
                 ""deviceTypeId"": ""{deviceTypeId}"",
                 ""ipAddress"": ""{eventMessage.IpAddress}"",
                 ""systemUser"": ""{systemUser}"",

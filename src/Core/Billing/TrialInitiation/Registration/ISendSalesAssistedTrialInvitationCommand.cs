@@ -10,6 +10,5 @@ public interface ISendSalesAssistedTrialInvitationCommand
         string senderEmail,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength,
-        bool paymentOptional);
+        int trialLength);
 }

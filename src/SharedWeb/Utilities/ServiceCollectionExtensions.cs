@@ -36,6 +36,7 @@ using Bit.Core.HostedServices;
 using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.OrganizationFeatures;
+using Bit.Core.Pam.Services;
 using Bit.Core.Platform;
 using Bit.Core.Platform.Mail.Delivery;
 using Bit.Core.Platform.Mail.Enqueuing;
@@ -156,6 +157,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.TryAddScoped<ICipherSyncPushService, CipherSyncPushService>();
+        // PAM credential leasing is commercial; OSS builds never gate. The commercial Pam library
+        // overrides this default by registering the real gate after AddBaseServices, where the last
+        // registration wins — the shape AddOosServices uses for IProviderService. That override must
+        // be a plain Add*; a TryAdd* would no-op against this default and leave leasing ungated.
+        services.AddScoped<ICipherLeaseGate, UnrestrictedCipherLeaseGate>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
@@ -293,7 +299,9 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<IStripePaymentService, StripePaymentService>();
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
+        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
         services.AddScoped<ITwoFactorEmailService, TwoFactorEmailService>();
+        services.AddScoped<INewDeviceVerificationOtpStore, NewDeviceVerificationOtpStore>();
         // Legacy mailer service
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
@@ -405,8 +413,6 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.TryAddTransient(typeof(IOtpTokenProvider<>), typeof(OtpTokenProvider<>));
-
         services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = PasswordValidationConstants.PasswordHasherKdfIterations);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
@@ -640,6 +646,7 @@ public static class ServiceCollectionExtensions
                 options.Origins = new HashSet<string> {
                     globalSettings.BaseServiceUri.Vault,
                     Constants.BrowserExtensions.ChromeId,
+                    Constants.BrowserExtensions.ChromeBetaId,
                     Constants.BrowserExtensions.EdgeId,
                     Constants.BrowserExtensions.OperaId
                  };

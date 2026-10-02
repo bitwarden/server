@@ -162,6 +162,10 @@ public class Startup
         // Gates endpoints carrying IFeatureMetadata; required in any app that
         // routes requests through endpoints tagged with [RequireFeature].
         app.UseFeatureFlagChecks();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
     }
 }

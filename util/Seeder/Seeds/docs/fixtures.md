@@ -15,7 +15,8 @@ See: `fixtures/organizations/redwood-analytics.json`
 Users, groups, and collections for an org.
 
 - Users have a `firstName`, `lastName`, and `role` (`owner`, `admin`, `user`, `custom`)
-- The Seeder builds emails as `firstName.lastName@domain`, so `"Family"` + `"Mom"` at domain `acme.example` becomes `family.mom@acme.example` or `a1b2c3d4+family.mom@acme.example` with mangling
+- The Seeder derives emails as `firstName.lastName@domain` unless a user overrides it, so `"Family"` + `"Mom"` at domain `acme.example` becomes `family.mom@acme.example` or `a1b2c3d4+family.mom@acme.example` with mangling
+- Users can optionally set `"email"` to override the derived address — use it for memorable logins (`dev-roles.json` gives its four role accounts `owner@bw.example`, `admin@bw.example`, …). Group and collection references still resolve by the `firstName.lastName` prefix, so only the stored address changes; two users resolving to the same final email fails the seed by roster name
 - Groups reference users by that same email prefix (e.g. `"family.mom"`)
 - Collections assign permissions to groups or individual users (`readOnly`, `hidePasswords`, `manage` — all default false)
 - Users can optionally declare `"folders": ["Banking", "Work"]` — each name becomes an encrypted Folder entity for that user

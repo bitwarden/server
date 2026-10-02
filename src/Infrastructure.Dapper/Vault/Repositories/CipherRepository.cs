@@ -4,7 +4,7 @@
 using System.Data;
 using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
@@ -366,11 +366,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid userId, IEnumerable<Cipher> ciphers)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *
@@ -673,6 +676,49 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 return details;
             },
             new { OrganizationId = orgId },
+            splitOn: "CollectionId",
+            commandType: CommandType.StoredProcedure
+        );
+
+        foreach (var kv in dict)
+        {
+            kv.Value.CollectionIds = tempCollections[kv.Key].ToArray();
+        }
+
+        return dict.Values.ToList();
+    }
+
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyLoginCipherOrganizationDetailsAsync(Guid organizationId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var dict = new Dictionary<Guid, CipherOrganizationDetailsWithCollections>();
+        var tempCollections = new Dictionary<Guid, List<Guid>>();
+
+        await connection.QueryAsync<
+            CipherOrganizationDetails,
+            CollectionCipher,
+            CipherOrganizationDetailsWithCollections
+        >(
+            $"[{Schema}].[CipherOrganizationDetails_ReadLoginsByOrganizationId]",
+            (cipher, cc) =>
+            {
+                if (!dict.TryGetValue(cipher.Id, out var details))
+                {
+                    details = new CipherOrganizationDetailsWithCollections(cipher, new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
+                    dict.Add(cipher.Id, details);
+                    tempCollections[cipher.Id] = new List<Guid>();
+                }
+
+                if (cc?.CollectionId != null)
+                {
+                    tempCollections[cipher.Id].AddIfNotExists(cc.CollectionId);
+                }
+
+                return details;
+            },
+            new { OrganizationId = organizationId },
             splitOn: "CollectionId",
             commandType: CommandType.StoredProcedure
         );

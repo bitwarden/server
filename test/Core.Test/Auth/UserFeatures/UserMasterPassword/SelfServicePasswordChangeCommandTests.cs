@@ -4,6 +4,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -51,7 +52,7 @@ public class SelfServicePasswordChangeCommandTests
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, true);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.ExcludeCurrentContext));
     }
 
     [Theory]
@@ -78,8 +79,8 @@ public class SelfServicePasswordChangeCommandTests
             .SaveUpdateExistingMasterPasswordAsync(default!, default!);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogUserEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushLogOutAsync(default, default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
     [Theory]
@@ -109,8 +110,8 @@ public class SelfServicePasswordChangeCommandTests
 
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogUserEventAsync(default, default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
-            .PushLogOutAsync(default, default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
     }
 
 }

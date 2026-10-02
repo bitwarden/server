@@ -34,46 +34,55 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
 
     public required int TrialLength { get; set; }
 
-    public required bool PaymentOptional { get; set; }
-
     public required string SenderEmail { get; set; }
 
     // Distinct from TrialLength: this is the token lifetime from GlobalSettings, not the trial period.
     public required int ExpiryDays { get; set; }
 
-    public string HeroTitle => TrialLength > 0
-        ? $"You're invited to start a <b>{TrialLength}-day free trial</b> of {ProductName}"
-        : $"You're invited to try <b>{ProductName}</b>";
+    public string HeroTitle => ProductTier == ProductTierType.Free
+    ? "You're invited to try Bitwarden"
+    : $"You're invited to start a <b>{TrialLength}-day<br/>free trial</b> of {ProductName}";
 
     public string ProductName => ProductTier switch
     {
+        ProductTierType.Free => "Bitwarden",
         ProductTierType.Families => "Bitwarden Families",
         ProductTierType.Teams => "Bitwarden Teams",
-        ProductTierType.TeamsStarter => "Bitwarden Teams Starter",
         ProductTierType.Enterprise => "Bitwarden Enterprise",
-        _ => "Bitwarden"
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     public string SpotImageUrl => ProductTier switch
     {
+        ProductTierType.Free => "https://assets.bitwarden.com/email/v1/account-fill.png",
         ProductTierType.Families => "https://assets.bitwarden.com/email/v1/spot-family-homes.png",
-        _ => "https://assets.bitwarden.com/email/v1/spot-enterprise.png"
+        ProductTierType.Teams => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
+        ProductTierType.Enterprise => "https://assets.bitwarden.com/email/v1/spot-enterprise.png",
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     public IEnumerable<string> Features => ProductTier switch
     {
+        ProductTierType.Free => [],
         ProductTierType.Families =>
         [
             "Securely store and share passwords, credentials, and sensitive data",
             "Cover up to 6 family members, each with their own personal encrypted vault",
             "Store up to 5GB of encrypted file attachments",
         ],
-        _ =>
+        ProductTierType.Teams =>
         [
             "Securely store and share passwords, credentials, and sensitive data",
             "Manage team access with group-based permissions and admin controls",
             "Connect to your directory service for automated user provisioning",
-        ]
+        ],
+        ProductTierType.Enterprise =>
+        [
+            "Securely store and share passwords, credentials, and sensitive data",
+            "Enforce security policies across your entire organization",
+            "Integrate with your existing SSO provider and directory services",
+        ],
+        _ => throw new InvalidOperationException($"Unexpected ProductTierType: {ProductTier}")
     };
 
     /// <summary>
@@ -87,27 +96,13 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     /// URL-encode in, so <see cref="Token"/> and <see cref="Email"/> are encoded here. Failing to encode
     /// silently breaks registration when a token contains <c>+</c> or <c>=</c> characters.
     /// </summary>
-    public string Url
-    {
-        get
-        {
-            var url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/{Route}" +
+    public string Url => $"{_globalSettings.BaseServiceUri.VaultWithHash}/{Route}" +
                       $"?productTier={(int)ProductTier}" +
                       $"&product={string.Join(",", Products.Select(p => (int)p))}" +
                       $"&trialLength={TrialLength}" +
                       $"&salesAssistedToken={WebUtility.UrlEncode(Token)}" +
-                      $"&email={WebUtility.UrlEncode(Email)}";
-
-            if (PaymentOptional)
-            {
-                url += "&paymentOptional=true";
-            }
-
-            url += "&fromEmail=true";
-
-            return url;
-        }
-    }
+                      $"&email={WebUtility.UrlEncode(Email)}" +
+                      "&paymentOptional=true&fromEmail=true";
 
     private string Route => Products.Any(p => p == ProductType.PasswordManager)
         ? "trial-initiation"

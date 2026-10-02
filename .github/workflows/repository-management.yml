@@ -67,7 +67,7 @@ jobs:
           version: ${{ inputs.version_number_override }}
 
       - name: Check out branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           token: ${{ github.token }}
@@ -77,6 +77,9 @@ jobs:
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
 
       - name: Install xmllint
         run: |
@@ -131,6 +134,9 @@ jobs:
         with:
           file_path: "Directory.Build.props"
           version: ${{ steps.calculate-next-version.outputs.version }}
+
+      - name: Regenerate NuGet lock files
+        run: dotnet restore bitwarden-server.slnx --force-evaluate
 
       - name: Set final version output
         id: set-final-version-output
@@ -200,7 +206,7 @@ jobs:
 
     steps:
       - name: Check out target ref
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.target_ref }}
           token: ${{ github.token }}

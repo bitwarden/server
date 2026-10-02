@@ -1,0 +1,137 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    {
+      "firstName": "Owen",
+      "lastName": "Owner",
+      "role": "owner",
+      "email": "owner@bw.example",
+      "title": "Chief Executive Officer",
+      "folders": ["Break Glass"]
+    },
+    {
+      "firstName": "Ada",
+      "lastName": "Admin",
+      "role": "admin",
+      "email": "admin@bw.example",
+      "title": "IT Director"
+    },
+    {
+      "firstName": "Casey",
+      "lastName": "Custom",
+      "role": "custom",
+      "email": "custom@bw.example",
+      "title": "Compliance Manager"
+    },
+    {
+      "firstName": "Uma",
+      "lastName": "User",
+      "role": "user",
+      "email": "user@bw.example",
+      "title": "Software Engineer",
+      "folders": ["Work", "Personal Projects"]
+    },
+    { "firstName": "Elena", "lastName": "Vasquez", "role": "user", "title": "Engineering Lead" },
+    { "firstName": "Marcus", "lastName": "Webb", "role": "user", "title": "Site Reliability Engineer" },
+    { "firstName": "Priya", "lastName": "Sharma", "role": "user", "title": "Backend Engineer" },
+    { "firstName": "Tom", "lastName": "Okafor", "role": "user", "title": "Frontend Engineer" },
+    { "firstName": "Ingrid", "lastName": "Larsen", "role": "user", "title": "Finance Director" },
+    { "firstName": "Diego", "lastName": "Fuentes", "role": "user", "title": "Accountant" },
+    { "firstName": "Hana", "lastName": "Kobayashi", "role": "user", "title": "People Operations Manager" },
+    { "firstName": "Sam", "lastName": "Whitaker", "role": "user", "title": "Recruiter" }
+  ],
+  "groups": [
+    {
+      "name": "Everyone",
+      "members": [
+        "owen.owner",
+        "ada.admin",
+        "casey.custom",
+        "uma.user",
+        "elena.vasquez",
+        "marcus.webb",
+        "priya.sharma",
+        "tom.okafor",
+        "ingrid.larsen",
+        "diego.fuentes",
+        "hana.kobayashi",
+        "sam.whitaker"
+      ]
+    },
+    {
+      "name": "Engineering",
+      "members": ["uma.user", "elena.vasquez", "marcus.webb", "priya.sharma", "tom.okafor"]
+    },
+    {
+      "name": "Finance",
+      "members": ["ingrid.larsen", "diego.fuentes"]
+    },
+    {
+      "name": "People Ops",
+      "members": ["hana.kobayashi", "sam.whitaker"]
+    },
+    {
+      "name": "Leadership",
+      "members": ["owen.owner", "ada.admin", "elena.vasquez", "ingrid.larsen"]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Company-Wide",
+      "groups": [{ "group": "Everyone" }],
+      "users": [{ "user": "owen.owner", "manage": true }]
+    },
+    {
+      "name": "Engineering",
+      "groups": [{ "group": "Engineering" }],
+      "users": [
+        { "user": "owen.owner", "manage": true },
+        { "user": "elena.vasquez", "manage": true }
+      ]
+    },
+    {
+      "name": "Engineering/Cloud Infrastructure",
+      "groups": [{ "group": "Engineering" }],
+      "users": [{ "user": "owen.owner", "manage": true }]
+    },
+    {
+      "name": "Engineering/CI & Releases",
+      "groups": [
+        { "group": "Engineering" },
+        { "group": "Leadership", "readOnly": true }
+      ],
+      "users": [
+        { "user": "owen.owner", "manage": true },
+        { "user": "casey.custom", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Finance",
+      "groups": [{ "group": "Finance", "manage": true }],
+      "users": [
+        { "user": "owen.owner", "manage": true },
+        { "user": "casey.custom", "readOnly": true, "hidePasswords": true }
+      ]
+    },
+    {
+      "name": "Finance/Vendors & Contracts",
+      "groups": [
+        { "group": "Finance", "manage": true },
+        { "group": "Leadership", "readOnly": true }
+      ],
+      "users": [{ "user": "owen.owner", "manage": true }]
+    },
+    {
+      "name": "People Ops",
+      "groups": [{ "group": "People Ops", "manage": true }],
+      "users": [{ "user": "owen.owner", "manage": true }]
+    },
+    {
+      "name": "Leadership/Break Glass",
+      "users": [
+        { "user": "owen.owner", "manage": true },
+        { "user": "ada.admin" }
+      ]
+    }
+  ]
+}

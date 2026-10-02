@@ -9,7 +9,7 @@ namespace Bit.SeederUtility.Commands;
 public class OrganizationCommand
 {
     [DefaultCommand]
-    public void Execute(OrganizationArgs args)
+    public async Task ExecuteAsync(OrganizationArgs args)
     {
         try
         {
@@ -17,9 +17,9 @@ public class OrganizationCommand
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
 
-            var result = ConsoleProgressReporter.RunWithProgress(
+            var result = await ConsoleProgressReporter.RunWithProgressAsync(
                 deps.ToDependencies(),
-                d => new OrganizationRecipe(d).Seed(args.ToOptions()));
+                d => new OrganizationRecipe(d).SeedAsync(args.ToOptions()));
 
             ConsoleOutput.PrintRow("Organization", result.OrganizationId);
             if (result.OwnerEmail is not null)
@@ -36,11 +36,17 @@ public class OrganizationCommand
             ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
             ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
+            if (args.StripeBilling)
+            {
+                ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+                ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+            }
+
             ConsoleOutput.PrintMangleMap(deps);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex}");
+            await Console.Error.WriteLineAsync($"Error: {ex}");
             Environment.Exit(1);
         }
     }

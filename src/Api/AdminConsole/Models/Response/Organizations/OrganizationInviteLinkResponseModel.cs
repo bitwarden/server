@@ -13,7 +13,7 @@ public class OrganizationInviteLinkResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(inviteLink);
 
         Id = inviteLink.Id;
-        Code = inviteLink.Code;
+        Code = Guid.Parse(inviteLink.Code);
         OrganizationId = inviteLink.OrganizationId;
         AllowedDomains = inviteLink.GetAllowedDomains();
         Invite = inviteLink.Invite;

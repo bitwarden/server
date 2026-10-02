@@ -33,8 +33,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
 
             if (!verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
             {
-                throw new BadRequestException(
-                    "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.");
+                throw new BadRequestException(new EmailNotOnVerifiedDomainError().Message);
             }
 
             return;
@@ -45,8 +44,7 @@ public class OrganizationDomainAllowEmailChangeQuery(
             .HasVerifiedDomainWithBlockClaimedDomainPolicyAsync(newDomain);
         if (isDomainBlocked)
         {
-            throw new BadRequestException(
-                "This email address is claimed by an organization using Bitwarden.");
+            throw new BadRequestException(new EmailClaimedByOrganizationError().Message);
         }
     }
 }

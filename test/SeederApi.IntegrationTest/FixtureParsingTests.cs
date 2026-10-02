@@ -11,7 +11,7 @@ namespace Bit.SeederApi.IntegrationTest;
 /// </summary>
 public sealed class FixtureParsingTests
 {
-    private const int ExpectedCipherCount = 34;
+    private const int _expectedCipherCount = 34;
     private readonly SeedReader _reader = new();
 
     [Fact]
@@ -23,7 +23,7 @@ public sealed class FixtureParsingTests
         Assert.Equal("encryption-modes", preset.Ciphers?.Fixture);
 
         var ciphers = _reader.Read<SeedFile>("ciphers.encryption-modes");
-        Assert.Equal(ExpectedCipherCount, ciphers.Items.Count);
+        Assert.Equal(_expectedCipherCount, ciphers.Items.Count);
     }
 
     [Fact]
@@ -44,9 +44,9 @@ public sealed class FixtureParsingTests
         Assert.Contains(roster.Users, u => u.Role == "owner");
 
         var ciphers = _reader.Read<SeedFile>("ciphers.encryption-modes");
-        Assert.Equal(ExpectedCipherCount, ciphers.Items.Count);
-        Assert.Contains(ciphers.Items, i => i.Archived == true);
-        Assert.Contains(ciphers.Items, i => i.Deleted == true);
+        Assert.Equal(_expectedCipherCount, ciphers.Items.Count);
+        Assert.Contains(ciphers.Items, i => i.Archived is true);
+        Assert.Contains(ciphers.Items, i => i.Deleted is true);
     }
 
     [Fact]
@@ -65,8 +65,54 @@ public sealed class FixtureParsingTests
         Assert.Contains(ciphers.Items, i => i.CipherEncryption is null or "userKey");
     }
 
+    [Fact]
+    public void EnterpriseBasicFixture_CoversAllCipherTypesWithLifecycle()
+    {
+        var ciphers = _reader.Read<SeedFile>("ciphers.enterprise-basic");
+
+        // The enrichment added the five types that were missing; assert all eight are present.
+        var types = ciphers.Items.Select(i => i.Type).ToHashSet();
+        Assert.Superset(
+            new HashSet<string> { "login", "card", "identity", "secureNote", "sshKey", "bankAccount", "driversLicense", "passport" },
+            types);
+
+        Assert.Contains(ciphers.Items, i => i.Archived is true);
+        Assert.Contains(ciphers.Items, i => i.Deleted == true);
+    }
+
+    [Fact]
+    public void DevPlaygroundPreset_ParsesWithRoleEmailsAndFullAssignmentCoverage()
+    {
+        var preset = _reader.Read<SeedPreset>("presets.dev.playground");
+
+        Assert.False(preset.IsIndividual);
+        Assert.Equal("dev-org", preset.Organization?.Fixture);
+        Assert.Equal("dev-roles", preset.Roster?.Fixture);
+        Assert.Equal("dev-playground", preset.Ciphers?.Fixture);
+
+        var org = _reader.Read<SeedOrganization>("organizations.dev-org");
+        Assert.Equal("bw.example", org.Domain);
+
+        // The four role logins carry email overrides; everyone else derives firstName.lastName@domain.
+        var roster = _reader.Read<SeedRoster>("rosters.dev-roles");
+        var overrides = roster.Users.Where(u => u.Email is not null).Select(u => u.Email).ToHashSet();
+        Assert.Equal(
+            new HashSet<string?> { "owner@bw.example", "admin@bw.example", "custom@bw.example", "user@bw.example" },
+            overrides);
+
+        // Every cipher is mapped to a roster collection, and every mapping resolves both ways.
+        var ciphers = _reader.Read<SeedFile>("ciphers.dev-playground");
+        var cipherNames = ciphers.Items.Select(i => i.Name).ToHashSet();
+        var collectionNames = (roster.Collections ?? []).Select(c => c.Name).ToHashSet();
+        var assignments = preset.CollectionAssignments ?? [];
+
+        Assert.Equal(cipherNames, assignments.Select(a => a.Cipher).ToHashSet());
+        Assert.All(assignments, a => Assert.Contains(a.Collection, collectionNames));
+    }
+
     [Theory]
     [InlineData("encryption-modes")]
+    [InlineData("enterprise-basic")]
     public void AttachmentFixtures_ReferenceEmbeddedBodies(string fixture)
     {
         var ciphers = _reader.Read<SeedFile>($"ciphers.{fixture}");

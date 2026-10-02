@@ -10,7 +10,7 @@ internal static class DeviceSeeder
     {
         return new Device
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             UserId = userId,
             Type = deviceType,
             Name = deviceName,

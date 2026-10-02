@@ -27,10 +27,12 @@ The OTP Token Provider generates secure, time-limited tokens that can be used fo
 public interface IOtpTokenProvider<TOptions>
     where TOptions : DefaultOtpTokenProviderOptions
 {
-    Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier);
-    Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier);
+    Task<string?> GenerateTokenAsync(string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
+    Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null);
 }
 ```
+
+`boundValue` lets a caller tie a generated token to some other piece of request context — for example, the device that requested it. A token only validates when the same `boundValue` is supplied to `ValidateTokenAsync` as was supplied to `GenerateTokenAsync`; omitting it on one side while supplying it on the other also fails validation.
 
 ### Implementation: `OtpTokenProvider`
 
@@ -60,6 +62,16 @@ string token = await otpProvider.GenerateTokenAsync("EmailToken", "email_verific
 bool isValid = await otpProvider.ValidateTokenAsync("123456", "EmailToken", "email_verification", $"{userId}_{securityStamp}");
 // Returns: true if valid, false otherwise
 // Note: Valid tokens are automatically removed from cache
+```
+
+### Binding a Token to Other Request Context
+
+```csharp
+// Bind the token to the device that requested it
+string token = await otpProvider.GenerateTokenAsync("NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
+
+// Validation must supply the same bound value; a different or missing one fails even for a correct token
+bool isValid = await otpProvider.ValidateTokenAsync(token, "NewDeviceVerification", "NewDeviceVerificationCode", uniqueIdentifier, deviceIdentifier);
 ```
 
 ### Custom Configurations
@@ -151,13 +163,14 @@ These are passed into the OTP Token Provider which creates a cache record:
 
 ### Storage
 
+- Each cache entry is a JSON envelope containing the token and its optional bound value, not the bare token
 - Tokens are stored in distributed cache. The cache depends on the specific deployment, for cloud it is CosmosDb.
 - Automatic expiration prevents indefinite token validity
 - One-time use prevents replay attacks
 
 ### Validation
 
-- Exact string matching for validation
+- Exact string matching for the token, plus an exact match on the bound value supplied at generation, if any
 - Automatic removal after successful validation
 - Returns `false` for expired or non-existent tokens
 

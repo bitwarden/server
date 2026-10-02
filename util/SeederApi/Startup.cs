@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -35,6 +36,7 @@ public class Startup
 
         services.AddTokenizers();
         services.AddDatabaseRepositories(globalSettings);
+        services.AddSecretsManagerEfRepositories();
         services.AddTestPlayIdTracking(globalSettings);
         services.AddManglerService(globalSettings);
 
@@ -46,6 +48,7 @@ public class Startup
         services.TryAddSingleton<IMailService, NoopMailService>();
         services.AddPush(globalSettings);
         services.TryAddSingleton<ILicensingService, LicensingService>();
+        services.TryAddSingleton<Func<ILicensingService>>(sp => sp.GetRequiredService<ILicensingService>);
 
         services.AddSeederApiServices();
         services.AddScenes();
@@ -93,6 +96,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapControllerRoute(name: "default", pattern: "{controller=Seed}/{action=Index}/{id?}");
+            endpoints.MapVersionEndpoint();
         });
     }
 }

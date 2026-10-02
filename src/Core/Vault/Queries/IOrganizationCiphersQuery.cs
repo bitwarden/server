@@ -43,4 +43,10 @@ public interface IOrganizationCiphersQuery
     /// </summary>
     public Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
         GetAllOrganizationCiphersExcludingDefaultUserCollections(Guid organizationId);
+
+    /// <summary>
+    /// Returns all Login-type ciphers belonging to the organization, including those in default user collections.
+    /// </summary>
+    public Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetOrganizationLoginCiphers(Guid organizationId);
 }

@@ -80,7 +80,7 @@ public static class ServerSdkCompatibilityExtensions
 
         // Server has a class that contains all the feature flag keys
         // the application cares about, add them here.
-        services.AddKnownFeatureFlags(FeatureFlagKeys.GetAllKeys());
+        services.AddKnownFeatureFlags(FeatureFlagKeys.GetKeys());
 
         // ServerContextBuilder needs IHttpContextAccessor and resolves ICurrentContext per-request.
         // Every consuming Startup already registers ICurrentContext, but TryAdd lets this compat

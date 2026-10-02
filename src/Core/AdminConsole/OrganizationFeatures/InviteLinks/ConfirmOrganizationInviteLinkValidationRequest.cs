@@ -10,6 +10,11 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 public record ConfirmOrganizationInviteLinkValidationRequest
 {
     /// <summary>
+    /// The organization the user is attempting to join.
+    /// </summary>
+    public required Guid OrganizationId { get; init; }
+
+    /// <summary>
     /// The secret code embedded in the invite link the user is attempting to use.
     /// </summary>
     public required Guid Code { get; init; }

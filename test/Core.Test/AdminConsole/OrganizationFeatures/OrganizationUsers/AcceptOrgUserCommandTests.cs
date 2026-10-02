@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -89,7 +91,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("Your organization access has been revoked.", exception.Message);
+        Assert.Equal(new OrganizationAccessRevoked(org.Name).Message, exception.Message);
     }
 
     [Theory]
@@ -130,8 +132,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.",
-            exception.Message);
+        Assert.Equal(new TwoFactorRequiredForMembership().Message, exception.Message);
     }
 
     [Theory]
@@ -185,8 +186,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot accept this invite until you leave or remove all other organizations.",
-            exception.Message);
+        Assert.Equal(new UserCannotAcceptInviteMemberOfAnotherOrg().Message, exception.Message);
     }
 
     [Theory]
@@ -209,8 +209,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot accept this invite because you are in another organization which forbids it.",
-            exception.Message);
+        Assert.Equal(new UserCannotAcceptInviteForbiddenByOtherOrg().Message, exception.Message);
     }
 
     [Theory]
@@ -250,7 +249,7 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You can only be an admin of one free organization.", exception.Message);
+        Assert.Equal(new FreeOrgAdminLimitError().Message, exception.Message);
     }
 
     // AcceptOrgUserByOrgIdAsync tests --------------------------------------------------------------------------------
@@ -634,13 +633,13 @@ public class AcceptOrgUserCommandTests
             .ValidateAsync(Arg.Any<AcceptOrganizationMembershipValidationRequest>())
             .Returns(Task.FromResult(
                 Invalid(new AcceptOrganizationMembershipValidationResult(),
-                    new UserCannotBelongToAnotherOrganization())));
+                    new UserCannotBelongToAnotherOrganization(string.Empty))));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal(new UserCannotBelongToAnotherOrganization().Message, exception.Message);
+        Assert.Equal(new UserCannotBelongToAnotherOrganization(string.Empty).Message, exception.Message);
         await sutProvider.GetDependency<IDeleteEmergencyAccessCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteAllByUserIdAsync(Arg.Any<Guid>());

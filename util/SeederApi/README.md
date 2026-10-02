@@ -77,9 +77,11 @@ Use the `X-Play-Id` header value to later destroy the seeded data.
 
 Beyond `planType` and `seats`, the request accepts:
 
-- `overrides` — optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
-  unset keeps the plan default. Set Secrets Manager via `enableSecretsManager` (with optional `smSeats` /
-  `smServiceAccounts`), not via `overrides`.
+- `overrides`: optional capability/collection-management flags applied **on top of** the plan defaults. Any flag left
+  unset keeps the plan default. This includes `useSecretsManager`: to seed an SM-off Enterprise org, send
+  `overrides.useSecretsManager: false` together with `enableSecretsManager: false`. If both
+  `enableSecretsManager: true` and `overrides.useSecretsManager: false` are sent, Secrets Manager stays on. Seat
+  provisioning (`smSeats` / `smServiceAccounts`) applies only when `enableSecretsManager: true`.
 - `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded org resembles a
   real billed org.
 
@@ -102,6 +104,34 @@ curl -X POST http://localhost:5000/seed \
         "useSso": true,
         "useGroups": true
       },
+      "gateway": 0,
+      "gatewayCustomerId": "cus_123",
+      "gatewaySubscriptionId": "sub_456"
+    }
+  }'
+```
+
+### Seeding a User with Billing Gateway Identity
+
+`SingleUserScene` seeds a standalone user. Beyond `email` and `password`, the request accepts:
+
+- `premium` — when true, marks the account premium (enables 1 GB storage and sets a premium expiration).
+- `gateway`, `gatewayCustomerId`, `gatewaySubscriptionId` — billing gateway identity, so the seeded user resembles a
+  real premium cloud user linked to a Stripe (or other gateway) customer/subscription. Any field left unset leaves the
+  user's existing value unchanged.
+
+Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -H "X-Play-Id: test-run-123" \
+  -d '{
+    "template": "SingleUserScene",
+    "arguments": {
+      "email": "premium@example.com",
+      "password": "REPLACE_ME",
+      "premium": true,
       "gateway": 0,
       "gatewayCustomerId": "cus_123",
       "gatewaySubscriptionId": "sub_456"

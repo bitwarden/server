@@ -3,7 +3,7 @@
 using System.Security.Cryptography;
 using AutoMapper;
 using Bit.Core;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -150,17 +150,17 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+    public DatabaseTransactionAction UpdateForKeyRotation(Guid userId,
         IEnumerable<Core.Tools.Entities.Send> sends)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             // No Emails protect/unprotect needed here: this only mutates Key on tracked entities, and EF
             // writes only the changed column, so the already-protected Emails at rest is untouched. (The
             // Dapper implementation protects because it bulk-copies whole rows.)
             var newSends = sends.ToDictionary(s => s.Id);
             using var scope = ServiceScopeFactory.CreateScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var userSends = await GetDbSet(dbContext)
                 .Where(s => s.UserId == userId)
                 .ToListAsync();

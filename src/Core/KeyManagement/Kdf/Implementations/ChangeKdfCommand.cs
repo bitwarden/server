@@ -46,6 +46,7 @@ public class ChangeKdfCommand : IChangeKdfCommand
         // Also checked in the MasterPasswordService via UpdateExistingKdfConfigurationData.ValidateDataForUser.
         authenticationData.ValidateSaltUnchangedForUser(user);
         unlockData.ValidateSaltUnchangedForUser(user);
+        unlockData.ValidateKeyIdUnchangedForUser(user);
 
         // Currently KDF settings are not saved separately for authentication and unlock and must therefore be equal
         if (!authenticationData.Kdf.Equals(unlockData.Kdf))

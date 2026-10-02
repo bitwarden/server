@@ -21,9 +21,6 @@ public sealed class LegacyBillingFlagsFixture : StripeTestsFixture
         api.UpdateConfiguration(
             $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand}",
             "false");
-        api.UpdateConfiguration(
-            $"globalSettings:launchDarkly:flagValues:{FeatureFlagKeys.PM37597_AlwaysEnableStripeAutomaticTax}",
-            "false");
 
         return api;
     }

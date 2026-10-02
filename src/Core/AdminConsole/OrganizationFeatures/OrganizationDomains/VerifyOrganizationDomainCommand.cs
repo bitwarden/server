@@ -95,7 +95,7 @@ public class VerifyOrganizationDomainCommand(
         if (domain.VerifiedDate is not null)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("Domain has already been verified.");
+            throw new ConflictException(new DomainAlreadyVerifiedError().Message);
         }
 
         var claimedDomain =
@@ -104,7 +104,7 @@ public class VerifyOrganizationDomainCommand(
         if (claimedDomain.Count > 0)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("The domain is not available to be claimed.");
+            throw new ConflictException(new DomainNotAvailableError().Message);
         }
 
         try
