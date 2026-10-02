@@ -17,7 +17,7 @@ namespace Bit.Identity.Test.IdentityServer.SendAccess;
 [SutProviderCustomize]
 public class SendEmailOtpRequestValidatorTests
 {
-    private const string DeviceIdentifier = "device-identifier";
+    private const string DeviceIdentifier = "d1f10175-45f1-474f-9e08-7056e64f7475";
 
     [Theory, BitAutoData]
     public async Task ValidateRequestAsync_MissingEmail_ReturnsInvalidRequest(
