@@ -18,6 +18,8 @@ internal static class OrganizationDomainSeeder
 
         domain.SetVerifiedDate();
         domain.SetLastCheckedDate();
+        // Without this NextRunDate stays at 0001-01-01 and overflows SQL Server's datetime range on insert.
+        domain.SetNextRunDate(12);
 
         return domain;
     }
