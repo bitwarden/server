@@ -24,7 +24,7 @@ public class IssueTwoFactorRememberTokenCommand(
         // The row takes its expiry from the token, so the two always lapse together.
         var tokenable = tokenableFactory.CreateToken(user, device, stamp);
 
-        var row = await twoFactorRememberTokenRepository.UpsertAsync(new TwoFactorRememberToken
+        await twoFactorRememberTokenRepository.UpsertAsync(new TwoFactorRememberToken
         {
             UserId = user.Id,
             DeviceId = device.Id,
