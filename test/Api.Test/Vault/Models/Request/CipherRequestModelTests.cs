@@ -320,6 +320,102 @@ public class CipherRequestModelTests
         Assert.Empty(results);
     }
 
+    // A valid EncString (type 2 AesCbc256_B64) so [EncryptedString] on Name passes and
+    // IValidatableObject.Validate is called (it is skipped when property annotations fail).
+    private const string ValidEncString =
+        "2.AAECAwQFBgcICQoLDA0ODw==|aGVsbG8=|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonArray_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "[]",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsEmptyJsonObject_Passes(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "{}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_DataIsJsonNull_ReturnsDataError(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Name = ValidEncString,
+            Data = "null",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.Contains(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
+    [Theory]
+    [InlineData(CipherType.Login)]
+    [InlineData(CipherType.Card)]
+    [InlineData(CipherType.Identity)]
+    [InlineData(CipherType.SecureNote)]
+    [InlineData(CipherType.SSHKey)]
+    [InlineData(CipherType.BankAccount)]
+    [InlineData(CipherType.DriversLicense)]
+    [InlineData(CipherType.Passport)]
+    public void Validate_BlobEncryptedData_SkipsTypeCheck(CipherType type)
+    {
+        var request = new CipherRequestModel
+        {
+            Type = type,
+            Data = "{\"format_version\":1,\"wrapped_cek\":\"abc\"}",
+        };
+
+        var results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(CipherRequestModel.Data)));
+    }
+
     private static List<ValidationResult> ValidateModel(CipherRequestModel request)
     {
         var results = new List<ValidationResult>();
