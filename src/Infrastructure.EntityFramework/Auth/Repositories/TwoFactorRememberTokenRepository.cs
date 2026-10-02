@@ -12,7 +12,9 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
         : base(serviceScopeFactory, mapper)
     { }
 
-    public async Task<Core.Auth.Entities.TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(Guid userId, Guid deviceId)
+    // Virtual so tests can simulate a stale read, which is what the fallbacks in UpsertAsync handle.
+    public virtual async Task<Core.Auth.Entities.TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(
+        Guid userId, Guid deviceId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -25,33 +27,84 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
     public async Task<Core.Auth.Entities.TwoFactorRememberToken> UpsertAsync(
         Core.Auth.Entities.TwoFactorRememberToken token)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-
-        var existing = await dbContext.TwoFactorRememberTokens
-            .FirstOrDefaultAsync(t => t.UserId == token.UserId && t.DeviceId == token.DeviceId);
-
-        if (existing != null)
+        var existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
+        if (existing != null && await TryUpdateAsync(token, existing))
         {
-            // CreationDate is deliberately left alone so the row still records when the device was
-            // first remembered, matching the MSSQL procedure.
-            existing.Stamp = token.Stamp;
-            existing.RevisionDate = token.RevisionDate;
-            existing.ExpirationDate = token.ExpirationDate;
-            await dbContext.SaveChangesAsync();
-
-            token.Id = existing.Id;
-            token.CreationDate = existing.CreationDate;
             return token;
         }
 
+        // Either there is no row, or it was removed between the read and the update (the expiry
+        // sweep can do that).
         token.SetNewId();
-        var entity = Mapper.Map<Models.TwoFactorRememberToken>(token);
-        await dbContext.AddAsync(entity);
-        await dbContext.SaveChangesAsync();
+
+        try
+        {
+            await CreateAsync(token);
+        }
+        catch (DbUpdateException e) when (IsDuplicateKeyException(e))
+        {
+            // Unique-index backstop: a concurrent remember-login on the same device inserted the row
+            // between our read and our insert. Update the winner's row instead of failing the login.
+            existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
+            if (existing == null || !await TryUpdateAsync(token, existing))
+            {
+                throw;
+            }
+        }
 
         return token;
     }
+
+    private async Task<bool> TryUpdateAsync(
+        Core.Auth.Entities.TwoFactorRememberToken token, Core.Auth.Entities.TwoFactorRememberToken existing)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var rowsUpdated = await dbContext.TwoFactorRememberTokens
+            .Where(t => t.Id == existing.Id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(t => t.Stamp, token.Stamp)
+                .SetProperty(t => t.RevisionDate, token.RevisionDate)
+                .SetProperty(t => t.ExpirationDate, token.ExpirationDate));
+
+        if (rowsUpdated == 0)
+        {
+            return false;
+        }
+
+        // CreationDate is left alone so the row still records when the device was first remembered,
+        // matching the MSSQL procedure.
+        token.Id = existing.Id;
+        token.CreationDate = existing.CreationDate;
+        return true;
+    }
+
+    private async Task CreateAsync(Core.Auth.Entities.TwoFactorRememberToken token)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entity = Mapper.Map<Models.TwoFactorRememberToken>(token);
+        await dbContext.AddAsync(entity);
+        await dbContext.SaveChangesAsync();
+    }
+
+    /// <remarks>
+    /// Recognises unique-<em>index</em> violations, which report different codes from primary-key ones on
+    /// SQL Server (2601 rather than 2627) and SQLite (2067 rather than 1555).
+    /// </remarks>
+    private static bool IsDuplicateKeyException(DbUpdateException e) => e.InnerException switch
+    {
+        MySqlConnector.MySqlException my => my.ErrorCode == MySqlConnector.MySqlErrorCode.DuplicateKeyEntry,
+        Microsoft.Data.SqlClient.SqlException ms => ms.Errors
+            .Cast<Microsoft.Data.SqlClient.SqlError>()
+            .Any(error => error.Number is 2601 or 2627),
+        Npgsql.PostgresException pg => pg.SqlState == "23505",
+        Microsoft.Data.Sqlite.SqliteException lite => lite.SqliteErrorCode == 19
+            && lite.SqliteExtendedErrorCode is 1555 or 2067,
+        _ => false,
+    };
 
     public async Task RotateStampsByUserIdAsync(Guid userId)
     {

@@ -1,13 +1,15 @@
+using AutoMapper;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
+using DapperTwoFactorRememberTokenRepository = Bit.Infrastructure.Dapper.Auth.Repositories.TwoFactorRememberTokenRepository;
 using EfTwoFactorRememberToken = Bit.Infrastructure.EntityFramework.Auth.Models.TwoFactorRememberToken;
+using EfTwoFactorRememberTokenRepository = Bit.Infrastructure.EntityFramework.Auth.Repositories.TwoFactorRememberTokenRepository;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -114,7 +116,7 @@ public class TwoFactorRememberTokenRepositoryTests
     /// </summary>
     /// <remarks>
     /// Whether the two calls actually collide is timing-dependent, so this is a regression guard on the
-    /// common path. The two tests that follow force the Dapper repository's fallbacks deterministically.
+    /// common path. The two tests that follow force each repository's fallbacks deterministically.
     /// </remarks>
     [Theory, DatabaseData]
     public async Task UpsertAsync_Concurrent_BothCompleteAndOneRowSurvives(
@@ -139,8 +141,8 @@ public class TwoFactorRememberTokenRepositoryTests
     /// A repository whose first read returns a canned value, standing in for a read that was stale by
     /// the time the write happened.
     /// </summary>
-    private sealed class StaleFirstReadRepository(string connectionString, TwoFactorRememberToken? staleRow)
-        : TwoFactorRememberTokenRepository(connectionString, connectionString)
+    private sealed class StaleFirstReadDapperRepository(string connectionString, TwoFactorRememberToken? staleRow)
+        : DapperTwoFactorRememberTokenRepository(connectionString, connectionString)
     {
         private bool _served;
 
@@ -156,6 +158,56 @@ public class TwoFactorRememberTokenRepositoryTests
         }
     }
 
+    /// <inheritdoc cref="StaleFirstReadDapperRepository" />
+    private sealed class StaleFirstReadEfRepository(
+        IServiceScopeFactory serviceScopeFactory, IMapper mapper, TwoFactorRememberToken? staleRow)
+        : EfTwoFactorRememberTokenRepository(serviceScopeFactory, mapper)
+    {
+        private bool _served;
+
+        public override Task<TwoFactorRememberToken?> GetByUserIdDeviceIdAsync(Guid userId, Guid deviceId)
+        {
+            if (_served)
+            {
+                return base.GetByUserIdDeviceIdAsync(userId, deviceId);
+            }
+
+            _served = true;
+            return Task.FromResult(staleRow);
+        }
+    }
+
+    private static ITwoFactorRememberTokenRepository CreateStaleFirstReadRepository(
+        Database database, IServiceProvider services, TwoFactorRememberToken? staleRow) =>
+        database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf
+            ? new StaleFirstReadDapperRepository(database.ConnectionString, staleRow)
+            : new StaleFirstReadEfRepository(
+                services.GetRequiredService<IServiceScopeFactory>(),
+                services.GetRequiredService<IMapper>(),
+                staleRow);
+
+    /// <summary>
+    /// Deletes a token row at the database level, standing in for the expiry sweep.
+    /// </summary>
+    private static async Task DeleteTokenRowAtDatabaseLevelAsync(
+        IServiceProvider services, Database database, Guid id)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await using var connection = new SqlConnection(database.ConnectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM [dbo].[TwoFactorRememberToken] WHERE [Id] = @Id";
+            command.Parameters.Add(new SqlParameter("@Id", id));
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+            return;
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        await dbContext.TwoFactorRememberTokens.Where(r => r.Id == id).ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+    }
+
     /// <summary>
     /// The read finds no row, but a concurrent login inserts one before this call's insert runs. The
     /// unique index rejects the insert, and the repository must update the winner's row rather than
@@ -164,22 +216,18 @@ public class TwoFactorRememberTokenRepositoryTests
     [Theory, DatabaseData]
     public async Task UpsertAsync_RowAppearsAfterRead_UpdatesTheWinnersRow(
         Database database,
+        IServiceProvider services,
         ITwoFactorRememberTokenRepository sut,
         IUserRepository userRepository,
         IDeviceRepository deviceRepository)
     {
-        if (database.Type != SupportedDatabaseProviders.SqlServer || database.UseEf)
-        {
-            Assert.Skip("Exercises the Dapper repository's duplicate-key fallback.");
-        }
-
         var user = await userRepository.CreateTestUserAsync();
         var device = await CreateTestDeviceAsync(deviceRepository, user.Id);
         await sut.UpsertAsync(NewToken(user.Id, device.Id, "winner"));
         var winner = await sut.GetByUserIdDeviceIdAsync(user.Id, device.Id);
         Assert.NotNull(winner);
 
-        var loser = new StaleFirstReadRepository(database.ConnectionString, staleRow: null);
+        var loser = CreateStaleFirstReadRepository(database, services, staleRow: null);
         await loser.UpsertAsync(NewToken(user.Id, device.Id, "loser"));
 
         var row = await sut.GetByUserIdDeviceIdAsync(user.Id, device.Id);
@@ -197,31 +245,20 @@ public class TwoFactorRememberTokenRepositoryTests
     [Theory, DatabaseData]
     public async Task UpsertAsync_RowDeletedAfterRead_CreatesTheRow(
         Database database,
+        IServiceProvider services,
         ITwoFactorRememberTokenRepository sut,
         IUserRepository userRepository,
         IDeviceRepository deviceRepository)
     {
-        if (database.Type != SupportedDatabaseProviders.SqlServer || database.UseEf)
-        {
-            Assert.Skip("Exercises the Dapper repository's update-matched-nothing fallback.");
-        }
-
         var user = await userRepository.CreateTestUserAsync();
         var device = await CreateTestDeviceAsync(deviceRepository, user.Id);
         await sut.UpsertAsync(NewToken(user.Id, device.Id, "original"));
         var staleRow = await sut.GetByUserIdDeviceIdAsync(user.Id, device.Id);
         Assert.NotNull(staleRow);
 
-        await using (var connection = new SqlConnection(database.ConnectionString))
-        {
-            await connection.OpenAsync(TestContext.Current.CancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM [dbo].[TwoFactorRememberToken] WHERE [Id] = @Id";
-            command.Parameters.Add(new SqlParameter("@Id", staleRow.Id));
-            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
-        }
+        await DeleteTokenRowAtDatabaseLevelAsync(services, database, staleRow.Id);
 
-        var repository = new StaleFirstReadRepository(database.ConnectionString, staleRow);
+        var repository = CreateStaleFirstReadRepository(database, services, staleRow);
         await repository.UpsertAsync(NewToken(user.Id, device.Id, "replacement"));
 
         var row = await sut.GetByUserIdDeviceIdAsync(user.Id, device.Id);
