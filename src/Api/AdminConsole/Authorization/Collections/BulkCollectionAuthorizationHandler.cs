@@ -116,21 +116,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanCreateAsync(CurrentContextOrganization? org)
     {
-        // Owners, Admins, and users with CreateNewCollections permission can always create collections
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.CreateNewCollections: true })
-        {
-            return true;
-        }
-
-        var organizationAbility = await GetOrganizationAbilityAsync(org);
-
-        var userIsMemberOfOrg = org is not null;
-        var limitCollectionCreationEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionCreation: true };
-        var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-        // If the limit collection management setting is disabled, allow any user to create collections
-        if (userIsMemberOfOrg && (!limitCollectionCreationEnabled || userIsOrgOwnerOrAdmin))
+        if (CollectionPermissions.CanCreate(org, await GetOrganizationAbilityAsync(org)))
         {
             return true;
         }
@@ -226,6 +212,11 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanUpdateUserAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
+        if (resources.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            return false;
+        }
+
         if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageUsers == true)
         {
             return true;
@@ -236,6 +227,11 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
     private async Task<bool> CanUpdateGroupAccessAsync(ICollection<Collection> resources, CurrentContextOrganization? org)
     {
+        if (resources.Any(c => c.Type == CollectionType.DefaultUserCollection))
+        {
+            return false;
+        }
+
         if (await AllowAdminAccessToAllCollectionItems(org) && org?.Permissions.ManageGroups == true)
         {
             return true;

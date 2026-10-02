@@ -1182,4 +1182,215 @@ public class InviteOrganizationUserCommandTests
             .DidNotReceive()
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenCollectionBelongsToAnotherOrganization_ThenFailureIsReturnedAndNoUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        Collection collection,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        collection.Type = CollectionType.SharedCollection;
+        var request = BuildInviteRequest(organization, address.Address, timeProvider,
+            [new CollectionAccessSelection { Id = collection.Id, Manage = true }], []);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([collection]);
+
+        // Act
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        // Assert
+        await AssertInviteRejectedAsync(result, sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenCollectionDoesNotExist_ThenFailureIsReturnedAndNoUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        Guid collectionId,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        var request = BuildInviteRequest(organization, address.Address, timeProvider,
+            [new CollectionAccessSelection { Id = collectionId }], []);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([]);
+
+        // Act
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        // Assert
+        await AssertInviteRejectedAsync(result, sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenCollectionIsADefaultUserCollection_ThenFailureIsReturnedAndNoUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        Collection collection,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        collection.OrganizationId = organization.Id;
+        collection.Type = CollectionType.DefaultUserCollection;
+        var request = BuildInviteRequest(organization, address.Address, timeProvider,
+            [new CollectionAccessSelection { Id = collection.Id }], []);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([collection]);
+
+        // Act
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        // Assert
+        await AssertInviteRejectedAsync(result, sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenGroupBelongsToAnotherOrganization_ThenFailureIsReturnedAndNoUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        Group group,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        var request = BuildInviteRequest(organization, address.Address, timeProvider, [], [group.Id]);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .Returns([group]);
+
+        // Act
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        // Assert
+        await AssertInviteRejectedAsync(result, sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenCollectionsAndGroupsBelongToTheOrganization_ThenUserIsCreatedWithThatAccess(
+        MailAddress address,
+        Organization organization,
+        Collection collection,
+        Group group,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        collection.OrganizationId = organization.Id;
+        collection.Type = CollectionType.SharedCollection;
+        group.OrganizationId = organization.Id;
+        var request = BuildInviteRequest(organization, address.Address, timeProvider,
+            [new CollectionAccessSelection { Id = collection.Id, Manage = true }], [group.Id]);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([collection]);
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .Returns([group]);
+
+        // Act
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        // Assert
+        Assert.IsType<Success<InviteOrganizationUsersResponse>>(result);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
+                users.Single().Collections.Single().Id == collection.Id &&
+                users.Single().Groups.Single() == group.Id));
+    }
+
+    private static InviteOrganizationUsersRequest BuildInviteRequest(
+        Organization organization,
+        string email,
+        FakeTimeProvider timeProvider,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups) =>
+        new(
+            invites:
+            [
+                new OrganizationUserInviteCommandModel(
+                    email: email,
+                    assignedCollections: collections,
+                    groups: groups,
+                    type: OrganizationUserType.User,
+                    permissions: new Permissions(),
+                    externalId: null,
+                    accessSecretsManager: false)
+            ],
+            organization: organization,
+            performedBy: Guid.Empty,
+            performedAt: timeProvider.GetUtcNow());
+
+    private static void ArrangeInvitableOrganization(
+        SutProvider<InviteOrganizationUsersCommand> sutProvider,
+        Organization organization,
+        InviteOrganizationUsersRequest request)
+    {
+        var inviteOrganization = new InviteOrganization(organization, new FreePlan());
+        organization.PlanType = inviteOrganization.Plan.Type;
+
+        sutProvider.GetDependency<IPricingClient>()
+            .GetPlan(organization.PlanType)
+            .Returns(inviteOrganization.Plan);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IInviteUsersValidator>()
+            .ValidateAsync(Arg.Any<InviteOrganizationUsersValidationRequest>())
+            .Returns(new Valid<InviteOrganizationUsersValidationRequest>(GetInviteValidationRequestMock(request, inviteOrganization, organization)));
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 0 });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(0);
+    }
+
+    private static async Task AssertInviteRejectedAsync(
+        CommandResult<InviteOrganizationUsersResponse> result,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        var failure = Assert.IsType<Failure<InviteOrganizationUsersResponse>>(result);
+        Assert.Equal(InvalidCollectionOrGroupAccessError.Code, failure.Error.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive()
+            .CreateManyAsync(Arg.Any<IEnumerable<CreateOrganizationUser>>());
+
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .DidNotReceive()
+            .SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+    }
 }

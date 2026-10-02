@@ -38,6 +38,7 @@ public static class OrganizationPlanExtensions
         organization.UseScim = newPlan.HasScim;
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.UseCustomPermissions = newPlan.HasCustomPermissions;
+        organization.UseRiskInsights = newPlan.HasRiskInsights;
         organization.UsersGetPremium = newPlan.UsersGetPremium;
         organization.UsePasswordManager = true;
         organization.MaxCollections = newPlan.PasswordManager.MaxCollections;

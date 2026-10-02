@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
@@ -16,6 +17,7 @@ public class CreateResellerProviderModel : IValidatableObject
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
 
+    [StrictEmailAddress]
     [Display(Name = "Primary Billing Email")]
     public string BillingEmail { get; set; }
 

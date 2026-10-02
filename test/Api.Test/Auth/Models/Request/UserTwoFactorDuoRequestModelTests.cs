@@ -13,7 +13,7 @@ public class UserTwoFactorDuoRequestModelTests
     {
         // Arrange
         var existingUser = new User();
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             ClientId = "clientId",
             ClientSecret = "clientSecret",
@@ -40,7 +40,7 @@ public class UserTwoFactorDuoRequestModelTests
         {
             { TwoFactorProviderType.Duo, new TwoFactorProvider() }
         });
-        var model = new UpdateTwoFactorDuoRequestModel
+        var model = new TwoFactorDuoUpdateRequestModel
         {
             ClientId = "newClientId",
             ClientSecret = "newClientSecret",

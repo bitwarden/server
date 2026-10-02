@@ -8,11 +8,15 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Enums;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,6 +28,7 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Stripe;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Admin.Test.AdminConsole.Controllers;
@@ -40,6 +45,24 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(true);
+    }
+
+    private sealed record FreePlanStub : Bit.Core.Models.StaticStore.Plan
+    {
+        public FreePlanStub()
+        {
+            Type = PlanType.Free;
+            PasswordManager = new FreePasswordManagerFeatures();
+        }
+
+        private record FreePasswordManagerFeatures : PasswordManagerPlanFeatures
+        {
+            public FreePasswordManagerFeatures()
+            {
+                MaxSeats = 2;
+                MaxCollections = 2;
+            }
+        }
     }
 
     #region Edit (POST)
@@ -298,6 +321,85 @@ public class OrganizationsControllerTests
 
         await providerBillingService.Received(1).ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
         await providerBillingService.Received(1).ScaleSeats(provider, update.PlanType!.Value, update.Seats!.Value - organization.Seats.Value + organization.Seats.Value);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_DowngradeToFree_MaxCollectionsExceedsFreePlan_SetsErrorAndRedirects(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.MaxCollections = 10;
+
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.Free,
+            Seats = null,
+            MaxCollections = 10
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.Free)
+            .Returns(new FreePlanStub());
+
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        // Act
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirectResult.ActionName);
+        Assert.Equal(
+            "Organizations with more than 2 collections cannot be downgraded to the Free plan. Your organization currently has 10 collections.",
+            sutProvider.Sut.TempData["Error"]);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_DowngradeToFree_MaxCollectionsExceedsFreePlan_Vfo1FoundationEnabled_SetsErrorWithSharedFolderTerminology(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Arrange
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.MaxCollections = 10;
+
+        var update = new OrganizationEditModel
+        {
+            PlanType = PlanType.Free,
+            Seats = null,
+            MaxCollections = 10
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.Free)
+            .Returns(new FreePlanStub());
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.VFO1Foundation)
+            .Returns(true);
+
+        sutProvider.Sut.TempData = new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        // Act
+        var result = await sutProvider.Sut.Edit(organization.Id, update);
+
+        // Assert
+        var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+        Assert.Equal("Edit", redirectResult.ActionName);
+        Assert.Equal(
+            "Organizations with more than 2 shared folders cannot be downgraded to the Free plan. Your organization currently has 10 shared folders.",
+            sutProvider.Sut.TempData["Error"]);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceive().ReplaceAsync(Arg.Any<Organization>());
     }
 
     [BitAutoData]
@@ -1909,6 +2011,112 @@ public class OrganizationsControllerTests
         await sutProvider.GetDependency<IOrganizationPlanMigrationCohortAssignmentRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a deleted Stripe customer makes GetBillingAsync throw. The page must still
+        // render so an admin can correct the Gateway Customer ID rather than being locked out.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingHistoryLoadThrows_StillRendersPageWithWarning(
+        Organization organization,
+        BillingInfo billingInfo,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: GetBillingAsync can succeed while GetBillingHistoryAsync throws. The catch must
+        // reset both values so the billing section is hidden and the page renders, rather than
+        // falling through with a non-null BillingInfo and a null BillingHistoryInfo (which would NRE).
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .Returns(billingInfo);
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingHistoryAsync(organization)
+            .ThrowsAsync(new StripeException
+            {
+                StripeError = new StripeError { Code = StripeConstants.ErrorCodes.ResourceMissing }
+            });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.Equal(
+            "Billing information could not be loaded. The Stripe customer may have been deleted. " +
+            "You can still edit the organization and set a valid Gateway Customer ID.",
+            (string)sutProvider.Sut.TempData["Warning"]);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_BillingLoadThrowsUnexpectedError_StillRendersPageWithErrorToast(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // PM-38874: a billing-load failure that is NOT a missing Stripe customer (resource_missing)
+        // must fall through to the generic catch, which surfaces a neutral error toast rather than
+        // asserting the customer was deleted.
+        StubEditGetDependencies(sutProvider, organization, currentAssignment: null);
+
+        sutProvider.GetDependency<IStripePaymentService>()
+            .GetBillingAsync(organization)
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        sutProvider.Sut.TempData =
+            new TempDataDictionary(new DefaultHttpContext(), Substitute.For<ITempDataProvider>());
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var view = Assert.IsType<ViewResult>(result);
+        var model = Assert.IsType<OrganizationEditModel>(view.Model);
+        Assert.Null(model.BillingInfo);
+        Assert.Null(model.BillingHistoryInfo);
+        Assert.False(sutProvider.Sut.TempData.ContainsKey("Warning"));
+        Assert.True(sutProvider.Sut.TempData.ContainsKey("Error"));
+        Assert.Equal(
+            "Billing information could not be loaded. You can still edit the organization or try reloading the page. " +
+            "Contact support if the problem persists.",
+            (string)sutProvider.Sut.TempData["Error"]);
     }
 
     #endregion

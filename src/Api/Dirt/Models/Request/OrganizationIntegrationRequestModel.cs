@@ -28,15 +28,18 @@ public class OrganizationIntegrationRequestModel : IValidatableObject
         return currentIntegration;
     }
 
+    /// <summary>
+    /// Validates the request model based on the integration type. Runs automatically when the model is bound to a controller action parameter.
+    /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         switch (Type)
         {
             case IntegrationType.CloudBillingSync or IntegrationType.Scim:
-                yield return new ValidationResult($"{nameof(Type)} integrations are not yet supported.", [nameof(Type)]);
+                yield return new ValidationResult($"{Type} integrations are not yet supported.", [nameof(Type)]);
                 break;
             case IntegrationType.Slack or IntegrationType.Teams:
-                yield return new ValidationResult($"{nameof(Type)} integrations cannot be created directly.", [nameof(Type)]);
+                yield return new ValidationResult($"{Type} integrations cannot be created or updated directly.", [nameof(Type)]);
                 break;
             case IntegrationType.Webhook:
                 foreach (var r in ValidateConfiguration<WebhookIntegration>(allowNullOrEmpty: true))

@@ -12,7 +12,6 @@ namespace Bit.Core.Services;
 
 public interface IOrganizationService
 {
-    Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
@@ -20,6 +19,13 @@ public interface IOrganizationService
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
+    /// <summary>
+    /// Removes the entry for <paramref name="type"/> from the organization's <c>TwoFactorProviders</c> JSON column.
+    /// The provider's <c>MetaData</c> (Duo Host / ClientId / ClientSecret) is destroyed in the process; the name is
+    /// historical — this is a hard delete of the provider configuration, not a reversible disable. No-op if
+    /// <paramref name="type"/> is not currently configured. Throws <see cref="ArgumentException"/> if
+    /// <paramref name="type"/> is not an organization-scoped provider type.
+    /// </summary>
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         OrganizationUserInvite invite, string externalId);

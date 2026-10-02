@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Globalization;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
@@ -215,6 +216,45 @@ internal static class CipherComposer
     }
 
     /// <summary>
+    /// Applies archived/deleted lifecycle state to a composed cipher per its membership in
+    /// <paramref name="selection"/>. No-op if <paramref name="index"/> is in none of the sets.
+    /// <paramref name="resolveArchiveOwner"/> is invoked only when the cipher is archived (alone or
+    /// both), so callers can defer lookups (e.g. a dictionary keyed only by archived indices) that
+    /// would otherwise be unsafe to evaluate eagerly.
+    /// </summary>
+    internal static void AssignArchiveOrDeleteState(Cipher cipher, int index, ArchiveDeleteSets selection, Func<int, Guid> resolveArchiveOwner)
+    {
+        var isBoth = selection.Both.Contains(index);
+        var isArchived = isBoth || selection.Archived.Contains(index);
+
+        // CreationDate must predate ArchivedDate/DeletedDate — Compose stamps it to UtcNow, which is
+        // otherwise later than these backdated values.
+        if (isBoth)
+        {
+            var archivedDate = DaysAgo(index, 15, 90);
+            var deletedDate = DaysAgo(index, 7, 14);
+            cipher.CreationDate = archivedDate;
+            cipher.Archives = BuildArchivesJson(resolveArchiveOwner(index), archivedDate);
+            cipher.DeletedDate = deletedDate;
+            cipher.RevisionDate = deletedDate;
+        }
+        else if (isArchived)
+        {
+            var archivedDate = DaysAgo(index, 15, 90);
+            cipher.CreationDate = archivedDate;
+            cipher.Archives = BuildArchivesJson(resolveArchiveOwner(index), archivedDate);
+            cipher.RevisionDate = archivedDate;
+        }
+        else if (selection.DeletedOnly.Contains(index))
+        {
+            var deletedDate = DaysAgo(index, 7, 14);
+            cipher.CreationDate = deletedDate;
+            cipher.DeletedDate = deletedDate;
+            cipher.RevisionDate = deletedDate;
+        }
+    }
+
+    /// <summary>
     /// Builds the Folders JSON column value from a set of (userId, folderId) pairs.
     /// Produces <c>{"USERID1":"FOLDERID1","USERID2":"FOLDERID2"}</c> with uppercase GUIDs.
     /// </summary>
@@ -234,5 +274,27 @@ internal static class CipherComposer
         var entries = userIds.Select(id =>
             $"\"{id.ToString().ToUpperInvariant()}\":true");
         return $"{{{string.Join(",", entries)}}}";
+    }
+
+    /// <summary>
+    /// Builds the Archives JSON column value for a single user. Mirrors the JSON_MODIFY shape
+    /// produced by Cipher_Archive.sql. Produces <c>{"USERID":"yyyy-MM-ddTHH:mm:ss.fffZ"}</c>
+    /// with an uppercase GUID key.
+    /// </summary>
+    internal static string BuildArchivesJson(Guid userId, DateTime archivedDateUtc)
+    {
+        var timestamp = archivedDateUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        return $"{{\"{userId.ToString().ToUpperInvariant()}\":\"{timestamp}\"}}";
+    }
+
+    /// <summary>
+    /// Deterministic "N days ago" timestamp within [minDaysAgo, maxDaysAgo], varied by index.
+    /// Mirrors the existing BuildPasswordHistory precedent of AddDays(-7 * k) — no RNG needed.
+    /// </summary>
+    internal static DateTime DaysAgo(int index, int minDaysAgo, int maxDaysAgo)
+    {
+        var range = maxDaysAgo - minDaysAgo + 1;
+        var days = minDaysAgo + (index % range);
+        return DateTime.UtcNow.AddDays(-days);
     }
 }

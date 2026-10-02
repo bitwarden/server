@@ -16,4 +16,10 @@ public interface ISeedReader
     /// Lists available seed file names (without extension).
     /// </summary>
     IReadOnlyList<string> ListAvailable();
+
+    /// <summary>
+    /// Reads a bundled binary attachment body (under Seeds/attachments) by filename,
+    /// e.g. "mock-seeder-data-bank-statement-1.pdf". Used to supply plaintext attachment bodies for seeding.
+    /// </summary>
+    byte[] ReadBytes(string fileName);
 }

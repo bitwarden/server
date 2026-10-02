@@ -5,6 +5,7 @@ secrets.json
 # Docker container configurations
 .env
 authsources.php
+saml20-sp-remote.php
 
 # Development certificates
 identity_server_dev.crt

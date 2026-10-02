@@ -4,4 +4,8 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="HttpExtensions.Test" />
+  </ItemGroup>
+
 </Project>

@@ -5,5 +5,8 @@ namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 public class GetOrganizationInviteLinkStatusRequestModel
 {
     [Required]
+    public required Guid OrganizationId { get; set; }
+
+    [Required]
     public required Guid Code { get; set; }
 }

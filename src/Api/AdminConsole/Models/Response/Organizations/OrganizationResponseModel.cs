@@ -3,11 +3,13 @@
 
 using System.Security.Claims;
 using System.Text.Json.Serialization;
+using Bit.Api.Billing.Models.Responses;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses;
 using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Models;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -153,9 +155,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         Organization organization,
         SubscriptionInfo subscription,
         Plan plan,
-        bool hideSensitiveData) : this(organization, plan)
+        bool hideSensitiveData,
+        PendingAnnualUpgrade pendingAnnualUpgrade = null) : this(organization, plan)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
+        PendingAnnualUpgrade = pendingAnnualUpgrade != null
+            ? new PendingAnnualUpgradeResponseModel(pendingAnnualUpgrade)
+            : null;
+        SmServiceAccountsGrace = subscription.Subscription?.ServiceAccountGrace;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
         CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
@@ -170,6 +177,10 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             if (UpcomingInvoice != null)
             {
                 UpcomingInvoice.Amount = null;
+            }
+            if (PendingAnnualUpgrade != null)
+            {
+                PendingAnnualUpgrade.LineItems = null;
             }
         }
     }
@@ -218,6 +229,15 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
+    public PendingAnnualUpgradeResponseModel PendingAnnualUpgrade { get; set; }
+
+    /// <summary>
+    /// The count of permanently-free Secrets Manager service accounts granted beyond the plan baseline during a
+    /// pricing migration. Clients subtract this from <see cref="OrganizationResponseModel.SmServiceAccounts"/> so the
+    /// migration-grace allotment is not billed. Null on self-hosted and when there is no gateway subscription;
+    /// a concrete count (including 0 for a non-migrated cloud organization) otherwise.
+    /// </summary>
+    public int? SmServiceAccountsGrace { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization's subscription expires, without any grace period.

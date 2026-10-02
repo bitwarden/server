@@ -6,7 +6,8 @@ CREATE PROCEDURE [dbo].[OrganizationPlanMigrationCohortAssignment_Update]
     @MigratedDate DATETIME2(7),
     @ChurnDiscountAppliedDate DATETIME2(7),
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @RenewalNotificationSentDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +21,8 @@ BEGIN
         [ScheduledDate] = @ScheduledDate,
         [MigratedDate] = @MigratedDate,
         [ChurnDiscountAppliedDate] = @ChurnDiscountAppliedDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [RenewalNotificationSentDate] = @RenewalNotificationSentDate
     WHERE
         [Id] = @Id
 END

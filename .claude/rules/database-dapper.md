@@ -94,6 +94,16 @@ GO
 - Add new columns at the **end** of the column list to keep `src/Sql/dbo/` in sync.
 - For a `NOT NULL` column, add a `DEFAULT` constraint rather than backfilling rows:
   `ADD [Column] INT NOT NULL CONSTRAINT [DF_Table_Column] DEFAULT 0`. Do **not** use defaults for string columns.
+- A `NOT NULL` column written through an `OPENJSON` or TVP path also needs `ISNULL([Column], <default>)` at every
+  insert/update site. A scalar procedure parameter stays backwards-compatible via its own default (`@Column BIT = 0`),
+  but a JSON/TVP field has no per-field default — during a rolling deployment an old server omits it, `OPENJSON`
+  yields `NULL`, and the write violates the `NOT NULL` constraint. (The `OrganizationUser_CreateMany`, `_UpdateMany`,
+  and `_CreateManyWithCollectionsAndGroups` procedures are the canonical example.)
+
+  ```sql
+  SELECT ..., ISNULL(OUI.[Column], 0)                  -- INSERT ... SELECT
+  SET    ..., [Column] = ISNULL(OUI.[Column], 0)       -- UPDATE ... SET
+  ```
 
 ### Create / drop a table
 

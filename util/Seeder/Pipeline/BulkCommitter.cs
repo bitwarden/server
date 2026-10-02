@@ -14,6 +14,7 @@ using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Or
 using EfOrganizationApiKey = Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey;
 using EfOrganizationDomain = Bit.Infrastructure.EntityFramework.Models.OrganizationDomain;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
+using EfSsoConfig = Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Seeder.Pipeline;
@@ -44,6 +45,8 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         MapCopyAndClear<Core.Entities.OrganizationDomain, EfOrganizationDomain>(context.OrganizationDomains);
 
         MapAndCopy<Core.Entities.OrganizationApiKey, EfOrganizationApiKey>(context.OrganizationApiKey);
+
+        CommitSsoConfigs(context.SsoConfigs);
 
         MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
 
@@ -118,6 +121,33 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         db.BulkCopy(entities);
         entities.Clear();
+    }
+
+    /// <summary>
+    /// Commits SsoConfig rows via EF Add/SaveChanges rather than BulkCopy: <c>SsoConfig.Id</c> is a
+    /// database identity (long) that the EF change tracker populates on insert. The EF model inherits
+    /// the Core entity, so only the settable columns are copied (CreationDate/RevisionDate default to UtcNow).
+    /// Organizations are already flushed (BulkCopy above), so the FK is satisfied.
+    /// </summary>
+    private void CommitSsoConfigs(List<Core.Auth.Entities.SsoConfig> ssoConfigs)
+    {
+        if (ssoConfigs.Count is 0)
+        {
+            return;
+        }
+
+        foreach (var config in ssoConfigs)
+        {
+            db.SsoConfigs.Add(new EfSsoConfig
+            {
+                OrganizationId = config.OrganizationId,
+                Enabled = config.Enabled,
+                Data = config.Data,
+            });
+        }
+
+        db.SaveChanges();
+        ssoConfigs.Clear();
     }
 
     /// <summary>

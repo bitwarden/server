@@ -1,96 +1,43 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core;
-using Bit.Core.Settings;
-using Bit.Identity.IdentityServer.RequestValidators;
+﻿using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer;
 
 public class ApiClient : Client
 {
-    public ApiClient(
-        GlobalSettings globalSettings,
-        string id,
-        int refreshTokenSlidingDays,
-        int accessTokenLifetimeHours,
-        string[] scopes = null)
+    public ApiClient(ApiClientConfiguration config)
     {
-        ClientId = id;
+        ClientId = config.Id;
         AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType };
 
-        // Use global setting: false = Sliding (default), true = Absolute
-        RefreshTokenExpiration = globalSettings.IdentityServer.ApplyAbsoluteExpirationOnRefreshToken
+        RefreshTokenExpiration = config.ApplyAbsoluteExpirationOnRefreshToken
             ? TokenExpiration.Absolute
             : TokenExpiration.Sliding;
-
         RefreshTokenUsage = TokenUsage.ReUse;
-
-        // Use global setting if provided, otherwise use constructor parameter
-        SlidingRefreshTokenLifetime = globalSettings.IdentityServer.SlidingRefreshTokenLifetimeSeconds ?? (86400 * refreshTokenSlidingDays);
-        AbsoluteRefreshTokenLifetime = globalSettings.IdentityServer.AbsoluteRefreshTokenLifetimeSeconds ?? 0; // forever
+        SlidingRefreshTokenLifetime = config.SlidingRefreshTokenLifetimeSecondsOverride ?? (86400 * config.RefreshTokenSlidingDays);
+        AbsoluteRefreshTokenLifetime = config.AbsoluteRefreshTokenLifetimeSeconds ?? 0;
 
         UpdateAccessTokenClaimsOnRefresh = true;
-        AccessTokenLifetime = 3600 * accessTokenLifetimeHours;
+        AccessTokenLifetime = config.AccessTokenLifetimeSeconds;
         AllowOfflineAccess = true;
 
         RequireConsent = false;
         RequirePkce = true;
         RequireClientSecret = false;
-        if (id == "web")
+
+        if (config.RedirectUris != null)
         {
-            RedirectUris = new[] { $"{globalSettings.BaseServiceUri.Vault}/sso-connector.html" };
-            PostLogoutRedirectUris = new[] { globalSettings.BaseServiceUri.Vault };
-            AllowedCorsOrigins = new[] { globalSettings.BaseServiceUri.Vault };
+            RedirectUris = config.RedirectUris;
         }
-        else if (id == "desktop")
+        if (config.PostLogoutRedirectUris != null)
         {
-            var desktopUris = new List<string>();
-            desktopUris.Add("bitwarden://sso-callback");
-            for (var port = 8065; port <= 8070; port++)
-            {
-                desktopUris.Add(string.Format("http://localhost:{0}", port));
-            }
-            RedirectUris = desktopUris;
-            PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
+            PostLogoutRedirectUris = config.PostLogoutRedirectUris;
         }
-        else if (id == "connector")
+        if (config.AllowedCorsOrigins != null)
         {
-            var connectorUris = new List<string>();
-            for (var port = 8065; port <= 8070; port++)
-            {
-                connectorUris.Add(string.Format("http://localhost:{0}", port));
-            }
-            RedirectUris = connectorUris.Append("bwdc://sso-callback").ToList();
-            PostLogoutRedirectUris = connectorUris.Append("bwdc://logged-out").ToList();
-        }
-        else if (id == "browser")
-        {
-            RedirectUris = new[] { $"{globalSettings.BaseServiceUri.Vault}/sso-connector.html" };
-            PostLogoutRedirectUris = new[] { globalSettings.BaseServiceUri.Vault };
-            AllowedCorsOrigins = new[] { globalSettings.BaseServiceUri.Vault };
-        }
-        else if (id == "cli")
-        {
-            var cliUris = new List<string>();
-            for (var port = 8065; port <= 8070; port++)
-            {
-                cliUris.Add(string.Format("http://localhost:{0}", port));
-            }
-            RedirectUris = cliUris;
-            PostLogoutRedirectUris = cliUris;
-        }
-        else if (id == "mobile")
-        {
-            RedirectUris = Constants.BitwardenMobileSsoCallbackUris;
-            PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
+            AllowedCorsOrigins = config.AllowedCorsOrigins;
         }
 
-        if (scopes == null)
-        {
-            scopes = new string[] { "api" };
-        }
-        AllowedScopes = scopes;
+        AllowedScopes = config.Scopes ?? new[] { "api" };
     }
 }

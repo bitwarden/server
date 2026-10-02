@@ -4,9 +4,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Vault.Entities;
@@ -48,7 +51,7 @@ public class ImportCiphersAsyncCommandTests
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
             .CreateAsync(importingUserId, ciphers, Arg.Any<List<Folder>>());
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]
@@ -176,7 +179,7 @@ public class ImportCiphersAsyncCommandTests
                 newFolders.Count() == folders.Count() - 1 &&
                 !newFolders.Any(folder => folder.Id == folders[0].Id) // Check that the folder that already existed for the importing user was not added
             ));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]
@@ -225,6 +228,58 @@ public class ImportCiphersAsyncCommandTests
 
         Assert.Equal("This organization can only have a maximum of " +
         $"{organization.MaxCollections} collections.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_Vfo1FoundationEnabled_ThrowsBadRequestWithSharedFolderTerminology(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        organization.MaxCollections = 1;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        // Set up a collection that already exists in the organization
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection> { collections[0] });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VFO1Foundation)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId, [], []));
+
+        Assert.Equal("This organization can only have a maximum of " +
+        $"{organization.MaxCollections} shared folders.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -281,7 +336,7 @@ public class ImportCiphersAsyncCommandTests
             Arg.Is<IEnumerable<CollectionUser>>(cus => !cus.Any()),
             Arg.Is<IEnumerable<Folder>>(f => f.Count() == 0));
 
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == importingUserId));
     }
 
     [Theory, BitAutoData]

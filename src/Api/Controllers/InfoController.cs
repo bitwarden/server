@@ -1,5 +1,4 @@
-﻿using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
 
@@ -16,11 +15,5 @@ public class InfoController : Controller
     public DateTime GetNow()
     {
         return GetAlive();
-    }
-
-    [HttpGet("~/version")]
-    public JsonResult GetVersion()
-    {
-        return Json(AssemblyHelpers.GetVersion());
     }
 }

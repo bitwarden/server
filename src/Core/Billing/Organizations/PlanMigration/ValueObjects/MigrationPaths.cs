@@ -60,6 +60,22 @@ public static class MigrationPaths
         FromPlan: PlanType.TeamsStarter2023,
         ToPlan: PlanType.TeamsMonthly);
 
+    // Teams 2019 is a Packaged base + seat-overage plan migrating to a Scalable plan, so its Phase 2
+    // seat quantity is resolved from actual usage rather than preserved from the source line items.
+    public static readonly MigrationPath Teams2019AnnualToCurrent = new(
+        Id: MigrationPathId.Teams2019AnnualToCurrent,
+        Name: nameof(Teams2019AnnualToCurrent),
+        FromPlan: PlanType.TeamsAnnually2019,
+        ToPlan: PlanType.TeamsAnnually,
+        SeatCountPolicy: SeatCountPolicy.ActualUsage);
+
+    public static readonly MigrationPath Teams2019MonthlyToCurrent = new(
+        Id: MigrationPathId.Teams2019MonthlyToCurrent,
+        Name: nameof(Teams2019MonthlyToCurrent),
+        FromPlan: PlanType.TeamsMonthly2019,
+        ToPlan: PlanType.TeamsMonthly,
+        SeatCountPolicy: SeatCountPolicy.ActualUsage);
+
     public static IReadOnlyList<MigrationPath> All { get; } =
     [
         Enterprise2020AnnualToCurrent,
@@ -70,6 +86,8 @@ public static class MigrationPaths
         Enterprise2019MonthlyToCurrent,
         TeamsStarterToCurrent,
         TeamsStarter2023ToCurrent,
+        Teams2019AnnualToCurrent,
+        Teams2019MonthlyToCurrent,
     ];
 
     /// <summary>

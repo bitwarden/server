@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -32,6 +33,43 @@ public class IntegrationTemplateContextTests
         Assert.Equal("2025-10-27T13:30:00.0000000Z", result);
         // Verify it's valid ISO 8601
         Assert.True(DateTime.TryParse(result, out _));
+    }
+
+    [Theory, BitAutoData]
+    public void DeviceType_WhenSet_ReturnsDisplayName(EventMessage eventMessage)
+    {
+        eventMessage.DeviceType = DeviceType.ChromeExtension;
+        var sut = new IntegrationTemplateContext(eventMessage);
+
+        // Display name from [Display(Name = "...")], not the enum member identifier "ChromeExtension"
+        Assert.Equal("Chrome Extension", sut.DeviceType);
+    }
+
+    [Theory, BitAutoData]
+    public void DeviceType_WhenNull_ReturnsNull(EventMessage eventMessage)
+    {
+        eventMessage.DeviceType = null;
+        var sut = new IntegrationTemplateContext(eventMessage);
+
+        Assert.Null(sut.DeviceType);
+    }
+
+    [Theory, BitAutoData]
+    public void DeviceTypeId_WhenSet_ReturnsNumericValue(EventMessage eventMessage)
+    {
+        eventMessage.DeviceType = DeviceType.ChromeExtension;
+        var sut = new IntegrationTemplateContext(eventMessage);
+
+        Assert.Equal((int)DeviceType.ChromeExtension, sut.DeviceTypeId);
+    }
+
+    [Theory, BitAutoData]
+    public void DeviceTypeId_WhenNull_ReturnsNull(EventMessage eventMessage)
+    {
+        eventMessage.DeviceType = null;
+        var sut = new IntegrationTemplateContext(eventMessage);
+
+        Assert.Null(sut.DeviceTypeId);
     }
 
     [Theory, BitAutoData]

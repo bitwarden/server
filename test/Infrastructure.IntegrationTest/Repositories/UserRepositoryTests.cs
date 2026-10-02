@@ -2,13 +2,12 @@
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
-using Microsoft.Data.SqlClient;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -507,7 +506,8 @@ public class UserRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database)
+    public async Task SetKeyConnectorUserKey_UpdatesUserKey(IUserRepository userRepository, Database database,
+        IServiceProvider serviceProvider)
     {
         var user = await userRepository.CreateTestUserAsync();
 
@@ -515,7 +515,7 @@ public class UserRepositoryTests
 
         var setKeyConnectorUserKeyDelegate = userRepository.SetKeyConnectorUserKey(user.Id, keyConnectorWrappedKey);
 
-        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database);
+        await RunUpdateUserDataAsync(setKeyConnectorUserKeyDelegate, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
@@ -674,7 +674,7 @@ public class UserRepositoryTests
     /// </summary>
     [Theory, DatabaseData]
     public async Task UpdateMasterPassword_MasterPasswordSaltIsUpdated(
-        IUserRepository userRepository, Database database)
+        IUserRepository userRepository, Database database, IServiceProvider serviceProvider)
     {
         // Arrange
         var originalEmail = $"OriGinaL+{Guid.NewGuid()}@example.com";
@@ -706,7 +706,7 @@ public class UserRepositoryTests
         // Act
         var result = userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newMasterPasswordHash", "hint");
         Assert.NotNull(result);
-        await RunUpdateUserDataAsync(result, database);
+        await RunUpdateUserDataAsync(result, database, serviceProvider);
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(updatedUser);
@@ -770,7 +770,7 @@ public class UserRepositoryTests
         user.RevisionDate = DateTime.UtcNow;
 
         var actionWasInvoked = false;
-        UpdateEncryptedDataForKeyRotation action = (_, _) =>
+        DatabaseTransactionAction action = (_, _) =>
         {
             actionWasInvoked = true;
             return Task.CompletedTask;
@@ -880,29 +880,73 @@ public class UserRepositoryTests
         Assert.Null(result);
     }
 
-    private static async Task RunUpdateUserDataAsync(UpdateUserData task, Database database)
+    [Theory, DatabaseData]
+    public async Task SetV2AccountCryptographicStateAsync_RunsDelegatesInTheCallerTransaction(
+        IUserRepository userRepository)
     {
-        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        // Arrange
+        // The delegate writes the same user row the enclosing transaction has already written and not yet
+        // committed. If it does not enlist in that transaction it opens a second connection and blocks on
+        // the uncommitted row until the command times out, so this test failing as a timeout is the
+        // regression it guards against.
+        var email = $"test+{Guid.NewGuid()}@example.com";
+        var user = await userRepository.CreateAsync(new User
         {
-            await using var connection = new SqlConnection(database.ConnectionString);
-            connection.Open();
+            Name = "Test User",
+            Email = email,
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
 
-            await using var transaction = connection.BeginTransaction();
-            try
-            {
-                await task(connection, transaction);
-
-                transaction.Commit();
-            }
-            catch
-            {
-                transaction.Rollback();
-                throw;
-            }
-        }
-        else
+        var masterPasswordUnlockData = new MasterPasswordUnlockData
         {
-            await task();
-        }
+            Kdf = new KdfSettings
+            {
+                KdfType = KdfType.PBKDF2_SHA256,
+                Iterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            },
+            MasterKeyWrappedUserKey = "wrapped-user-key",
+            Salt = email.ToLowerInvariant().Trim(),
+        };
+
+        // Act
+        await userRepository.SetV2AccountCryptographicStateAsync(user.Id, BuildV2AccountKeysData(),
+            [userRepository.SetMasterPassword(user.Id, masterPasswordUnlockData, "newHash", "hint")]);
+
+        // Assert
+        // Both halves of the transaction committed: the account keys and the delegate's write.
+        var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
+        Assert.Equal("public-key", updatedUser.PublicKey);
+        Assert.Equal("newHash", updatedUser.MasterPassword);
+        Assert.Equal("hint", updatedUser.MasterPasswordHint);
+        Assert.Equal("wrapped-user-key", updatedUser.Key);
     }
+
+    private static UserAccountKeysData BuildV2AccountKeysData() => new()
+    {
+        PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+            "wrapped-private-key",
+            "public-key",
+            "signed-public-key"),
+        SignatureKeyPairData = new SignatureKeyPairData(
+            SignatureAlgorithm.Ed25519,
+            "wrapped-signing-key",
+            "verifying-key"),
+        SecurityStateData = new SecurityStateData
+        {
+            SecurityState = "security-state",
+            SecurityVersion = 2
+        }
+    };
+
+    /// <summary>
+    /// <see cref="UpdateUserData"/> declares its connection and transaction as optional, so it needs a cast to bind
+    /// to <see cref="DatabaseTransactionAction"/>.
+    /// </summary>
+    private static Task RunUpdateUserDataAsync(UpdateUserData task, Database database,
+        IServiceProvider serviceProvider)
+        => DatabaseTransactionActionTestHelper.ExecuteAsync(database,
+            new DatabaseTransactionAction((connection, transaction) => task(connection, transaction)),
+            serviceProvider);
 }

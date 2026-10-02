@@ -11,6 +11,7 @@ using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -962,7 +963,7 @@ public class CipherServiceTests
         }
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(events => events.All(e => cipherIds.Contains(e.Item1.Id))));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCiphersAsync(restoringUserId);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory]
@@ -1017,7 +1018,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
 
@@ -1085,7 +1086,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory]
@@ -1135,7 +1136,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(restoringUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == restoringUserId));
     }
 
     [Theory, BitAutoData]
@@ -1450,7 +1451,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1494,7 +1495,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1525,7 +1526,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
 
@@ -1577,7 +1578,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1626,7 +1627,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1708,6 +1709,51 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PurgeAsync_SkipsAttachmentDeletionForCiphersInADefaultUserCollection(
+        Organization org, Cipher defaultCollectionCipher, Cipher regularCipher, Collection defaultCollection,
+        SutProvider<CipherService> sutProvider)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        var attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        foreach (var cipher in new[] { defaultCollectionCipher, regularCipher })
+        {
+            cipher.OrganizationId = org.Id;
+            cipher.Attachments = attachments;
+        }
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<Cipher> { defaultCollectionCipher, regularCipher });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<Collection> { defaultCollection });
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(org.Id)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = defaultCollectionCipher.Id, CollectionId = defaultCollection.Id },
+            });
+
+        await sutProvider.Sut.PurgeAsync(org.Id);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(defaultCollectionCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .Received(1)
+            .DeleteAttachmentsForCipherAsync(regularCipher.Id);
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteByOrganizationIdAsync(org.Id);
     }
 
     [Theory]
@@ -1887,7 +1933,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1926,7 +1972,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -1957,7 +2003,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2005,7 +2051,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2055,7 +2101,7 @@ public class CipherServiceTests
             .LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncCiphersAsync(deletingUserId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncCiphers && n.TargetId == deletingUserId));
     }
 
     [Theory]
@@ -2303,7 +2349,7 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
-        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -2493,5 +2539,54 @@ public class CipherServiceTests
                 .DidNotReceive()
                 .DeleteAttachmentsForCipherAsync(cipher.Id);
         }
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAttachmentsForOrganizationAsync_ExcludeDefaultUserCollectionCiphers_SkipsCiphersInADefaultCollection(
+        SutProvider<CipherService> sutProvider,
+        Guid organizationId,
+        Collection defaultCollection,
+        Collection sharedCollection,
+        Cipher defaultOnlyCipher,
+        Cipher mixedMembershipCipher,
+        Cipher sharedOnlyCipher)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.Type = CollectionType.SharedCollection;
+
+        var attachments = JsonSerializer.Serialize(
+            new Dictionary<string, CipherAttachment.MetaData> { { "attachment1", new CipherAttachment.MetaData() } });
+        foreach (var cipher in new[] { defaultOnlyCipher, mixedMembershipCipher, sharedOnlyCipher })
+        {
+            cipher.Attachments = attachments;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Cipher> { defaultOnlyCipher, mixedMembershipCipher, sharedOnlyCipher });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { defaultCollection, sharedCollection });
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = defaultOnlyCipher.Id, CollectionId = defaultCollection.Id },
+                new() { CipherId = mixedMembershipCipher.Id, CollectionId = defaultCollection.Id },
+                new() { CipherId = mixedMembershipCipher.Id, CollectionId = sharedCollection.Id },
+                new() { CipherId = sharedOnlyCipher.Id, CollectionId = sharedCollection.Id },
+            });
+
+        await sutProvider.Sut.DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
+
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(defaultOnlyCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceive()
+            .DeleteAttachmentsForCipherAsync(mixedMembershipCipher.Id);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .Received(1)
+            .DeleteAttachmentsForCipherAsync(sharedOnlyCipher.Id);
     }
 }

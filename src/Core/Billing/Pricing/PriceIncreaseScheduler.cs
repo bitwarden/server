@@ -12,6 +12,7 @@ using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
+using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Billing.Pricing;
 
@@ -20,9 +21,8 @@ public interface IPriceIncreaseScheduler
     /// <summary>
     /// Creates a two-phase subscription schedule that defers a Premium/Families price increase
     /// to the subscription's renewal date. Phase 1 echoes the current subscription state;
-    /// Phase 2 applies the new price (and discount where applicable). Gated behind the
-    /// <c>PM32645_DeferPriceMigrationToRenewal</c> feature flag. No-ops if the flag is off,
-    /// an active schedule already exists, or the subscription does not match a known personal
+    /// Phase 2 applies the new price (and discount where applicable). No-ops if an active
+    /// schedule already exists, or the subscription does not match a known personal
     /// migration path.
     /// </summary>
     /// <param name="subscription">The Stripe subscription to schedule a price increase for.</param>
@@ -37,8 +37,10 @@ public interface IPriceIncreaseScheduler
     /// behind the <c>PM35215_BusinessPlanPriceMigration</c> feature flag.
     /// </summary>
     /// <remarks>
-    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts</c>,
-    /// <c>customer</c>, and <c>customer.discount</c> expanded, and <see cref="Subscription.Metadata"/>
+    /// Caller contract: <paramref name="subscription"/> must be loaded with <c>discounts.source.coupon</c>,
+    /// <c>customer</c>, and <c>customer.discount.source.coupon</c> expanded (the 2025-09-30.clover refactor
+    /// moved Coupon under Discount.Source, so stopping at <c>discounts</c>/<c>customer.discount</c> leaves
+    /// <c>Source.Coupon.Id</c> unexpanded), and <see cref="Subscription.Metadata"/>
     /// must contain an <c>organizationId</c> key (the scheduler throws if missing). The caller is
     /// responsible for confirming the organization belongs to <paramref name="cohort"/>.
     /// </remarks>
@@ -78,6 +80,14 @@ public interface IPriceIncreaseScheduler
     /// schedule is released, dropping it from the deferred business migration.
     /// </param>
     Task Release(string customerId, string subscriptionId, Guid? organizationId = null);
+
+    /// <summary>
+    /// Releases an already-resolved schedule, skipping the lookup <see cref="Release(string, string, Guid?)"/>
+    /// performs, so a caller that has classified the schedule does not resolve it twice. Pass null when no
+    /// schedule is attached; the cohort assignment is still dropped when <paramref name="organizationId"/> is
+    /// supplied.
+    /// </summary>
+    Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null);
 }
 
 public class PriceIncreaseScheduler(
@@ -91,11 +101,6 @@ public class PriceIncreaseScheduler(
 {
     public async Task<bool> SchedulePersonalPriceIncrease(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return false;
-        }
-
         if (await ActiveScheduleExistsAsync(subscription))
         {
             return false;
@@ -223,14 +228,19 @@ public class PriceIncreaseScheduler(
 
     public async Task Release(string customerId, string subscriptionId, Guid? organizationId = null)
     {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = customerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
+
+        await ReleaseSchedule(activeSchedule, organizationId);
+    }
+
+    public async Task ReleaseSchedule(SubscriptionSchedule? activeSchedule, Guid? organizationId = null)
+    {
         try
         {
-            var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-                new SubscriptionScheduleListOptions { Customer = customerId });
-
-            var activeSchedule = schedules.Data.FirstOrDefault(s =>
-                s.Status == SubscriptionScheduleStatus.Active && s.SubscriptionId == subscriptionId);
-
             if (activeSchedule != null)
             {
                 await stripeAdapter.ReleaseSubscriptionScheduleAsync(activeSchedule.Id);
@@ -249,16 +259,16 @@ public class PriceIncreaseScheduler(
                 catch (Exception ex)
                 {
                     logger.LogError(ex,
-                        "Released the subscription schedule for subscription {SubscriptionId} but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
-                        subscriptionId, organizationId.Value);
+                        "Released the subscription schedule but failed to drop the migration cohort assignment for organization {OrganizationId}. Manual cleanup of the cohort assignment is required.",
+                        organizationId.Value);
                 }
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex,
-                "Failed to release subscription schedule for subscription {SubscriptionId}. Manual release required.",
-                subscriptionId);
+                "Failed to release subscription schedule ({ScheduleId}). Manual release required.",
+                activeSchedule?.Id);
             throw;
         }
     }
@@ -300,15 +310,11 @@ public class PriceIncreaseScheduler(
                 Items = [.. phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
                 {
                     Price = i.PriceId,
-                    Quantity = i.Quantity
+                    Quantity = i.Quantity,
+                    Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                        i.Discounts?.Select(d => d.CouponId) ?? [])
                 })],
-                Discounts = phase1.Discounts is null ? null :
-                [
-                    .. phase1.Discounts.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                    {
-                        Coupon = d.CouponId
-                    })
-                ],
+                Discounts = DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
                 ProrationBehavior = ProrationBehavior.None
             };
 
@@ -350,19 +356,15 @@ public class PriceIncreaseScheduler(
 
     private async Task<SubscriptionSchedulePhaseOptions?> ResolvePersonalPhase2Async(Subscription subscription)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
-        {
-            return null;
-        }
-
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
@@ -439,9 +441,8 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            CouponIDs.Milestone2SubscriptionDiscount).ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription, [CouponIDs.Milestone2SubscriptionDiscount]);
 
         return new SubscriptionSchedulePhaseOptions
         {
@@ -490,10 +491,9 @@ public class PriceIncreaseScheduler(
             });
         }
 
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            oldPlan.Type == PlanType.FamiliesAnnually2019 ? CouponIDs.Milestone3SubscriptionDiscount : null)
-            .ToPhaseDiscountOptions();
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            oldPlan.Type == PlanType.FamiliesAnnually2019 ? [CouponIDs.Milestone3SubscriptionDiscount] : []);
 
         var startDate = subscription.GetCurrentPeriodEnd();
         if (startDate == null)
@@ -509,7 +509,7 @@ public class PriceIncreaseScheduler(
             StartDate = startDate,
             EndDate = startDate.Value.AddYears(1),
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
     }
@@ -519,14 +519,15 @@ public class PriceIncreaseScheduler(
         OrganizationPlanMigrationCohort cohort,
         Guid organizationId)
     {
-        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries;
-        // proceeding would silently drop pre-existing discounts from Phase 2.
-        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d == null))
+        // Stripe.NET deserializes an unexpanded "discounts" array as a list of null entries, and a discount
+        // expanded without "discounts.source.coupon" has a null Source.Coupon; either would silently drop
+        // pre-existing discounts from Phase 2.
+        if (subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d?.Source?.Coupon is null))
         {
             logger.LogError(
-                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts'; " +
+                "Subscription ({SubscriptionId}) was loaded without expanding 'discounts.source.coupon'; " +
                 "{Count} pre-existing discount(s) would be silently dropped from Phase 2. " +
-                "Caller must include \"discounts\" in the Stripe Expand list.",
+                "Caller must include \"discounts.source.coupon\" in the Stripe Expand list.",
                 subscription.Id, subscription.DiscountIds?.Count ?? 0);
             return null;
         }
@@ -549,15 +550,17 @@ public class PriceIncreaseScheduler(
         var sourcePlan = await pricingClient.GetPlanOrThrow(migrationPath.FromPlan);
         var targetPlan = await pricingClient.GetPlanOrThrow(migrationPath.ToPlan);
 
-        // A packaged source (e.g. Teams Starter) carries its flat bundle at quantity ~1, so bill the org's
-        // actual occupied seats on the per-seat target — applied unconditionally and floored at 1.
-        var overrideSeatQuantity =
-            sourcePlan.HasNonSeatBasedPasswordManagerPlan()
-                ? Math.Max(1, (await organizationRepository
-                    .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total)
-                : (long?)null;
-
         var targetSeatPriceId = targetPlan.PasswordManager.StripeSeatPlanId;
+
+        // Teams Starter and Teams 2019 are Packaged sources whose base line (and, for Teams 2019, the
+        // seat-overage line) collapse onto the Scalable target's single seat price at a usage-resolved
+        // quantity. Scalable sources preserve their line-item quantities.
+        var isPackagedSourcePlan = sourcePlan.IsPackagedMigrationSource(migrationPath.SeatCountPolicy);
+
+        // Captured while iterating below: the billed SM seat line quantity used to floor the collapsed PM
+        // seat line (keep SM <= PM). Matched on the source SM seat price id, distinct from the SM
+        // service-account line. Stays 0 when there is no SM seat line.
+        var secretsManagerSeatQuantity = 0L;
 
         var items = new List<SubscriptionSchedulePhaseItemOptions>();
         foreach (var item in subscription.Items.Data)
@@ -571,22 +574,37 @@ public class PriceIncreaseScheduler(
                 return null;
             }
 
-            var quantity =
-                overrideSeatQuantity is { } seats && targetPriceId == targetSeatPriceId
-                    ? seats
-                    : item.Quantity;
+            if (sourcePlan.SecretsManager is not null && item.Price.Id == sourcePlan.SecretsManager.StripeSeatPlanId)
+            {
+                secretsManagerSeatQuantity = item.Quantity;
+            }
+
+            // Skip the packaged source's seat line(s) here; one collapsed seat line is added below.
+            if (isPackagedSourcePlan && targetPriceId == targetSeatPriceId)
+            {
+                continue;
+            }
 
             items.Add(new SubscriptionSchedulePhaseItemOptions
             {
                 Price = targetPriceId,
-                Quantity = quantity
+                Quantity = item.Quantity
             });
         }
 
-        // Merge de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
-        var discounts = (subscription.Customer?.Discount).MergeDiscountCouponIds(
-            subscription.Discounts?.Select(d => d.Coupon.Id),
-            cohort.ProactiveDiscountCouponCode).ToPhaseDiscountOptions();
+        if (isPackagedSourcePlan)
+        {
+            items.Add(new SubscriptionSchedulePhaseItemOptions
+            {
+                Price = targetSeatPriceId,
+                Quantity = await CalculatePasswordManagerSeatCountAsync(sourcePlan, organizationId, secretsManagerSeatQuantity)
+            });
+        }
+
+        // BuildPhaseLevelDiscounts de-duplicates, so a coupon on both the customer and the subscription isn't double-added.
+        var discounts = DiscountExtensions.BuildPhaseLevelDiscounts(
+            subscription,
+            cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
         if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
         {
@@ -603,9 +621,33 @@ public class PriceIncreaseScheduler(
             StartDate = currentEnd,
             EndDate = currentEnd + periodLength,
             Items = items,
-            Discounts = discounts.Count > 0 ? discounts : null,
+            Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
         };
+    }
+
+    /// <summary>
+    /// Resolves the billed Password Manager seat count for a Packaged source from the organization's actual
+    /// usage, floored at the Stripe Secrets Manager seat line quantity to keep SM &lt;= PM.
+    /// </summary>
+    private async Task<int> CalculatePasswordManagerSeatCountAsync(
+        OrganizationPlan sourcePlan, Guid organizationId, long secretsManagerSeatQuantity)
+    {
+        // Packaged line items don't reflect the true total; bill by actual usage.
+        var occupiedSeatCount = (await organizationRepository
+            .GetOccupiedSeatCountByOrganizationIdAsync(organizationId)).Total;
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        var passwordManagerSeatCount = sourcePlan.ResolveMigratedSeatCount(occupiedSeatCount, organization?.Seats);
+
+        // Floor on the billed Stripe line, not DB SmSeats, so Stripe billing stays correct under drift; log drift.
+        if (secretsManagerSeatQuantity != (organization?.SmSeats ?? 0))
+        {
+            logger.LogWarning(
+                "Secrets Manager seat drift for organization ({OrganizationId}) during business migration: Stripe SM seat line quantity ({StripeSecretsManagerSeats}) does not match Organization.SmSeats ({OrganizationSecretsManagerSeats}); flooring billed Password Manager seats on the Stripe line",
+                organizationId, secretsManagerSeatQuantity, organization?.SmSeats ?? 0);
+        }
+
+        return (int)Math.Max((long)passwordManagerSeatCount, secretsManagerSeatQuantity);
     }
 
     /// <summary>

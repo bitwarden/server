@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
@@ -33,6 +34,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Controllers;
@@ -67,8 +69,7 @@ public class OrganizationsControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Leave(orgId));
 
-        Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
-            exception.Message);
+        Assert.Contains(new LeaveOrgSsoBlockedError().Message, exception.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);
     }
@@ -101,8 +102,7 @@ public class OrganizationsControllerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.Leave(orgId));
 
-        Assert.Contains("Claimed user account cannot leave claiming organization. Contact your organization administrator for additional details.",
-            exception.Message);
+        Assert.Contains(new LeaveOrgClaimedAccountError().Message, exception.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
     }
@@ -362,5 +362,27 @@ public class OrganizationsControllerTests
 
         await sutProvider.GetDependency<IOrganizationDeleteCommand>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPrivateKey_WhenOrganizationExists_ReturnsPrivateKey(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var result = await sutProvider.Sut.GetPrivateKey(organization.Id);
+
+        Assert.Equal(organization.PrivateKey, result.PrivateKey);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPrivateKey_WhenOrganizationNotFound_ThrowsNotFoundException(
+        SutProvider<OrganizationsController> sutProvider,
+        Guid orgId)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPrivateKey(orgId));
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
@@ -13,6 +15,7 @@ using Bit.Core.KeyManagement.Models.Api.Response;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -44,7 +47,6 @@ public class BaseRequestValidatorTests
     private readonly IDeviceValidator _deviceValidator;
     private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly ISsoRequestValidator _ssoRequestValidator;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly FakeLogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
@@ -69,7 +71,6 @@ public class BaseRequestValidatorTests
         _deviceValidator = Substitute.For<IDeviceValidator>();
         _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
         _ssoRequestValidator = Substitute.For<ISsoRequestValidator>();
-        _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _logger = new FakeLogger<BaseRequestValidatorTests>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
@@ -91,7 +92,6 @@ public class BaseRequestValidatorTests
             _deviceValidator,
             _twoFactorAuthenticationValidator,
             _ssoRequestValidator,
-            _organizationUserRepository,
             _logger,
             _currentContext,
             _globalSettings,
@@ -110,6 +110,11 @@ public class BaseRequestValidatorTests
         _clientVersionValidator
             .Validate(Arg.Any<User>(), Arg.Any<CustomValidatorRequestContext>())
             .Returns(true);
+
+        // Default: no master password policy enforced.
+        _policyRequirementQuery
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new MasterPasswordPolicyRequirement { EnforcedOptions = null });
     }
 
     /* Logic path
@@ -1659,6 +1664,92 @@ public class BaseRequestValidatorTests
         Assert.False(context.GrantResult.IsError);
         Assert.Equal(middlewareUserId, _currentContext.UserId);
         Assert.Equal(middlewareDeviceId, _currentContext.DeviceIdentifier);
+    }
+
+    /* Logic path
+     * ValidateAsync -> BuildSuccessResultAsync -> GetMasterPasswordPolicyAsync
+     * GetMasterPasswordPolicyAsync should always call PolicyRequirementQuery, even when user has no confirmed org memberships.
+     * This ensures accepted members are subject to MP policy enforcement.
+     */
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_GetMasterPasswordPolicyAsync_NoPolicyApplies_ReturnsResponseWithNullOptions(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _policyRequirementQuery
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new MasterPasswordPolicyRequirement { EnforcedOptions = null });
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("test-private-key", "test-public-key")
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        await _policyRequirementQuery.Received(1).GetAsyncVNext<MasterPasswordPolicyRequirement>(Arg.Any<Guid>());
+        var policy = (MasterPasswordPolicyResponseModel)context.GrantResult.CustomResponse["MasterPasswordPolicy"];
+        Assert.Null(policy.EnforceOnLogin);
+        Assert.Null(policy.MinLength);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_GetMasterPasswordPolicyAsync_AcceptedMemberWithPolicy_ReturnsPolicyInResponse(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext] CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange: accepted member with an MP policy enforced (EnforceOnLogin=true, MinLength=12)
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _sut.isValid = true;
+
+        _policyRequirementQuery
+            .GetAsyncVNext<MasterPasswordPolicyRequirement>(Arg.Any<Guid>())
+            .Returns(new MasterPasswordPolicyRequirement
+            {
+                EnforcedOptions = new MasterPasswordPolicyData
+                {
+                    EnforceOnLogin = true,
+                    MinLength = 12
+                }
+            });
+
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(requestContext.User, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData("test-private-key", "test-public-key")
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        await _policyRequirementQuery.Received(1).GetAsyncVNext<MasterPasswordPolicyRequirement>(Arg.Any<Guid>());
+        var policy = (MasterPasswordPolicyResponseModel)context.GrantResult.CustomResponse["MasterPasswordPolicy"];
+        Assert.True(policy.EnforceOnLogin);
+        Assert.Equal(12, policy.MinLength);
     }
 
     private BaseRequestValidationContextFake CreateContext(

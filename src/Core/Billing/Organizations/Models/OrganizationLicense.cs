@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Models.Business;
@@ -297,8 +298,7 @@ public class OrganizationLicense : ILicense
         var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
         if (licenseType != Core.Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
+            errorMessages.AppendLine(new PremiumLicenseError().Message);
         }
 
         if (errorMessages.Length > 0)
@@ -378,8 +378,7 @@ public class OrganizationLicense : ILicense
 
         if (LicenseType != null && LicenseType != Core.Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
+            errorMessages.AppendLine(new PremiumLicenseError().Message);
         }
 
         if (!licensingService.VerifyLicense(this))
@@ -440,6 +439,7 @@ public class OrganizationLicense : ILicense
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
         var usePam = claimsPrincipal.GetValue<bool>(nameof(UsePam));
+        var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
 
@@ -488,7 +488,15 @@ public class OrganizationLicense : ILicense
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseInviteLinks))
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
-                   || usePam == organization.UsePam);
+                   || usePam == organization.UsePam) &&
+               // UseRiskInsights is additive and plan-derived (backfilled for existing
+               // Enterprise orgs). Licenses issued since 2025-04 carry the claim with the
+               // org's value at generation time, which is False for orgs backfilled later.
+               // Only enforce equality when the claim asserts True, so a stale False claim
+               // does not invalidate a backfilled org and disable it.
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(UseRiskInsights))
+                   || !useRiskInsights
+                   || useRiskInsights == organization.UseRiskInsights);
 
     }
 

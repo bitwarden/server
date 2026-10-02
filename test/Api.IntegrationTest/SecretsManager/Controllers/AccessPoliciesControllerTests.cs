@@ -1051,7 +1051,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _loginHelper.LoginAsync(_email);
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,
@@ -1390,7 +1390,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             await _loginHelper.LoginAsync(_email);
         }
 
-        var secret = await _secretRepository.CreateAsync(new Secret
+        var secret = await _secretRepository.CreateWithInitialVersionAsync(new Secret
         {
             OrganizationId = org.Id,
             Key = _mockEncryptedString,

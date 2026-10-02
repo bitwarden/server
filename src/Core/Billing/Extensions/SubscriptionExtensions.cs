@@ -7,7 +7,8 @@ namespace Bit.Core.Billing.Extensions;
 public static class SubscriptionExtensions
 {
     public static int GetMigrationGraceServiceAccounts(this Subscription subscription) =>
-        subscription.Metadata.TryGetValue(StripeConstants.MetadataKeys.MigrationGraceServiceAccounts, out var raw)
+        subscription.Metadata != null
+        && subscription.Metadata.TryGetValue(StripeConstants.MetadataKeys.MigrationGraceServiceAccounts, out var raw)
         && int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var grace)
         && grace > 0
             ? grace

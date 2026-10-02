@@ -30,6 +30,7 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
         public string? Notes { get; set; }
         public bool Reprompt { get; set; }
         public bool Deleted { get; set; }
+        public bool Archived { get; set; }
         public bool Favorite { get; set; }
         public Guid? FolderId { get; set; }
         public IEnumerable<FieldRequest>? Fields { get; set; }
@@ -100,6 +101,10 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
         if (request.Deleted)
         {
             cipher.DeletedDate = DateTime.UtcNow.AddDays(-1);
+        }
+        if (request.Archived)
+        {
+            cipher.Archives = CipherComposer.BuildArchivesJson(request.UserId, DateTime.UtcNow.AddDays(-1));
         }
         if (request.Favorite)
         {

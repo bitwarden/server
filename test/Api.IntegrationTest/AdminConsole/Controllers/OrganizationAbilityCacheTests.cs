@@ -111,8 +111,11 @@ public class OrganizationAbilityCacheTests : IClassFixture<ApiApplicationFactory
         {
             MasterPasswordHash = "master_password_hash"
         };
-        var response = await _client.PostAsJsonAsync(
-            $"/organizations/{_organization.Id}/delete", deleteRequest);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"/organizations/{_organization.Id}")
+        {
+            Content = JsonContent.Create(deleteRequest)
+        };
+        var response = await _client.SendAsync(message);
 
         // Assert - endpoint succeeded and cache was cleared
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

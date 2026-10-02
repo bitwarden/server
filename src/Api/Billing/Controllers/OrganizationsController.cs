@@ -7,10 +7,10 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.AnnualUpgradeOffer.Queries;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Entities;
 using Bit.Core.Billing.Organizations.Models;
@@ -50,8 +50,8 @@ public class OrganizationsController(
     ISubscriberService subscriberService,
     IOrganizationInstallationRepository organizationInstallationRepository,
     IPricingClient pricingClient,
-    IFeatureService featureService,
-    IReinstateSubscriptionCommand reinstateSubscriptionCommand)
+    IReinstateSubscriptionCommand reinstateSubscriptionCommand,
+    IGetPendingAnnualUpgradeQuery getPendingAnnualUpgradeQuery)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -90,7 +90,14 @@ public class OrganizationsController(
 
         var hideSensitiveData = !await currentContext.EditSubscription(id);
 
-        return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, plan, hideSensitiveData);
+        // A pending annual upgrade requires an attached subscription schedule, so skip the query when
+        // the already-fetched subscription has none.
+        var pendingAnnualUpgrade = string.IsNullOrEmpty(subscriptionInfo.Subscription?.ScheduleId)
+            ? null
+            : await getPendingAnnualUpgradeQuery.Run(organization);
+
+        return new OrganizationSubscriptionResponseModel(
+            organization, subscriptionInfo, plan, hideSensitiveData, pendingAnnualUpgrade);
     }
 
     [HttpGet("{id:guid}/license")]
@@ -250,20 +257,13 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
-            var organization = await organizationRepository.GetByIdAsync(id);
-            if (organization == null)
-            {
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
+        }
 
-            (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
-        }
-        else
-        {
-            await organizationService.ReinstateSubscriptionAsync(id);
-        }
+        (await reinstateSubscriptionCommand.Run(organization)).GetValueOrThrow();
     }
 
     /// <summary>

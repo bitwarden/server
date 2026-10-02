@@ -148,7 +148,16 @@ public class CollectController : Controller
                 case EventType.Organization_ClientExportedVault:
                 case EventType.Organization_AutoConfirmEnabled_Admin:
                 case EventType.Organization_AutoConfirmDisabled_Admin:
-                    if (!eventModel.OrganizationId.HasValue)
+                case EventType.Organization_InviteLinkClientCopied:
+                    if (!eventModel.OrganizationId.HasValue || !_currentContext.UserId.HasValue)
+                    {
+                        continue;
+                    }
+
+                    // Drop the event if the caller is not a member of the target organization.
+                    var orgMembership = await _organizationUserRepository.GetByOrganizationAsync(
+                        eventModel.OrganizationId.Value, _currentContext.UserId.Value);
+                    if (orgMembership == null)
                     {
                         continue;
                     }

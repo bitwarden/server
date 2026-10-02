@@ -107,38 +107,6 @@ public class SendAccessGrantValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_NeverAuthenticateMethod_ReturnsInvalidGrant(
-        [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        SutProvider<SendAccessGrantValidator> sutProvider,
-        NeverAuthenticate neverAuthenticate,
-        Guid sendId,
-        GrantValidationResult expectedResult)
-    {
-        // Arrange
-        var context = SetupTokenRequest(
-            sutProvider,
-            sendId,
-            tokenRequest);
-
-        sutProvider.GetDependency<ISendAuthenticationQuery>()
-            .GetAuthenticationMethod(sendId)
-            .Returns(neverAuthenticate);
-
-        sutProvider.GetDependency<ISendAuthenticationMethodValidator<NeverAuthenticate>>()
-            .ValidateRequestAsync(context, neverAuthenticate, sendId)
-            .Returns(expectedResult);
-
-        // Act
-        await sutProvider.Sut.ValidateAsync(context);
-
-        // Assert
-        Assert.Equal(expectedResult, context.Result);
-        await sutProvider.GetDependency<ISendAuthenticationMethodValidator<NeverAuthenticate>>()
-            .Received(1)
-            .ValidateRequestAsync(context, neverAuthenticate, sendId);
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_NotAuthenticatedMethod_ReturnsSuccess(
         [AutoFixture.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         SutProvider<SendAccessGrantValidator> sutProvider,
@@ -264,7 +232,7 @@ public class SendAccessGrantValidatorTests
     public void GrantType_ReturnsCorrectType()
     {
         // Arrange & Act
-        var validator = new SendAccessGrantValidator(null!, null!, null!, null!);
+        var validator = new SendAccessGrantValidator(null!, null!, null!);
 
         // Assert
         Assert.Equal(CustomGrantTypes.SendAccess, ((IExtensionGrantValidator)validator).GrantType);

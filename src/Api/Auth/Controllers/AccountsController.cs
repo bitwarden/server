@@ -19,13 +19,14 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Api.Response;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -58,6 +59,8 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly ICurrentContext _currentContext;
+    private readonly ILogger<AccountsController> _logger;
 
     public AccountsController(
         IOrganizationService organizationService,
@@ -78,7 +81,9 @@ public class AccountsController : Controller
         IChangeKdfCommand changeKdfCommand,
         IUserRepository userRepository,
         IRotateUserApiKeyCommand rotateUserApiKeyCommand,
-        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand
+        ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand,
+        ICurrentContext currentContext,
+        ILogger<AccountsController> logger
         )
     {
         _organizationService = organizationService;
@@ -100,6 +105,8 @@ public class AccountsController : Controller
         _userRepository = userRepository;
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
         _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
+        _currentContext = currentContext;
+        _logger = logger;
     }
 
 
@@ -282,48 +289,111 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.IsV2Request())
+        // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
+        // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
+        // fall through to SetInitialPasswordV1Async, which uses the V1 command to handle modern
+        // V1 MP JIT requests and all legacy-shape requests (TDE and MP JIT). See its doc comment
+        // for the full list of scenarios.
+        if (model.HasAuthAndUnlockData())
         {
+            // TDE set-password (for TDE users who obtain the "manage account recovery" permission).
+            // _tdeSetPasswordCommand handles both V1 and V2 TDE users (it sets the master password
+            // without touching cryptographic state).
+            // 
+            // Note: Why not check the V2RegistrationTDEJIT flag?
+            // The V2RegistrationTDEJIT flag governs SSO+TDE account creation, not set-password, so
+            // don't reference it here (no feature-flag gate), because it isn't relevant. A TDE user
+            // reaching this endpoint already has keys that were set up at registration time, regardless
+            // of the flag.
             if (model.IsTdeSetPasswordRequest())
             {
                 await _tdeSetPasswordCommand.SetMasterPasswordAsync(user, model.ToData());
-            }
-            else
-            {
-                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
-            }
-        }
-        else
-        {
-            // TODO removed with https://bitwarden.atlassian.net/browse/PM-27327
-            try
-            {
-                user = model.ToUser(user);
-            }
-            catch (Exception e)
-            {
-                ModelState.AddModelError(string.Empty, e.Message);
-                throw new BadRequestException(ModelState);
-            }
-
-            var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
-                user,
-                model.MasterPasswordHash,
-                model.Key,
-                model.OrgIdentifier);
-
-            if (result.Succeeded)
-            {
                 return;
             }
 
-            foreach (var error in result.Errors)
+            // V2 encryption - MP JIT.
+            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
+            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
+            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
+            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
+            if (model.AccountKeys != null &&
+                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
             {
-                ModelState.AddModelError(string.Empty, error.Description);
+                await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
+                return;
             }
+        }
 
+        await SetInitialPasswordV1Async(user, model);
+    }
+
+    /// <summary>
+    /// Handles setting an initial password for V1 users in the following scenarios:
+    /// 1. TDE user where request contains legacy fields (MasterPasswordHash + Key)
+    /// 2. MP JIT user where request contains legacy fields (MasterPasswordHash + Key + Keys)
+    /// 3. MP JIT user where request contains MPAD + MPUD + legacy Keys (not AccountKeys)
+    /// </summary>
+    /// <remarks>
+    /// TODO: In order to remove this method, all 3 of those scenarios need to become unused. This means
+    /// removal can only happen when BOTH of the following are true:
+    /// 
+    /// 1. Client-side changes in https://bitwarden.atlassian.net/browse/PM-35599 have been merged
+    ///    and have aged out according to the Bitwarden release support policy. This covers scenarios
+    ///    #1-2 above (legacy TDE and legacy MP JIT).
+    /// 
+    /// 2. The EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
+    ///    https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has
+    ///    aged out according to the Bitwarden release support policy. This covers scenarios #2-3 above (legacy
+    ///    and modern MP JIT).
+    /// </remarks>
+    private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
+    {
+        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
+        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
+        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
+        // a client/server flag-state mismatch or a non-Angular caller.
+        if (model.AccountKeys != null)
+        {
+            throw new BadRequestException(
+                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
+        }
+
+        try
+        {
+            // Stage 1 (PM-27044) compatibility: the client MUST send salt == email.lower.trim
+            // on initial SET. Clients currently derive the master key from the email as salt at
+            // login time, so a divergent salt persisted here would make the account un-loginable.
+            // Mirrors the check in SetInitialPasswordData.ValidateDataForUser; removable in
+            // Stage 3 when PM-28143 clears and clients consume the explicit salt from prelogin.
+            model.MasterPasswordUnlock?.ToData().ValidateSaltUnchangedForUser(user);
+            model.MasterPasswordAuthentication?.ToData().ValidateSaltUnchangedForUser(user);
+
+            // ToUser() handles fallbacks if MPAD + MPUD are not present (i.e. legacy shape)
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
             throw new BadRequestException(ModelState);
         }
+
+        var result = await _setInitialMasterPasswordCommandV1.SetInitialMasterPasswordAsync(
+            user,
+            model.MasterPasswordAuthentication?.MasterPasswordAuthenticationHash ?? model.MasterPasswordHash,
+            model.MasterPasswordUnlock?.MasterKeyWrappedUserKey ?? model.Key,
+            model.OrgIdentifier);
+
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        throw new BadRequestException(ModelState);
     }
 
     [HttpPost("verify-password")]
@@ -418,11 +488,7 @@ public class AccountsController : Controller
 
         var accountKeys = await _userAccountKeysQuery.Run(user);
 
-        IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null;
-        if (_featureService.IsEnabled(FeatureFlagKeys.PoliciesInAcceptedState))
-        {
-            organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
-        }
+        var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, accountKeys, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
@@ -530,7 +596,15 @@ public class AccountsController : Controller
             {
                 throw new BadRequestException("AccountKeys are only supported for V2 encryption.");
             }
-            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData);
+            // A client that predates the key id field sends none. The account then picks one up from
+            // the backfill endpoint on a later sync rather than here.
+            var userKeyId = KeyId.FromHexEncodedString(model.UserKeyId);
+            var updateUserDataTasks = userKeyId == null
+                ? null
+                : new UpdateUserData[] { _userRepository.SetUserKeyId(user.Id, userKeyId) };
+
+            await _userRepository.SetV2AccountCryptographicStateAsync(user.Id, accountKeysData,
+                updateUserDataTasks);
             return new KeysResponseModel(accountKeysData, user.Key);
         }
         else
@@ -579,12 +653,6 @@ public class AccountsController : Controller
         }
         else
         {
-            // Check if the user is claimed by any organization.
-            if (await _userService.IsClaimedByAnyOrganizationAsync(user.Id))
-            {
-                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
-            }
-
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -813,6 +881,16 @@ public class AccountsController : Controller
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
+        // The code is scoped to a device, so prefer the device making this request.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // Login rejects an over-long identifier, so a code scoped to one would be unusable. The check
+        // precedes the secret check, so a 400 never signals whether the secret was correct.
+        if (deviceIdentifier?.Length > Device.MaxIdentifierLength)
+        {
+            throw new BadRequestException("Device-Identifier", "Invalid device identifier.");
+        }
+
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null || !await _userService.VerifySecretAsync(user, request.Secret))
         {
@@ -820,7 +898,33 @@ public class AccountsController : Controller
             // a success response, to avoid account enumeration via response shape.
             return;
         }
-        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user);
+
+        // TODO: PM-43465 - Delete this fallback block once every supported client version sends the
+        // Device-Identifier header on this request. It covers clients that do not identify themselves by
+        // reusing the device the pending code was originally issued to (mobile clients don't send it yet).
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            deviceIdentifier = await _twoFactorEmailService
+                .GetPendingNewDeviceVerificationDeviceIdentifierAsync(user);
+        }
+
+        // No device to scope to means no code can be issued. The secret is already verified here, so a
+        // distinguishable response would confirm a correct secret to an anonymous caller — hence the
+        // unchanged success shape, with the log as the only signal.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            _logger.LogWarning(
+                "Could not resend a new device verification code: the request identified no device and no "
+                + "pending device was recorded.");
+            return;
+        }
+
+        // TODO PM-43468: a user can send up a different device identifier than the one they started with, but this is fine
+        // because this basically creates a new new device verification session and the new device will only be saved
+        // to the user's devices table upon successful verification of the OTP + MP login re-submission. 
+        // We should eventually mitigate this by leveraging a similar approach to the SsoEmail2faSessionTokenable
+        // which enshrines the session data (e.g., like device identifier) in the server token itself. 
+        await _twoFactorEmailService.SendNewDeviceVerificationEmailAsync(user, deviceIdentifier);
     }
 
     [HttpPut("verify-devices")]

@@ -1,10 +1,12 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tools.ImportFeatures.Interfaces;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -22,6 +24,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
 
     public ImportCiphersCommand(
         ICipherRepository cipherRepository,
@@ -31,7 +34,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
         IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushService,
         IPolicyRequirementQuery policyRequirementQuery,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -41,6 +45,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         _pushService = pushService;
         _policyRequirementQuery = policyRequirementQuery;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     public async Task ImportIntoIndividualVaultAsync(
@@ -121,8 +126,9 @@ public class ImportCiphersCommand : IImportCiphersCommand
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
             if (org.MaxCollections.Value < (collectionCount + collections.Count))
             {
+                var collectionTerm = CollectionTerminology.Plural(_featureService);
                 throw new BadRequestException("This organization can only have a maximum of " +
-                    $"{org.MaxCollections.Value} collections.");
+                    $"{org.MaxCollections.Value} {collectionTerm}.");
             }
         }
 

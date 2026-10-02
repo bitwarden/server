@@ -114,6 +114,33 @@ public class OrganizationPlanMigrationPriceMapperTests
         Assert.Equal(target.SecretsManager.StripeServiceAccountPlanId, result);
     }
 
+    // PM-37514: Teams 2019 is a packaged plan — its flat base price lives in StripePlanId. Migrating
+    // to the pure per-seat current plan, that base price maps onto the target's per-seat price (the
+    // base + per-seat-overage lines are later collapsed to a single seat line by the scheduler).
+    [Fact]
+    public void MapOrNull_Teams2019MonthlyBasePrice_ReturnsTargetPmSeat()
+    {
+        var source = MockPlans.Get(PlanType.TeamsMonthly2019);
+        var target = MockPlans.Get(PlanType.TeamsMonthly);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.PasswordManager.StripePlanId, source, target);
+
+        Assert.Equal(target.PasswordManager.StripeSeatPlanId, result);
+    }
+
+    [Fact]
+    public void MapOrNull_Teams2019AnnualBasePrice_ReturnsTargetPmSeat()
+    {
+        var source = MockPlans.Get(PlanType.TeamsAnnually2019);
+        var target = MockPlans.Get(PlanType.TeamsAnnually);
+
+        var result = OrganizationPlanMigrationPriceMapper.MapOrNull(
+            source.PasswordManager.StripePlanId, source, target);
+
+        Assert.Equal(target.PasswordManager.StripeSeatPlanId, result);
+    }
+
     [Fact]
     public void MapOrNull_SmSeatWhenSourceSmIsNull_ReturnsNull()
     {

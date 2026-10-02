@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Kdf.Implementations;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -200,7 +201,8 @@ public class ChangeKdfCommandTests
         await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.RefreshStamp == true));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushLogOutAsync(user.Id);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
         sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }
 
@@ -242,8 +244,9 @@ public class ChangeKdfCommandTests
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
                 d.RefreshStamp == false));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushLogOutAsync(user.Id, false, PushNotificationLogOutReason.KdfChange);
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncSettingsAsync(user.Id);
+            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KdfChange));
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == user.Id));
         sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }
 

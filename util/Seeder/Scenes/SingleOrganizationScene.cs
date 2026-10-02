@@ -6,6 +6,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.RustSDK;
 using Bit.Seeder.Factories;
+using Bit.Seeder.Models;
+using Bit.Seeder.Options;
 using Bit.Seeder.Services;
 
 namespace Bit.Seeder.Scenes;
@@ -43,6 +45,10 @@ public class SingleOrganizationScene(
         public bool EnableSecretsManager { get; set; }
         public int? SmSeats { get; set; }
         public int? SmServiceAccounts { get; set; }
+        public OrganizationOverrides? Overrides { get; set; }
+        public GatewayType? Gateway { get; set; }
+        public string? GatewayCustomerId { get; set; }
+        public string? GatewaySubscriptionId { get; set; }
     }
 
     public async Task<SceneResult<SingleOrganizationSceneResult>> SeedAsync(Request request)
@@ -50,7 +56,7 @@ public class SingleOrganizationScene(
         var user = await userRepository.GetByIdAsync(request.OwnerUserId);
         if (user == null)
         {
-            throw new Exception($"User with ID {request.OwnerUserId} not found.");
+            throw new InvalidOperationException($"User with ID {request.OwnerUserId} not found.");
         }
 
         if (string.IsNullOrEmpty(user.PublicKey))
@@ -62,18 +68,23 @@ public class SingleOrganizationScene(
         var orgKeys = RustSdkService.GenerateOrganizationKeys();
 
         var organization = OrganizationSeeder.Create(
-            request.Name,
-            request.Domain,
-            request.Seats,
-            manglerService,
-            orgKeys.PublicKey,
-            orgKeys.PrivateKey,
-            request.PlanType);
-
-        if (request.EnableSecretsManager)
-        {
-            PlanFeatures.EnableSecretsManager(organization, request.SmSeats, request.SmServiceAccounts);
-        }
+            new OrganizationSeed
+            {
+                Name = request.Name,
+                Domain = request.Domain,
+                Seats = request.Seats,
+                PlanType = request.PlanType,
+                PublicKey = orgKeys.PublicKey,
+                PrivateKey = orgKeys.PrivateKey,
+                Overrides = request.Overrides,
+                Gateway = request.Gateway,
+                GatewayCustomerId = request.GatewayCustomerId,
+                GatewaySubscriptionId = request.GatewaySubscriptionId,
+                EnableSecretsManager = request.EnableSecretsManager,
+                SmSeats = request.SmSeats,
+                SmServiceAccounts = request.SmServiceAccounts
+            },
+            manglerService);
 
         await organizationRepository.CreateAsync(organization);
 
@@ -90,7 +101,7 @@ public class SingleOrganizationScene(
 
         var apiKey = new OrganizationApiKey
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             OrganizationId = organization.Id,
             Type = OrganizationApiKeyType.Default,
             ApiKey = CoreHelpers.SecureRandomString(30),

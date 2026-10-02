@@ -19,7 +19,7 @@ BEGIN
     
     INSERT INTO @UserIds
     SELECT DISTINCT
-        UserId
+        [UserId]
     FROM
         [dbo].[Send]
     WHERE

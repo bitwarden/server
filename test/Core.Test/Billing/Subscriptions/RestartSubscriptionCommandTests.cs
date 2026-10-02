@@ -473,7 +473,13 @@ public class RestartSubscriptionCommandTests
             org.UseScim == newPlan.HasScim &&
             org.UseResetPassword == newPlan.HasResetPassword &&
             org.UsersGetPremium == newPlan.UsersGetPremium &&
-            org.UseCustomPermissions == newPlan.HasCustomPermissions));
+            org.UseCustomPermissions == newPlan.HasCustomPermissions &&
+            org.UseRiskInsights == newPlan.HasRiskInsights));
+
+        // newPlan is Enterprise, which enables RiskInsights; assert the mapped value is true.
+        Assert.True(newPlan.HasRiskInsights);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+            org.UseRiskInsights));
     }
 
     [Fact]
@@ -654,6 +660,61 @@ public class RestartSubscriptionCommandTests
             options.Metadata[MetadataKeys.MigrationGraceServiceAccounts] == "150"));
     }
 
+    [Fact]
+    public async Task Run_Organization_WithDisabledPlan_UpgradesToNonRiskInsightsPlan_SetsUseRiskInsightsFalse()
+    {
+        var organizationId = Guid.NewGuid();
+        var currentPeriodEnd = DateTime.UtcNow.AddMonths(1);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.TeamsAnnually2023,
+            UseRiskInsights = true
+        };
+
+        var oldPlan = new DisabledTeamsPlan2023(true);
+        var newPlan = MockPlans.Get(PlanType.TeamsAnnually);
+
+        var existingSubscription = new Subscription
+        {
+            Status = SubscriptionStatus.Canceled,
+            CustomerId = "cus_teams_old",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem { Price = new Price { Id = oldPlan.PasswordManager.StripeSeatPlanId }, Quantity = 10 }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { ["organizationId"] = organizationId.ToString() }
+        };
+
+        var newSubscription = new Subscription
+        {
+            Id = "sub_teams_new",
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem { CurrentPeriodEnd = currentPeriodEnd }]
+            }
+        };
+
+        _subscriberService.GetSubscription(organization).Returns(existingSubscription);
+        _pricingClient.ListPlans().Returns([oldPlan, newPlan]);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(newSubscription);
+
+        var result = await _command.Run(organization);
+
+        Assert.True(result.IsT0);
+
+        // Teams does not enable RiskInsights, so the mapped value is false.
+        Assert.False(newPlan.HasRiskInsights);
+        await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org =>
+            org.Id == organizationId &&
+            org.PlanType == PlanType.TeamsAnnually &&
+            org.UseRiskInsights == newPlan.HasRiskInsights &&
+            !org.UseRiskInsights));
+    }
+
     private record DisabledEnterprisePlan2023 : Bit.Core.Models.StaticStore.Plan
     {
         public DisabledEnterprisePlan2023(bool isAnnual)
@@ -741,6 +802,92 @@ public class RestartSubscriptionCommandTests
                     StripeSeatPlanId = "2023-enterprise-seat-monthly-old";
                     StripeStoragePlanId = "storage-gb-monthly";
                     SeatPrice = 7;
+                    AdditionalStoragePricePerGb = 0.5M;
+                }
+            }
+        }
+    }
+
+    private record DisabledTeamsPlan2023 : Bit.Core.Models.StaticStore.Plan
+    {
+        public DisabledTeamsPlan2023(bool isAnnual)
+        {
+            Type = PlanType.TeamsAnnually2023;
+            ProductTier = ProductTierType.Teams;
+            Name = "Teams (Annually) 2023";
+            IsAnnual = isAnnual;
+            NameLocalizationKey = "planNameTeams";
+            DescriptionLocalizationKey = "planDescTeams";
+            CanBeUsedByBusiness = true;
+            TrialPeriodDays = 7;
+            HasGroups = true;
+            HasDirectory = true;
+            HasEvents = true;
+            HasTotp = true;
+            Has2fa = true;
+            HasApi = true;
+            HasScim = true;
+            UsersGetPremium = true;
+            UpgradeSortOrder = 3;
+            DisplaySortOrder = 3;
+            LegacyYear = 2024;
+            Disabled = true;
+
+            PasswordManager = new PasswordManagerFeatures(isAnnual);
+            SecretsManager = new SecretsManagerFeatures(isAnnual);
+        }
+
+        private record SecretsManagerFeatures : SecretsManagerPlanFeatures
+        {
+            public SecretsManagerFeatures(bool isAnnual)
+            {
+                BaseSeats = 0;
+                BasePrice = 0;
+                BaseServiceAccount = 50;
+                HasAdditionalSeatsOption = true;
+                HasAdditionalServiceAccountOption = true;
+                AllowSeatAutoscale = true;
+                AllowServiceAccountsAutoscale = true;
+
+                if (isAnnual)
+                {
+                    StripeSeatPlanId = "secrets-manager-teams-seat-annually-2023";
+                    StripeServiceAccountPlanId = "secrets-manager-service-account-teams-2023-annually";
+                    SeatPrice = 72;
+                    AdditionalPricePerServiceAccount = 12;
+                }
+                else
+                {
+                    StripeSeatPlanId = "secrets-manager-teams-seat-monthly-2023";
+                    StripeServiceAccountPlanId = "secrets-manager-service-account-teams-2023-monthly";
+                    SeatPrice = 7;
+                    AdditionalPricePerServiceAccount = 1;
+                }
+            }
+        }
+
+        private record PasswordManagerFeatures : PasswordManagerPlanFeatures
+        {
+            public PasswordManagerFeatures(bool isAnnual)
+            {
+                BaseSeats = 0;
+                BaseStorageGb = 1;
+                HasAdditionalStorageOption = true;
+                HasAdditionalSeatsOption = true;
+                AllowSeatAutoscale = true;
+
+                if (isAnnual)
+                {
+                    AdditionalStoragePricePerGb = 4;
+                    StripeStoragePlanId = "storage-gb-annually";
+                    StripeSeatPlanId = "2023-teams-org-seat-annually-old";
+                    SeatPrice = 48;
+                }
+                else
+                {
+                    StripeSeatPlanId = "2023-teams-seat-monthly-old";
+                    StripeStoragePlanId = "storage-gb-monthly";
+                    SeatPrice = 5;
                     AdditionalStoragePricePerGb = 0.5M;
                 }
             }

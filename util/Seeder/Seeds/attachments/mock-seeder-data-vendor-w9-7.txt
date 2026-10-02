@@ -1,0 +1,4 @@
+EXAMPLE vendor W-9 - fake seeder test data, not a real tax form.
+Vendor: Acme Supplies LLC
+Taxpayer ID (EIN): 00-0000000 (EXAMPLE)
+Address: 123 Example Ave, Testville, CA 90210

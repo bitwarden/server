@@ -24,4 +24,9 @@ public class CollectionAccessSelection
     /// deleting it, and assigning access for other users and groups.
     /// </summary>
     public bool Manage { get; set; }
+
+    /// <summary>
+    /// Manage is mutually exclusive with ReadOnly and HidePasswords.
+    /// </summary>
+    public bool Valid() => !(Manage && (ReadOnly || HidePasswords));
 }

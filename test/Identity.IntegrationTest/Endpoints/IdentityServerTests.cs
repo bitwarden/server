@@ -217,29 +217,6 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task TokenEndpoint_GrantTypeRefreshToken_Success(RegisterFinishRequestModel requestModel)
-    {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        var localFactory = new IdentityApplicationFactory();
-
-        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
-            requestModel.Email, requestModel.MasterPasswordHash);
-
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "client_id", "web" },
-                { "refresh_token", refreshToken },
-            }));
-
-        using var body = await AssertDefaultTokenBodyAsync(context);
-        AssertRefreshTokenExists(body.RootElement);
-    }
-
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypeClientCredentials_Success(RegisterFinishRequestModel model)
     {
         model.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;

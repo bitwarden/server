@@ -227,6 +227,25 @@ public class MailerTest
         }
     }
 
+    [Fact]
+    public async Task SendEmail_PassesReplyToAddressThrough()
+    {
+        var mailer = BuildMailer(out var deliveryService);
+
+        MailMessage? sentMessage = null;
+        await deliveryService.SendEmailAsync(Arg.Do<MailMessage>(message => sentMessage = message));
+
+        await mailer.SendEmail(new TestMail.TestMail
+        {
+            ToEmails = ["test@bw.com"],
+            ReplyToAddress = "support@bitwarden.com",
+            View = new TestMailView { Name = "John Smith" }
+        });
+
+        Assert.NotNull(sentMessage);
+        Assert.Equal("support@bitwarden.com", sentMessage.ReplyToAddress);
+    }
+
     private static Core.Platform.Mail.Mailer.Mailer BuildMailer(out IMailDeliveryService deliveryService)
     {
         var logger = Substitute.For<ILogger<HandlebarMailRenderer>>();

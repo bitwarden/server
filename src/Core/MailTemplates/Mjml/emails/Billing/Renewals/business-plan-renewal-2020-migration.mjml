@@ -31,7 +31,9 @@
           <mj-text font-size="16px" line-height="24px" font-weight="500" padding="5px 15px">
             This is a notice that your Bitwarden subscription price will increase to
             the current standard rate at your upcoming renewal on
-            {{ RenewalDate }}:
+            {{ RenewalDate }}.{{#if ShowProactiveDiscountCopy}} As a long-time
+            Bitwarden customer, a loyalty discount will apply to your invoices for
+            the {{ ProactiveDiscountDurationPhrase }}.{{/if}}
           </mj-text>
           <mj-text padding="10px 15px">
             {{#if HasDiscount}}

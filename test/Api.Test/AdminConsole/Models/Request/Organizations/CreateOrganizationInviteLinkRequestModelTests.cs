@@ -6,8 +6,7 @@ namespace Bit.Api.Test.AdminConsole.Models.Request.Organizations;
 
 public class CreateOrganizationInviteLinkRequestModelTests
 {
-    private const string _validEncryptedString =
-        "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+    private const string _invite = "opaque-invite-blob";
 
     [Fact]
     public void Validate_ValidModel_ReturnsNoErrors()
@@ -15,7 +14,8 @@ public class CreateOrganizationInviteLinkRequestModelTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = new[] { "acme.com" },
-            EncryptedInviteKey = _validEncryptedString,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -34,7 +34,8 @@ public class CreateOrganizationInviteLinkRequestModelTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = new[] { invalidDomain },
-            EncryptedInviteKey = _validEncryptedString,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -49,7 +50,8 @@ public class CreateOrganizationInviteLinkRequestModelTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = Array.Empty<string>(),
-            EncryptedInviteKey = _validEncryptedString,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);
@@ -64,7 +66,8 @@ public class CreateOrganizationInviteLinkRequestModelTests
         var model = new CreateOrganizationInviteLinkRequestModel
         {
             AllowedDomains = new[] { "acme.com", "not a domain", "<script>" },
-            EncryptedInviteKey = _validEncryptedString,
+            Invite = _invite,
+            SupportsConfirmation = false,
         };
 
         var results = Validate(model);

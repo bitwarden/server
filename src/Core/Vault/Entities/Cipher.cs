@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
@@ -34,13 +35,44 @@ public class Cipher : ITableObject<Guid>, ICloneable
 
     public bool IsDataBlobEncrypted()
     {
+        // Blob-encrypted data is a JSON object carrying a top-level "format_version"
+        // key; legacy field-level CipherData JSON never contains it.
+        return HasTopLevelProperty("format_version");
+    }
+
+    private bool HasTopLevelProperty(string propertyName)
+    {
         if (string.IsNullOrWhiteSpace(Data))
         {
             return false;
         }
 
-        var span = Data.AsSpan().TrimStart();
-        return span.Length > 0 && span[0] != '{';
+        try
+        {
+            var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(Data));
+
+            // Probe only the top-level properties rather than materializing the whole document.
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return false;
+            }
+
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                if (reader.ValueTextEquals(propertyName))
+                {
+                    return true;
+                }
+
+                reader.Skip();
+            }
+
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public Dictionary<string, CipherAttachment.MetaData> GetAttachments()

@@ -18,10 +18,8 @@ public class OrganizationDomainAllowEmailChangeQueryTests
     private const string _newDomain = "test-domain.com";
     private const string _newEmail = "user@test-domain.com";
     private const string _otherDomain = "other-test-domain.com";
-    private const string _claimedNotVerifiedMessage =
-        "Your account is managed by an organization, and this email address isn't on one of the organization's verified domains.";
-    private const string _blockedByPolicyMessage =
-        "This email address is claimed by an organization using Bitwarden.";
+    private static readonly string _claimedNotVerifiedMessage = new EmailNotOnVerifiedDomainError().Message;
+    private static readonly string _blockedByPolicyMessage = new EmailClaimedByOrganizationError().Message;
 
     [Theory, BitAutoData]
     public async Task ValidateAllowedAsync_ClaimingOrganizationHasNewDomainVerified_DoesNotThrow(
