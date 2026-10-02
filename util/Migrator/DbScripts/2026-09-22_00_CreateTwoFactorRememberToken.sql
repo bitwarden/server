@@ -138,7 +138,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[TwoFactorRememberToken_DeleteExpired]
+CREATE OR ALTER PROCEDURE [dbo].[TwoFactorRememberToken_DeleteManyExpired]
     @Now DATETIME2(7)
 AS
 BEGIN
