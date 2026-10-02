@@ -45,8 +45,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the HTTP client that every OpenID Connect scheme uses for its backchannel requests
-    /// (discovery metadata, JWKS, token and userinfo).
+    /// Registers the named HTTP client whose handler pipeline every OpenID Connect scheme uses for its
+    /// backchannel requests (discovery metadata, JWKS, token and userinfo).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -64,15 +64,10 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddOidcBackchannelHttpClient(this IServiceCollection services,
         GlobalSettings globalSettings)
     {
-        var builder = services.AddHttpClient(
-            DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName, client =>
-        {
-            // Supplying our own Backchannel skips the client OpenIdConnectPostConfigureOptions would
-            // otherwise build, so reproduce the defaults it would have applied.
-            client.Timeout = TimeSpan.FromMinutes(1);
-            client.MaxResponseContentBufferSize = 1024 * 1024 * 10; // 10 MB
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Microsoft ASP.NET Core OpenIdConnect handler");
-        });
+        // Only the handler pipeline is used. The OpenID Connect post-configure step builds the
+        // HttpClient around it and applies its own timeout, buffer limit and user agent, so
+        // client-level settings configured on this registration have no effect.
+        var builder = services.AddHttpClient(DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName);
 
         if (!globalSettings.SelfHosted)
         {

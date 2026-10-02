@@ -18,9 +18,12 @@ public class OidcBackchannelHttpClientTests
         services.AddLogging();
         services.AddSsoServices(new GlobalSettings { SelfHosted = selfHosted });
 
-        return services.BuildServiceProvider()
-            .GetRequiredService<IHttpClientFactory>()
-            .CreateClient(DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName);
+        // Mirrors how the scheme provider consumes the registration: it takes the named handler
+        // pipeline and lets the OpenID Connect framework build the HttpClient around it.
+        var handler = services.BuildServiceProvider()
+            .GetRequiredService<IHttpMessageHandlerFactory>()
+            .CreateHandler(DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName);
+        return new HttpClient(handler, disposeHandler: false);
     }
 
     [Theory]
@@ -60,18 +63,5 @@ public class OidcBackchannelHttpClientTests
 
         Assert.IsNotType<SsrfProtectionException>(exception);
         Assert.IsType<HttpRequestException>(exception);
-    }
-
-    [Fact]
-    public void MatchesTheBackchannelDefaultsTheFrameworkWouldHaveApplied()
-    {
-        // Defaults reproduced from OpenIdConnectPostConfigureOptions; see AddOidcBackchannelHttpClient.
-        var client = CreateOidcBackchannel(selfHosted: false);
-
-        Assert.Equal(TimeSpan.FromMinutes(1), client.Timeout);
-        Assert.Equal(1024 * 1024 * 10, client.MaxResponseContentBufferSize);
-        Assert.Equal(
-            "Microsoft ASP.NET Core OpenIdConnect handler",
-            client.DefaultRequestHeaders.UserAgent.ToString());
     }
 }

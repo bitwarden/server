@@ -29,8 +29,8 @@ namespace Bit.Core.Business.Sso;
 public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
 {
     /// <summary>
-    /// Named <see cref="HttpClient"/> used as the backchannel for every dynamically built
-    /// OpenID Connect scheme. Registered by <c>AddOidcBackchannelHttpClient</c>.
+    /// Named HTTP client whose handler pipeline carries the backchannel requests of every
+    /// dynamically built OpenID Connect scheme. Registered by <c>AddSsoServices</c>.
     /// </summary>
     public const string OidcBackchannelHttpClientName = "SsoOidcBackchannel";
 
@@ -39,7 +39,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
     private readonly IPostConfigureOptions<Saml2Options> _saml2PostConfigureOptions;
     private readonly IExtendedOptionsMonitorCache<Saml2Options> _extendedSaml2OptionsMonitorCache;
     private readonly ISsoConfigRepository _ssoConfigRepository;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHttpMessageHandlerFactory _httpMessageHandlerFactory;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly SamlEnvironment _samlEnvironment;
@@ -60,7 +60,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         IPostConfigureOptions<Saml2Options> saml2PostConfigureOptions,
         IOptionsMonitorCache<Saml2Options> saml2OptionsMonitorCache,
         ISsoConfigRepository ssoConfigRepository,
-        IHttpClientFactory httpClientFactory,
+        IHttpMessageHandlerFactory httpMessageHandlerFactory,
         ILogger<DynamicAuthenticationSchemeProvider> logger,
         GlobalSettings globalSettings,
         SamlEnvironment samlEnvironment,
@@ -84,7 +84,8 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         }
 
         _ssoConfigRepository = ssoConfigRepository;
-        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+        _httpMessageHandlerFactory = httpMessageHandlerFactory
+            ?? throw new ArgumentNullException(nameof(httpMessageHandlerFactory));
         _logger = logger;
         _globalSettings = globalSettings;
         _schemeCacheLifetime = TimeSpan.FromSeconds(_globalSettings.Sso?.CacheLifetimeInSeconds ?? 30);
@@ -325,9 +326,12 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             // Prevents URLs that go beyond 1024 characters which may break for some servers
             AuthenticationMethod = config.RedirectBehavior,
             GetClaimsFromUserInfoEndpoint = config.GetClaimsFromUserInfoEndpoint,
-            // Leave this unset and the framework builds its own unguarded backchannel; see
-            // AddOidcBackchannelHttpClient for why these requests need the SSRF guard.
-            Backchannel = _httpClientFactory.CreateClient(OidcBackchannelHttpClientName),
+            // Authority and MetadataAddress are organization-controlled, so every backchannel
+            // request below (discovery, JWKS, token, userinfo) targets a URL the organization
+            // chose. Assigning our own handler keeps those requests on the SSRF-protected
+            // pipeline instead of the unguarded one the framework would create by default. The
+            // framework still builds the HttpClient around it and applies its own defaults.
+            BackchannelHttpHandler = _httpMessageHandlerFactory.CreateHandler(OidcBackchannelHttpClientName),
         };
         oidcOptions.Scope
             .AddIfNotExists(OpenIdConnectScopes.OpenId)

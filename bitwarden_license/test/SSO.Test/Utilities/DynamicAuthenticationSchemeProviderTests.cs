@@ -145,13 +145,36 @@ public class DynamicAuthenticationSchemeProviderTests
         Guid organizationId,
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
     {
-        // Leaving Backchannel unset makes the framework build an unguarded client.
-        var (backchannel, _) = ArrangeOidcScheme(sutProvider, organizationId);
+        // Authority and MetadataAddress are organization-controlled, and the discovery fetch is
+        // reachable without authentication via /sso/prevalidate. Leaving BackchannelHttpHandler
+        // unset makes the framework build an unguarded client, which is the SSRF sink this pins
+        // shut.
+        var handler = ArrangeOidcScheme(sutProvider, organizationId);
 
         var scheme = await sutProvider.Sut.GetSchemeAsync(organizationId.ToString());
 
         var oidcOptions = Assert.IsType<OpenIdConnectOptions>(((DynamicAuthenticationScheme)scheme).Options);
-        Assert.Same(backchannel, oidcOptions.Backchannel);
+        Assert.Same(handler, oidcOptions.BackchannelHttpHandler);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetSchemeAsync_OidcConfig_FrameworkBuildsTheBackchannelWithItsDefaults(
+        Guid organizationId,
+        SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
+    {
+        // Only the handler is supplied, so post-configure still builds the HttpClient and applies
+        // its own timeout, buffer limit and user agent.
+        ArrangeOidcScheme(sutProvider, organizationId);
+
+        var scheme = await sutProvider.Sut.GetSchemeAsync(organizationId.ToString());
+
+        var oidcOptions = Assert.IsType<OpenIdConnectOptions>(((DynamicAuthenticationScheme)scheme).Options);
+        Assert.NotNull(oidcOptions.Backchannel);
+        Assert.Equal(oidcOptions.BackchannelTimeout, oidcOptions.Backchannel.Timeout);
+        Assert.Equal(1024 * 1024 * 10, oidcOptions.Backchannel.MaxResponseContentBufferSize);
+        Assert.Equal(
+            "Microsoft ASP.NET Core OpenIdConnect handler",
+            oidcOptions.Backchannel.DefaultRequestHeaders.UserAgent.ToString());
     }
 
     [Theory, BitAutoData]
@@ -159,7 +182,7 @@ public class DynamicAuthenticationSchemeProviderTests
         Guid organizationId,
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider)
     {
-        var (_, handler) = ArrangeOidcScheme(sutProvider, organizationId);
+        var handler = ArrangeOidcScheme(sutProvider, organizationId);
 
         var scheme = (IDynamicAuthenticationScheme)await sutProvider.Sut.GetSchemeAsync(organizationId.ToString());
 
@@ -196,16 +219,15 @@ public class DynamicAuthenticationSchemeProviderTests
         }
     }
 
-    private static (HttpClient Backchannel, RecordingHandler Handler) ArrangeOidcScheme(
+    private static RecordingHandler ArrangeOidcScheme(
         SutProvider<DynamicAuthenticationSchemeProvider> sutProvider,
         Guid organizationId)
     {
         var handler = new RecordingHandler();
-        var backchannel = new HttpClient(handler);
-        var httpClientFactory = Substitute.For<IHttpClientFactory>();
-        httpClientFactory
-            .CreateClient(DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName)
-            .Returns(backchannel);
+        var httpMessageHandlerFactory = Substitute.For<IHttpMessageHandlerFactory>();
+        httpMessageHandlerFactory
+            .CreateHandler(DynamicAuthenticationSchemeProvider.OidcBackchannelHttpClientName)
+            .Returns(handler);
 
         sutProvider.SetDependency<IOptions<AuthenticationOptions>>(
             Options.Create(new AuthenticationOptions()));
@@ -213,12 +235,12 @@ public class DynamicAuthenticationSchemeProviderTests
             Substitute.For<IExtendedOptionsMonitorCache<Saml2Options>>());
         sutProvider.SetDependency<IOptionsMonitorCache<OpenIdConnectOptions>>(
             new ExtendedOptionsMonitorCache<OpenIdConnectOptions>());
-        // The real post-configure runs so these tests also cover the framework leaving our
-        // Backchannel in place and building the ConfigurationManager on top of it.
+        // The real post-configure runs so these tests also cover the framework wrapping our
+        // handler in its Backchannel and building the ConfigurationManager on top of it.
         sutProvider.SetDependency<IPostConfigureOptions<OpenIdConnectOptions>>(
             new OpenIdConnectPostConfigureOptions(
                 DataProtectionProvider.Create(nameof(DynamicAuthenticationSchemeProviderTests))));
-        sutProvider.SetDependency(httpClientFactory);
+        sutProvider.SetDependency(httpMessageHandlerFactory);
         sutProvider.SetDependency(new SamlEnvironment());
         sutProvider.Create();
 
@@ -234,7 +256,7 @@ public class DynamicAuthenticationSchemeProviderTests
             .GetByOrganizationIdAsync(organizationId)
             .Returns(ssoConfig);
 
-        return (backchannel, handler);
+        return handler;
     }
 
     private static EntityDescriptor BuildEntityDescriptor(KeyDescriptor keyDescriptor)
