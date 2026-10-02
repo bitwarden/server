@@ -1,14 +1,31 @@
-﻿using Bit.Core.Auth.IdentityServer;
+﻿using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
+using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
 public static class SendAccessTestUtilities
 {
+    /// <summary>
+    /// Builds the unique identifier the email OTP is cached under, independently of the validator, so an
+    /// unintended change to its format fails these tests instead of passing silently.
+    /// </summary>
+    public static string ExpectedOtpUniqueIdentifier(Guid sendId, string email, string deviceIdentifier)
+    {
+        var deviceIdentifierHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(deviceIdentifier)));
+        return string.Format(CultureInfo.InvariantCulture, "{0}_{1}_{2}", sendId, email, deviceIdentifierHash);
+    }
+
+    /// <summary>A valid device identifier for tests that are not about the identifier itself.</summary>
+    public const string DeviceIdentifier = IdentityApplicationFactory.DefaultDeviceIdentifier;
+
     public static FormUrlEncodedContent CreateTokenRequestBody(
         Guid sendId,
         string email = null,
