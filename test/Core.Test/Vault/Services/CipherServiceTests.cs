@@ -12,6 +12,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -2588,5 +2589,138 @@ public class CipherServiceTests
         await sutProvider.GetDependency<IAttachmentStorageService>()
             .Received(1)
             .DeleteAttachmentsForCipherAsync(sharedOnlyCipher.Id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_CipherInAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { defaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_CipherInOwnDefaultCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { defaultCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns the default collection the cipher lives in.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = defaultCollection.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_AddingCipherAlreadyInSharedCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection foreignDefaultCollection,
+        Collection sharedCollection,
+        List<Guid> targetCollectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        sharedCollection.Type = CollectionType.SharedCollection;
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        // The cipher already lives in a shared collection alongside another member's default collection.
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid> { foreignDefaultCollection.Id, sharedCollection.Id });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_RemovingAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection defaultCollection)
+    {
+        defaultCollection.Type = CollectionType.DefaultUserCollection;
+        var targetCollectionIds = new[] { defaultCollection.Id };
+
+        // The requested (removed) collection is another member's default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { defaultCollection });
+        // The acting user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_RemovingSharedCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection sharedCollection)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        sharedCollection.Type = CollectionType.SharedCollection;
+        var targetCollectionIds = new[] { sharedCollection.Id };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        // The requested (removed) collection is shared, not a default collection, so removal is allowed
+        // even though the cipher may also live in another member's default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { sharedCollection });
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId, removeCollections: true);
     }
 }
