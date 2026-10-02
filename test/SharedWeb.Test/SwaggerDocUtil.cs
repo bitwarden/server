@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -47,7 +48,7 @@ public class SwaggerDocUtil
         services.AddSwaggerGen(config =>
         {
             config.SwaggerDoc("v1", new OpenApiInfo { Title = "Test API", Version = "v1" });
-            config.CustomOperationIds(e => $"{e.ActionDescriptor.RouteValues["controller"]}_{e.ActionDescriptor.RouteValues["action"]}");
+            config.CustomOperationIds(SwaggerGenOptionsExt.BuildOperationId);
         });
         var serviceProvider = services.BuildServiceProvider();
 

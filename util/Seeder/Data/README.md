@@ -19,7 +19,8 @@ Seeded, deterministic data generation for cipher content. Orchestrated by `Gener
 
 ## Distributions
 
-Percentage-based deterministic selection via `Distribution<T>.Select(index, total)`.
+Percentage-based deterministic selection — `Distribution<T>.Select(index, total)` for typed buckets, or
+index-set selection like `ArchiveDeleteDistribution.Select(...)` for lifecycle-state assignment.
 
 ## Current Capabilities
 

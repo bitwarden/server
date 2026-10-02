@@ -1,6 +1,8 @@
 ﻿using System.Data.Common;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -17,7 +19,6 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<ICollection<Organization>> GetManyByUserIdAsync(Guid userId);
     Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid, int skip, int take);
     Task UpdateStorageAsync(Guid id);
-    Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
     Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId);
     Task<Organization?> GetByLicenseKeyAsync(string licenseKey);
     Task<SelfHostedOrganizationDetails?> GetSelfHostedOrganizationDetailsById(Guid id);
@@ -33,6 +34,13 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
 
     Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(Guid userId, ProviderType providerType);
     Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Returns a lightweight projection of <c>(OrganizationId, PlanType)</c> for the given organization ids.
+    /// Only organizations that exist are returned; ids with no matching organization are omitted.
+    /// </summary>
+    /// <param name="ids">The organization ids to look up.</param>
+    Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids);
 
     /// <summary>
     /// Returns the number of occupied seats for an organization.
@@ -77,4 +85,16 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     /// <param name="confirmOwnerAction">Action to confirm the organization owner, obtained from
     /// <see cref="IOrganizationUserRepository.BuildConfirmOwnerAction"/></param>
     Task InitializeOrganizationAsync(Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction);
+
+    /// <summary>
+    /// Deletes the organization and, within the same database transaction, enqueues one
+    /// <c>OrganizationDeleteTask</c> per supplied task type. This guarantees the deletion and the
+    /// cleanup-task records commit atomically, so durable downstream cleanup (e.g. purging
+    /// Table Storage event logs for GDPR) is never lost if the deletion succeeds. Any team can
+    /// enqueue its own cleanup type by adding it to <paramref name="taskTypes"/> without changing
+    /// this signature. An empty collection deletes the organization without enqueuing any task.
+    /// </summary>
+    /// <param name="organization">The organization to delete.</param>
+    /// <param name="taskTypes">The cleanup task types to enqueue, one row created per type.</param>
+    Task DeleteAndCreateDeleteTasksAsync(Organization organization, IEnumerable<OrganizationDeleteTaskType> taskTypes);
 }

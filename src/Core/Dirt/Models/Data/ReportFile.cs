@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using static System.Text.Json.Serialization.JsonNumberHandling;
 
@@ -28,5 +26,5 @@ public class ReportFile
     /// <summary>
     /// When true the uploaded file's length has been validated.
     /// </summary>
-    public bool Validated { get; set; } = true;
+    public bool Validated { get; set; } = false;
 }

@@ -10,6 +10,7 @@ public sealed class SeedReader : ISeedReader
 {
     private const string _resourcePrefix = "Bit.Seeder.Seeds.fixtures.";
     private const string _resourceSuffix = ".json";
+    private const string _samplePrefix = "Bit.Seeder.Seeds.attachments.";
 
     private static readonly Assembly _assembly = typeof(SeedReader).Assembly;
 
@@ -56,6 +57,32 @@ public sealed class SeedReader : ISeedReader
         return _assembly.GetManifestResourceNames()
             .Where(n => n.StartsWith(_resourcePrefix) && n.EndsWith(_resourceSuffix))
             .Select(n => n[_resourcePrefix.Length..^_resourceSuffix.Length])
+            .OrderBy(n => n)
+            .ToList();
+    }
+
+    public byte[] ReadBytes(string fileName)
+    {
+        var resourceName = $"{_samplePrefix}{fileName}";
+        using var stream = _assembly.GetManifestResourceStream(resourceName);
+
+        if (stream is null)
+        {
+            var available = string.Join(", ", ListAvailableSamples());
+            throw new InvalidOperationException(
+                $"Sample file '{fileName}' not found. Available samples: {available}");
+        }
+
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
+    }
+
+    private IReadOnlyList<string> ListAvailableSamples()
+    {
+        return _assembly.GetManifestResourceNames()
+            .Where(n => n.StartsWith(_samplePrefix))
+            .Select(n => n[_samplePrefix.Length..])
             .OrderBy(n => n)
             .ToList();
     }

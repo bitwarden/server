@@ -192,6 +192,36 @@ public class SingleOrgPolicyEventHandlerTests
         Assert.True(string.IsNullOrEmpty(result));
     }
 
+    [Theory]
+    [BitAutoData(false, "The Single organization policy is required for organizations that have enabled domain verification.")]
+    [BitAutoData(true, "The Single organization membership policy is required for organizations that have enabled domain verification.")]
+    public async Task ValidateAsync_WithSavePolicyModel_DisablingPolicy_HasVerifiedDomains_ReturnsError(
+        bool vfo1Enabled,
+        string expectedMessage,
+        [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy policy,
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(new SsoConfig { Enabled = false });
+
+        sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
+            .HasVerifiedDomainsAsync(policyUpdate.OrganizationId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.VFO1Foundation)
+            .Returns(vfo1Enabled);
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate);
+
+        var result = await sutProvider.Sut.ValidateAsync(savePolicyModel, policy);
+        Assert.Equal(expectedMessage, result);
+    }
+
     [Theory, BitAutoData]
     public async Task ExecutePreUpsertSideEffectAsync_RevokesNonCompliantUsers(
         [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
@@ -276,5 +306,74 @@ public class SingleOrgPolicyEventHandlerTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), nonCompliantUser.Email);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExecutePreUpsertSideEffectAsync_StagedMembershipsAreNotRevokedOrCountedAsConflicts(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy policy,
+        Guid savingUserId,
+        Guid confirmedUserId,
+        Organization organization,
+        SutProvider<SingleOrgPolicyEventHandler> sutProvider)
+    {
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+
+        // A confirmed member of this org whose only OTHER-org membership is Staged.
+        var confirmedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = confirmedUserId,
+            Email = "confirmed@example.com"
+        };
+
+        // A staged member of this org (must not be treated as revocable).
+        var stagedUser = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Staged,
+            UserId = Guid.NewGuid(),
+            Email = "staged@example.com"
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([confirmedUser, stagedUser]);
+
+        // The confirmed user's only other-org membership is Staged, which is not a single-org conflict.
+        var stagedOtherOrgMembership = new OrganizationUser
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = new Guid(),
+            UserId = confirmedUserId,
+            Status = OrganizationUserStatusType.Staged
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([stagedOtherOrgMembership]);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
+
+        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .Returns(new CommandResult());
+
+        await sutProvider.Sut.ExecutePreUpsertSideEffectAsync(new SavePolicyModel(policyUpdate), policy);
+
+        // No member is revoked: the staged member is not revocable, and a staged membership elsewhere is not a conflict.
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceive()
+            .RevokeNonCompliantOrganizationUsersAsync(
+                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationUsers.Any()));
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(Arg.Any<string>(), Arg.Any<string>());
     }
 }

@@ -179,4 +179,30 @@ public class PolicyDataValidatorTests
 
         Assert.Contains("Invalid data for MasterPassword policy", exception.Message);
     }
+
+    [Fact]
+    public void ValidateAndSerialize_FillAssist_ValidUrl_ReturnsSerializedJson()
+    {
+        var data = new Dictionary<string, object>
+        {
+            { "rulesUrl", "https://github.com/bitwarden/map-the-web/releases/latest/download" }
+        };
+
+        var result = PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist);
+
+        Assert.NotNull(result);
+        Assert.Contains("\"rulesUrl\":\"https://github.com/bitwarden/map-the-web/releases/latest/download\"", result);
+    }
+
+    [Fact]
+    public void ValidateAndSerialize_FillAssist_WrongType_ThrowsBadRequestException()
+    {
+        var data = new Dictionary<string, object> { { "rulesUrl", 12345 } };
+
+        var exception = Assert.Throws<BadRequestException>(() =>
+            PolicyDataValidator.ValidateAndSerialize(data, PolicyType.FillAssist));
+
+        Assert.Contains("Invalid data for FillAssist policy", exception.Message);
+        Assert.Contains("rulesUrl", exception.Message);
+    }
 }

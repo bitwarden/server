@@ -89,7 +89,7 @@ public class UpdateOrganizationReportCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.UpdateOrganizationReportAsync(request));
 
-        Assert.Equal("OrganizationId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }
@@ -109,7 +109,7 @@ public class UpdateOrganizationReportCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
             await sutProvider.Sut.UpdateOrganizationReportAsync(request));
 
-        Assert.Equal("ReportId is required", exception.Message);
+        Assert.Equal("Invalid Organization", exception.Message);
         await sutProvider.GetDependency<IOrganizationReportRepository>()
             .DidNotReceive().UpsertAsync(Arg.Any<OrganizationReport>());
     }

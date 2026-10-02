@@ -21,7 +21,11 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
         Type = organizationDetails.Type;
         OrganizationUserId = organizationDetails.OrganizationUserId;
         UserIsClaimedByOrganization = organizationIdsClaimingUser.Contains(organizationDetails.OrganizationId);
-        Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationDetails.Permissions);
+        // Custom permissions only apply to the Custom role, and the stored blob is not guaranteed to be cleared when
+        // a member moves off Custom. This mirrors how the role's claims are built.
+        Permissions = Type == OrganizationUserType.Custom
+            ? CoreHelpers.LoadClassFromJsonData<Permissions>(organizationDetails.Permissions)
+            : new Permissions();
         IsAdminInitiated = organizationDetails.IsAdminInitiated ?? false;
         FamilySponsorshipFriendlyName = organizationDetails.FamilySponsorshipFriendlyName;
         FamilySponsorshipLastSyncDate = organizationDetails.FamilySponsorshipLastSyncDate;
@@ -31,6 +35,7 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
             SponsoredPlans.Get(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organizationDetails);
         AccessSecretsManager = organizationDetails.AccessSecretsManager;
+        AccessPam = organizationDetails.AccessPam;
     }
 
     public Guid OrganizationUserId { get; set; }
@@ -41,13 +46,4 @@ public class ProfileOrganizationResponseModel : BaseProfileOrganizationResponseM
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool IsAdminInitiated { get; set; }
-    /// <summary>
-    /// Obsolete property for backward compatibility
-    /// </summary>
-    [Obsolete("Please use UserIsClaimedByOrganization instead. This property will be removed in a future version.")]
-    public bool UserIsManagedByOrganization
-    {
-        get => UserIsClaimedByOrganization;
-        set => UserIsClaimedByOrganization = value;
-    }
 }

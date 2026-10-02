@@ -1,34 +1,26 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Enums;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
+/// <summary>
+/// Response model carrying Email provider details and the user-verification token minted
+/// by the read step of two-factor enrollment.
+/// </summary>
 public class TwoFactorEmailResponseModel : ResponseModel
 {
-    public TwoFactorEmailResponseModel(User user)
+    public TwoFactorEmailResponseModel(User user, string userVerificationToken)
         : base("twoFactorEmail")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider?.MetaData?.TryGetValue("Email", out var email) ?? false)
-        {
-            Email = (string)email;
-            Enabled = provider.Enabled;
-        }
-        else
-        {
-            Enabled = false;
-        }
+        Email = new TwoFactorEmailDetails(user);
+        UserVerificationToken = userVerificationToken;
     }
 
-    public bool Enabled { get; set; }
-    public string Email { get; set; }
+    public TwoFactorEmailDetails Email { get; set; }
+
+    /// <summary>
+    /// User-verification token bound to <c>UserId + ProviderType</c>. Replayed on subsequent
+    /// management calls so the user does not have to re-verify.
+    /// </summary>
+    public string UserVerificationToken { get; set; }
 }

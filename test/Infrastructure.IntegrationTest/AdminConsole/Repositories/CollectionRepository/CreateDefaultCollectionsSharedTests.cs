@@ -35,8 +35,6 @@ public static class CreateDefaultCollectionsSharedTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
-
-        await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
 
     public static async Task CreatesForNewUsersOnly_AndIgnoresExistingUsers(
@@ -72,8 +70,6 @@ public static class CreateDefaultCollectionsSharedTests
 
         // Assert
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, affectedOrgUsers, organization.Id);
-
-        await CleanupAsync(organizationRepository, userRepository, organization, affectedOrgUsers);
     }
 
     public static async Task IgnoresAllExistingUsers(
@@ -101,8 +97,6 @@ public static class CreateDefaultCollectionsSharedTests
 
         // Assert - Original collections should remain unchanged, still only one per user
         await AssertAllUsersHaveOneDefaultCollectionAsync(collectionRepository, resultOrganizationUsers, organization.Id);
-
-        await CleanupAsync(organizationRepository, userRepository, organization, resultOrganizationUsers);
     }
 
     private static async Task CreateUsersWithExistingDefaultCollectionsAsync(
@@ -140,19 +134,5 @@ public static class CreateDefaultCollectionsSharedTests
         var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
 
         return orgUser;
-    }
-
-    private static async Task CleanupAsync(IOrganizationRepository organizationRepository,
-        IUserRepository userRepository,
-        Organization organization,
-        IEnumerable<OrganizationUser> organizationUsers)
-    {
-        await organizationRepository.DeleteAsync(organization);
-
-        await userRepository.DeleteManyAsync(
-            organizationUsers
-                .Where(organizationUser => organizationUser.UserId != null)
-                .Select(organizationUser => new User() { Id = organizationUser.UserId.Value })
-        );
     }
 }

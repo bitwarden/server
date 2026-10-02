@@ -1,19 +1,49 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.KeyManagement.Models.Api.Request;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class PasswordRequestModel : SecretVerificationRequestModel
+public class PasswordRequestModel : IValidatableObject
 {
     [Required]
+    public required string MasterPasswordHash { get; set; }
+    [Obsolete("To be removed in PM-33141")]
     [StringLength(300)]
-    public required string NewMasterPasswordHash { get; set; }
+    public string? NewMasterPasswordHash { get; set; }
+    [Obsolete("To be removed in PM-33141")]
+    public string? Key { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
-    [Required]
-    public required string Key { get; set; }
 
-    // Note: These will eventually become required, but not all consumers are moved over yet.
+    // Should be made required in PM-33141
     public MasterPasswordAuthenticationDataRequestModel? AuthenticationData { get; set; }
+    // Should be made required in PM-33141
     public MasterPasswordUnlockDataRequestModel? UnlockData { get; set; }
+
+    public bool RequestHasNewDataTypes()
+    {
+        return UnlockData is not null && AuthenticationData is not null;
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var hasLegacyPayloads = NewMasterPasswordHash is not null && Key is not null;
+
+        foreach (var validationResult in MasterPasswordPayloadVariantValidator.ValidatePresence(
+                     RequestHasNewDataTypes(), hasLegacyPayloads))
+        {
+            yield return validationResult;
+        }
+
+        if (RequestHasNewDataTypes())
+        {
+            foreach (var validationResult in KdfSettingsValidator.ValidateKdfAndSaltAgreement(
+                         AuthenticationData!.ToData(), UnlockData!.ToData()))
+            {
+                yield return validationResult;
+            }
+        }
+    }
 }

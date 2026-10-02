@@ -46,22 +46,12 @@ public class Send : ITableObject<Guid>
     /// <summary>
     /// Stores data containing or pointing to the transmitted secret. JSON.
     /// </summary>
-    /// <note>
-    /// Must be nullable due to several database column configuration.
-    /// The application and all other databases assume this is not nullable.
-    /// Tech debt ticket: PM-4128
-    /// </note>
-    public string? Data { get; set; }
+    public string Data { get; set; } = string.Empty;
 
     /// <summary>
     /// Stores the data's encryption key. Encrypted.
     /// </summary>
-    /// <note>
-    /// Must be nullable due to MySql database column configuration.
-    /// The application and all other databases assume this is not nullable.
-    /// Tech debt ticket: PM-4128
-    /// </note>
-    public string? Key { get; set; }
+    public string Key { get; set; } = string.Empty;
 
     /// <summary>
     /// Password provided by the user. Protected with pbkdf2.

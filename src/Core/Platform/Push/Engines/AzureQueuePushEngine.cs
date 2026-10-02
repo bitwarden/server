@@ -1,17 +1,26 @@
 ﻿using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
+/// <summary>
+/// Sends notifications to the Notifications service by writing them to the notifications Azure
+/// Queue, where AzureQueueHostedService dequeues them and fans them out over SignalR. Registered for
+/// cloud-hosted installations that have a notifications queue configured; the self-hosted equivalent
+/// is <see cref="NotificationsApiPushEngine"/>.
+/// </summary>
+/// <remarks>
+/// Every notification is written, whatever client type it is bound for; this engine filters nothing.
+/// Which connections receive one is decided by the Notifications service, and a mobile app holding a
+/// SignalR connection is delivered to like any other client.
+/// </remarks>
 public class AzureQueuePushEngine : IPushEngine
 {
     private readonly QueueClient _queueClient;
@@ -31,38 +40,18 @@ public class AzureQueuePushEngine : IPushEngine
         }
     }
 
-    public async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
+    public async Task PushAsync<T>(PushNotification<T> pushNotification)
+        where T : class
     {
-        if (cipher.OrganizationId.HasValue)
+        var message = JsonSerializer.Serialize(new PushNotificationData<T>
         {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                OrganizationId = cipher.OrganizationId,
-                RevisionDate = cipher.RevisionDate,
-                CollectionIds = collectionIds,
-            };
-
-            await SendMessageAsync(type, message, true);
-        }
-        else if (cipher.UserId.HasValue)
-        {
-            var message = new SyncCipherPushNotification
-            {
-                Id = cipher.Id,
-                UserId = cipher.UserId,
-                RevisionDate = cipher.RevisionDate,
-            };
-
-            await SendMessageAsync(type, message, true);
-        }
-    }
-
-    private async Task SendMessageAsync<T>(PushType type, T payload, bool excludeCurrentContext)
-    {
-        var contextId = GetContextIdentifier(excludeCurrentContext);
-        var message = JsonSerializer.Serialize(new PushNotificationData<T>(type, payload, contextId),
-            JsonHelpers.IgnoreWritingNull);
+            Type = pushNotification.Type,
+            Payload = pushNotification.Payload,
+            ContextId = GetContextIdentifier(pushNotification.ExcludeCurrentContext),
+            Target = pushNotification.Target,
+            TargetId = pushNotification.TargetId,
+            ClientType = pushNotification.ClientType,
+        }, JsonHelpers.Default);
         await _queueClient.SendMessageAsync(message);
     }
 
@@ -76,11 +65,5 @@ public class AzureQueuePushEngine : IPushEngine
         var currentContext =
             _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
-    }
-
-    public async Task PushAsync<T>(PushNotification<T> pushNotification)
-        where T : class
-    {
-        await SendMessageAsync(pushNotification.Type, pushNotification.Payload, pushNotification.ExcludeCurrentContext);
     }
 }

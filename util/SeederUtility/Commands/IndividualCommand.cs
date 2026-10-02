@@ -9,16 +9,17 @@ namespace Bit.SeederUtility.Commands;
 public class IndividualCommand
 {
     [DefaultCommand]
-    public void Execute(IndividualArgs args)
+    public async Task ExecuteAsync(IndividualArgs args)
     {
         try
         {
             args.Validate();
 
             using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-            var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
-            var result = recipe.Seed(args.ToOptions());
+            var result = await ConsoleProgressReporter.RunWithProgressAsync(
+                deps.ToDependencies(),
+                d => new IndividualUserRecipe(d).SeedAsync(args.ToOptions()));
 
             ConsoleOutput.PrintRow("User", result.UserId);
             if (result.Email is not null)
@@ -38,7 +39,7 @@ public class IndividualCommand
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            await Console.Error.WriteLineAsync($"Error: {ex}");
             Environment.Exit(1);
         }
     }

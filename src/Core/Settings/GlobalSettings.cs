@@ -17,6 +17,7 @@ public class GlobalSettings : IGlobalSettings
         BaseServiceUri = new BaseServiceUriSettings(this);
         Attachment = new FileStorageSettings(this, "attachments", "attachments");
         Send = new FileStorageSettings(this, "attachments/send", "attachments/send");
+        OrganizationReport = new FileStorageSettings(this, "attachments/reports", "attachments/reports");
         DataProtection = new DataProtectionSettings(this);
     }
 
@@ -37,15 +38,20 @@ public class GlobalSettings : IGlobalSettings
         set => _mailTemplateDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
+    public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
+    public virtual int SalesAssistedRegistrationTokenLifetimeDays { get; set; } = 5;
+    public virtual bool SuppressOnboardingInterstitials { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
+    public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
@@ -65,6 +71,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
+    public virtual FileStorageSettings OrganizationReport { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
     public virtual DataProtectionSettings DataProtection { get; set; }
     public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
@@ -75,7 +82,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
-    public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
@@ -89,11 +95,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
-    /// <summary>
-    /// This Hash Key is used to prevent enumeration attacks against the Send Access feature.
-    /// </summary>
-    public virtual string SendDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
+    public virtual string PricingApiKey { get; set; }
     public virtual Fido2Settings Fido2 { get; set; } = new Fido2Settings();
     public virtual ICommunicationSettings Communication { get; set; } = new CommunicationSettings();
 
@@ -256,6 +259,8 @@ public class GlobalSettings : IGlobalSettings
         public bool SkipDatabasePreparation { get; set; }
         public bool DisableDatabaseMaintenanceJobs { get; set; }
 
+        public int? MigrationExecutionTimeoutSeconds { get; set; }
+
         public string ConnectionString
         {
             get => _connectionString;
@@ -269,7 +274,7 @@ public class GlobalSettings : IGlobalSettings
                     _readOnlyConnectionString = null;
                 }
 
-                _connectionString = value.Trim('"');
+                _connectionString = value?.Trim('"');
             }
         }
 
@@ -277,13 +282,13 @@ public class GlobalSettings : IGlobalSettings
         {
             get => string.IsNullOrWhiteSpace(_readOnlyConnectionString) ?
                 _connectionString : _readOnlyConnectionString;
-            set => _readOnlyConnectionString = value.Trim('"');
+            set => _readOnlyConnectionString = value?.Trim('"');
         }
 
         public string JobSchedulerConnectionString
         {
             get => _jobSchedulerConnectionString;
-            set => _jobSchedulerConnectionString = value.Trim('"');
+            set => _jobSchedulerConnectionString = value?.Trim('"');
         }
     }
 
@@ -302,6 +307,7 @@ public class GlobalSettings : IGlobalSettings
         public virtual string ClientId { get; set; }
         public virtual string ClientSecret { get; set; }
         public virtual string Scopes { get; set; }
+        public virtual string TenantId { get; set; }
     }
 
     public class EventLoggingSettings
@@ -313,12 +319,18 @@ public class GlobalSettings : IGlobalSettings
 
         public class AzureServiceBusSettings
         {
+            public static readonly TimeSpan DefaultDeadLetterSweepInterval = TimeSpan.FromHours(1);
+
             private string _connectionString;
             private string _eventTopicName;
             private string _integrationTopicName;
 
             public virtual int DefaultMaxConcurrentCalls { get; set; } = 1;
             public virtual int DefaultPrefetchCount { get; set; } = 0;
+
+            public virtual TimeSpan IntegrationMessageTimeToLive { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterRetention { get; set; } = TimeSpan.Zero;
+            public virtual TimeSpan DeadLetterSweepInterval { get; set; } = DefaultDeadLetterSweepInterval;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
             public virtual string SlackEventSubscriptionName { get; set; } = "events-slack-subscription";
@@ -335,19 +347,19 @@ public class GlobalSettings : IGlobalSettings
             public string ConnectionString
             {
                 get => _connectionString;
-                set => _connectionString = value.Trim('"');
+                set => _connectionString = value?.Trim('"');
             }
 
             public string EventTopicName
             {
                 get => _eventTopicName;
-                set => _eventTopicName = value.Trim('"');
+                set => _eventTopicName = value?.Trim('"');
             }
 
             public string IntegrationTopicName
             {
                 get => _integrationTopicName;
-                set => _integrationTopicName = value.Trim('"');
+                set => _integrationTopicName = value?.Trim('"');
             }
         }
 
@@ -361,6 +373,9 @@ public class GlobalSettings : IGlobalSettings
 
             public int RetryTiming { get; set; } = 30000; // 30s
             public bool UseDelayPlugin { get; set; } = false;
+
+            public TimeSpan DeadLetterTimeToLive { get; set; } = TimeSpan.Zero;
+
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string IntegrationDeadLetterQueueName { get; set; } = "integration-dead-letter-queue";
             public virtual string SlackEventsQueueName { get; set; } = "events-slack-queue";
@@ -382,27 +397,27 @@ public class GlobalSettings : IGlobalSettings
             public string HostName
             {
                 get => _hostName;
-                set => _hostName = value.Trim('"');
+                set => _hostName = value?.Trim('"');
             }
             public string Username
             {
                 get => _username;
-                set => _username = value.Trim('"');
+                set => _username = value?.Trim('"');
             }
             public string Password
             {
                 get => _password;
-                set => _password = value.Trim('"');
+                set => _password = value?.Trim('"');
             }
             public string EventExchangeName
             {
                 get => _eventExchangeName;
-                set => _eventExchangeName = value.Trim('"');
+                set => _eventExchangeName = value?.Trim('"');
             }
             public string IntegrationExchangeName
             {
                 get => _integrationExchangeName;
-                set => _integrationExchangeName = value.Trim('"');
+                set => _integrationExchangeName = value?.Trim('"');
             }
         }
     }
@@ -432,7 +447,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
     }
 
@@ -455,7 +470,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
 
         public string BaseDirectory
@@ -487,6 +502,7 @@ public class GlobalSettings : IGlobalSettings
             }
         }
         public string ReplyToEmail { get; set; }
+        public string SupportReplyToEmail { get; set; }
         public string AmazonConfigSetName { get; set; }
         public SmtpSettings Smtp { get; set; } = new SmtpSettings();
         public string SendGridApiKey { get; set; }
@@ -543,27 +559,89 @@ public class GlobalSettings : IGlobalSettings
         ///     Token lifetime is renewed on each use, by the amount in SlidingRefreshTokenLifetimeSeconds. Extensions stop once AbsoluteRefreshTokenLifetimeSeconds is reached (if set > 0).
         /// </summary>
         public bool ApplyAbsoluteExpirationOnRefreshToken { get; set; } = false;
+        /// <summary>
+        /// Access token lifetime override in seconds, applied to the interactive static
+        /// clients (web, mobile, browser, desktop, cli). The directory connector is
+        /// deliberately excluded because its headless-service model relies on a longer
+        /// lifetime. API-key providers and the Send client are unaffected. When null,
+        /// each client keeps its built-in default. Must be greater than 0 if set.
+        /// </summary>
+        public int? AccessTokenLifetimeSeconds { get; set; }
     }
 
+#nullable enable
     public class DataProtectionSettings
     {
         private readonly GlobalSettings _globalSettings;
 
-        private string _directory;
+        private string? _directory;
 
         public DataProtectionSettings(GlobalSettings globalSettings)
         {
             _globalSettings = globalSettings;
         }
 
-        public string CertificateThumbprint { get; set; }
-        public string CertificatePassword { get; set; }
+        public string? CertificateThumbprint { get; set; }
+
+        public string BlobName { get; set; } = "dataprotection.pfx";
+
+        public string? CertificatePassword { get; set; }
+
+        public KeyProtectionPolicyType KeyProtectionPolicy { get; set; } =
+            KeyProtectionPolicyType.Certificate;
+
         public string Directory
         {
             get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
             set => _directory = value;
         }
+
+        public CertificateInfo[] UnprotectCertificates { get; set; } = [];
+
+        /// <summary>
+        /// Stages a new protection certificate so its secret (Password) can be deployed before
+        /// the non-secret (FileName) without causing a startup failure. When Enabled is false the
+        /// entry is completely ignored. When Enabled is true the pending cert becomes the active
+        /// protection certificate and BlobName/CertificatePassword are ignored entirely, which
+        /// means they can be updated to match the new cert at any time without coordination.
+        /// The old protection certificate must be added to UnprotectCertificates explicitly
+        /// before activating PendingProtection to keep existing keys readable.
+        /// </summary>
+        public PendingProtectionSettings? PendingProtection { get; set; }
+
+        /// <summary>
+        /// Defines how ASP.NET Core data-protection keys are protected at rest.
+        /// Migration between types is not supported.
+        /// </summary>
+        public enum KeyProtectionPolicyType
+        {
+            /// <summary>
+            /// ASP.NET Core data-protection keys are wrapped using the configured certificate.
+            /// </summary>
+            Certificate = 0,
+
+            /// <summary>
+            /// Keys are persisted without application-level certificate wrapping and rely on storage
+            /// encryption at rest and access controls.
+            /// </summary>
+            StorageManaged = 1,
+        }
+
+        public class CertificateInfo
+        {
+            public required string FileName { get; set; }
+            public required string Password { get; set; }
+            public bool Enabled { get; set; } = true;
+        }
+
+        public class PendingProtectionSettings
+        {
+            public string? FileName { get; set; }
+            public string? Password { get; set; }
+            public bool Enabled { get; set; }
+        }
     }
+#nullable disable
 
     public class NotificationsSettings : ConnectionStringSettings
     {
@@ -645,6 +723,8 @@ public class GlobalSettings : IGlobalSettings
         public int CiphersLimit { get; set; }
         public int CollectionRelationshipsLimit { get; set; }
         public int CollectionsLimit { get; set; }
+        public int FoldersLimit { get; set; }
+        public int FolderRelationshipsLimit { get; set; }
     }
 
     public class BitPaySettings
@@ -682,13 +762,6 @@ public class GlobalSettings : IGlobalSettings
         public string Region { get; set; }
     }
 
-    public class ServiceBusSettings : ConnectionStringSettings
-    {
-        public string ApplicationCacheTopicName { get; set; }
-        public string ApplicationCacheSubscriptionName { get; set; }
-        public string WebSiteInstanceId { get; set; }
-    }
-
     public class AppleIapSettings
     {
         public string Password { get; set; }
@@ -708,6 +781,10 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
         public string PremiumCheckoutSuccessUrl { get; set; }
         public string PremiumCheckoutCancelUrl { get; set; }
+        public string BrowserPremiumCheckoutSuccessUrl { get; set; }
+        public string BrowserPremiumCheckoutCancelUrl { get; set; }
+        public string DesktopPremiumCheckoutSuccessUrl { get; set; }
+        public string DesktopPremiumCheckoutCancelUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

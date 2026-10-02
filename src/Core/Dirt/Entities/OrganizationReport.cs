@@ -1,5 +1,5 @@
-﻿#nullable enable
-
+﻿using System.Text.Json;
+using Bit.Core.Dirt.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -28,6 +28,21 @@ public class OrganizationReport : ITableObject<Guid>
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
     public string? ReportFile { get; set; }
+
+    public ReportFile? GetReportFile()
+    {
+        if (string.IsNullOrWhiteSpace(ReportFile))
+        {
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<ReportFile>(ReportFile);
+    }
+
+    public void SetReportFile(ReportFile data)
+    {
+        ReportFile = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
+    }
 
     public void SetNewId()
     {

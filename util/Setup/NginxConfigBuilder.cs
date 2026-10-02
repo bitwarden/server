@@ -5,7 +5,7 @@ namespace Bit.Setup;
 
 public class NginxConfigBuilder
 {
-    private const string ConfFile = "/bitwarden/nginx/default.conf";
+    private string ConfFile => $"{_context.App.RootDirectory}/nginx/default.conf";
 
     private const string DefaultContentSecurityPolicy = "default-src 'self'; " +
         "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
@@ -55,7 +55,7 @@ public class NginxConfigBuilder
 
     private void Build(TemplateModel model)
     {
-        Directory.CreateDirectory("/bitwarden/nginx/");
+        Directory.CreateDirectory($"{_context.App.RootDirectory}/nginx/");
         Helpers.WriteLine(_context, "Building nginx config.");
         if (!_context.Config.GenerateNginxConfig)
         {

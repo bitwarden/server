@@ -9,6 +9,8 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     private readonly ILogger _logger;
     private readonly HubHelpers _hubHelpers;
     private readonly GlobalSettings _globalSettings;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly TimeProvider _timeProvider;
 
     private Task? _executingTask;
     private CancellationTokenSource? _cts;
@@ -16,15 +18,25 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
         HubHelpers hubHelpers,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IServiceProvider serviceProvider,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _hubHelpers = hubHelpers;
         _globalSettings = globalSettings;
+        _serviceProvider = serviceProvider;
+        _timeProvider = timeProvider;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        if (_globalSettings.SelfHosted ||
+            !CoreHelpers.SettingHasValue(_globalSettings.Notifications?.ConnectionString))
+        {
+            return Task.CompletedTask;
+        }
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _executingTask = ExecuteAsync(_cts.Token);
         return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
@@ -49,7 +61,8 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        var queueClient = new QueueClient(_globalSettings.Notifications.ConnectionString, "notifications");
+        var queueClient = _serviceProvider.GetRequiredKeyedService<QueueClient>("notifications");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -61,7 +74,29 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                     {
                         try
                         {
-                            var decodedMessage = message.DecodeMessageText();
+                            // CoreHelpers.DecodeMessageText inlined, so that a successful decode can
+                            // be reported: nothing writes base64 to this queue any more, and the
+                            // decode exists only to tolerate a sender that predates that. The warning
+                            // is how we find out whether any still does, so the tolerance can be
+                            // dropped on evidence rather than on the assumption that it is unused.
+                            var decodedMessage = message.MessageText;
+                            if (!string.IsNullOrWhiteSpace(decodedMessage))
+                            {
+                                try
+                                {
+                                    decodedMessage = CoreHelpers.Base64DecodeString(decodedMessage);
+                                    _logger.LogWarning(
+                                        "Dequeued a base64-encoded message: {MessageId}. Decoding it is legacy tolerance, not something a current sender needs.",
+                                        message.MessageId);
+                                }
+                                catch
+                                {
+                                    // Not base64, so it is the plain text a current sender writes.
+                                    // Catching everything is what CoreHelpers.DecodeMessageText does,
+                                    // and this is only meant to inline it, not to change it.
+                                }
+                            }
+
                             if (!string.IsNullOrWhiteSpace(decodedMessage))
                             {
                                 await _hubHelpers.SendNotificationToHubAsync(decodedMessage, cancellationToken);
@@ -84,7 +119,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                 }
                 else
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(5), _timeProvider, cancellationToken);
                 }
             }
             catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)

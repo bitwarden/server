@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\util\SeederApi\SeederApi.csproj" />
     <ProjectReference Include="..\..\util\Seeder\Seeder.csproj" />
+    <ProjectReference Include="..\..\util\SeederUtility\SeederUtility.csproj" />
     <ProjectReference Include="..\IntegrationTestCommon\IntegrationTestCommon.csproj" />
 
     <Content Include="..\..\util\SeederApi\appsettings.*.json">

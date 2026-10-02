@@ -19,5 +19,6 @@ public class MasterPasswordRotateUserAccountKeysData
 
         MasterPasswordUnlockData.ValidateSaltUnchangedForUser(user);
         MasterPasswordUnlockData.Kdf.ValidateUnchangedForUser(user);
+        MasterPasswordUnlockData.ValidateKeyIdMatchesNewUserKeyId(BaseData.NewUserKeyId);
     }
 }

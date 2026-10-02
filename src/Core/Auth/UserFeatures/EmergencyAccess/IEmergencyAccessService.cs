@@ -3,8 +3,10 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Auth.UserFeatures.EmergencyAccess;
 
@@ -110,6 +112,18 @@ public interface IEmergencyAccessService
     /// <returns>emergency access entity and the grantorUser</returns>
     Task<(Entities.EmergencyAccess, User)> TakeoverAsync(Guid emergencyAccessId, User granteeUser);
     /// <summary>
+    /// Finishes emergency access recovery takeover by setting or updating the grantor's master password
+    /// using structured cryptographic data via <see cref="Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces.IMasterPasswordService"/>.
+    /// </summary>
+    /// <param name="emergencyAccessId">Emergency Access Id being acted on</param>
+    /// <param name="granteeUser">user making the request</param>
+    /// <param name="unlockData">new master password unlock data (encrypted user key, public/private key pair)</param>
+    /// <param name="authenticationData">new master password authentication data (hash, salt, KDF configuration)</param>
+    /// <returns>success or identity errors from validation</returns>
+    Task<IdentityResult> FinishRecoveryTakeoverAsync(
+        Guid emergencyAccessId, User granteeUser,
+        MasterPasswordUnlockData unlockData, MasterPasswordAuthenticationData authenticationData);
+    /// <summary>
     /// Updates the grantor's password hash and updates the key for the EmergencyAccess entity.
     /// </summary>
     /// <param name="emergencyAccessId">Emergency Access Id being acted on</param>
@@ -117,6 +131,7 @@ public interface IEmergencyAccessService
     /// <param name="newMasterPasswordHash">new password hash set by grantee user</param>
     /// <param name="key">new encrypted user key</param>
     /// <returns>void</returns>
+    [Obsolete("To be removed in PM-33141")]
     Task PasswordAsync(Guid emergencyAccessId, User granteeUser, string newMasterPasswordHash, string key);
     /// <summary>
     /// sends a reminder email that there is a pending request for recovery.

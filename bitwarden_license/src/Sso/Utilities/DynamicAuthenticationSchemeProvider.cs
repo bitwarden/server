@@ -11,6 +11,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Infrastructure;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Sustainsys.Saml2.AspNetCore2;
 using Sustainsys.Saml2.Configuration;
+using Sustainsys.Saml2.Metadata;
 using Sustainsys.Saml2.Saml2P;
 
 namespace Bit.Core.Business.Sso;
@@ -406,7 +408,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         if (!string.IsNullOrWhiteSpace(config.IdpX509PublicCert))
         {
             var cert = CoreHelpers.Base64UrlDecode(config.IdpX509PublicCert);
-            idp.SigningKeys.AddConfiguredKey(new X509Certificate2(cert));
+            idp.SigningKeys.AddConfiguredKey(X509CertificateLoader.LoadCertificate(cert));
         }
         idp.ArtifactResolutionServiceUrls.Clear();
         // This must happen last since it calls Validate() internally.
@@ -420,6 +422,8 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             CookieManager = new DistributedCacheCookieManager(),
         };
         options.IdentityProviders.Add(idp);
+
+        options.Notifications.MetadataCreated += OnMetadataCreated;
 
         return new DynamicAuthenticationScheme(name, name, typeof(Saml2Handler), options, SsoType.Saml2);
     }
@@ -459,5 +463,27 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             Saml2BindingType.HttpPost => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
             _ => Sustainsys.Saml2.WebSso.Saml2BindingType.HttpPost,
         };
+    }
+
+    /// <summary>
+    /// Adds the accepted key-transport algorithms to every encryption-capable <c>KeyDescriptor</c>
+    /// in the published Service Provider metadata when it is created. 
+    /// </summary>
+    public static void OnMetadataCreated(
+        EntityDescriptor entityDescriptor,
+        Sustainsys.Saml2.WebSso.Saml2Urls _)
+    {
+        var keyDescriptors = entityDescriptor.RoleDescriptors
+            .OfType<SpSsoDescriptor>()
+            .SelectMany(d => d.Keys)
+            .Where(k => k.Use != KeyType.Signing);
+
+        foreach (var keyDescriptor in keyDescriptors)
+        {
+            foreach (var algorithm in Saml2KeyTransportEncryptionAlgorithms.Accepted)
+            {
+                keyDescriptor.EncryptionMethods.Add(new EncryptionMethod { Algorithm = new Uri(algorithm) });
+            }
+        }
     }
 }

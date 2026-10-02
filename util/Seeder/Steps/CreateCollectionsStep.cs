@@ -30,21 +30,35 @@ internal sealed class CreateCollectionsStep : IStep
         var orgId = context.RequireOrgId();
         var orgKey = context.RequireOrgKey();
         var hardenedOrgUserIds = context.Registry.HardenedOrgUserIds;
+        var progress = context.GetProgress();
 
         List<Collection> collections;
 
         if (_structure.HasValue)
         {
             var orgStructure = OrgStructures.GetStructure(_structure.Value);
-            collections = orgStructure.Units
-                .Select(unit => CollectionSeeder.Create(orgId, orgKey, unit.Name))
-                .ToList();
+            var unitCount = orgStructure.Units.Length;
+            progress?.Report(new PhaseStarted(SeederPhases.CreatingCollections, unitCount));
+            var structTicker = new ProgressTicker(progress, SeederPhases.CreatingCollections, unitCount);
+            collections = new List<Collection>(unitCount);
+            foreach (var unit in orgStructure.Units)
+            {
+                collections.Add(CollectionSeeder.Create(orgId, orgKey, unit.Name));
+                structTicker.Tick();
+            }
+            structTicker.Flush();
         }
         else
         {
-            collections = Enumerable.Range(0, _count)
-                .Select(i => CollectionSeeder.Create(orgId, orgKey, $"Collection {i + 1}"))
-                .ToList();
+            progress?.Report(new PhaseStarted(SeederPhases.CreatingCollections, _count));
+            var countTicker = new ProgressTicker(progress, SeederPhases.CreatingCollections, _count);
+            collections = new List<Collection>(_count);
+            for (var i = 0; i < _count; i++)
+            {
+                collections.Add(CollectionSeeder.Create(orgId, orgKey, $"Collection {i + 1}"));
+                countTicker.Tick();
+            }
+            countTicker.Flush();
         }
 
         var collectionIds = collections.Select(c => c.Id).ToList();
@@ -54,6 +68,7 @@ internal sealed class CreateCollectionsStep : IStep
 
         if (collections.Count == 0)
         {
+            progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
             return;
         }
 
@@ -76,6 +91,7 @@ internal sealed class CreateCollectionsStep : IStep
                 }
             }
             context.CollectionUsers.AddRange(collectionUsers);
+            progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
             return;
         }
 
@@ -95,6 +111,8 @@ internal sealed class CreateCollectionsStep : IStep
             ApplyUserPermissions(directUsers, _density.PermissionDistribution);
             context.CollectionUsers.AddRange(directUsers);
         }
+
+        progress?.Report(new PhaseCompleted(SeederPhases.CreatingCollections));
     }
 
     internal List<CollectionGroup> BuildCollectionGroups(List<Guid> collectionIds, List<Guid> groupIds)

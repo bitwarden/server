@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -110,6 +111,9 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         UseDisableSmAdsForUsers = org.UseDisableSmAdsForUsers;
         UsePhishingBlocker = org.UsePhishingBlocker;
         UseMyItems = org.UseMyItems;
+        UseInviteLinks = org.UseInviteLinks;
+        UsePam = org.UsePam;
+        ExemptFromBillingAutomation = org.ExemptFromBillingAutomation;
 
         _plans = plans;
     }
@@ -205,6 +209,29 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool UseAutomaticUserConfirmation { get; set; }
     [Display(Name = "Create My Items for organization ownership")]
     public bool UseMyItems { get; set; }
+    [Display(Name = "Invite Links")]
+    public bool UseInviteLinks { get; set; }
+    [Display(Name = "Use PAM")]
+    public bool UsePam { get; set; }
+    [Display(Name = "Exempt From Billing Automation")]
+    public bool ExemptFromBillingAutomation { get; set; }
+
+    [Display(Name = "Migration cohort")]
+    public Guid? MigrationCohortId { get; set; }
+
+    /// <summary>
+    /// All cohorts (active and inactive) used to populate the migration cohort dropdown.
+    /// Set during the Edit GET so the view can render the dropdown options; null otherwise.
+    /// </summary>
+    public IReadOnlyList<OrganizationPlanMigrationCohort> AvailableMigrationCohorts { get; set; }
+
+    public bool MigrationCohortLocked { get; set; }
+
+    public string MigrationCohortLockReason { get; set; }
+
+    public bool MigrationCohortMismatch { get; set; }
+
+    public bool MigrationCohortOrphaned { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change
@@ -240,6 +267,8 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
                     UsersGetPremium = p.UsersGetPremium,
                     HasCustomPermissions = p.HasCustomPermissions,
                     HasMyItems = p.HasMyItems,
+                    HasInviteLinks = p.HasInviteLinks,
+                    HasRiskInsights = p.HasRiskInsights,
                     UpgradeSortOrder = p.UpgradeSortOrder,
                     DisplaySortOrder = p.DisplaySortOrder,
                     LegacyYear = p.LegacyYear,
@@ -340,6 +369,9 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
         existingOrganization.UseDisableSmAdsForUsers = UseDisableSmAdsForUsers;
         existingOrganization.UsePhishingBlocker = UsePhishingBlocker;
         existingOrganization.UseMyItems = UseMyItems;
+        existingOrganization.UseInviteLinks = UseInviteLinks;
+        existingOrganization.UsePam = UsePam;
+        existingOrganization.ExemptFromBillingAutomation = ExemptFromBillingAutomation;
         return existingOrganization;
     }
 

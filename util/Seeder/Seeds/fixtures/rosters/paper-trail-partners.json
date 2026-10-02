@@ -1,0 +1,48 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "Trail", "lastName": "Owner", "role": "owner" },
+    { "firstName": "Trail", "lastName": "Admin", "role": "admin" },
+    { "firstName": "Trail", "lastName": "Member", "role": "user" }
+  ],
+  "groups": [
+    {
+      "name": "All-Access",
+      "members": ["trail.owner", "trail.admin", "trail.member"]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Default collection",
+      "groups": [{ "group": "All-Access", "manage": true }],
+      "users": [{ "user": "trail.owner", "manage": true }]
+    },
+    {
+      "name": "Finance",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    },
+    {
+      "name": "Engineering",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    },
+    { "name": "Legal", "groups": [{ "group": "All-Access", "manage": true }] },
+    { "name": "HR", "groups": [{ "group": "All-Access", "manage": true }] },
+    {
+      "name": "Marketing",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    },
+    {
+      "name": "Operations",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    },
+    { "name": "Sales", "groups": [{ "group": "All-Access", "manage": true }] },
+    {
+      "name": "Support",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    },
+    {
+      "name": "Shared Documents",
+      "groups": [{ "group": "All-Access", "manage": true }]
+    }
+  ]
+}

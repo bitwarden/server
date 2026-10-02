@@ -1,0 +1,231 @@
+﻿using System.Collections.Specialized;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
+using Bit.Core.Entities;
+using Bit.Core.Tokens;
+using Bit.Identity.IdentityServer.RequestValidators;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityServer.Validation;
+using Fido2NetLib;
+using NSubstitute;
+using Xunit;
+using AuthFixtures = Bit.Identity.Test.AutoFixture;
+
+namespace Bit.Identity.Test.IdentityServer.RequestValidators;
+
+[SutProviderCustomize]
+public class WebAuthnGrantValidatorTests
+{
+    private static ExtensionGrantValidationContext CreateContext(
+        ValidatedTokenRequest tokenRequest,
+        string token = "test-token",
+        string deviceResponse = """{"id":"abc","rawId":"abc","type":"public-key","response":{"authenticatorData":"dGVzdA","signature":"dGVzdA","clientDataJSON":"dGVzdA","userHandle":"dGVzdA"}}""")
+    {
+        tokenRequest.Raw = new NameValueCollection
+        {
+            { "token", token },
+            { "deviceResponse", deviceResponse }
+        };
+
+        return new ExtensionGrantValidationContext { Request = tokenRequest };
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_MissingToken_RejectsWithInvalidGrant(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange - no token or deviceResponse in raw params
+        tokenRequest.Raw = new NameValueCollection();
+        var context = new ExtensionGrantValidationContext { Request = tokenRequest };
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_grant", context.Result.Error);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_InvalidToken_RejectsWithInvalidRequest(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns(false);
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_request", context.Result.Error);
+    }
+
+    [Theory]
+    [BitAutoData("", "{}")]
+    [BitAutoData("   ", "{}")]
+    [BitAutoData("test-token", "")]
+    [BitAutoData("test-token", "   ")]
+    public async Task ValidateAsync_EmptyOrWhitespaceParameter_RejectsWithInvalidGrant(
+        string token,
+        string deviceResponse,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange - one of token / deviceResponse is empty or whitespace
+        var context = CreateContext(tokenRequest, token, deviceResponse);
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_grant", context.Result.Error);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .DidNotReceive()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DeviceResponseDeserializesToNull_RejectsWithInvalidRequest(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange
+        var options = new AssertionOptions { Challenge = [1, 2, 3, 4, 5, 6, 7, 8] };
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(
+            WebAuthnLoginAssertionOptionsScope.Authentication, options);
+
+        var context = CreateContext(tokenRequest, deviceResponse: "null");
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns(x =>
+            {
+                x[1] = tokenable;
+                return true;
+            });
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_request", context.Result.Error);
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .DidNotReceive()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TokenWithWrongScope_RejectsWithInvalidRequest(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange
+        var options = new AssertionOptions { Challenge = [1, 2, 3, 4, 5, 6, 7, 8] };
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(
+            WebAuthnLoginAssertionOptionsScope.PrfRegistration, options);
+
+        var context = CreateContext(tokenRequest);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns(x =>
+            {
+                x[1] = tokenable;
+                return true;
+            });
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_request", context.Result.Error);
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .DidNotReceive()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_TokenWithNullOptions_RejectsWithInvalidRequest(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable
+        {
+            Scope = WebAuthnLoginAssertionOptionsScope.Authentication,
+            Options = null,
+        };
+
+        var context = CreateContext(tokenRequest);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns(x =>
+            {
+                x[1] = tokenable;
+                return true;
+            });
+
+        // Act
+        await sutProvider.Sut.ValidateAsync(context);
+
+        // Assert
+        Assert.Equal("invalid_request", context.Result.Error);
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .DidNotReceive()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_ValidToken_CallsAssertCommand(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        SutProvider<WebAuthnGrantValidator> sutProvider)
+    {
+        // Arrange
+        var challenge = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+        var options = new AssertionOptions { Challenge = challenge };
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(
+            WebAuthnLoginAssertionOptionsScope.Authentication, options);
+
+        var context = CreateContext(tokenRequest);
+
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable>>()
+            .TryUnprotect(Arg.Any<string>(), out Arg.Any<WebAuthnLoginAssertionOptionsTokenable>())
+            .Returns(x =>
+            {
+                x[1] = tokenable;
+                return true;
+            });
+
+        // Mock credential assertion to succeed
+        var user = new User { Id = Guid.NewGuid() };
+        var credential = new WebAuthnCredential();
+        sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .AssertWebAuthnLoginCredential(Arg.Any<AssertionOptions>(), Arg.Any<AuthenticatorAssertionRawResponse>())
+            .Returns((user, credential));
+
+        // Act - the base validator pipeline may throw due to unmocked dependencies,
+        // but our code runs before that.
+        try
+        {
+            await sutProvider.Sut.ValidateAsync(context);
+        }
+        catch (NullReferenceException)
+        {
+            // Expected: base validator pipeline has unmocked dependencies
+        }
+
+        // Assert - verify the assert command was called
+        await sutProvider.GetDependency<IAssertWebAuthnLoginCredentialCommand>()
+            .Received(1)
+            .AssertWebAuthnLoginCredential(options, Arg.Any<AuthenticatorAssertionRawResponse>());
+    }
+}

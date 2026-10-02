@@ -36,13 +36,10 @@ public interface IStripePaymentService
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
     Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts);
-    Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false);
-    Task ReinstateSubscriptionAsync(ISubscriber subscriber);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
     Task<BillingInfo> GetBillingAsync(ISubscriber subscriber);
     Task<BillingHistoryInfo> GetBillingHistoryAsync(ISubscriber subscriber);
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
-    Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats, int additionalServiceAccount);
     /// <summary>
     /// Secrets Manager Standalone is a discount in Stripe that is used to give an organization access to Secrets Manager.
     /// Usually, this also implies that when they invite a user to their organization, they are doing so for both Password

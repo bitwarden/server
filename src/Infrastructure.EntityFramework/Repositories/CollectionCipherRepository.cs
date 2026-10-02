@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -87,6 +88,53 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
+    public async Task<ICollection<Guid>> GetCollectionIdsByCipherIdAsync(Guid cipherId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.CollectionCiphers
+                .Where(cc => cc.CipherId == cipherId)
+                .Select(cc => cc.CollectionId)
+                .ToListAsync();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
+    {
+        var collectionIdList = collectionIds.ToList();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var directUserIds = from cu in dbContext.CollectionUsers
+                                where collectionIdList.Contains(cu.CollectionId)
+                                join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                                select ou.UserId!.Value;
+
+            var groupUserIds = from cg in dbContext.CollectionGroups
+                               where collectionIdList.Contains(cg.CollectionId)
+                               join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
+                               join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                               where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed && ou.UserId != null
+                               select ou.UserId!.Value;
+
+            var orgLevelUserIds = from c in dbContext.Collections
+                                  where collectionIdList.Contains(c.Id)
+                                  join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                  join ou in dbContext.OrganizationUsers on c.OrganizationId equals ou.OrganizationId
+                                  where ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed
+                                      && ou.UserId != null
+                                      && (ou.Type == OrganizationUserType.Owner
+                                          || ou.Type == OrganizationUserType.Admin)
+                                      && o.AllowAdminAccessToAllCollectionItems
+                                  select ou.UserId!.Value;
+
+            return await directUserIds.Union(groupUserIds).Union(orgLevelUserIds).ToListAsync();
+        }
+    }
+
     public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -131,7 +179,10 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             }
 
             // Now we need to remove collection ciphers that are no longer requested
-            dbContext.CollectionCiphers.RemoveRange(collectionCiphers.Where(cc => !collectionIds.Contains(cc.CollectionId) && cc.CipherId == cipherId));
+            dbContext.CollectionCiphers.RemoveRange(collectionCiphers.Where(cc =>
+                !collectionIds.Contains(cc.CollectionId)
+                && cc.CipherId == cipherId
+                && availableCollections.Contains(cc.CollectionId)));
 
             if (organizationId.HasValue)
             {

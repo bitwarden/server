@@ -11,9 +11,11 @@
   "folders": true,
   "ciphers": {
     "count": 150,
-    "assignFolders": true
+    "assignFolders": true,
+    "repromptEveryNthCipher": 10
   },
   "personalCiphers": {
-    "countPerUser": 65
+    "countPerUser": 65,
+    "repromptEveryNthCipher": 5
   }
 }

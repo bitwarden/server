@@ -6,6 +6,7 @@ using Bit.Core.Models.BitStripe;
 using Stripe;
 using Stripe.Tax;
 using Stripe.TestHelpers;
+using static Bit.Core.Billing.Constants.StripeConstants;
 using BillingPortalSessionService = Stripe.BillingPortal.SessionService;
 using CheckoutSessionService = Stripe.Checkout.SessionService;
 using CustomerService = Stripe.CustomerService;
@@ -18,6 +19,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly CustomerService _customerService;
     private readonly SubscriptionService _subscriptionService;
     private readonly InvoiceService _invoiceService;
+    private readonly InvoiceLineItemService _invoiceLineItemService;
     private readonly PaymentMethodService _paymentMethodService;
     private readonly TaxIdService _taxIdService;
     private readonly ChargeService _chargeService;
@@ -40,6 +42,7 @@ public class StripeAdapter : IStripeAdapter
         _customerService = new CustomerService();
         _subscriptionService = new SubscriptionService();
         _invoiceService = new InvoiceService();
+        _invoiceLineItemService = new InvoiceLineItemService();
         _paymentMethodService = new PaymentMethodService();
         _taxIdService = new TaxIdService();
         _chargeService = new ChargeService();
@@ -139,6 +142,21 @@ public class StripeAdapter : IStripeAdapter
 
     public Task<Invoice> CreateInvoicePreviewAsync(InvoiceCreatePreviewOptions options) =>
         _invoiceService.CreatePreviewAsync(options);
+
+    public async Task<List<InvoiceLineItem>> ListInvoiceLineItemsAsync(string invoiceId,
+        InvoiceLineItemListOptions options)
+    {
+        options.Limit = 100;
+
+        var lineItems = new List<InvoiceLineItem>();
+
+        await foreach (var lineItem in _invoiceLineItemService.ListAutoPagingAsync(invoiceId, options))
+        {
+            lineItems.Add(lineItem);
+        }
+
+        return lineItems;
+    }
 
     public async Task<List<Invoice>> SearchInvoiceAsync(InvoiceSearchOptions options) =>
         (await _invoiceService.SearchAsync(options)).Data;
@@ -281,4 +299,22 @@ public class StripeAdapter : IStripeAdapter
      ******************/
     public Task<TestClock> GetTestClockAsync(string testClockId, TestClockGetOptions options = null) =>
         _testClockService.GetAsync(testClockId, options);
+
+    public async Task WaitForTestClockToAdvanceAsync(TestClock testClock)
+    {
+        if (testClock == null)
+        {
+            return;
+        }
+
+        while (testClock.Status != TestClockStatus.Ready)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            testClock = await _testClockService.GetAsync(testClock.Id);
+            if (testClock.Status == TestClockStatus.InternalFailure)
+            {
+                throw new Exception("Stripe Test Clock encountered an internal failure");
+            }
+        }
+    }
 }

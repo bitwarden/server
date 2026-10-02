@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
@@ -11,6 +12,8 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -214,7 +217,46 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         await _stripeAdapter.Received(1).CreateCustomerAsync(Arg.Any<CustomerCreateOptions>());
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_NoCoupons_CreatesSubscriptionWithNoDiscounts_NoCustomerDiscountInjected(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Creation-site guard (#12): fresh customer, so no pre-existing discount to carry. With no
+        // coupons supplied, Discounts must be null — pins that nothing is ever injected here.
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+        billingAddress.Country = "US";
+        billingAddress.PostalCode = "12345";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>()).Returns(mockSubscription);
+        _subscriberService.GetCustomerOrThrow(Arg.Any<User>(), Arg.Any<CustomerGetOptions>()).Returns(mockCustomer);
+
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        Assert.True(result.IsT0);
+        await _stripeAdapter.Received(1).CreateSubscriptionAsync(
+            Arg.Is<SubscriptionCreateOptions>(opts => opts.Discounts == null));
     }
 
     [Theory, BitAutoData]
@@ -277,7 +319,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
                 opts.Expand.Contains("customer")));
         await _braintreeService.Received(1).PayInvoice(Arg.Any<SubscriberId>(), mockInvoice);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -342,7 +384,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.Equal(20, user.LicenseKey.Length);
         Assert.NotEqual(default, user.RevisionDate);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -476,7 +518,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         // Verify user was updated correctly
         Assert.True(user.Premium);
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -1153,7 +1195,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             opts.Discounts.Count == 1 &&
             opts.Discounts[0].Coupon == "VALID_COUPON"));
         await _userService.Received(1).SaveUserAsync(user);
-        await _pushNotificationService.Received(1).PushSyncVaultAsync(user.Id);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncVault && n.TargetId == user.Id));
     }
 
     [Theory, BitAutoData]
@@ -1186,7 +1228,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             user, Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "INVALID_COUPON" })), DiscountTierType.Premium);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -1221,7 +1263,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             user, Arg.Is<IReadOnlyList<string>>(a => a.SequenceEqual(new[] { "NEW_USER_ONLY_COUPON" })), DiscountTierType.Premium);
         await _stripeAdapter.DidNotReceive().CreateSubscriptionAsync(Arg.Any<SubscriptionCreateOptions>());
         await _userService.DidNotReceive().SaveUserAsync(Arg.Any<User>());
-        await _pushNotificationService.DidNotReceive().PushSyncVaultAsync(Arg.Any<Guid>());
+        await _pushNotificationService.DidNotReceive().PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
     }
 
     [Theory, BitAutoData]
@@ -1356,6 +1398,86 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             Arg.Any<User>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<DiscountTierType>());
         await _stripeAdapter.Received(1).CreateSubscriptionAsync(Arg.Is<SubscriptionCreateOptions>(opts =>
             opts.Discounts == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithMarketingFromMarketing_SetsMarketingInitiatedMetadata(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null,
+            FromMarketing = MarketingInitiativeConstants.Premium
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        SubscriptionCreateOptions? capturedOptions = null;
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(opts => capturedOptions = opts))
+            .Returns(mockSubscription);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.NotNull(capturedOptions);
+        Assert.Equal("marketing-initiated", capturedOptions.Metadata[StripeConstants.MetadataKeys.TrialInitiationPath]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_WithoutFromMarketing_SetsProductInitiatedMetadata(
+        User user,
+        TokenizedPaymentMethod paymentMethod,
+        BillingAddress billingAddress)
+    {
+        // Arrange
+        user.Premium = false;
+        user.GatewayCustomerId = null;
+        user.Email = "test@example.com";
+        paymentMethod.Type = TokenizablePaymentMethodType.Card;
+        paymentMethod.Token = "card_token_123";
+
+        var subscriptionPurchase = new PremiumSubscriptionPurchase
+        {
+            PaymentMethod = paymentMethod,
+            BillingAddress = billingAddress,
+            AdditionalStorageGb = 0,
+            Coupons = null,
+            FromMarketing = null
+        };
+
+        var mockCustomer = CreateMockCustomer();
+        var mockSubscription = CreateMockActiveSubscription();
+
+        SubscriptionCreateOptions? capturedOptions = null;
+        _stripeAdapter.CreateCustomerAsync(Arg.Any<CustomerCreateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.UpdateCustomerAsync(Arg.Any<string>(), Arg.Any<CustomerUpdateOptions>()).Returns(mockCustomer);
+        _stripeAdapter.CreateSubscriptionAsync(Arg.Do<SubscriptionCreateOptions>(opts => capturedOptions = opts))
+            .Returns(mockSubscription);
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.NotNull(capturedOptions);
+        Assert.Equal("product-initiated", capturedOptions.Metadata[StripeConstants.MetadataKeys.TrialInitiationPath]);
     }
 
     [Theory, BitAutoData]

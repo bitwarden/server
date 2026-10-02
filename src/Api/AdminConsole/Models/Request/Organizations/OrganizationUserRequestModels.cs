@@ -56,6 +56,8 @@ public class OrganizationUserAcceptRequestModel
     [Required]
     public string Token { get; set; }
     // Used to auto-enroll in master password reset
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string ResetPasswordKey { get; set; }
 }
 
@@ -98,21 +100,39 @@ public class OrganizationUserUpdateRequestModel
     [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 
+#nullable enable
+    [StrictEmailAddressNullable]
+    [StringLength(256)]
+    public string? Email { get; set; }
+
+    [StringLength(50)]
+    public string? Name { get; set; }
+
+    public string? DefaultUserCollectionName { get; set; }
+#nullable disable
+
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
+        // Custom permissions only apply to the Custom role. Clear them for any other role so a member demoted from
+        // Custom doesn't keep a stale permissions blob.
+        existingUser.Permissions = Type.Value == OrganizationUserType.Custom
+            ? CoreHelpers.ClassToJsonData(Permissions)
+            : null;
         existingUser.AccessSecretsManager = AccessSecretsManager;
+        existingUser.AccessPam = AccessPam;
         return existingUser;
     }
 }
 
 public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
+    [EncryptedStringLength(1000)]
     public string ResetPasswordKey { get; set; }
     public string MasterPasswordHash { get; set; }
 }
@@ -127,9 +147,3 @@ public class OrganizationUserBulkRequestModel
     public string? DefaultUserCollectionName { get; set; }
 }
 #nullable disable
-
-public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
-{
-    [Required]
-    public Guid OrganizationId { get; set; }
-}

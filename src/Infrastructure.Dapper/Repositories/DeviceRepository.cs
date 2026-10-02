@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -108,9 +107,31 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
+    public async Task UpdateLastActivityByIdAsync(Guid deviceId, string? clientVersion)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_UpdateLastActivityById]",
+                new { Id = deviceId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task UpdateLastActivityByIdentifierAndUserIdAsync(string identifier, Guid userId, string? clientVersion)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_UpdateLastActivityByIdentifierUserId]",
+                new { Identifier = identifier, UserId = userId, LastActivityDate = DateTime.UtcNow, ClientVersion = clientVersion },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public DatabaseTransactionAction UpdateKeysForRotationAsync(Guid userId, IEnumerable<Device> devices)
+    {
+        return async (connection, transaction) =>
         {
             const string sql = @"
                 UPDATE D

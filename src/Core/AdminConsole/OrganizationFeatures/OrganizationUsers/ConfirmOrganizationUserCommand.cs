@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationConfirmation;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -31,9 +32,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IFeatureService _featureService;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IAutomaticUserConfirmationPolicyEnforcementValidator _automaticUserConfirmationPolicyEnforcementValidator;
+    private readonly IAutomaticUserConfirmationPolicyEnforcementHandler _automaticUserConfirmationPolicyEnforcementHandler;
     private readonly ISendOrganizationConfirmationCommand _sendOrganizationConfirmationCommand;
     private readonly IDeleteEmergencyAccessCommand _deleteEmergencyAccessCommand;
 
@@ -47,9 +47,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         IPushRegistrationService pushRegistrationService,
         IDeviceRepository deviceRepository,
         IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService,
         ICollectionRepository collectionRepository,
-        IAutomaticUserConfirmationPolicyEnforcementValidator automaticUserConfirmationPolicyEnforcementValidator,
+        IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
         ISendOrganizationConfirmationCommand sendOrganizationConfirmationCommand,
         IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand)
     {
@@ -62,9 +61,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _deviceRepository = deviceRepository;
         _policyRequirementQuery = policyRequirementQuery;
-        _featureService = featureService;
         _collectionRepository = collectionRepository;
-        _automaticUserConfirmationPolicyEnforcementValidator = automaticUserConfirmationPolicyEnforcementValidator;
+        _automaticUserConfirmationPolicyEnforcementHandler = automaticUserConfirmationPolicyEnforcementHandler;
         _sendOrganizationConfirmationCommand = sendOrganizationConfirmationCommand;
         _deleteEmergencyAccessCommand = deleteEmergencyAccessCommand;
     }
@@ -81,7 +79,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
 
         if (!result.Any())
         {
-            throw new BadRequestException("User not valid.");
+            throw new BadRequestException(new ConfirmUserNotValidError().Message);
         }
 
         var (orgUser, error) = result[0];
@@ -155,7 +153,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
                     var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
                     if (adminCount > 0)
                     {
-                        throw new BadRequestException("User can only be an admin of one free organization.");
+                        throw new BadRequestException(new UserFreeOrgAdminLimitError().Message);
                     }
                 }
 
@@ -188,31 +186,28 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         // Enforce Two Factor Authentication Policy for this organization
         await ValidateTwoFactorAuthenticationPolicyAsync(user, organizationId, userTwoFactorEnabled);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AutomaticConfirmUsers))
+        var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+            user.Id);
+
+        var error = (await _automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
+                new AutomaticUserConfirmationPolicyEnforcementRequest(
+                    organizationId,
+                    orgUsers,
+                    user),
+                policyRequirement))
+            .Match(
+                error => new BadRequestException(error.Message),
+                _ => null
+            );
+
+        if (error is not null)
         {
-            var policyRequirement = await _policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
-                user.Id);
+            throw error;
+        }
 
-            var error = (await _automaticUserConfirmationPolicyEnforcementValidator.IsCompliantAsync(
-                    new AutomaticUserConfirmationPolicyEnforcementRequest(
-                        organizationId,
-                        orgUsers,
-                        user),
-                    policyRequirement))
-                .Match(
-                    error => new BadRequestException(error.Message),
-                    _ => null
-                );
-
-            if (error is not null)
-            {
-                throw error;
-            }
-
-            if (policyRequirement.IsEnabled(organizationId))
-            {
-                await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
-            }
+        if (policyRequirement.IsEnabled(organizationId))
+        {
+            await _deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
 
         var singleOrgRequirement = await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
@@ -221,8 +216,8 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         {
             var singleOrgErrorMessage = singleOrgError switch
             {
-                UserIsAMemberOfAnotherOrganization => $"{user.Email} cannot be confirmed until they leave or remove all other organizations.",
-                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => $"{user.Email} cannot be confirmed because they are in another organization which forbids it.",
+                UserIsAMemberOfAnotherOrganization => new UserCannotBeConfirmedMemberOfAnotherOrg(user.Email).Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeConfirmedForbiddenByOtherOrg(user.Email).Message,
                 _ => singleOrgError.Message
             };
 
@@ -241,7 +236,7 @@ public class ConfirmOrganizationUserCommand : IConfirmOrganizationUserCommand
         var twoFactorPolicyRequirement = await _policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(user.Id);
         if (twoFactorPolicyRequirement.IsTwoFactorRequiredForOrganization(organizationId))
         {
-            throw new BadRequestException("User does not have two-step login enabled.");
+            throw new BadRequestException(new UserDoesNotHaveTwoFactorEnabled().Message);
         }
     }
 

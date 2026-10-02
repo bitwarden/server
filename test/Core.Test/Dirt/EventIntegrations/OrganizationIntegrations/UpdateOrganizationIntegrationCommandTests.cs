@@ -48,7 +48,7 @@ public class UpdateOrganizationIntegrationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationDoesNotExist_ThrowsNotFound(
+    public async Task UpdateAsync_IntegrationDoesNotExist_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -58,7 +58,7 @@ public class UpdateOrganizationIntegrationCommandTests
             .GetByIdAsync(integrationId)
             .Returns((OrganizationIntegration)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
@@ -68,7 +68,7 @@ public class UpdateOrganizationIntegrationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationDoesNotBelongToOrganization_ThrowsNotFound(
+    public async Task UpdateAsync_IntegrationDoesNotBelongToOrganization_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -82,7 +82,7 @@ public class UpdateOrganizationIntegrationCommandTests
             .GetByIdAsync(integrationId)
             .Returns(existingIntegration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()
@@ -92,7 +92,7 @@ public class UpdateOrganizationIntegrationCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_IntegrationIsDifferentType_ThrowsNotFound(
+    public async Task UpdateAsync_IntegrationIsDifferentType_ThrowsBadRequest(
         SutProvider<UpdateOrganizationIntegrationCommand> sutProvider,
         Guid organizationId,
         Guid integrationId,
@@ -110,7 +110,7 @@ public class UpdateOrganizationIntegrationCommandTests
             .GetByIdAsync(integrationId)
             .Returns(existingIntegration);
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(organizationId, integrationId, updatedIntegration));
 
         await sutProvider.GetDependency<IOrganizationIntegrationRepository>().DidNotReceive()

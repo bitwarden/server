@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -68,7 +69,7 @@ public class SelfRevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.OrganizationDataOwnershipPolicyNonCompliance);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
@@ -76,7 +77,7 @@ public class SelfRevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncOrgKeysAsync(userId);
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == userId));
     }
 
     [Theory, BitAutoData]
@@ -224,7 +225,7 @@ public class SelfRevokeOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeAsync(organizationUser.Id);
+            .RevokeAsync(organizationUser.Id, RevocationReason.OrganizationDataOwnershipPolicyNonCompliance);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)

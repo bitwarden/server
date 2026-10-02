@@ -7,6 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Models.Mail;
+
 public class OrganizationInvitesInfo
 {
     public OrganizationInvitesInfo(

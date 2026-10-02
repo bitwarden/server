@@ -9,41 +9,7 @@ namespace Bit.Core.Test.Billing.Organizations.Models;
 public class OrganizationSaleTests
 {
     [Fact]
-    public void From_WithUserCoupons_PopulatesCustomerSetupCoupons()
-    {
-        var organization = new Organization();
-        var signup = new OrganizationSignup
-        {
-            IsFromProvider = false,
-            IsFromSecretsManagerTrial = false,
-            Coupons = new[] { "COUPON_ONE", "COUPON_TWO" }
-        };
-
-        var sale = OrganizationSale.From(organization, signup);
-
-        Assert.NotNull(sale.CustomerSetup);
-        Assert.Equal(new[] { "COUPON_ONE", "COUPON_TWO" }, sale.CustomerSetup.Coupons);
-    }
-
-    [Fact]
-    public void From_WithNoCoupons_CustomerSetupCouponsIsNull()
-    {
-        var organization = new Organization();
-        var signup = new OrganizationSignup
-        {
-            IsFromProvider = false,
-            IsFromSecretsManagerTrial = false,
-            Coupons = null
-        };
-
-        var sale = OrganizationSale.From(organization, signup);
-
-        Assert.NotNull(sale.CustomerSetup);
-        Assert.Null(sale.CustomerSetup.Coupons);
-    }
-
-    [Fact]
-    public void From_WithProviderSignup_UsesMSPCouponAndIgnoresUserCoupons()
+    public void From_WithProviderSignup_UsesMSPCouponInSystemCoupons()
     {
         var organization = new Organization();
         var signup = new OrganizationSignup
@@ -55,11 +21,12 @@ public class OrganizationSaleTests
         var sale = OrganizationSale.From(organization, signup);
 
         Assert.NotNull(sale.CustomerSetup);
-        Assert.Equal(new[] { StripeConstants.CouponIDs.LegacyMSPDiscount }, sale.CustomerSetup.Coupons);
+        Assert.Equal(new[] { StripeConstants.CouponIDs.LegacyMSPDiscount }, sale.CustomerSetup.SystemCoupons);
+        Assert.Null(sale.CustomerSetup.DiscountCoupons);
     }
 
     [Fact]
-    public void From_WithSMTrialSignup_UsesSMCouponAndIgnoresUserCoupons()
+    public void From_WithSMTrialSignup_UsesSMCouponInSystemCoupons()
     {
         var organization = new Organization();
         var signup = new OrganizationSignup
@@ -72,6 +39,43 @@ public class OrganizationSaleTests
         var sale = OrganizationSale.From(organization, signup);
 
         Assert.NotNull(sale.CustomerSetup);
-        Assert.Equal(new[] { StripeConstants.CouponIDs.SecretsManagerStandalone }, sale.CustomerSetup.Coupons);
+        Assert.Equal(new[] { StripeConstants.CouponIDs.SecretsManagerStandalone }, sale.CustomerSetup.SystemCoupons);
+        Assert.Null(sale.CustomerSetup.DiscountCoupons);
+    }
+
+    [Fact]
+    public void From_WithUserCoupons_PopulatesCustomerSetupDiscountCoupons()
+    {
+        var organization = new Organization();
+        var signup = new OrganizationSignup
+        {
+            IsFromProvider = false,
+            IsFromSecretsManagerTrial = false,
+            Coupons = ["COUPON_ONE", "COUPON_TWO"]
+        };
+
+        var sale = OrganizationSale.From(organization, signup);
+
+        Assert.NotNull(sale.CustomerSetup);
+        Assert.Equal(new[] { "COUPON_ONE", "COUPON_TWO" }, sale.CustomerSetup.DiscountCoupons);
+        Assert.Null(sale.CustomerSetup.SystemCoupons);
+    }
+
+    [Fact]
+    public void From_WithNoCoupons_CustomerSetupDiscountCouponsAndSystemCouponsAreNull()
+    {
+        var organization = new Organization();
+        var signup = new OrganizationSignup
+        {
+            IsFromProvider = false,
+            IsFromSecretsManagerTrial = false,
+            Coupons = null
+        };
+
+        var sale = OrganizationSale.From(organization, signup);
+
+        Assert.NotNull(sale.CustomerSetup);
+        Assert.Null(sale.CustomerSetup.DiscountCoupons);
+        Assert.Null(sale.CustomerSetup.SystemCoupons);
     }
 }

@@ -3,7 +3,8 @@ CREATE PROCEDURE [dbo].[PlayItem_Create]
     @PlayId NVARCHAR(256),
     @UserId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
-    @CreationDate DATETIME2(7)
+    @CreationDate DATETIME2(7),
+    @ProviderId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -14,7 +15,8 @@ BEGIN
         [PlayId],
         [UserId],
         [OrganizationId],
-        [CreationDate]
+        [CreationDate],
+        [ProviderId]
     )
     VALUES
     (
@@ -22,6 +24,7 @@ BEGIN
         @PlayId,
         @UserId,
         @OrganizationId,
-        @CreationDate
+        @CreationDate,
+        @ProviderId
     )
 END

@@ -7,4 +7,5 @@ public interface IProviderInvoiceItemRepository : IRepository<ProviderInvoiceIte
 {
     Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId);
     Task<ICollection<ProviderInvoiceItem>> GetByProviderId(Guid providerId);
+    Task<ICollection<ProviderInvoiceItem>> GetByProviderIdAndInvoiceId(Guid providerId, string invoiceId);
 }

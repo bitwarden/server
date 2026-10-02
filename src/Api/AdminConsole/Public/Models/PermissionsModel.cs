@@ -31,6 +31,7 @@ public class PermissionsModel
         ManageUsers = data.ManageUsers;
         ManageResetPassword = data.ManageResetPassword;
         ManageScim = data.ManageScim;
+        ManageAccessRules = data.ManageAccessRules;
     }
 
     public bool AccessEventLogs { get; set; }
@@ -45,6 +46,7 @@ public class PermissionsModel
     public bool ManageUsers { get; set; }
     public bool ManageResetPassword { get; set; }
     public bool ManageScim { get; set; }
+    public bool ManageAccessRules { get; set; }
 
     public Permissions ToData()
     {
@@ -61,7 +63,8 @@ public class PermissionsModel
             ManageSso = ManageSso,
             ManageUsers = ManageUsers,
             ManageResetPassword = ManageResetPassword,
-            ManageScim = ManageScim
+            ManageScim = ManageScim,
+            ManageAccessRules = ManageAccessRules
         };
     }
 }

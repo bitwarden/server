@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.ComponentModel;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Platform.Push;
 
@@ -13,7 +14,7 @@ public record PushNotification<T>
     /// <summary>
     /// The <see cref="PushType"/> to be associated with the notification. This is used to route
     /// the notification to the correct handler on the client side. Be sure to use the correct payload
-    /// type for the associated <see cref="PushType"/>. 
+    /// type for the associated <see cref="PushType"/>.
     /// </summary>
     public required PushType Type { get; init; }
 
@@ -21,9 +22,9 @@ public record PushNotification<T>
     /// The target entity type for the notification.
     /// </summary>
     /// <remarks>
-    /// When the target type is <see cref="NotificationTarget.User"/> the <see cref="TargetId"/> 
+    /// When the target type is <see cref="NotificationTarget.User"/> the <see cref="TargetId"/>
     /// property is expected to be a users ID. When it is <see cref="NotificationTarget.Organization"/>
-    /// it should be an organizations id. When it is a <see cref="NotificationTarget.Installation"/> 
+    /// it should be an organizations id. When it is a <see cref="NotificationTarget.Installation"/>
     /// it should be an installation id.
     /// </remarks>
     public required NotificationTarget Target { get; init; }
@@ -45,10 +46,20 @@ public record PushNotification<T>
     public required bool ExcludeCurrentContext { get; init; }
 
     /// <summary>
-    /// The type of clients the notification should be sent to, if <see langword="null"/> then 
+    /// The type of clients the notification should be sent to, if <see langword="null"/> then
     /// <see cref="ClientType.All"/> is inferred.
     /// </summary>
     public ClientType? ClientType { get; init; }
+
+
+    /// <summary>
+    /// When true, only non-mobile engines (SignalR/web/desktop) will deliver this notification. When null or false, all engines process it.
+    /// </summary>
+    /// <remarks>
+    /// This property is temporary and tied to a feature flag. Do not use it for new work — it will be removed when the flag is cleaned up.
+    /// </remarks>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public bool? NonMobileOnly { get; init; }
 
     internal Guid? GetTargetWhen(NotificationTarget notificationTarget)
     {

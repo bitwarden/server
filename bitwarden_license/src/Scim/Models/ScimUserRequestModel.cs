@@ -1,8 +1,8 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -34,7 +34,7 @@ public class ScimUserRequestModel : BaseScimUserModel
 
     public InviteOrganizationUsersRequest ToRequest(
         ScimProviderType scimProvider,
-        InviteOrganization inviteOrganization,
+        Organization organization,
         DateTimeOffset performedAt)
     {
         var email = EmailForInvite(scimProvider);
@@ -52,7 +52,7 @@ public class ScimUserRequestModel : BaseScimUserModel
                         externalId: ExternalIdForInvite()
                     )
             ],
-            inviteOrganization: inviteOrganization,
+            organization: organization,
             performedBy: Guid.Empty, // SCIM does not have a user id
             performedAt: performedAt);
     }

@@ -32,6 +32,7 @@ public class OrganizationNoPaymentCreateRequest
     [Required]
     public string Key { get; set; }
 
+    [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public string PaymentToken { get; set; }
@@ -78,6 +79,9 @@ public class OrganizationNoPaymentCreateRequest
 
     public string InitiationPath { get; set; }
 
+    [Range(0, 30)]
+    public int? TrialLength { get; set; }
+
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
         var orgSignup = new OrganizationSignup
@@ -110,7 +114,8 @@ public class OrganizationNoPaymentCreateRequest
                 BillingAddressCountry = BillingAddressCountry,
             },
             InitiationPath = InitiationPath,
-            Keys = Keys?.ToPublicKeyEncryptionKeyPairData()
+            TrialLength = TrialLength,
+            Keys = Keys.ToPublicKeyEncryptionKeyPairData()
         };
 
         return orgSignup;

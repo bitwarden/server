@@ -18,7 +18,7 @@ public class OrganizationReportMetricsData
     public int? CriticalPasswordCount { get; set; }
     public int? CriticalPasswordAtRiskCount { get; set; }
 
-    public static OrganizationReportMetricsData From(Guid organizationId, OrganizationReportMetricsRequest? request)
+    public static OrganizationReportMetricsData From(Guid organizationId, OrganizationReportMetrics? request)
     {
         if (request == null)
         {

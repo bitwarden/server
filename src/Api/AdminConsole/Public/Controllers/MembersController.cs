@@ -1,9 +1,8 @@
 ﻿using System.Net;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
-using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -14,28 +13,26 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
+using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/members")]
 [Authorize("Organization")]
-public class MembersController : Controller
+public class MembersController : BaseAdminConsoleController
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
-    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
+    private readonly V2_UpdateUserCommand.IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IStripePaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -44,17 +41,14 @@ public class MembersController : Controller
     private readonly IResendOrganizationInviteCommand _resendOrganizationInviteCommand;
     private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommandV2;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
-    private readonly IFeatureService _featureService;
     private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
-    private readonly IPricingClient _pricingClient;
     private readonly TimeProvider _timeProvider;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
-        IOrganizationService organizationService,
         ICurrentContext currentContext,
-        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
+        V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IStripePaymentService paymentService,
         IOrganizationRepository organizationRepository,
@@ -63,14 +57,11 @@ public class MembersController : Controller
         IResendOrganizationInviteCommand resendOrganizationInviteCommand,
         IRevokeOrganizationUserCommand revokeOrganizationUserCommandV2,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
-        IFeatureService featureService,
         IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
-        IPricingClient pricingClient,
         TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
-        _organizationService = organizationService;
         _currentContext = currentContext;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
@@ -81,9 +72,7 @@ public class MembersController : Controller
         _resendOrganizationInviteCommand = resendOrganizationInviteCommand;
         _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
-        _featureService = featureService;
         _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
-        _pricingClient = pricingClient;
         _timeProvider = timeProvider;
     }
 
@@ -175,45 +164,20 @@ public class MembersController : Controller
             hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
         }
 
-        var invite = model.ToOrganizationUserInvite();
-        if (_featureService.IsEnabled(FeatureFlagKeys.PublicMembersInviteRefactor))
+        var inviteRequest = model.ToInviteRequest(organization!, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
+        var inviteResult = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(inviteRequest) switch
         {
-            return await PostInviteUserAsync_vNext(model, organization!, hasStandaloneSecretsManager);
-        }
+            Success<InviteOrganizationUsersResponse> success => success,
+            Failure<InviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code } => throw new BadRequestException("This user has already been invited."),
+            Failure<InviteOrganizationUsersResponse> failure => throw MapToBitException(failure.Error),
+            _ => throw new InvalidOperationException()
+        };
 
-        invite.AccessSecretsManager = hasStandaloneSecretsManager;
+        var user = inviteResult.Value.InvitedUsers.First();
+        var collections = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
+        var response = new MemberResponseModel(user, collections);
 
-        var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId!.Value, null,
-            systemUser: null, invite, model.ExternalId);
-        var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
-    }
-
-    private async Task<IActionResult> PostInviteUserAsync_vNext(
-        MemberCreateRequestModel model,
-        Core.AdminConsole.Entities.Organization organization,
-        bool hasStandaloneSecretsManager)
-    {
-        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
-        var inviteOrganization = new InviteOrganization(organization, plan);
-        var request = model.ToInviteRequest(inviteOrganization, hasStandaloneSecretsManager, Guid.Empty, _timeProvider.GetUtcNow());
-
-        var result = await _inviteOrganizationUsersCommand.InviteImportedOrganizationUsersAsync(request);
-
-        switch (result)
-        {
-            case Success<InviteOrganizationUsersResponse> success:
-                var user = success.Value.InvitedUsers.First();
-                var collections = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-                var response = new MemberResponseModel(user, collections);
-                return new JsonResult(response);
-            case Failure<InviteOrganizationUsersResponse> { Error.Message: NoUsersToInviteError.Code }:
-                throw new BadRequestException("This user has already been invited.");
-            case Failure<InviteOrganizationUsersResponse> failure:
-                throw MapToBitException(failure.Error);
-            default:
-                throw new InvalidOperationException();
-        }
     }
 
     /// <summary>
@@ -229,29 +193,50 @@ public class MembersController : Controller
     [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> Put(Guid id, [FromBody] MemberUpdateRequestModel model)
+    public async Task<IResult> Put(Guid id, [FromBody] MemberUpdateRequestModel model)
     {
         var existingUser = await _organizationUserRepository.GetByIdAsync(id);
         if (existingUser == null || existingUser.OrganizationId != _currentContext.OrganizationId)
         {
-            return new NotFoundResult();
+            return TypedResults.NotFound();
         }
-        var existingUserType = existingUser.Type;
-        var updatedUser = model.ToOrganizationUser(existingUser);
+
+        existingUser.ExternalId = model.ExternalId;
+
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId!.Value);
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
-        await _updateOrganizationUserCommand.UpdateUserAsync(updatedUser, existingUserType, null, associations, model.Groups);
-        MemberResponseModel response;
-        if (existingUser.UserId.HasValue)
-        {
-            var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
-            response = new MemberResponseModel(existingUserDetails!,
-                await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
-        }
-        else
-        {
-            response = new MemberResponseModel(updatedUser, associations);
-        }
-        return new JsonResult(response);
+
+        var request = new V2_UpdateUserCommand.UpdateOrganizationUserRequest(
+            existingUser,
+            organization!,
+            model.Type!.Value,
+            model.Permissions?.ToData(),
+            existingUser.AccessSecretsManager,
+            existingUser.AccessPam,
+            associations,
+            model.Groups,
+            model.Email,
+            model.Name,
+            null,
+            new SystemUser(EventSystemUser.PublicApi));
+
+        return await HandlePublic(await _updateOrganizationUserCommand.UpdateUserAsync(request),
+            async _ =>
+            {
+                MemberResponseModel response;
+                if (existingUser.UserId.HasValue)
+                {
+                    var existingUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(id);
+                    response = new MemberResponseModel(existingUserDetails!,
+                        await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(existingUserDetails!), associations);
+                }
+                else
+                {
+                    response = new MemberResponseModel(existingUser, associations);
+                }
+
+                return TypedResults.Json(response);
+            });
     }
 
     /// <summary>
@@ -339,7 +324,8 @@ public class MembersController : Controller
         var request = new RevokeOrganizationUsersRequest(
             _currentContext.OrganizationId!.Value,
             [id],
-            new SystemUser(EventSystemUser.PublicApi)
+            new SystemUser(EventSystemUser.PublicApi),
+            RevocationReason.Manual
         );
 
         var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(request);

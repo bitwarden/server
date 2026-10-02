@@ -20,7 +20,7 @@ public class IconHttpResponseTests
         _mockedUriService = Substitute.For<IUriService>();
         _mockedUriService.TryGetUri(Arg.Any<Uri>(), out Arg.Any<IconUri>()).Returns(x =>
         {
-            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("192.0.2.1"));
+            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("8.8.8.8"));
             return true;
         });
     }
@@ -93,7 +93,11 @@ public class IconHttpResponseTests
         var handler = new MockedHttpMessageHandler();
         handler.Fallback
             .WithStatusCode(HttpStatusCode.OK)
-            .WithContent("image/png", new byte[] { 137, 80, 78, 71 });
+            .WithContent("image/png", new byte[]
+            {
+                137, 80, 78, 71, 13, 10, 26, 10,
+                0, 0, 0, 0, 73, 69, 78, 68, 0, 0, 0, 0,
+            });
 
         substitute.CreateClient("Icons").Returns(handler.ToHttpClient());
         return substitute;

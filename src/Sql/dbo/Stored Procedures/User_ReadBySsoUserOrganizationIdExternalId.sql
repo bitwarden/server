@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[User_ReadBySsoUserOrganizationIdExternalId]
     @OrganizationId UNIQUEIDENTIFIER,
-    @ExternalId NVARCHAR(50)
+    @ExternalId NVARCHAR(300)
 AS
 BEGIN
     SET NOCOUNT ON

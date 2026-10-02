@@ -17,6 +17,20 @@ public class ValidationResult<TRequest>(TRequest request, OneOf<Error, None> err
     public bool IsError => IsT0;
     public bool IsValid => IsT1;
     public Error AsError => AsT0;
+
+    /// <summary>
+    /// Invokes <paramref name="error"/> when validation failed, or <paramref name="valid"/> with the
+    /// validated <see cref="Request"/> when validation succeeded.
+    /// </summary>
+    public void SwitchResult(Action<Error> error, Action<TRequest> valid) =>
+        Switch(error, _ => valid(Request));
+
+    /// <summary>
+    /// Returns the result of <paramref name="error"/> when validation failed, or the result of
+    /// <paramref name="valid"/> invoked with the validated <see cref="Request"/> when validation succeeded.
+    /// </summary>
+    public TResult MatchResult<TResult>(Func<Error, TResult> error, Func<TRequest, TResult> valid) =>
+        Match(error, _ => valid(Request));
 }
 
 public static class ValidationResultHelpers

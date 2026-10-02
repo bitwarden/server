@@ -37,10 +37,13 @@ public interface IProviderBillingService
     /// <summary>
     /// Generate a provider's client invoice report in CSV format for the specified <paramref name="invoiceId"/>. Utilizes the <see cref="ProviderInvoiceItem"/>
     /// records saved for the <paramref name="invoiceId"/> as part of our webhook processing for the <b>"invoice.created"</b> and <b>"invoice.finalized"</b> Stripe events.
+    /// The report is scoped to the provided <paramref name="providerId"/>, so a provider can only generate reports for invoices it owns.
     /// </summary>
+    /// <param name="providerId">The ID of the <see cref="Provider"/> that owns the invoice. Only items belonging to this provider are included.</param>
     /// <param name="invoiceId">The ID of the Stripe <see cref="Stripe.Invoice"/> to generate the report for.</param>
     /// <returns>The provider's client invoice report as a byte array.</returns>
     Task<byte[]> GenerateClientInvoiceReport(
+        Guid providerId,
         string invoiceId);
 
     Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(

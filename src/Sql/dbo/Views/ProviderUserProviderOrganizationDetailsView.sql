@@ -47,7 +47,9 @@ SELECT
     SS.[Data] SsoConfig,
     O.[UsePhishingBlocker],
     O.[UseDisableSmAdsForUsers],
-    O.[UseMyItems]
+    O.[UseMyItems],
+    O.[UseInviteLinks],
+    O.[UsePam]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

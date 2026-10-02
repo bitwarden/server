@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
@@ -22,7 +23,9 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         public string? PublicKey { get; set; }
         public string? Fingerprint { get; set; }
         public bool Reprompt { get; set; }
+        public bool Favorite { get; set; }
         public string? Notes { get; set; }
+        public Guid? FolderId { get; set; }
     }
 
     public class Result
@@ -56,6 +59,20 @@ public class UserSshKeyCipherScene(IUserRepository userRepository, ICipherReposi
         if (request.Reprompt)
         {
             cipher.Reprompt = CipherRepromptType.Password;
+        }
+        if (request.Favorite)
+        {
+            cipher.Favorites = JsonSerializer.Serialize(new Dictionary<string, bool>
+            {
+                { request.UserId.ToString().ToUpperInvariant(), true}
+            });
+        }
+        if (request.FolderId.HasValue)
+        {
+            cipher.Folders = CipherComposer.BuildFoldersJson(new Dictionary<Guid, Guid>
+            {
+                { request.UserId, request.FolderId.Value }
+            });
         }
 
         await cipherRepository.CreateAsync(cipher);

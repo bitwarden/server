@@ -3,7 +3,6 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using Stripe;
@@ -20,7 +19,6 @@ public interface IReinstateSubscriptionCommand
 public class ReinstateSubscriptionCommand(
     ILogger<ReinstateSubscriptionCommand> logger,
     IStripeAdapter stripeAdapter,
-    IFeatureService featureService,
     IPriceIncreaseScheduler priceIncreaseScheduler) : BaseBillingCommand<ReinstateSubscriptionCommand>(logger), IReinstateSubscriptionCommand
 {
     private readonly ILogger<ReinstateSubscriptionCommand> _logger = logger;
@@ -28,7 +26,9 @@ public class ReinstateSubscriptionCommand(
 
     public Task<BillingCommandResult<None>> Run(ISubscriber subscriber) => HandleAsync<None>(async () =>
     {
-        var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.GetSubscriptionAsync(
+            subscriber.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["discounts.source.coupon", "customer.discount.source.coupon"] });
 
         if (subscription is not
             {
@@ -39,78 +39,40 @@ public class ReinstateSubscriptionCommand(
             return new BadRequest("Subscription is not pending cancellation.");
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PM32645_DeferPriceMigrationToRenewal))
+        if (subscription.Metadata?.ContainsKey(MetadataKeys.CancelledDuringDeferredPriceIncrease) == true)
         {
-            var activeSchedule = await GetActiveScheduleAsync(subscription);
+            _logger.LogInformation(
+                "{Command}: Subscription ({SubscriptionId}) has pending price increase, clearing flag and recreating schedule",
+                CommandName, subscription.Id);
 
-            // if there is an active schedule, we need to update it to include Phase 2 because it was removed during cancellation
-            if (activeSchedule is { Phases.Count: > 0 })
+            // Clear pending cancellation, cancelling user, and flag BEFORE attaching a schedule.
+            // Stripe discourages direct subscription updates once a schedule is attached as it can create inconsistencies in phases.
+            await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
             {
-                if (activeSchedule.Phases.Count > 1)
+                CancelAtPeriodEnd = false,
+                Metadata = new Dictionary<string, string>
                 {
-                    _logger.LogError(
-                        "{Command}: Subscription schedule ({ScheduleId}) has {PhaseCount} phases (expected 1 after cancellation), updating to add Phase 2",
-                        CommandName, activeSchedule.Id, activeSchedule.Phases.Count);
-                    return DefaultConflict;
+                    [MetadataKeys.CancelledDuringDeferredPriceIncrease] = string.Empty,
+                    [MetadataKeys.CancellingUserId] = string.Empty
                 }
+            });
 
-                _logger.LogInformation(
-                    "{Command}: Active subscription schedule ({ScheduleId}) found for subscription ({SubscriptionId}), updating schedule phases",
-                    CommandName, activeSchedule.Id, subscription.Id);
+            await priceIncreaseScheduler.ScheduleForSubscription(subscription);
 
-                var phase2 = await priceIncreaseScheduler.ResolvePhase2Async(subscription);
-                if (phase2 == null)
-                {
-                    _logger.LogError("Failed to resolve Phase 2 for Subscription {SubscriptionId}", subscription.Id);
-                    return DefaultConflict;
-                }
-                var phase1 = activeSchedule.Phases[0];
-
-                await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
-                    new SubscriptionScheduleUpdateOptions
-                    {
-                        EndBehavior = SubscriptionScheduleEndBehavior.Release,
-                        Phases =
-                        [
-                            new SubscriptionSchedulePhaseOptions
-                            {
-                                StartDate = phase1.StartDate,
-                                EndDate = phase1.EndDate,
-                                Items = phase1.Items.Select(i => new SubscriptionSchedulePhaseItemOptions
-                                {
-                                    Price = i.PriceId,
-                                    Quantity = i.Quantity
-                                }).ToList(),
-                                Discounts = phase1.Discounts?.Select(d => new SubscriptionSchedulePhaseDiscountOptions
-                                {
-                                    Coupon = d.CouponId
-                                }).ToList(),
-                                ProrationBehavior = ProrationBehavior.None
-                            },
-                            phase2
-                        ]
-                    });
-                return new None();
-            }
+            return new None();
         }
 
         // The default behavior for non-price-migration subscriptions or subscriptions without
         // active schedules is to simply not cancel at the end of the period.
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
-            CancelAtPeriodEnd = false
+            CancelAtPeriodEnd = false,
+            Metadata = new Dictionary<string, string>
+            {
+                [MetadataKeys.CancellingUserId] = string.Empty
+            }
         });
 
         return new None();
     });
-
-    private async Task<SubscriptionSchedule?> GetActiveScheduleAsync(Subscription subscription)
-    {
-        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
-            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
-
-        return schedules.Data.FirstOrDefault(s =>
-            s.SubscriptionId == subscription.Id &&
-            s.Status == SubscriptionScheduleStatus.Active);
-    }
 }

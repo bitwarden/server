@@ -1,4 +1,5 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using System.Globalization;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Seeder.Data;
 using Bit.Seeder.Data.Distributions;
@@ -23,15 +24,16 @@ internal static class CipherComposer
         GeneratorContext generator,
         Distribution<PasswordStrength> passwordDistribution,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         return cipherType switch
         {
-            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId),
-            CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId),
-            CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId),
-            CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId),
-            CipherType.SSHKey => ComposeSshKey(index, encryptionKey, organizationId, userId),
+            CipherType.Login => ComposeLogin(index, encryptionKey, companies, generator, passwordDistribution, organizationId, userId, reprompt),
+            CipherType.Card => ComposeCard(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.Identity => ComposeIdentity(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.SecureNote => ComposeSecureNote(index, encryptionKey, generator, organizationId, userId, reprompt),
+            CipherType.SSHKey => ComposeSshKey(index, encryptionKey, organizationId, userId, reprompt),
             _ => throw new ArgumentException($"Unsupported cipher type: {cipherType}")
         };
     }
@@ -43,10 +45,22 @@ internal static class CipherComposer
         GeneratorContext generator,
         Distribution<PasswordStrength> passwordDistribution,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var company = companies[index % companies.Length];
         var uri = $"https://{company.Domain}";
+        var username = generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain);
+
+        // ~20% of logins get a FIDO2 passkey; ~40% get a 1-3 entry password history. Deterministic by index.
+        var fido2Credentials = index % 5 == 0
+            ? new List<Fido2CredentialViewDto> { LoginCipherSeeder.CreateFido2Credential(company.Domain, company.Name, username) }
+            : null;
+
+        var passwordHistory = index % 5 < 2
+            ? BuildPasswordHistory(index, 1 + (index % 3), generator.CipherCount, passwordDistribution)
+            : null;
+
         return LoginCipherSeeder.Create(new CipherSeed
         {
             Type = CipherType.Login,
@@ -54,13 +68,52 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Login = new LoginViewDto
             {
-                Username = generator.Username.GenerateByIndex(index, totalHint: generator.CipherCount, domain: company.Domain),
+                Username = username,
                 Password = Passwords.GetPassword(index, generator.CipherCount, passwordDistribution),
-                Uris = [new LoginUriViewDto { Uri = uri }]
+                Uris = [new LoginUriViewDto { Uri = uri }],
+                Fido2Credentials = fido2Credentials,
+                PasswordHistory = passwordHistory
             }
         });
+    }
+
+    internal static List<PasswordHistoryViewDto> BuildPasswordHistory(
+        int index,
+        int entryCount,
+        int total,
+        Distribution<PasswordStrength> passwordDistribution)
+    {
+        var history = new List<PasswordHistoryViewDto>(entryCount);
+        for (var k = 1; k <= entryCount; k++)
+        {
+            // Walk to a deterministic prior position in the pool. The offset must stay in [0, total) so
+            // Distribution.Select lands in a real bucket (otherwise every historical password collapses into the
+            // strongest tier), and must be non-zero so priorIndex != index — i.e. the prior password is genuinely
+            // distinct from the current one. 7919 is prime; multiplying by k varies offsets across entries.
+            int priorIndex;
+            if (total <= 1)
+            {
+                priorIndex = 0;
+            }
+            else
+            {
+                var offset = (k * 7919) % total;
+                if (offset == 0)
+                {
+                    offset = 1;
+                }
+                priorIndex = (index + offset) % total;
+            }
+            history.Add(new PasswordHistoryViewDto
+            {
+                Password = Passwords.GetPassword(priorIndex, total, passwordDistribution),
+                LastUsedDate = DateTime.UtcNow.AddDays(-7 * k)
+            });
+        }
+        return history;
     }
 
     private static Cipher ComposeCard(
@@ -68,7 +121,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var card = generator.Card.GenerateByIndex(index);
         return CardCipherSeeder.Create(new CipherSeed
@@ -78,6 +132,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Card = card
         });
     }
@@ -87,7 +142,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var identity = generator.Identity.GenerateByIndex(index);
         var name = $"{identity.FirstName} {identity.LastName}";
@@ -102,6 +158,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             Identity = identity
         });
     }
@@ -111,7 +168,8 @@ internal static class CipherComposer
         string encryptionKey,
         GeneratorContext generator,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var (name, notes) = generator.SecureNote.GenerateByIndex(index);
         return SecureNoteCipherSeeder.Create(new CipherSeed
@@ -121,7 +179,8 @@ internal static class CipherComposer
             Notes = notes,
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
-            UserId = userId
+            UserId = userId,
+            Reprompt = reprompt
         });
     }
 
@@ -129,7 +188,8 @@ internal static class CipherComposer
         int index,
         string encryptionKey,
         Guid? organizationId = null,
-        Guid? userId = null)
+        Guid? userId = null,
+        CipherRepromptType reprompt = CipherRepromptType.None)
     {
         var sshKey = SshKeyDataGenerator.GenerateByIndex(index);
         return SshKeyCipherSeeder.Create(new CipherSeed
@@ -139,6 +199,7 @@ internal static class CipherComposer
             EncryptionKey = encryptionKey,
             OrganizationId = organizationId,
             UserId = userId,
+            Reprompt = reprompt,
             SshKey = sshKey
         });
     }
@@ -151,6 +212,45 @@ internal static class CipherComposer
         if (userFolderIds.TryGetValue(userId, out var folderIds) && folderIds.Count > 0)
         {
             cipher.Folders = $"{{\"{userId.ToString().ToUpperInvariant()}\":\"{folderIds[index % folderIds.Count].ToString().ToUpperInvariant()}\"}}";
+        }
+    }
+
+    /// <summary>
+    /// Applies archived/deleted lifecycle state to a composed cipher per its membership in
+    /// <paramref name="selection"/>. No-op if <paramref name="index"/> is in none of the sets.
+    /// <paramref name="resolveArchiveOwner"/> is invoked only when the cipher is archived (alone or
+    /// both), so callers can defer lookups (e.g. a dictionary keyed only by archived indices) that
+    /// would otherwise be unsafe to evaluate eagerly.
+    /// </summary>
+    internal static void AssignArchiveOrDeleteState(Cipher cipher, int index, ArchiveDeleteSets selection, Func<int, Guid> resolveArchiveOwner)
+    {
+        var isBoth = selection.Both.Contains(index);
+        var isArchived = isBoth || selection.Archived.Contains(index);
+
+        // CreationDate must predate ArchivedDate/DeletedDate — Compose stamps it to UtcNow, which is
+        // otherwise later than these backdated values.
+        if (isBoth)
+        {
+            var archivedDate = DaysAgo(index, 15, 90);
+            var deletedDate = DaysAgo(index, 7, 14);
+            cipher.CreationDate = archivedDate;
+            cipher.Archives = BuildArchivesJson(resolveArchiveOwner(index), archivedDate);
+            cipher.DeletedDate = deletedDate;
+            cipher.RevisionDate = deletedDate;
+        }
+        else if (isArchived)
+        {
+            var archivedDate = DaysAgo(index, 15, 90);
+            cipher.CreationDate = archivedDate;
+            cipher.Archives = BuildArchivesJson(resolveArchiveOwner(index), archivedDate);
+            cipher.RevisionDate = archivedDate;
+        }
+        else if (selection.DeletedOnly.Contains(index))
+        {
+            var deletedDate = DaysAgo(index, 7, 14);
+            cipher.CreationDate = deletedDate;
+            cipher.DeletedDate = deletedDate;
+            cipher.RevisionDate = deletedDate;
         }
     }
 
@@ -174,5 +274,27 @@ internal static class CipherComposer
         var entries = userIds.Select(id =>
             $"\"{id.ToString().ToUpperInvariant()}\":true");
         return $"{{{string.Join(",", entries)}}}";
+    }
+
+    /// <summary>
+    /// Builds the Archives JSON column value for a single user. Mirrors the JSON_MODIFY shape
+    /// produced by Cipher_Archive.sql. Produces <c>{"USERID":"yyyy-MM-ddTHH:mm:ss.fffZ"}</c>
+    /// with an uppercase GUID key.
+    /// </summary>
+    internal static string BuildArchivesJson(Guid userId, DateTime archivedDateUtc)
+    {
+        var timestamp = archivedDateUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        return $"{{\"{userId.ToString().ToUpperInvariant()}\":\"{timestamp}\"}}";
+    }
+
+    /// <summary>
+    /// Deterministic "N days ago" timestamp within [minDaysAgo, maxDaysAgo], varied by index.
+    /// Mirrors the existing BuildPasswordHistory precedent of AddDays(-7 * k) — no RNG needed.
+    /// </summary>
+    internal static DateTime DaysAgo(int index, int minDaysAgo, int maxDaysAgo)
+    {
+        var range = maxDaysAgo - minDaysAgo + 1;
+        var days = minDaysAgo + (index % range);
+        return DateTime.UtcNow.AddDays(-days);
     }
 }

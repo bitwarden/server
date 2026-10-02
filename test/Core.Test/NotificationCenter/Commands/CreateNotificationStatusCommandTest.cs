@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using System.Security.Claims;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
@@ -53,10 +55,10 @@ public class CreateNotificationStatusCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(notificationStatus));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -70,10 +72,10 @@ public class CreateNotificationStatusCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(notificationStatus));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -87,10 +89,10 @@ public class CreateNotificationStatusCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(notificationStatus));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationStatusAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Any<PushNotification<NotificationPushNotification>>());
     }
 
     [Theory]
@@ -106,9 +108,6 @@ public class CreateNotificationStatusCommandTest
         Assert.Equal(notificationStatus, newNotificationStatus);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushNotificationStatusAsync(notification, notificationStatus);
-        await sutProvider.GetDependency<IPushNotificationService>()
-            .Received(0)
-            .PushNotificationAsync(Arg.Any<Notification>());
+            .PushAsync(Arg.Is<PushNotification<NotificationPushNotification>>(n => n.Type == PushType.NotificationStatus && n.Payload.Id == notification.Id));
     }
 }

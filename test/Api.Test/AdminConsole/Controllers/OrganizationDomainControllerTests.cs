@@ -34,6 +34,21 @@ public class OrganizationDomainControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Get_ShouldReturnOrganizationDomainList_WhenOrgIdCanManagePoliciesOnly(Guid orgId,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().ManagePolicies(orgId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
+        sutProvider.GetDependency<IGetOrganizationDomainByOrganizationIdQuery>()
+            .GetDomainsByOrganizationIdAsync(orgId).Returns(new List<OrganizationDomain>());
+
+        var result = await sutProvider.Sut.GetAll(orgId);
+
+        Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task Get_ShouldNotFound_WhenOrganizationDoesNotExist(Guid orgId,
         SutProvider<OrganizationDomainController> sutProvider)
     {
@@ -68,6 +83,77 @@ public class OrganizationDomainControllerTests
 
         Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
         Assert.Equal(orgId, result.Data.Select(x => x.OrganizationId).FirstOrDefault());
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllMini_ShouldThrowUnauthorized_WhenOrgIdCannotManageSsoOrUsers(Guid orgId,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(false);
+
+        var requestAction = async () => await sutProvider.Sut.GetAllMini(orgId);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllMini_ShouldNotFound_WhenOrganizationDoesNotExist(Guid orgId,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.GetAllMini(orgId);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetAllMini_ShouldReturnDomainNamesAndVerificationStatus_WhenOrgIdCanManageUsersOnly(Guid orgId,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        var verifiedDomain = new OrganizationDomain
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = orgId,
+            CreationDate = DateTime.UtcNow.AddDays(-7),
+            DomainName = "verified.com",
+            Txt = "btw+12342"
+        };
+        verifiedDomain.SetVerifiedDate();
+
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
+        sutProvider.GetDependency<IGetOrganizationDomainByOrganizationIdQuery>()
+            .GetDomainsByOrganizationIdAsync(orgId).Returns(new List<OrganizationDomain>
+            {
+                verifiedDomain,
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    OrganizationId = orgId,
+                    CreationDate = DateTime.UtcNow.AddDays(-7),
+                    DomainName = "unverified.com",
+                    Txt = "btw+56789"
+                }
+            });
+
+        var result = await sutProvider.Sut.GetAllMini(orgId);
+
+        Assert.IsType<Bit.HttpExtensions.ListResponseModel<OrganizationDomainMiniResponseModel>>(result);
+        Assert.Collection(result.Data,
+            domain =>
+            {
+                Assert.Equal("verified.com", domain.DomainName);
+                Assert.Equal(verifiedDomain.VerifiedDate, domain.VerifiedDate);
+            },
+            domain =>
+            {
+                Assert.Equal("unverified.com", domain.DomainName);
+                Assert.Null(domain.VerifiedDate);
+            });
     }
 
     [Theory, BitAutoData]
@@ -294,37 +380,15 @@ public class OrganizationDomainControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).ReturnsNull();
-
-        var requestAction = async () => await sutProvider.Sut.GetOrgDomainSsoDetails(model);
-
-        await Assert.ThrowsAsync<NotFoundException>(requestAction);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
-
-        var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
-
-        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetVerifiedOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
+    public async Task GetVerifiedOrgDomainSsoDetails_ShouldReturnEmptyList_WhenEmailHasNoVerifiedDomain(
         OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(Array.Empty<VerifiedOrganizationDomainSsoDetail>());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrgDomainSsoDetails(model));
+        var result = await sutProvider.Sut.GetVerifiedOrgDomainSsoDetailsAsync(model);
+
+        Assert.IsType<VerifiedOrganizationDomainSsoDetailsResponseModel>(result);
     }
 
     [Theory, BitAutoData]

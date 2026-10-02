@@ -59,32 +59,6 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(pastDomains);
     }
 
-    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
-    {
-        var domainName = new MailAddress(email).Host;
-
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var ssoDetails = await (from o in dbContext.Organizations
-                                from od in o.Domains
-                                join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
-                                from s in sJoin.DefaultIfEmpty()
-                                where od.DomainName == domainName && o.Enabled
-                                select new OrganizationDomainSsoDetailsData
-                                {
-                                    OrganizationId = o.Id,
-                                    OrganizationName = o.Name,
-                                    SsoAvailable = o.SsoConfigs.Any(sc => sc.Enabled),
-                                    OrganizationIdentifier = o.Identifier,
-                                    VerifiedDate = od.VerifiedDate,
-                                    DomainName = od.DomainName
-                                })
-            .AsNoTracking()
-            .SingleOrDefaultAsync();
-
-        return ssoDetails;
-    }
-
     public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         var domainName = new MailAddress(email).Host;

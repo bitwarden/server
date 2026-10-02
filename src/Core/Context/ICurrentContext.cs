@@ -79,8 +79,6 @@ public interface ICurrentContext
     bool ProviderUser(Guid providerId);
     bool ProviderManageUsers(Guid providerId);
     bool ProviderAccessEventLogs(Guid providerId);
-    bool AccessProviderOrganizations(Guid providerId);
-    bool ManageProviderOrganizations(Guid providerId);
 
     Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);
@@ -90,5 +88,11 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+
+    /// <summary>
+    /// Whether the caller holds a PAM license (<c>OrganizationUser.AccessPam</c>) in the given organization.
+    /// </summary>
+    bool AccessPam(Guid organizationId);
+
     CurrentContextOrganization? GetOrganization(Guid orgId);
 }

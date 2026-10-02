@@ -2,7 +2,7 @@
 using AutoMapper;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
-using Bit.Core.KeyManagement.UserKey;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -25,12 +25,12 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
         return signingKeys.ToSignatureKeyPairData();
     }
 
-    public UpdateEncryptedDataForKeyRotation SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
+    public DatabaseTransactionAction SetUserSignatureKeyPair(Guid userId, SignatureKeyPairData signingKeys)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var entity = new Models.UserSignatureKeyPair
             {
                 Id = CoreHelpers.GenerateComb(),
@@ -46,12 +46,12 @@ public class UserSignatureKeyPairRepository(IServiceScopeFactory serviceScopeFac
         };
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
+    public DatabaseTransactionAction UpdateForKeyRotation(Guid grantorId, SignatureKeyPairData signingKeys)
     {
-        return async (_, _) =>
+        return async (connection, transaction) =>
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
-            var dbContext = GetDatabaseContext(scope);
+            var dbContext = GetTransactionalDatabaseContext(scope, connection, transaction);
             var entity = await dbContext.UserSignatureKeyPairs.FirstOrDefaultAsync(x => x.UserId == grantorId);
             if (entity != null)
             {

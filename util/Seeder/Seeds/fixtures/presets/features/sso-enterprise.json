@@ -9,7 +9,7 @@
     "fixture": "starter-team"
   },
   "ciphers": {
-    "fixture": "sso-vault"
+    "fixture": "enterprise-basic"
   },
   "policies": {
     "enable": ["requireSso"]

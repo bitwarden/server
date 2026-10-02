@@ -1,5 +1,6 @@
-﻿using Bit.Api.Models.Public.Response;
-using Bit.Api.Public.Controllers;
+﻿using Bit.Api.AdminConsole.Models.Public.Response;
+using Bit.Api.AdminConsole.Public.Controllers;
+using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

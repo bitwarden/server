@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Bit.Api.AdminConsole.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
@@ -90,9 +91,10 @@ public static class ControllerAuthorizationTestHelpers
             // Only check for custom [Authorize<T>] (not base [Authorize])
             var methodHasCustomAuthorize = HasCustomAuthorizeAttribute(method);
             var methodHasAllowAnonymous = HasAllowAnonymousAttribute(method);
+            var methodHasNoopAuthorize = HasNoopAuthorizeAttribute(method);
 
-            // Method must have EITHER [Authorize<T>] OR [AllowAnonymous]
-            var hasAuthorizationAttribute = methodHasCustomAuthorize || methodHasAllowAnonymous;
+            // Method must have EITHER [Authorize<T>] OR [AllowAnonymous] OR [NoopAuthorize]
+            var hasAuthorizationAttribute = methodHasCustomAuthorize || methodHasAllowAnonymous || methodHasNoopAuthorize;
 
             if (!hasAuthorizationAttribute)
             {
@@ -113,7 +115,8 @@ public static class ControllerAuthorizationTestHelpers
                 $"  - {methodList}\n\n" +
                 $"Each HTTP action method must be explicitly decorated with:\n" +
                 $"  - [Authorize<TRequirement>] for protected endpoints, OR\n" +
-                $"  - [AllowAnonymous] for intentionally public endpoints\n\n" +
+                $"  - [AllowAnonymous] for intentionally public endpoints, OR\n" +
+                $"  - [NoopAuthorize] to explicitly document that no additional authorization is required\n\n" +
                 $"Note: Class-level [Authorize] is required but not sufficient. Every route must be explicitly decorated.");
         }
     }
@@ -155,5 +158,10 @@ public static class ControllerAuthorizationTestHelpers
     private static bool HasAllowAnonymousAttribute(MethodInfo method)
     {
         return method.GetCustomAttribute<AllowAnonymousAttribute>() != null;
+    }
+
+    private static bool HasNoopAuthorizeAttribute(MethodInfo method)
+    {
+        return method.GetCustomAttribute<NoopAuthorizeAttribute>() != null;
     }
 }

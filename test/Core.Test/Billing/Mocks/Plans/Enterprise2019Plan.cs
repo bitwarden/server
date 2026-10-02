@@ -33,6 +33,7 @@ public record Enterprise2019Plan : Plan
         UsersGetPremium = true;
         HasCustomPermissions = true;
         HasMyItems = true;
+        HasInviteLinks = true;
 
         UpgradeSortOrder = 4;
         DisplaySortOrder = 4;

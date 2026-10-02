@@ -12,4 +12,13 @@ public class GetAllPlayIdsQuery(DatabaseContext databaseContext) : IGetAllPlayId
             .Distinct()
             .ToList();
     }
+
+    public List<string> GetAllPlayIds(DateTime olderThan)
+    {
+        return databaseContext.PlayItem
+            .Where(pd => pd.CreationDate < olderThan)
+            .Select(pd => pd.PlayId)
+            .Distinct()
+            .ToList();
+    }
 }

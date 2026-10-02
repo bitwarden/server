@@ -115,7 +115,7 @@
         </dt>
     </dl>
 }
-@if (canViewBillingInformation)
+@if (canViewBillingInformation && Model.BillingInfo != null && Model.BillingHistoryInfo != null)
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",

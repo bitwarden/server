@@ -1,4 +1,5 @@
-﻿using Bit.Seeder.Recipes;
+﻿using System.Text.Json;
+using Bit.Seeder.Recipes;
 using Bit.Seeder.Services;
 using Bit.SeederUtility.Configuration;
 using Bit.SeederUtility.Helpers;
@@ -10,7 +11,7 @@ namespace Bit.SeederUtility.Commands;
 public class PresetCommand
 {
     [DefaultCommand]
-    public void Execute(PresetArgs args)
+    public async Task ExecuteAsync(PresetArgs args)
     {
         try
         {
@@ -18,33 +19,47 @@ public class PresetCommand
 
             if (args.List)
             {
-                PrintAvailablePresets();
+                PrintAvailablePresets(args.GetOutputFormat());
                 return;
             }
 
             if (IsIndividualPreset(args.Name!))
             {
-                RunIndividualPreset(args);
+                if (args.StripeBilling)
+                {
+                    throw new ArgumentException(
+                        $"--stripe-billing is not supported for individual preset '{args.Name}'. " +
+                        "Only organization presets can be billed today; premium billing is a separate task.");
+                }
+
+                await RunIndividualPresetAsync(args);
             }
             else
             {
-                RunOrganizationPreset(args);
+                await RunOrganizationPresetAsync(args);
             }
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            Console.Error.WriteLine($"Error: {ex.Message}");
+            await Console.Error.WriteLineAsync($"Error: {ex.Message}");
             Environment.Exit(1);
         }
     }
 
-    private static void RunOrganizationPreset(PresetArgs args)
+    private static async Task RunOrganizationPresetAsync(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-        var recipe = new OrganizationRecipe(deps.ToDependencies());
 
-        Console.WriteLine($"Seeding organization from preset '{args.Name}'...");
-        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
+        await Console.Error.WriteLineAsync($"Seeding organization from preset '{args.Name}'...");
+        var result = await ConsoleProgressReporter.RunWithProgressAsync(
+            deps.ToDependencies(),
+            d => new OrganizationRecipe(d).SeedAsync(
+                args.Name!,
+                args.Password,
+                args.KdfIterations,
+                args.OrgName,
+                args.OwnerEmail,
+                stripeBilling: args.ToStripeBillingOptions()));
 
         ConsoleOutput.PrintRow("Organization", result.OrganizationId);
         if (result.OwnerEmail is not null)
@@ -61,16 +76,28 @@ public class PresetCommand
         ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
         ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
 
+        if (args.StripeBilling)
+        {
+            ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+            ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+        }
+
         ConsoleOutput.PrintMangleMap(deps);
+
+        if (result.SsoIdentifier is not null)
+        {
+            ConsoleOutput.PrintSsoWiring(result.OrganizationId, result.SsoIdentifier, result.OwnerEmail);
+        }
     }
 
-    private static void RunIndividualPreset(PresetArgs args)
+    private static async Task RunIndividualPresetAsync(PresetArgs args)
     {
         using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
-        var recipe = new IndividualUserRecipe(deps.ToDependencies());
 
-        Console.WriteLine($"Seeding individual user from preset '{args.Name}'...");
-        var result = recipe.Seed(args.Name!, args.Password, args.KdfIterations);
+        await Console.Error.WriteLineAsync($"Seeding individual user from preset '{args.Name}'...");
+        var result = await ConsoleProgressReporter.RunWithProgressAsync(
+            deps.ToDependencies(),
+            d => new IndividualUserRecipe(d).SeedAsync(args.Name!, args.Password, args.KdfIterations));
 
         ConsoleOutput.PrintRow("User", result.UserId);
         if (result.Email is not null)
@@ -89,7 +116,7 @@ public class PresetCommand
         ConsoleOutput.PrintMangleMap(deps);
     }
 
-    private static void PrintAvailablePresets()
+    private static void PrintAvailablePresets(OutputFormat format = OutputFormat.Text)
     {
         var available = PresetCatalogService.ListAvailable();
 
@@ -106,6 +133,17 @@ public class PresetCommand
             {
                 orgPresets.Add(presetName);
             }
+        }
+
+        if (format == OutputFormat.Json)
+        {
+            var output = new
+            {
+                organization = orgPresets,
+                individual = individualPresets,
+            };
+            Console.WriteLine(JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true }));
+            return;
         }
 
         Console.WriteLine("Organization Presets:");

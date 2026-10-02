@@ -16,7 +16,8 @@ public class UpdateOrganizationIntegrationConfigurationCommand(
     IOrganizationIntegrationRepository integrationRepository,
     IOrganizationIntegrationConfigurationRepository configurationRepository,
     [FromKeyedServices(EventIntegrationsCacheConstants.CacheName)] IFusionCache cache,
-    IOrganizationIntegrationConfigurationValidator validator)
+    IOrganizationIntegrationConfigurationValidator validator,
+    ITeamsService teamsService)
     : IUpdateOrganizationIntegrationConfigurationCommand
 {
     public async Task<OrganizationIntegrationConfiguration> UpdateAsync(
@@ -28,17 +29,18 @@ public class UpdateOrganizationIntegrationConfigurationCommand(
         var integration = await integrationRepository.GetByIdAsync(integrationId);
         if (integration == null || integration.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Integration not found for this organization.");
         }
         var configuration = await configurationRepository.GetByIdAsync(configurationId);
         if (configuration is null || configuration.OrganizationIntegrationId != integrationId)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Configuration not found for this integration.");
         }
         if (!validator.ValidateConfiguration(integration.Type, updatedConfiguration))
         {
             throw new BadRequestException($"Invalid Configuration and/or Filters for integration type {integration.Type}");
         }
+        await TeamsChannelValidation.EnsureStandardChannelAsync(teamsService, integration, updatedConfiguration, configuration);
 
         updatedConfiguration.Id = configuration.Id;
         updatedConfiguration.CreationDate = configuration.CreationDate;

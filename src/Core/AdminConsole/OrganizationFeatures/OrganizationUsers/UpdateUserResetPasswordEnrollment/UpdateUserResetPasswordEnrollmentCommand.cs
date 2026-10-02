@@ -1,0 +1,87 @@
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
+
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
+
+public class UpdateUserResetPasswordEnrollmentCommand : IUpdateUserResetPasswordEnrollmentCommand
+{
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IPolicyQuery _policyQuery;
+    private readonly IEventService _eventService;
+
+    public UpdateUserResetPasswordEnrollmentCommand(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IPolicyQuery policyQuery,
+        IEventService eventService)
+    {
+        _organizationUserRepository = organizationUserRepository;
+        _organizationRepository = organizationRepository;
+        _policyQuery = policyQuery;
+        _eventService = eventService;
+    }
+
+    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string? resetPasswordKey,
+        Guid? callingUserId)
+    {
+        // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        if (!callingUserId.HasValue || orgUser == null || orgUser.UserId != callingUserId.Value ||
+            orgUser.OrganizationId != organizationId)
+        {
+            throw new BadRequestException(new ConfirmUserNotValidError().Message);
+        }
+
+        // Make sure the organization has the ability to use password reset
+        var org = await _organizationRepository.GetByIdAsync(organizationId);
+        if (org == null || !org.UseResetPassword)
+        {
+            throw new BadRequestException(new PasswordResetEnrollmentNotAllowedError().Message);
+        }
+
+        // Make sure the organization has the policy enabled
+        // Todo: Cannot use PolicyRequirements until PM-34092 is complete
+        var resetPasswordPolicy = await _policyQuery.RunAsync(organizationId, PolicyType.ResetPassword);
+        if (!resetPasswordPolicy.Enabled)
+        {
+            throw new BadRequestException(new PasswordResetPolicyNotEnabledError().Message);
+        }
+
+        var isWithdrawal = !OrganizationUser.IsValidResetPasswordKey(resetPasswordKey);
+
+        // Block the user from withdrawal if auto enrollment is enabled
+        if (isWithdrawal && resetPasswordPolicy.Data != null)
+        {
+            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data,
+                JsonHelpers.IgnoreCase);
+
+            if (data?.AutoEnrollEnabled ?? false)
+            {
+                throw new BadRequestException(
+                    "Due to an Enterprise policy, you are not allowed to withdraw from account recovery.");
+            }
+        }
+
+        if (!isWithdrawal && !EncryptedStringAttribute.IsValidCore(resetPasswordKey))
+        {
+            throw new BadRequestException(new InvalidResetPasswordKeyError().Message);
+        }
+
+        // Store null, not a blank string, to match how the key is read
+        orgUser.ResetPasswordKey = isWithdrawal ? null : resetPasswordKey;
+        await _organizationUserRepository.ReplaceAsync(orgUser);
+        await _eventService.LogOrganizationUserEventAsync(orgUser,
+            isWithdrawal
+                ? EventType.OrganizationUser_ResetPassword_Withdraw
+                : EventType.OrganizationUser_ResetPassword_Enroll);
+    }
+}

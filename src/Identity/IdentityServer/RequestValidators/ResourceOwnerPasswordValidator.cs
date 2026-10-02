@@ -4,8 +4,8 @@
 using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -32,20 +32,19 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IDeviceValidator deviceValidator,
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         ISsoRequestValidator ssoRequestValidator,
-        IOrganizationUserRepository organizationUserRepository,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
-        IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
-        IClientVersionValidator clientVersionValidator)
+        IClientVersionValidator clientVersionValidator,
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
         : base(
             userManager,
             userService,
@@ -53,12 +52,10 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             deviceValidator,
             twoFactorAuthenticationValidator,
             ssoRequestValidator,
-            organizationUserRepository,
             logger,
             currentContext,
             globalSettings,
             userRepository,
-            policyService,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
@@ -66,7 +63,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             authRequestRepository,
             mailService,
             userAccountKeysQuery,
-            clientVersionValidator)
+            clientVersionValidator,
+            updateDeviceLastActivityCommand)
     {
         _userManager = userManager;
         _currentContext = currentContext;
@@ -77,8 +75,10 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
-        // We want to keep this device around incase the device is new for the user
-        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        // We want to keep this device around incase the device is new for the user.
+        // Pass through the client version from CurrentContext so a brand-new device row gets
+        // ClientVersion populated at Device_Create time (no temporary-NULL window).
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request, _currentContext.ClientVersion?.ToString());
         var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {

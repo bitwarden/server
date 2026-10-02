@@ -4,24 +4,18 @@
 
 **Read these files before reviewing to ensure that you fully understand the project and contributing guidelines**
 
-1. @README.md
-2. @CONTRIBUTING.md
-3. @.github/PULL_REQUEST_TEMPLATE.md
+1. `README.md` (read on demand for project overview)
+2. `CONTRIBUTING.md` (read on demand for contributing guidelines)
+3. @../.github/PULL_REQUEST_TEMPLATE.md
 
 ## Critical Rules
 
 - **NEVER** use code regions: If complexity suggests regions, refactor for better readability
-
 - **NEVER** compromise zero-knowledge principles: User vault data must remain encrypted and inaccessible to Bitwarden
-
 - **NEVER** log or expose sensitive data: No PII, passwords, keys, or vault data in logs or error messages
-
 - **ALWAYS** use secure communication channels: Enforce confidentiality, integrity, and authenticity
-
 - **ALWAYS** encrypt sensitive data: All vault data must be encrypted at rest, in transit, and in use
-
 - **ALWAYS** prioritize cryptographic integrity and data protection
-
 - **ALWAYS** add unit tests (with mocking) for any new feature development
 
 ## Project Structure

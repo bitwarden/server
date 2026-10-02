@@ -1,20 +1,20 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public class OrganizationDisableCommand : IOrganizationDisableCommand
 {
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
 
     public OrganizationDisableCommand(
         IOrganizationRepository organizationRepository,
-        IApplicationCacheService applicationCacheService)
+        IOrganizationAbilityCacheService organizationAbilityCacheService)
     {
         _organizationRepository = organizationRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
     }
 
     public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
@@ -27,7 +27,7 @@ public class OrganizationDisableCommand : IOrganizationDisableCommand
             organization.RevisionDate = DateTime.UtcNow;
 
             await _organizationRepository.ReplaceAsync(organization);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
         }
     }
 }

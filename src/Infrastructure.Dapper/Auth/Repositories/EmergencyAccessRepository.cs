@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Auth.Helpers;
@@ -124,11 +124,14 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid grantorId, IEnumerable<EmergencyAccess> emergencyAccessKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *
@@ -174,6 +177,26 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 cmd.Parameters.Add("@GrantorId", SqlDbType.UniqueIdentifier).Value = grantorId;
                 cmd.ExecuteNonQuery();
             }
+        };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateStatusAndKeyEncryptedById(Guid id,
+        EmergencyAccessStatusType status, string? keyEncrypted, DateTime revisionDate)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_UpdateStatusKeyEncryptedById]",
+                new
+                {
+                    Id = id,
+                    Status = (byte)status,
+                    KeyEncrypted = keyEncrypted,
+                    RevisionDate = revisionDate
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
         };
     }
 

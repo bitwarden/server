@@ -146,19 +146,12 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
-        services.AddOptionality();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
-
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
-        {
-            services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
-        }
 
         // HttpClients
         services.AddHttpClient("InternalSso", client =>
@@ -231,8 +224,16 @@ public class Startup
         // Add IdentityServer to the request pipeline.
         app.UseIdentityServer();
 
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
+
         // Add Mvc stuff
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);

@@ -20,7 +20,6 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
 {
     public PolicyType Type => PolicyType.SingleOrg;
     private const string OrganizationNotFoundErrorMessage = "Organization not found.";
-    private const string ClaimedDomainSingleOrganizationRequiredErrorMessage = "The Single organization policy is required for organizations that have enabled domain verification.";
 
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -29,6 +28,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
 
     public SingleOrgPolicyEventHandler(
         IOrganizationUserRepository organizationUserRepository,
@@ -37,7 +37,8 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
@@ -46,6 +47,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         _currentContext = currentContext;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
+        _featureService = featureService;
     }
 
     public async Task<string> ValidateAsync(SavePolicyModel policyRequest, Policy? currentPolicy)
@@ -65,7 +67,8 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
 
             if (await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
             {
-                return ClaimedDomainSingleOrganizationRequiredErrorMessage;
+                var singleOrgPolicyName = PolicyType.SingleOrg.GetName(_featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
+                return $"The {singleOrgPolicyName} policy is required for organizations that have enabled domain verification.";
             }
         }
 
@@ -95,8 +98,7 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
 
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
-            .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
+            .Where(ou => ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed &&
                          ou.Type != OrganizationUserType.Owner &&
                          ou.Type != OrganizationUserType.Admin &&
                          !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId))
@@ -112,10 +114,13 @@ public class SingleOrgPolicyEventHandler : IPolicyValidationEvent, IOnPolicyPreU
         var usersToRevoke = currentActiveRevocableOrganizationUsers.Where(ou =>
             allRevocableUserOrgs.Any(uo => uo.UserId == ou.UserId &&
                 uo.OrganizationId != organizationId &&
-                uo.Status != OrganizationUserStatusType.Invited)).ToList();
+                uo.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)).ToList();
 
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, usersToRevoke, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId,
+                usersToRevoke,
+                performedBy,
+                RevocationReason.SingleOrgPolicyNonCompliance));
 
         if (commandResult.HasErrors)
         {

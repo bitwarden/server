@@ -1,0 +1,14 @@
+CREATE PROCEDURE [dbo].[AccessRule_ReadDetailsById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT *
+    FROM [dbo].[AccessRule]
+    WHERE [Id] = @Id
+
+    SELECT [Id]
+    FROM [dbo].[Collection]
+    WHERE [AccessRuleId] = @Id
+END

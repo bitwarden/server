@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Platform.Mail.Enqueuing;
+
 public class AzureQueueMailService : AzureQueueService<IMailQueueMessage>, IMailEnqueuingService
 {
     public AzureQueueMailService(GlobalSettings globalSettings) : base(

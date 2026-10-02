@@ -38,14 +38,16 @@ public interface IMailService
     /// <returns>Task</returns>
     Task SendFreeOrgOrFamilyOrgUserWelcomeEmailAsync(User user, string familyOrganizationName);
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
-    Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing);
+    Task SendRegistrationVerificationEmailAsync(string email, string token, string? fromMarketing,
+        string? sealedOpenOrgInviteData = null);
     Task SendTrialInitiationSignupEmailAsync(
         bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products,
-        int trialLength);
+        int trialLength,
+        bool paymentOptional = false);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
@@ -138,7 +140,7 @@ public interface IMailService
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
 #nullable disable
-    Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+    Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string organizationId,
         string organizationName);
 #nullable enable
     Task SendClaimedDomainUserEmailAsync(ClaimedUserDomainClaimedEmails emailList);

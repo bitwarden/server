@@ -5,12 +5,12 @@ namespace Bit.SeederUtility;
 
 public class Program
 {
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         PrintBanner();
 
-        return new AppRunner<Program>()
-            .Run(args);
+        return await new AppRunner<Program>()
+            .RunAsync(args);
     }
 
     private static void PrintBanner()
@@ -73,13 +73,13 @@ public class Program
                     continue;
                 }
 
-                Console.WriteLine($"{color}{line[minIndent..]}{reset}");
+                Console.Error.WriteLine($"{color}{line[minIndent..]}{reset}");
             }
         }
 
-        Console.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
-        Console.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
-        Console.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╔══════════════════════════════════════════╗{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}║            SEEDER    UTILITY             ║{reset}");
+        Console.Error.WriteLine($"  {bold}{cyan}╚══════════════════════════════════════════╝{reset}");
     }
 
     [Subcommand]

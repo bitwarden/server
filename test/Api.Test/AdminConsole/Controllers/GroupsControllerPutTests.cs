@@ -1,12 +1,12 @@
 ﻿using System.Security.Claims;
+using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Models.Request;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -46,7 +46,6 @@ public class GroupsControllerPutTests
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
@@ -103,7 +102,6 @@ public class GroupsControllerPutTests
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
@@ -155,7 +153,6 @@ public class GroupsControllerPutTests
 
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
@@ -224,7 +221,6 @@ public class GroupsControllerPutTests
         var response = await sutProvider.Sut.Put(organization.Id, group.Id, groupRequestModel);
 
         // Expect all collection access (modified and unmodified) to be saved
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageGroups(organization.Id);
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name),
@@ -289,7 +285,7 @@ public class GroupsControllerPutTests
 
         // Arrange org and orgAbility
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(orgId)
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(orgId)
             .Returns(new OrganizationAbility
             {
                 Id = organization.Id,
@@ -299,7 +295,6 @@ public class GroupsControllerPutTests
         // Arrange user
         // If no savingUser provided, they're not an org user, just return a random guid
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUser?.UserId ?? CoreHelpers.GenerateComb());
-        sutProvider.GetDependency<ICurrentContext>().ManageGroups(orgId).Returns(true);
 
         // Arrange repositories
         sutProvider.GetDependency<IGroupRepository>().GetManyUserIdsByIdAsync(group.Id).Returns(currentGroupUsers ?? []);

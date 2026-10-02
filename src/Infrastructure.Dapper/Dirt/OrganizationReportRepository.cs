@@ -38,6 +38,19 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         }
     }
 
+    public async Task<OrganizationReport> ReadLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadLatestByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
     public async Task<OrganizationReport> UpdateSummaryDataAsync(Guid organizationId, Guid reportId, string summaryData)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -96,44 +109,6 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
                 commandType: CommandType.StoredProcedure);
 
             return results;
-        }
-    }
-
-    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
-    {
-        using (var connection = new SqlConnection(ReadOnlyConnectionString))
-        {
-            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportDataResponse>(
-                $"[{Schema}].[OrganizationReport_GetReportDataById]",
-                new { Id = reportId },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-    }
-
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var parameters = new
-            {
-                OrganizationId = organizationId,
-                Id = reportId,
-                ReportData = reportData,
-                RevisionDate = DateTime.UtcNow
-            };
-
-            await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationReport_UpdateReportData]",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            // Return the updated report
-            return await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
-                $"[{Schema}].[OrganizationReport_ReadById]",
-                new { Id = reportId },
-                commandType: CommandType.StoredProcedure);
         }
     }
 

@@ -18,6 +18,9 @@ public class IndividualArgs : IArgumentModel
     [Option("last-name", Description = "Last name for the user (generates predictable email)")]
     public string? LastName { get; set; }
 
+    [Option("email", Description = "Email for the user")]
+    public string? Email { get; set; }
+
     [Option("vault", Description = "Generate ~75 personal ciphers and folders")]
     public bool Vault { get; set; } = false;
 
@@ -26,6 +29,12 @@ public class IndividualArgs : IArgumentModel
 
     [Option("kdf-iterations", Description = "KDF iteration count (default: 5000). Use 600000 for production-realistic e2e testing.")]
     public int KdfIterations { get; set; } = 5_000;
+
+    [Option("self-hosted", Description = "Write a user license file to LicenseDirectory after seeding (required for self-hosted premium validation)")]
+    public bool SelfHosted { get; set; }
+
+    [Option("account-age-days", Description = "Backdate the account's CreationDate by N days (default: 0 = today)")]
+    public int? AccountAgeDays { get; set; }
 
     [Option("mangle", Description = "Enable ID mangling for test isolation")]
     public bool Mangle { get; set; }
@@ -41,6 +50,11 @@ public class IndividualArgs : IArgumentModel
         if (KdfIterations < 5_000)
         {
             throw new ArgumentException("KDF iterations must be at least 5,000.");
+        }
+
+        if (AccountAgeDays < 0)
+        {
+            throw new ArgumentException("Account age days must be >= 0.");
         }
 
         var hasFirst = !string.IsNullOrWhiteSpace(FirstName);
@@ -62,9 +76,12 @@ public class IndividualArgs : IArgumentModel
     {
         FirstName = FirstName,
         LastName = LastName,
+        Email = Email,
         Premium = string.Equals(Subscription, "premium", StringComparison.OrdinalIgnoreCase),
         GenerateVault = Vault,
         Password = Password,
-        KdfIterations = KdfIterations
+        KdfIterations = KdfIterations,
+        SelfHosted = SelfHosted,
+        AccountAgeDays = AccountAgeDays ?? 0
     };
 }

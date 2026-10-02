@@ -29,8 +29,10 @@ public class AutomaticUserConfirmationPolicyRequirementTests
         Assert.True(sut.GrantorCannotInviteToEmergencyAccess());
     }
 
-    [Fact]
-    public void CannotGrantEmergencyAccess_WithInvitedStatus_ReturnsFalse()
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    public void CannotGrantEmergencyAccess_WithInactiveStatus_ReturnsFalse(OrganizationUserStatusType status)
     {
         var policyDetails = new[]
         {
@@ -38,7 +40,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
             {
                 OrganizationId = Guid.NewGuid(),
                 PolicyType = PolicyType.AutomaticUserConfirmation,
-                OrganizationUserStatus = OrganizationUserStatusType.Invited
+                OrganizationUserStatus = status
             }
         };
 
@@ -76,8 +78,10 @@ public class AutomaticUserConfirmationPolicyRequirementTests
         Assert.True(sut.GranteeCannotAcceptEmergencyAccess());
     }
 
-    [Fact]
-    public void CannotBeGrantedEmergencyAccess_WithInvitedStatus_ReturnsFalse()
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited)]
+    [InlineData(OrganizationUserStatusType.Staged)]
+    public void CannotBeGrantedEmergencyAccess_WithInactiveStatus_ReturnsFalse(OrganizationUserStatusType status)
     {
         var policyDetails = new[]
         {
@@ -85,7 +89,7 @@ public class AutomaticUserConfirmationPolicyRequirementTests
             {
                 OrganizationId = Guid.NewGuid(),
                 PolicyType = PolicyType.AutomaticUserConfirmation,
-                OrganizationUserStatus = OrganizationUserStatusType.Invited
+                OrganizationUserStatus = status
             }
         };
 

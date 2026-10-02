@@ -30,12 +30,22 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool AccessPam { get; set; }
     public string ExternalId { get; set; }
     public string SsoExternalId { get; set; }
     public string Permissions { get; set; }
     public string ResetPasswordKey { get; set; }
     public bool UsesKeyConnector { get; set; }
     public bool HasMasterPassword { get; set; }
+    /// <summary>
+    /// The reason a user is revoked. Null if the user is not revoked, or was revoked before
+    /// revocation reasons were tracked.
+    /// </summary>
+    public RevocationReason? RevocationReason { get; set; }
+    /// <summary>
+    /// The date the OrganizationUser was created, i.e. when the User was first invited to the Organization.
+    /// </summary>
+    public DateTime CreationDate { get; set; }
 
     public ICollection<Guid> Groups { get; set; } = new List<Guid>();
     public ICollection<CollectionAccessSelection> Collections { get; set; } = new List<CollectionAccessSelection>();
