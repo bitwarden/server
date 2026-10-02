@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -190,6 +191,34 @@ public class ValidateTwoFactorRememberTokenQueryTests
     {
         var (_, row) = ArrangeValid(sutProvider, user, deviceId);
         row.ExpirationDate = DateTime.UtcNow.AddMinutes(-1);
+
+        Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+    }
+
+    /// <summary>
+    /// Expiry is exclusive of the expiry instant, matching <c>ExpiringTokenable.IsExpired</c>: a row is
+    /// still honored at exactly its <c>ExpirationDate</c> and refused one tick later.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_RowExpiresExactlyNow_ReturnsTrue(User user, Guid deviceId)
+    {
+        var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>().WithFakeTimeProvider().Create();
+        var now = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+        var (_, row) = ArrangeValid(sutProvider, user, deviceId);
+        row.ExpirationDate = now;
+
+        Assert.True(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_RowExpiredOneTickAgo_ReturnsFalse(User user, Guid deviceId)
+    {
+        var sutProvider = new SutProvider<ValidateTwoFactorRememberTokenQuery>().WithFakeTimeProvider().Create();
+        var now = new DateTime(2026, 10, 2, 12, 0, 0, DateTimeKind.Utc);
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
+        var (_, row) = ArrangeValid(sutProvider, user, deviceId);
+        row.ExpirationDate = now.AddTicks(-1);
 
         Assert.False(await sutProvider.Sut.ValidateAsync(user, _deviceIdentifier, _token));
     }
