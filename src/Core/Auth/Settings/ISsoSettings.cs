@@ -5,4 +5,5 @@ public interface ISsoSettings
     int CacheLifetimeInSeconds { get; set; }
     double SsoTokenLifetimeInSeconds { get; set; }
     bool EnforceSsoPolicyForAllUsers { get; set; }
+    int Rsa15DeprecationEmailIntervalInDays { get; set; }
 }
