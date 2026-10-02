@@ -82,7 +82,7 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
-            "[dbo].[TwoFactorRememberToken_DeleteExpired]",
+            "[dbo].[TwoFactorRememberToken_DeleteManyExpired]",
             new { Now = now },
             commandType: CommandType.StoredProcedure);
     }

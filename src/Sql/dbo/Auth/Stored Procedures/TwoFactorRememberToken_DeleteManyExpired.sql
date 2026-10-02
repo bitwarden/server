@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[TwoFactorRememberToken_DeleteExpired]
+CREATE PROCEDURE [dbo].[TwoFactorRememberToken_DeleteManyExpired]
     @Now DATETIME2(7)
 AS
 BEGIN
