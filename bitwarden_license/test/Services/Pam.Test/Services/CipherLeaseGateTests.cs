@@ -481,10 +481,10 @@ public class CipherLeaseGateTests
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceiveWithAnyArgs().GetManyActiveByRequesterIdAsync(default, default);
-        await sutProvider.GetDependency<IGoverningRuleResolver>()
-            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
     }
 
     [Fact]
@@ -495,24 +495,26 @@ public class CipherLeaseGateTests
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId, []);
 
         Assert.False(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceiveWithAnyArgs().GetManyActiveByRequesterIdAsync(default, default);
     }
 
     [Fact]
-    public async Task EnsureCanMutateManyAsync_NoneGated_AuthorizesEveryCipher()
+    public async Task EnsureCanMutateManyAsync_NoneGated_AuthorizesEveryCipherWithoutReadingLeases()
     {
         var (sutProvider, userId, firstCipherId) = Setup();
         var secondCipherId = Guid.NewGuid();
-        HasNoActiveLeases(sutProvider, userId);
-        NotGated(sutProvider, userId, firstCipherId);
-        NotGated(sutProvider, userId, secondCipherId);
+        CallerGates(sutProvider, userId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(
             userId, [new Cipher { Id = firstCipherId }, new Cipher { Id = secondCipherId }]);
 
         Assert.True(access.Authorizes(firstCipherId));
         Assert.True(access.Authorizes(secondCipherId));
+        await sutProvider.GetDependency<IAccessLeaseRepository>()
+            .DidNotReceiveWithAnyArgs().GetManyActiveByRequesterIdAsync(default, default);
     }
 
     [Fact]
@@ -520,9 +522,8 @@ public class CipherLeaseGateTests
     {
         var (sutProvider, userId, gatedCipherId) = Setup();
         var plainCipherId = Guid.NewGuid();
+        CallerGates(sutProvider, userId, gatedCipherId);
         HasNoActiveLeases(sutProvider, userId);
-        NotGated(sutProvider, userId, plainCipherId);
-        Gated(sutProvider, userId, gatedCipherId);
 
         // All-or-nothing: a half-applied bulk delete would leave the caller unable to tell what happened.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateManyAsync(
@@ -533,7 +534,7 @@ public class CipherLeaseGateTests
     public async Task EnsureCanMutateManyAsync_GatedWithActiveLease_Authorizes()
     {
         var (sutProvider, userId, gatedCipherId) = Setup();
-        Gated(sutProvider, userId, gatedCipherId);
+        CallerGates(sutProvider, userId, gatedCipherId);
         HasActiveLeasesFor(sutProvider, userId, gatedCipherId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(
@@ -544,48 +545,42 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task EnsureCanMutateManyAsync_LeasedCipher_SkipsTheRuleResolve()
+    public async Task EnsureCanMutateManyAsync_GovernedOnlyByDisabledRule_NotGated()
     {
         var (sutProvider, userId, cipherId) = Setup();
-        HasActiveLeasesFor(sutProvider, userId, cipherId);
+        var disabledRuleCollectionId = Guid.NewGuid();
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns([DisabledRuleCollection(disabledRuleCollectionId)]);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdAsync(userId)
+            .Returns([new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }]);
 
-        await sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
+        var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId }]);
 
-        // A lease authorizes the mutation whatever rule governs the cipher, so resolving would be wasted work.
-        await sutProvider.GetDependency<IGoverningRuleResolver>()
-            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
+        Assert.True(access.Authorizes(cipherId));
     }
 
     [Fact]
-    public async Task EnsureCanMutateManyAsync_ReadsLeasesOnceForTheWholeBatch()
+    public async Task EnsureCanMutateManyAsync_QueryCountIsIndependentOfBatchSize()
     {
         var (sutProvider, userId, firstCipherId) = Setup();
         var secondCipherId = Guid.NewGuid();
-        HasNoActiveLeases(sutProvider, userId);
-        NotGated(sutProvider, userId, firstCipherId);
-        NotGated(sutProvider, userId, secondCipherId);
-
-        await sutProvider.Sut.EnsureCanMutateManyAsync(
-            userId, [new Cipher { Id = firstCipherId }, new Cipher { Id = secondCipherId }]);
-
-        // Per-cipher lease reads would make a bulk mutation cost O(n) lease queries on top of the resolves.
-        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
-            .GetManyActiveByRequesterIdAsync(userId, _now);
-    }
-
-    [Fact]
-    public async Task EnsureCanMutateManyAsync_RepeatedCipherId_ResolvesItOnce()
-    {
-        var (sutProvider, userId, cipherId) = Setup();
-        HasNoActiveLeases(sutProvider, userId);
-        NotGated(sutProvider, userId, cipherId);
-
-        await sutProvider.Sut.EnsureCanMutateManyAsync(
-            userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }, new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
+        var plainCipherId = Guid.NewGuid();
+        CallerGates(sutProvider, userId, firstCipherId, secondCipherId);
+        HasActiveLeasesFor(sutProvider, userId, firstCipherId, secondCipherId);
 
         // MoveManyAsync forwards request ids straight through, so duplicates reach the gate.
-        await sutProvider.GetDependency<IGoverningRuleResolver>().Received(1)
-            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>());
+        await sutProvider.Sut.EnsureCanMutateManyAsync(userId,
+        [
+            new Cipher { Id = firstCipherId }, new Cipher { Id = secondCipherId },
+            new Cipher { Id = plainCipherId }, new Cipher { Id = firstCipherId }
+        ]);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
+            .GetManyActiveByRequesterIdAsync(userId, _now);
+        await sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
     }
 
     [Fact]
@@ -705,7 +700,7 @@ public class CipherLeaseGateTests
     public async Task EnsureCanMutateManyAsync_GatedWithActiveLease_Unlicensed_Throws()
     {
         var (sutProvider, userId, cipherId) = Setup();
-        Gated(sutProvider, userId, cipherId);
+        CallerGates(sutProvider, userId, cipherId);
         HasActiveLeasesFor(sutProvider, userId, cipherId);
         Unlicensed(sutProvider);
 
@@ -866,6 +861,19 @@ public class CipherLeaseGateTests
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
+
+    /// <summary>
+    /// Puts <paramref name="gatedCipherIds" /> in a leasing collection the caller can reach; any other cipher is
+    /// reachable through no collection.
+    /// </summary>
+    private static void CallerGates(SutProvider<CipherLeaseGate> sutProvider, Guid userId, params Guid[] gatedCipherIds)
+    {
+        var leasingCollectionId = Guid.NewGuid();
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns([LeasingCollection(leasingCollectionId)]);
+        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdAsync(userId)
+            .Returns(gatedCipherIds.Select(id => new CollectionCipher { CipherId = id, CollectionId = leasingCollectionId }).ToList());
+    }
 
     private static void HasActiveLease(SutProvider<CipherLeaseGate> sutProvider, Guid userId, Guid cipherId) =>
         sutProvider.GetDependency<IAccessLeaseRepository>()

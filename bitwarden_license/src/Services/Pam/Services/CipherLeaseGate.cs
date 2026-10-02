@@ -88,10 +88,8 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        var collections = await _collectionRepository.GetManyByUserIdAsync(userId);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
-        var collectionCiphersByCipher = collectionCiphers.GroupBy(cc => cc.CipherId).ToDictionary(g => g.Key);
-        return BuildBulkWitness(ciphers, collections, collectionCiphersByCipher);
+        var gated = await GetCallerGatedCipherIdsAsync(userId);
+        return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id).Where(id => !gated.Contains(id)));
     }
 
     /// <remarks>
@@ -154,25 +152,23 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.ForCiphers([]);
         }
 
+        var gated = await GetCallerGatedCipherIdsAsync(userId);
+        var gatedCipherIds = cipherIds.Where(gated.Contains).ToList();
+        if (gatedCipherIds.Count == 0)
+        {
+            return FullCipherAccess.ForCiphers(cipherIds);
+        }
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var leasedCipherIds = (await _accessLeaseRepository.GetManyActiveByRequesterIdAsync(userId, now))
             .Where(l => LeaseCanRelease(l.OrganizationId))
             .Select(l => l.CipherId)
             .ToHashSet();
-        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
 
-        foreach (var cipherId in cipherIds)
+        // Gated with no lease; refuses the whole batch.
+        if (gatedCipherIds.Any(id => !leasedCipherIds.Contains(id)))
         {
-            if (leasedCipherIds.Contains(cipherId))
-            {
-                continue;
-            }
-
-            if (await _resolver.ResolveAsync(userId, cipherId, signals) is not null)
-            {
-                // Gated with no lease; refuses the whole batch.
-                throw new NotFoundException();
-            }
+            throw new NotFoundException();
         }
 
         return FullCipherAccess.ForCiphers(cipherIds);
@@ -249,6 +245,16 @@ public class CipherLeaseGate : ICipherLeaseGate
         var gated = GetGatedCipherIds(collections, collectionCiphersByCipher);
         var authorized = ciphers.Select(c => c.Id).Where(id => !gated.Contains(id));
         return FullCipherAccess.ForCiphers(authorized);
+    }
+
+    /// <summary>
+    /// <see cref="GetGatedCipherIds" /> over the caller's own collections and mappings, loaded in two queries.
+    /// </summary>
+    private async Task<ISet<Guid>> GetCallerGatedCipherIdsAsync(Guid userId)
+    {
+        var collections = await _collectionRepository.GetManyByUserIdAsync(userId);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
+        return GetGatedCipherIds(collections, collectionCiphers.GroupBy(cc => cc.CipherId).ToDictionary(g => g.Key));
     }
 
     /// <summary>
