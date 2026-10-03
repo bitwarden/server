@@ -238,6 +238,7 @@ public class LoginController : Controller
                 "we've sent you an email with a secure link to log in.",
             4 => "Access denied. Please log in.",
             5 => "SSO sign-in failed. Try again or use the email link.",
+            6 => "Your session has expired. Please sign in again.",
             _ => null,
         };
     }
