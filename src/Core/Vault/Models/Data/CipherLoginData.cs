@@ -23,6 +23,7 @@ public class CipherLoginData : CipherData
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
     public CipherLoginFido2CredentialData[] Fido2Credentials { get; set; }
+    public CipherAutotypeAppsData AutotypeApps { get; set; }
 
     public class CipherLoginUriData
     {
