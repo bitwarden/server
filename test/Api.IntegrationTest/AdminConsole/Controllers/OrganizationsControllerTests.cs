@@ -193,4 +193,72 @@ public class OrganizationsControllerTests : IClassFixture<ApiApplicationFactory>
         Assert.Equal(_organizationName, updatedOrg.Name);
         Assert.Equal(_billingEmail, updatedOrg.BillingEmail);
     }
+
+    // PM-39004: routing behavior for org SSO identifiers containing characters that are not
+    // URL path delimiters. These exercise the real HTTP pipeline (routing + URL decoding), which
+    // the controller unit tests cannot, since they invoke the action method directly.
+
+    [Fact]
+    public async Task GetAutoEnrollStatus_IdentifierWithInnerSpace_ResolvesViaPathRoute()
+    {
+        // A space is not a path delimiter: it is percent-encoded to %20 within a single segment,
+        // so the segment count is unchanged and the {identifier}/auto-enroll-status route matches.
+        // A 200 proves the request routed to the action AND the org was resolved by this identifier.
+        await _loginHelper.LoginAsync(_ownerEmail);
+        const string identifier = "DQS bitwarden";
+        await SetOrganizationIdentifierAsync(identifier);
+
+        var response = await _client.GetAsync(
+            $"/organizations/{Uri.EscapeDataString(identifier)}/auto-enroll-status");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Café")]            // accented Latin
+    [InlineData("Straße")]          // German eszett
+    [InlineData("Smørrebrød")]      // Danish ø
+    [InlineData("価格表")]           // CJK
+    [InlineData("Açaí Büro €")]     // mixed accents + euro sign + space
+    public async Task GetAutoEnrollStatus_IdentifierWithNonAsciiCharacters_ResolvesViaPathRoute(
+        string identifier)
+    {
+        // Non-ASCII characters are not path delimiters: they are UTF-8 percent-encoded within a
+        // single segment (e.g. "Café" -> "Caf%C3%A9"), so the segment count is unchanged and the
+        // {identifier}/auto-enroll-status route matches and resolves the org. A 200 proves it.
+        await _loginHelper.LoginAsync(_ownerEmail);
+        await SetOrganizationIdentifierAsync(identifier);
+
+        var response = await _client.GetAsync(
+            $"/organizations/{Uri.EscapeDataString(identifier)}/auto-enroll-status");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAutoEnrollStatus_IdentifierWithSlash_FailsOnPathRouteButResolvesViaQueryRoute()
+    {
+        // Same org, same slash-bearing identifier, two transports:
+        await _loginHelper.LoginAsync(_ownerEmail);
+        const string identifier = "DQS/bitwarden";
+        await SetOrganizationIdentifierAsync(identifier);
+
+        // Path route: the "/" adds a segment, so /organizations/DQS/bitwarden/auto-enroll-status has
+        // too many segments for {identifier}/auto-enroll-status -> no route matches -> 404, even
+        // though an org with this exact identifier exists (proven by the query route below).
+        var pathResponse = await _client.GetAsync("/organizations/DQS/bitwarden/auto-enroll-status");
+        Assert.Equal(HttpStatusCode.NotFound, pathResponse.StatusCode);
+
+        // Query route: the identifier travels outside the path, survives encoding, and resolves.
+        var queryResponse = await _client.GetAsync(
+            $"/organizations/auto-enroll-status?identifier={Uri.EscapeDataString(identifier)}");
+        Assert.Equal(HttpStatusCode.OK, queryResponse.StatusCode);
+    }
+
+    private async Task SetOrganizationIdentifierAsync(string identifier)
+    {
+        var organizationRepository = _factory.GetService<IOrganizationRepository>();
+        _organization.Identifier = identifier;
+        await organizationRepository.ReplaceAsync(_organization);
+    }
 }
