@@ -413,11 +413,50 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
     #endregion
 
     /// <summary>
+    /// A Custom member holding only manageUsers must not be able to revoke a colleague's
+    /// member-initiated (personal) Families sponsorship. The list route hides that row from them,
+    /// so the revoke route must answer the same 400 it gives for an unknown friendly name.
+    /// </summary>
+    [Fact]
+    public async Task AdminInitiatedRevokeSponsorship_MemberInitiatedSponsorship_IsNotRevoked()
+    {
+        // Arrange: a plain member creates their own personal Families sponsorship
+        var (_, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorship = await CreateSponsorshipAsync(
+            _organization.Id, memberOrgUser.Id, "personal-family@example.com", isAdminInitiated: false);
+
+        // Another member holds manageUsers and nothing else
+        var (manageUsersEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.Custom,
+            permissions: new Permissions { ManageUsers = true });
+
+        await _loginHelper.LoginAsync(manageUsersEmail);
+
+        // Act
+        var response = await _client.DeleteAsync(
+            $"organization/sponsorship/{_organization.Id}/{Uri.EscapeDataString(sponsorship.FriendlyName!)}/revoke");
+
+        // Assert: same answer as an unknown friendly name, and the row survives untouched
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
+        var stillExists = await sponsorshipRepository.GetByIdAsync(sponsorship.Id);
+        Assert.NotNull(stillExists);
+        Assert.False(stillExists.ToDelete, "Member-initiated sponsorship should not have been marked for deletion.");
+    }
+
+    /// <summary>
     /// Helper to create an admin-initiated sponsorship directly in the DB,
     /// bypassing the command layer (which has its own auth checks).
     /// </summary>
-    private async Task<OrganizationSponsorship> CreateAdminInitiatedSponsorshipAsync(
-        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName)
+    private Task<OrganizationSponsorship> CreateAdminInitiatedSponsorshipAsync(
+        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName) =>
+        CreateSponsorshipAsync(sponsoringOrgId, sponsoringOrgUserId, friendlyName, isAdminInitiated: true);
+
+    private async Task<OrganizationSponsorship> CreateSponsorshipAsync(
+        Guid sponsoringOrgId, Guid sponsoringOrgUserId, string friendlyName, bool isAdminInitiated)
     {
         var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
 
@@ -428,7 +467,7 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
             FriendlyName = friendlyName,
             OfferedToEmail = friendlyName,
             PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-            IsAdminInitiated = true,
+            IsAdminInitiated = isAdminInitiated,
             ToDelete = false,
         };
         sponsorship.SetNewId();
