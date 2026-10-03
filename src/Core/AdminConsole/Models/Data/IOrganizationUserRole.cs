@@ -9,6 +9,5 @@ namespace Bit.Core.AdminConsole.Models.Data;
 public interface IOrganizationUserRole
 {
     OrganizationUserType Type { get; }
-    Guid OrganizationId { get; }
     Permissions? GetPermissions();
 }
