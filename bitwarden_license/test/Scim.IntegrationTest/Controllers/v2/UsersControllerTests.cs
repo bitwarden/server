@@ -280,6 +280,55 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
+    [Fact]
+    public async Task GetList_SearchUserName_Ne_Success()
+    {
+        string filter = "userName ne user2@example.com";
+        int? itemsPerPage = 10;
+        int? startIndex = 1;
+
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(_initialUserCount - 1, responseModel.TotalResults);
+        Assert.DoesNotContain(responseModel.Resources, r => r.UserName == "user2@example.com");
+    }
+
+    [Fact]
+    public async Task GetList_SearchUserName_Co_Success()
+    {
+        string filter = "userName co user2";
+        int? itemsPerPage = 10;
+        int? startIndex = 1;
+
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(1, responseModel.TotalResults);
+        Assert.Contains(responseModel.Resources, r => r.UserName == "user2@example.com");
+    }
+
+    [Fact]
+    public async Task GetList_SearchUserName_Sw_WithPagination_Success()
+    {
+        // All 4 users match "sw user", but pagination limits to 2
+        string filter = "userName sw user";
+        int? itemsPerPage = 2;
+        int? startIndex = 1;
+
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        Assert.Equal(_initialUserCount, responseModel.TotalResults);
+        Assert.Equal(2, responseModel.Resources.Count);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
