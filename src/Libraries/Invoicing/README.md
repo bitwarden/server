@@ -13,17 +13,23 @@ feature flag keys the library owns (`InvoicingFeatureFlags`) as known flags. The
 `SubscriptionPreview` record family under `InvoicePreviews/Models/` (including `PlanTierType`). The
 service, builder, mappers, reference table, and Stripe client are internal.
 
+`IInvoicePreviewService.GetInvoicePreviewAsync(options, tier, cadence)` is the shared entry point:
+callers (this library's own queries, and feature libraries such as `Subscriptions.Organization`) build
+a Stripe `InvoiceCreatePreviewOptions` and hand it here to get back the projected `InvoicePreview`.
+
 `IGetSubscriptionPreviewQuery.Run(ISubscriber)` builds the `SubscriptionPreview` for a subscriber's
 upcoming renewal: the invoice preview wrapped in the subscription-level envelope (status, storage,
-cancellation, and suspension). The `Organization` path is wired; the `User`/Premium path is stubbed
-for its own screen slice.
+cancellation, and suspension). Both the `Organization` path and the `User`/Premium path are wired —
+`Bit.Subscriptions.Organization` and `Bit.Subscriptions.User` map renewal preview endpoints onto them.
 
 ## Stripe boundary
 
-Invoicing owns the Stripe interaction behind invoice previews — the `IStripeAdapter` calls that
-hydrate invoice and subscription data — and projects the results into the vendor-neutral models on
-its public surface. Feature libraries above it never call Stripe themselves; they consume preview
-data through this surface, and reference Stripe SDK types only to pass data to and from it.
+Invoicing owns the projection behind invoice previews — the final `IStripeAdapter` call that fetches the
+preview invoice — and projects the results into the vendor-neutral models on its public surface. Feature
+libraries above it consume preview data through this surface. Until a shared `Bit.Subscriptions` library
+exists, a feature library may also read Stripe data directly through `IStripeAdapter` (for example, to
+read a subscription while building a plan-change request); reading Stripe this way is allowed for now,
+with the ideal state being that all Stripe access flows through this library.
 
 ### Proration months come from the line period
 
