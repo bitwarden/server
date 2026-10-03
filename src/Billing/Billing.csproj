@@ -8,6 +8,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />
+
+  <!-- Demo only: -p:RestrictedDemo=<section> compiles one section of RestrictedDependencyDemo.cs. -->
+  <PropertyGroup Condition="'$(RestrictedDemo)' != ''">
+    <DefineConstants>$(DefineConstants);RESTRICTED_DEMO_$(RestrictedDemo.ToUpperInvariant())</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />

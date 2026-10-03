@@ -11,6 +11,12 @@
           "Microsoft.Extensions.Options": "8.0.0"
         }
       },
+      "Bitwarden.Server.Sdk.RestrictedDependencies": {
+        "type": "Direct",
+        "requested": "[0.1.0-demo.2, )",
+        "resolved": "0.1.0-demo.2",
+        "contentHash": "BwdWftjCW9BcOnAXwSM6FTntS6avwWYbEf2K7m3XlRRbL+hMR3O7sq4e3Z6rpspkFYrcWzPKDgGqWIDG3yAQdw=="
+      },
       "linq2db": {
         "type": "Direct",
         "requested": "[5.4.1, 5.4.1]",
