@@ -4,12 +4,14 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -956,5 +958,75 @@ public class EventServiceTests
         var expectedIds = providers.Select(provider => provider.Id);
         await sutProvider.GetDependency<IProviderAbilityCacheService>().Received(1)
             .GetProviderAbilitiesAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.OrderBy(x => x).SequenceEqual(expectedIds.OrderBy(x => x))));
+    }
+
+    /// <summary>
+    /// The granted member is the subject of this event, not its acting user, so it belongs in
+    /// OrganizationUserId (which backs MemberId/OrganizationUserId on the response models) rather
+    /// than UserId. UserId stays null, matching every other object-centric event (cipher,
+    /// collection, group, policy, secret, project) where the acted-upon object -- not a raw
+    /// user id -- occupies the type-specific column.
+    /// </summary>
+    [Theory, BitAutoData]
+    public async Task LogServiceAccountPeopleEvent_HumanActor_SetsOrganizationUserIdNotUserId(
+        Guid actingUserId, OrganizationUser orgUser, Guid organizationUserId, Guid grantedServiceAccountId,
+        EventType eventType, DateTime date, SutProvider<EventService> sutProvider)
+    {
+        var policy = new UserServiceAccountAccessPolicy
+        {
+            OrganizationUserId = organizationUserId,
+            GrantedServiceAccountId = grantedServiceAccountId
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(orgUser);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgUser.OrganizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogServiceAccountPeopleEventAsync(
+            actingUserId, policy, eventType, IdentityClientType.User, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
+            Arg.Is<IEnumerable<IEvent>>(events => events.Count() == 1 && events.All(e =>
+                e.OrganizationId == orgUser.OrganizationId &&
+                e.Type == eventType &&
+                e.GrantedServiceAccountId == grantedServiceAccountId &&
+                e.OrganizationUserId == organizationUserId &&
+                e.UserId == null &&
+                e.ServiceAccountId == null &&
+                e.ActingUserId == actingUserId &&
+                e.Date == date)));
+    }
+
+    /// <inheritdoc cref="LogServiceAccountPeopleEvent_HumanActor_SetsOrganizationUserIdNotUserId"/>
+    [Theory, BitAutoData]
+    public async Task LogServiceAccountPeopleEvent_MachineActor_SetsOrganizationUserIdNotUserId(
+        Guid actingServiceAccountId, OrganizationUser orgUser, Guid organizationUserId, Guid grantedServiceAccountId,
+        EventType eventType, DateTime date, SutProvider<EventService> sutProvider)
+    {
+        var policy = new UserServiceAccountAccessPolicy
+        {
+            OrganizationUserId = organizationUserId,
+            GrantedServiceAccountId = grantedServiceAccountId
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUserId)
+            .Returns(orgUser);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(orgUser.OrganizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+
+        await sutProvider.Sut.LogServiceAccountPeopleEventAsync(
+            actingServiceAccountId, policy, eventType, IdentityClientType.ServiceAccount, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
+            Arg.Is<IEnumerable<IEvent>>(events => events.Count() == 1 && events.All(e =>
+                e.OrganizationUserId == organizationUserId &&
+                e.UserId == null &&
+                e.ServiceAccountId == actingServiceAccountId &&
+                e.ActingUserId == null)));
     }
 }
