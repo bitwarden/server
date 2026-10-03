@@ -48,6 +48,15 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
             var tableEvents = entities.Select(e => e as Core.Entities.Event ?? new Core.Entities.Event(e));
             var entityEvents = Mapper.Map<List<Event>>(tableEvents);
             entityEvents.ForEach(e => e.SetNewId());
+
+            // SQLite deployments can fail to resolve the linq2db bulk copy provider adapter
+            if (dbContext.Database.IsSqlite())
+            {
+                await dbContext.Events.AddRangeAsync(entityEvents);
+                await dbContext.SaveChangesAsync();
+                return;
+            }
+
             await dbContext.BulkCopyAsync(entityEvents);
         }
     }
