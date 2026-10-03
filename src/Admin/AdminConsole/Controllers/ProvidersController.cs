@@ -463,6 +463,7 @@ public class ProvidersController : Controller
             providerPlans.ToList(), payByInvoice, GetGatewayCustomerUrl(provider), GetGatewaySubscriptionUrl(provider));
     }
 
+    [HttpPost]
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
@@ -517,6 +518,7 @@ public class ProvidersController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> CreateOrganization(Guid providerId)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
@@ -531,6 +533,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
