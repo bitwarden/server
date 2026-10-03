@@ -13,6 +13,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
@@ -1953,12 +1954,17 @@ public class CiphersControllerTests
             .DeleteByUserIdAsync(user.Id);
     }
 
-    [Theory, BitAutoData]
-    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_Successful(
+    /// <summary>
+    /// Sets up a verified user for an organization purge and places the caller in the organization
+    /// with the given role/permissions. Pass a null <paramref name="organization"/> for a caller
+    /// with no membership in the organization.
+    /// </summary>
+    private static void SetupOrganizationPurge(
+        SutProvider<CiphersController> sutProvider,
         User user,
         SecretVerificationRequestModel model,
         Guid organizationId,
-        SutProvider<CiphersController> sutProvider)
+        CurrentContextOrganization organization)
     {
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
@@ -1966,12 +1972,20 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>()
             .VerifySecretAsync(user, model.Secret)
             .Returns(true);
-        sutProvider.GetDependency<IUserService>()
-            .IsClaimedByAnyOrganizationAsync(user.Id)
-            .Returns(true);
         sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(organizationId)
-            .Returns(true);
+            .GetOrganization(organizationId)
+            .Returns(organization);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithOwner_Successful(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId,
+            new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Owner });
 
         await sutProvider.Sut.PostPurge(model, organizationId);
 
@@ -1981,26 +1995,108 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PostPurge_OrganizationPurge_WithInsufficientPermissions_ThrowsNotFoundException(
+    public async Task PostPurge_OrganizationPurge_WithEditAnyCollectionPermission_Successful(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId,
+            new CurrentContextOrganization
+            {
+                Id = organizationId,
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { EditAnyCollection = true }
+            });
+
+        await sutProvider.Sut.PostPurge(model, organizationId);
+
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .PurgeAsync(organizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithProviderUser_Successful(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId, null);
+        sutProvider.GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(organizationId)
+            .Returns(true);
+
+        await sutProvider.Sut.PostPurge(model, organizationId);
+
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .PurgeAsync(organizationId);
+    }
+
+    /// <summary>
+    /// An Admin must not be able to purge an organization vault regardless of the organization's
+    /// "admins can manage all collections and items" setting. Purge is documented as owner-only.
+    /// </summary>
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task PostPurge_OrganizationPurge_WithAdmin_ThrowsNotFoundException(
+        bool allowAdminAccessToAllCollectionItems,
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId,
+            new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Admin });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility
+            {
+                Id = organizationId,
+                AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems
+            });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .PurgeAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithUser_ThrowsNotFoundException(
+        User user,
+        SecretVerificationRequestModel model,
+        Guid organizationId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        SetupOrganizationPurge(sutProvider, user, model, organizationId,
+            new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.User });
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .PurgeAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostPurge_OrganizationPurge_WithNonMember_ThrowsNotFoundException(
         User user,
         Guid organizationId,
         SecretVerificationRequestModel model,
         SutProvider<CiphersController> sutProvider)
     {
-        sutProvider.GetDependency<IUserService>()
-            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-            .Returns(user);
-        sutProvider.GetDependency<IUserService>()
-            .VerifySecretAsync(user, model.Secret)
-            .Returns(true);
-        sutProvider.GetDependency<IUserService>()
-            .IsClaimedByAnyOrganizationAsync(user.Id)
-            .Returns(false);
-        sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(organizationId)
-            .Returns(false);
+        SetupOrganizationPurge(sutProvider, user, model, organizationId, null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostPurge(model, organizationId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .PurgeAsync(default);
     }
 
     [Theory, BitAutoData]
