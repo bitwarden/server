@@ -15,19 +15,43 @@
         }
         <div class="card">
             <div class="card-body">
-                <p>Please enter your email address below to log in.</p>
-                <form asp-action="" method="post">
-                    <input type="hidden" asp-for="ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <div class="mb-3">
-                        <label asp-for="Email" class="visually-hidden">Email Address</label>
-                        <input asp-for="Email" type="email" class="form-control" placeholder="ex. john@example.com"
-                               required autofocus>
-                        <span asp-validation-for="Email" class="invalid-feedback"></span>
-                        <div class="form-text">We'll email you a secure login link.</div>
-                    </div>
-                    <button class="btn btn-primary" type="submit">Continue</button>
-                </form>
+                @if (Model.EnablePasswordlessLogin)
+                {
+                    <h6 class="text-muted text-uppercase small mb-3">Email login</h6>
+                    <form asp-action="" method="post" class="mb-0">
+                        <input type="hidden" asp-for="ReturnUrl" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div class="mb-0">
+                            <label asp-for="Email" class="visually-hidden">Email Address</label>
+                            <div class="d-flex gap-2">
+                                <input asp-for="Email" type="email" class="form-control"
+                                       placeholder="ex. john@example.com" required autofocus>
+                                <button class="btn btn-primary flex-shrink-0" type="submit">
+                                    Continue
+                                </button>
+                            </div>
+                            <span asp-validation-for="Email" class="invalid-feedback"></span>
+                        </div>
+                    </form>
+                }
+                @if (Model.SsoEnabled)
+                {
+                    if (Model.EnablePasswordlessLogin)
+                    {
+                        <hr class="my-4" />
+                    }
+                    <h6 class="text-muted text-uppercase small mb-3">Single sign-on</h6>
+                    <a class="btn btn-outline-primary w-100 text-decoration-none"
+                       asp-controller="Login"
+                       asp-action="Sso"
+                       asp-route-returnUrl="@Model.ReturnUrl">
+                        Sign in with @(string.IsNullOrWhiteSpace(Model.SsoDisplayName) ? "SSO" : Model.SsoDisplayName)
+                    </a>
+                }
+                @if (!Model.EnablePasswordlessLogin && !Model.SsoEnabled)
+                {
+                    <p class="mb-0">No login methods are configured.</p>
+                }
             </div>
         </div>
     </div>
