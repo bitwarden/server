@@ -38,7 +38,9 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
-        services.Configure<AdminSettings>(Configuration.GetSection("AdminSettings"));
+        var adminSettingsSection = Configuration.GetSection("AdminSettings");
+        var adminSettings = adminSettingsSection.Get<AdminSettings>() ?? new AdminSettings();
+        services.Configure<AdminSettings>(adminSettingsSection);
 
         // Data Protection
         services.AddCustomDataProtectionServices(Environment, globalSettings);
@@ -73,7 +75,8 @@ public class Startup
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         // Identity
-        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
+        services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings, adminSettings);
+        services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
             options.ValidationInterval = TimeSpan.FromMinutes(5);

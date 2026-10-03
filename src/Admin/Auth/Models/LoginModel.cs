@@ -1,4 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
+// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
 using System.ComponentModel.DataAnnotations;
@@ -13,4 +13,7 @@ public class LoginModel
     public string ReturnUrl { get; set; }
     public string Error { get; set; }
     public string Success { get; set; }
+    public bool EnablePasswordlessLogin { get; set; }
+    public bool SsoEnabled { get; set; }
+    public string SsoDisplayName { get; set; }
 }
