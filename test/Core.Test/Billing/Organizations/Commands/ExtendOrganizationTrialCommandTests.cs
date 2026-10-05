@@ -31,14 +31,18 @@ public class ExtendOrganizationTrialCommandTests
     private static Organization CreateOrganization(string? subscriptionId = _subscriptionId) =>
         new() { Id = Guid.NewGuid(), GatewaySubscriptionId = subscriptionId };
 
-    private static Subscription CreateTrialingSubscription(DateTime now, double remainingDays, string? scheduleId = null) =>
+    private static Subscription CreateTrialingSubscription(
+        DateTime now,
+        double remainingDays,
+        string? scheduleId = null,
+        bool withTestClock = true) =>
         new()
         {
             Id = _subscriptionId,
             Status = SubscriptionStatus.Trialing,
             TrialEnd = now.AddDays(remainingDays),
             ScheduleId = scheduleId,
-            TestClock = new TestClock { FrozenTime = now }
+            TestClock = withTestClock ? new TestClock { FrozenTime = now } : null
         };
 
     private void StubSubscription(Subscription subscription) =>
@@ -132,9 +136,10 @@ public class ExtendOrganizationTrialCommandTests
     [Fact]
     public async Task Run_EligibleSubscription_ExtendsFromExistingTrialEndAndSyncsExpiration()
     {
+        // Production subscriptions carry no test clock, so the happy path runs against wall-clock time.
         const int days = 14;
         var organization = CreateOrganization();
-        var subscription = CreateTrialingSubscription(DateTime.UtcNow, 5);
+        var subscription = CreateTrialingSubscription(DateTime.UtcNow, 5.5, withTestClock: false);
         var expectedTrialEnd = subscription.TrialEnd!.Value.AddDays(days);
         StubSubscription(subscription);
 
@@ -207,8 +212,36 @@ public class ExtendOrganizationTrialCommandTests
         _logger.Received(1).Log(
             LogLevel.Error,
             Arg.Any<EventId>(),
-            Arg.Is<object>(state => state.ToString()!.Contains("failed to sync the expiration date")),
+            Arg.Is<object>(state =>
+                state.ToString()!.Contains("failed to sync the expiration date") &&
+                state.ToString()!.Contains(_subscriptionId) &&
+                state.ToString()!.Contains(expectedTrialEnd.ToString("u"))),
             Arg.Any<InvalidOperationException>(),
             Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Fact]
+    public async Task Run_NoTestClock_ThirtyOrMoreDaysRemaining_ReturnsBadRequest()
+    {
+        StubSubscription(CreateTrialingSubscription(DateTime.UtcNow, 29.5, withTestClock: false));
+
+        var result = await _command.Run(CreateOrganization(), 10);
+
+        Assert.True(result.IsT1);
+        Assert.Equal(TrialExtensionPolicy.TooManyDaysRemainingMessage, result.AsT1.Response);
+        await AssertNoStripeOrDatabaseWritesAsync();
+    }
+
+    [Fact]
+    public async Task Run_SubscriptionLookupReturnsNull_ReturnsBadRequest()
+    {
+        _stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>())
+            .Returns((Subscription?)null);
+
+        var result = await _command.Run(CreateOrganization(), 10);
+
+        Assert.True(result.IsT1);
+        Assert.Equal(TrialExtensionPolicy.NoSubscriptionMessage, result.AsT1.Response);
+        await AssertNoStripeOrDatabaseWritesAsync();
     }
 }

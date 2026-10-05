@@ -59,11 +59,24 @@ public class OrganizationTrialController(
                 TempData["Success"] = $"Trial extended to {newTrialEnd:yyyy-MM-dd} UTC.";
             },
             badRequest => TempData["Error"] = badRequest.Response,
-            _ => TempData["Error"] = _genericError,
-            _ => TempData["Error"] = _genericError);
+            conflict =>
+            {
+                LogFailedAttempt(organization.Id, days, conflict.Response, exception: null);
+                TempData["Error"] = conflict.Response;
+            },
+            unhandled =>
+            {
+                LogFailedAttempt(organization.Id, days, unhandled.Response, unhandled.Exception);
+                TempData["Error"] = _genericError;
+            });
 
         return RedirectToEdit(organizationId);
     }
+
+    private void LogFailedAttempt(Guid organizationId, int days, string reason, Exception? exception) =>
+        logger.LogError(exception,
+            "Trial extension by {Actor} for organization ({OrganizationId}) by {Days} days failed: {Reason}",
+            User?.Identity?.Name ?? "unknown", organizationId, days, reason);
 
     private RedirectToActionResult RedirectToEdit(Guid organizationId) =>
         RedirectToAction("Edit", "Organizations", new { id = organizationId });

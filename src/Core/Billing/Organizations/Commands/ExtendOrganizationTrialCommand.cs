@@ -45,23 +45,12 @@ public class ExtendOrganizationTrialCommand(
             organization.GatewaySubscriptionId,
             new SubscriptionGetOptions { Expand = ["test_clock"] });
 
-        if (subscription is not { Status: SubscriptionStatus.Trialing, TrialEnd: not null })
+        if (TrialExtensionPolicy.GetIneligibilityReason(subscription) is { } ineligibilityReason)
         {
-            return new BadRequest(TrialExtensionPolicy.NotTrialingMessage);
+            return new BadRequest(ineligibilityReason);
         }
 
-        if (TrialExtensionPolicy.GetRemainingDays(subscription) >= TrialExtensionPolicy.MaxRemainingDaysForExtension)
-        {
-            return new BadRequest(TrialExtensionPolicy.TooManyDaysRemainingMessage);
-        }
-
-        // Stripe discourages direct subscription updates while a schedule is attached; the schedule would own the trial end.
-        if (!string.IsNullOrEmpty(subscription.ScheduleId))
-        {
-            return new BadRequest(TrialExtensionPolicy.ScheduleAttachedMessage);
-        }
-
-        var newTrialEnd = subscription.TrialEnd.Value.AddDays(days);
+        var newTrialEnd = subscription!.TrialEnd!.Value.AddDays(days);
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {
@@ -69,8 +58,8 @@ public class ExtendOrganizationTrialCommand(
             ProrationBehavior = ProrationBehavior.None
         });
 
-        // Audit the Stripe mutation as soon as it succeeds. The expiration sync below can fail independently and
-        // surface a retryable error to the admin, and the trail for the extension that already happened must survive that.
+        // Audit the Stripe mutation as soon as it succeeds. The expiration sync below is best-effort (see the catch),
+        // and the trail for the extension that already happened must not depend on it.
         _logger.LogInformation(
             "{Command}: Extended trial for subscription ({SubscriptionId}) of organization ({OrganizationId}) by {Days} days",
             CommandName, subscription.Id, organization.Id, days);
@@ -83,8 +72,8 @@ public class ExtendOrganizationTrialCommand(
         catch (Exception exception)
         {
             _logger.LogError(exception,
-                "{Command}: Extended trial for organization ({OrganizationId}) but failed to sync the expiration date; relying on the subscription webhook",
-                CommandName, organization.Id);
+                "{Command}: Extended trial for subscription ({SubscriptionId}) of organization ({OrganizationId}) to {NewTrialEnd:u} but failed to sync the expiration date; relying on the subscription.updated webhook",
+                CommandName, subscription.Id, organization.Id, newTrialEnd);
         }
 
         return newTrialEnd;

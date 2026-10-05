@@ -22,7 +22,10 @@ public static class TrialExtensionPolicy
         "Trial cannot be extended because the subscription has an active subscription schedule.";
 
     /// <summary>
-    /// Whole days left in the trial, rounded up, measured against the subscription's test clock when one is attached.
+    /// Whole days left in the trial, rounded up, measured against the subscription's test clock when one is attached
+    /// (callers must expand <c>test_clock</c>) and against wall-clock UTC otherwise. A negative result means the trial
+    /// has already ended. Requires <see cref="Subscription.TrialEnd"/> to be set; <see cref="GetIneligibilityReason"/>
+    /// checks that first.
     /// </summary>
     public static int GetRemainingDays(Subscription subscription)
     {
@@ -30,10 +33,21 @@ public static class TrialExtensionPolicy
         return (int)Math.Ceiling((subscription.TrialEnd!.Value - now).TotalDays);
     }
 
-    public static bool IsEligible(Subscription? subscription) =>
-        subscription is { Status: StripeConstants.SubscriptionStatus.Trialing, TrialEnd: not null } &&
-        string.IsNullOrEmpty(subscription.ScheduleId) &&
-        GetRemainingDays(subscription) < MaxRemainingDaysForExtension;
+    /// <summary>
+    /// Returns the user-facing reason the trial cannot be extended, or <see langword="null"/> when it can.
+    /// This is the single definition of eligibility; the Admin Edit page and the extend command both rely on it.
+    /// </summary>
+    public static string? GetIneligibilityReason(Subscription? subscription) => subscription switch
+    {
+        null => NoSubscriptionMessage,
+        not { Status: StripeConstants.SubscriptionStatus.Trialing, TrialEnd: not null } => NotTrialingMessage,
+        _ when GetRemainingDays(subscription) >= MaxRemainingDaysForExtension => TooManyDaysRemainingMessage,
+        // Stripe discourages direct subscription updates while a schedule is attached; the schedule would own the trial end.
+        { ScheduleId: { Length: > 0 } } => ScheduleAttachedMessage,
+        _ => null
+    };
+
+    public static bool IsEligible(Subscription? subscription) => GetIneligibilityReason(subscription) is null;
 
     /// <summary>
     /// Returns a validation message when <paramref name="days"/> is not an acceptable extension, otherwise <see langword="null"/>.

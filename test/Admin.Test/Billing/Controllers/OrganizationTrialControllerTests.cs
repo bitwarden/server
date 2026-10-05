@@ -198,7 +198,50 @@ public class OrganizationTrialControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Extend_CommandReturnsConflict_SetsGenericError(
+    public async Task Extend_CommandReturnsConflict_SetsErrorWithResponseMessage(
+        Organization organization,
+        SutProvider<OrganizationTrialController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        const string message = "We had a problem extending this trial. Please try again.";
+        sutProvider.GetDependency<IExtendOrganizationTrialCommand>()
+            .Run(organization, 7)
+            .Returns(new BillingCommandResult<DateTime>(new Conflict(message)));
+
+        var result = await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 7 });
+
+        AssertRedirectsToOrganizationEdit(result, organization.Id);
+        Assert.Equal(message, sutProvider.Sut.TempData["Error"]);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Extend_CommandReturnsUnhandled_LogsErrorWithActorOrganizationAndDays(
+        Organization organization,
+        SutProvider<OrganizationTrialController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        var exception = new Exception("boom");
+        sutProvider.GetDependency<IExtendOrganizationTrialCommand>()
+            .Run(organization, 7)
+            .Returns(new BillingCommandResult<DateTime>(new Unhandled(exception)));
+
+        await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 7 });
+
+        sutProvider.GetDependency<ILogger<OrganizationTrialController>>()
+            .Received(1)
+            .Log(
+                LogLevel.Error,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(state =>
+                    state.ToString()!.Contains(_actorEmail) &&
+                    state.ToString()!.Contains(organization.Id.ToString()) &&
+                    state.ToString()!.Contains("by 7 days")),
+                exception,
+                Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Extend_CommandReturnsConflict_LogsErrorWithActorOrganizationAndDays(
         Organization organization,
         SutProvider<OrganizationTrialController> sutProvider)
     {
@@ -207,9 +250,19 @@ public class OrganizationTrialControllerTests
             .Run(organization, 7)
             .Returns(new BillingCommandResult<DateTime>(new Conflict("conflict")));
 
-        var result = await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 7 });
+        await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 7 });
 
-        AssertRedirectsToOrganizationEdit(result, organization.Id);
-        Assert.Equal(_genericError, sutProvider.Sut.TempData["Error"]);
+        sutProvider.GetDependency<ILogger<OrganizationTrialController>>()
+            .Received(1)
+            .Log(
+                LogLevel.Error,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(state =>
+                    state.ToString()!.Contains(_actorEmail) &&
+                    state.ToString()!.Contains(organization.Id.ToString()) &&
+                    state.ToString()!.Contains("by 7 days") &&
+                    state.ToString()!.Contains("conflict")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
     }
 }
