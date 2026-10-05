@@ -27,6 +27,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 

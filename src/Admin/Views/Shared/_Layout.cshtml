@@ -4,7 +4,7 @@
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
+@inject Bitwarden.Server.Sdk.Features.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);

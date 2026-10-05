@@ -16,6 +16,7 @@ using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Admin.Controllers;
 

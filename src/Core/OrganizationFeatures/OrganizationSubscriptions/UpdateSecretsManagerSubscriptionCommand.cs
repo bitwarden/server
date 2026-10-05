@@ -19,6 +19,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
