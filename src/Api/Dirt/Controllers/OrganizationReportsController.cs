@@ -16,6 +16,8 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
+using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 
 namespace Bit.Api.Dirt.Controllers;
 
