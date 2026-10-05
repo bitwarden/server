@@ -38,8 +38,7 @@ public class AdminSettings
         public const int ClockSkewSeconds = 120;
 
 
-        // OIDC discovery root (e.g., "https://tenant.auth0.com/"). The handler appends
-        // /.well-known/openid-configuration to fetch endpoints and JWKS.
+        // OIDC discovery root. The handler appends /.well-known/openid-configuration to fetch endpoints and JWKS.
         public string Authority { get; set; }
 
         // Registered application ID at the IdP. Sent as `client_id` on the authorize request
