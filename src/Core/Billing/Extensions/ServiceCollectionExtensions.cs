@@ -27,6 +27,7 @@ using Bit.Core.Services.Implementations;
 namespace Bit.Core.Billing.Extensions;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public static class ServiceCollectionExtensions
 {
@@ -58,6 +59,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IBraintreeService, BraintreeService>();
         services.AddTransient<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
+        services.TryAddTransient<IExtendOrganizationTrialCommand, ExtendOrganizationTrialCommand>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();

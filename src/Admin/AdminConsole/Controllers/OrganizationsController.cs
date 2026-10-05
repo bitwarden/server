@@ -22,6 +22,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
@@ -316,6 +317,8 @@ public class OrganizationsController : Controller
             }
         }
 
+        var (canExtendTrial, trialEndDate) = await GetTrialExtensionStateAsync(organization);
+
         var model = new OrganizationEditModel(
             organization,
             provider,
@@ -346,9 +349,40 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
+            CanExtendTrial = canExtendTrial,
+            TrialEndDate = trialEndDate,
         };
 
         return View(model);
+    }
+
+    private async Task<(bool CanExtendTrial, DateTime? TrialEndDate)> GetTrialExtensionStateAsync(
+        Organization organization)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
+            || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial)
+            || string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            return (false, null);
+        }
+
+        try
+        {
+            var subscription = await _subscriberService.GetSubscription(
+                organization,
+                new SubscriptionGetOptions { Expand = ["test_clock"] });
+
+            return TrialExtensionPolicy.IsEligible(subscription)
+                ? (true, subscription.TrialEnd)
+                : (false, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to load subscription to determine trial extension eligibility for organization {OrganizationId}.",
+                organization.Id);
+            return (false, null);
+        }
     }
 
     [HttpPost]

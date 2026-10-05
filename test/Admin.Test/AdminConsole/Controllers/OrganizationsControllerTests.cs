@@ -29,6 +29,7 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
+using Stripe.TestHelpers;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Admin.Test.AdminConsole.Controllers;
@@ -2120,4 +2121,186 @@ public class OrganizationsControllerTests
     }
 
     #endregion
+
+    private static void StubTrialExtensionAccess(
+        SutProvider<OrganizationsController> sutProvider,
+        Organization organization,
+        bool flagEnabled = true,
+        bool hasPermission = true)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(Bit.Core.FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
+            .Returns(flagEnabled);
+        sutProvider.GetDependency<IAccessControlService>()
+            .UserHasPermission(Permission.Org_ExtendTrial)
+            .Returns(hasPermission);
+    }
+
+    private static Subscription CreateTrialingSubscription(double remainingDays)
+    {
+        var now = DateTime.UtcNow;
+        return new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Trialing,
+            TrialEnd = now.AddDays(remainingDays),
+            TestClock = new TestClock { FrozenTime = now }
+        };
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_TrialExtensionEligible_SetsCanExtendTrial(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        var subscription = CreateTrialingSubscription(10);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Is<SubscriptionGetOptions>(o => o.Expand.Contains("test_clock")))
+            .Returns(subscription);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.CanExtendTrial);
+        Assert.Equal(subscription.TrialEnd, model.TrialEndDate);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_TrialHasThirtyOrMoreDaysRemaining_HidesExtendTrial(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(CreateTrialingSubscription(30));
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.TrialEndDate);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_SubscriptionNotTrialing_HidesExtendTrial(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        var subscription = CreateTrialingSubscription(10);
+        subscription.Status = StripeConstants.SubscriptionStatus.Active;
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_NoSubscriptionId_DoesNotFetchSubscription(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        organization.GatewaySubscriptionId = null;
+        StubTrialExtensionAccess(sutProvider, organization);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetSubscription(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_WithoutExtendTrialPermission_DoesNotFetchSubscription(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization, hasPermission: false);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetSubscription(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_ExtendTrialFlagOff_DoesNotFetchSubscription(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization, flagEnabled: false);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+        await sutProvider.GetDependency<ISubscriberService>()
+            .DidNotReceiveWithAnyArgs()
+            .GetSubscription(default, default);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_ProviderManagedOrganization_StillOffersExtendTrial(
+        Organization organization,
+        Provider provider,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        // Sales must be able to extend trials for provider-managed client organizations too (Product, 2026-10-01).
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        var subscription = CreateTrialingSubscription(10);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .Returns(subscription);
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.CanExtendTrial);
+        Assert.Equal(subscription.TrialEnd, model.TrialEndDate);
+    }
+
+    [BitAutoData]
+    [SutProviderCustomize]
+    [Theory]
+    public async Task Edit_Get_SubscriptionFetchThrows_HidesExtendTrialAndRendersPage(
+        Organization organization,
+        SutProvider<OrganizationsController> sutProvider)
+    {
+        StubTrialExtensionAccess(sutProvider, organization);
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(organization, Arg.Any<SubscriptionGetOptions>())
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = "api_error" } });
+
+        var result = await sutProvider.Sut.Edit(organization.Id);
+
+        var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.TrialEndDate);
+    }
 }
