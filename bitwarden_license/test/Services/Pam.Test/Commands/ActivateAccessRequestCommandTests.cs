@@ -306,7 +306,7 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
     }
 
-    // Attempt up front, then a LeaseActivated Outcome after the mint.
+    // Attempt before the mint, LeaseActivated outcome after.
     [Theory, BitAutoData]
     public async Task ActivateAsync_Minted_EmitsActivatedAttemptThenOutcome(AccessRequest request)
     {

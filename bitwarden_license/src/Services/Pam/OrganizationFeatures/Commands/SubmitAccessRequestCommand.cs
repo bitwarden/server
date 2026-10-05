@@ -158,7 +158,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
-        // Audit before/after the point of no return: one attempt, then submission and auto-approval outcomes.
+        // One attempt, then the submission and auto-approval outcomes.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
@@ -177,7 +177,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
-        // Distinct event from the submission, with no attempt of its own, so it gets its own correlation id.
+        // A separate event from the submission, so it gets its own correlation id.
         await _accessAuditEventEmitter.EmitAsync(
             audit with
             {
@@ -245,7 +245,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CreationDate = now,
         };
 
-        // Audit before/after the point of no return: attempt now, outcome once the request has an id.
+        // Attempt now, outcome once the request has an id.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,

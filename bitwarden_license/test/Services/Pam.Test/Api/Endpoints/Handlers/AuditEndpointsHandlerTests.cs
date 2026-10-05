@@ -18,7 +18,7 @@ namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 [SutProviderCustomize]
 public class AuditEndpointsHandlerTests
 {
-    // Authorized by AccessEventLogs; a caller without it must not learn the organization exists.
+    // A caller without AccessEventLogs gets a 404.
     [Theory, BitAutoData]
     public async Task GetTrail_WithoutAccessEventLogs_ThrowsNotFound(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
@@ -32,7 +32,7 @@ public class AuditEndpointsHandlerTests
             .GetTrailAsync(default, default!);
     }
 
-    // Checked ahead of the permission so an unaudited organization and an unauthorized one look identical.
+    // The kill switch gives the same 404 as a failed permission check.
     [Theory, BitAutoData]
     public async Task GetTrail_WithSqlAuditLoggingDisabled_ThrowsNotFound(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
@@ -71,7 +71,6 @@ public class AuditEndpointsHandlerTests
         Assert.Equal(organizationId, row.OrganizationId);
     }
 
-    // The filter reaches the query as the validated read it describes, rather than the handler re-deriving it.
     [Theory, BitAutoData]
     public async Task GetTrail_PassesTheRequestedFilterToTheQuery(
         Guid organizationId, Guid actorId, SutProvider<AuditEndpointsHandler> sutProvider)
@@ -95,7 +94,6 @@ public class AuditEndpointsHandlerTests
         Assert.True(requested.IncludeAutomatedActor);
     }
 
-    // The token must reach the client, or paging the trail has no way to continue.
     [Theory, BitAutoData]
     public async Task GetTrail_CarriesTheContinuationTokenOntoTheResponse(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)

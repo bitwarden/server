@@ -160,7 +160,7 @@ public class UpdateAccessRuleCommandTests
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
-    // RuleName is the name after the edit; the previous name is read from the preceding trail event.
+    // RuleName is the name after the edit.
     [Theory, BitAutoData]
     public async Task UpdateAsync_EmitsAttemptThenOutcome_WithTheNewNameAndEditorAsActor(
         AccessRuleDetails existing, AccessRule update, Guid editorId)
@@ -186,7 +186,7 @@ public class UpdateAccessRuleCommandTests
             && e.AccessRuleId == existing.Id && e.RuleName == "after"));
     }
 
-    // A rule that isn't the route organization's is rejected before anything is recorded.
+    // A rule from another organization is rejected before anything is recorded.
     [Theory, BitAutoData]
     public async Task UpdateAsync_WrongOrg_EmitsNothing(AccessRuleDetails existing, AccessRule update)
     {

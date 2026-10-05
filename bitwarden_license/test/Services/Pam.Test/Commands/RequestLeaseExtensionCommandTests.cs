@@ -412,7 +412,7 @@ public class RequestLeaseExtensionCommandTests
 
         await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
-        // Outcome carries the denial, against the lease's own unchanged end.
+        // The outcome carries the denial and the lease's unchanged end.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(e =>
                 e.Kind == AccessAuditEventKind.RequestDenied

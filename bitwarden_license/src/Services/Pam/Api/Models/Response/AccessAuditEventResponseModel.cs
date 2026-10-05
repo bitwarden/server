@@ -5,8 +5,7 @@ using Bit.Pam.Models;
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// One row of the PAM access-audit trail, as the governance client renders it. Read from the dedicated audit store,
-/// where each event was written self-contained with display names snapshotted at write time. Subject ids are
+/// One row of the PAM access-audit trail. Display names are as recorded when the event was written; subject ids are
 /// populated according to <see cref="Kind"/>.
 /// </summary>
 public class AccessAuditEventResponseModel : ResponseModel
@@ -46,13 +45,13 @@ public class AccessAuditEventResponseModel : ResponseModel
         Incomplete = auditEvent.Phase == AccessAuditEventPhase.Attempt;
     }
 
-    /// <summary>The event kind, as the governance vocabulary (see <see cref="AccessAuditEventKindNames"/>).</summary>
+    /// <summary>The event kind, as an <see cref="AccessAuditEventKindNames"/> name.</summary>
     public string Kind { get; }
 
     public DateTime OccurredAt { get; }
     public Guid OrganizationId { get; }
 
-    /// <summary>Who performed the event; null for a system / automatic event.</summary>
+    /// <summary>Who performed the event; null for a system event.</summary>
     public Guid? ActorId { get; }
 
     /// <summary>The owner of the subject request or lease.</summary>
@@ -68,10 +67,10 @@ public class AccessAuditEventResponseModel : ResponseModel
     public Guid? RotationConfigId { get; }
     public Guid? RotationJobId { get; }
 
-    /// <summary>What triggered the rotation job (scheduled, on-demand, or access-end); set on job/attempt-scoped events.</summary>
+    /// <summary>What triggered the rotation job; set on job and attempt events.</summary>
     public PamRotationSource? RotationSource { get; }
 
-    /// <summary>Whether a failed attempt left the target system's password changed; set on failure/report events.</summary>
+    /// <summary>Whether a failed attempt left the target system's password changed; set on failure events.</summary>
     public PamRotationSyncState? SyncState { get; }
 
     /// <summary>An approver comment or a revoke reason.</summary>
@@ -80,28 +79,26 @@ public class AccessAuditEventResponseModel : ResponseModel
     public DateTime? LeaseNotBefore { get; }
     public DateTime? LeaseNotAfter { get; }
 
-    /// <summary>The actor's display name and email (plaintext). Null for a system event or an unresolved user.</summary>
+    /// <summary>The actor's display name and email. Null for a system event or an unresolved user.</summary>
     public string? ActorName { get; }
     public string? ActorEmail { get; }
 
-    /// <summary>The requester's display name and email (plaintext).</summary>
+    /// <summary>The requester's display name and email.</summary>
     public string? RequesterName { get; }
     public string? RequesterEmail { get; }
 
-    /// <summary>The access rule's name — plaintext org configuration (not vault data), for rule administration events.</summary>
+    /// <summary>The access rule's name, for rule administration events.</summary>
     public string? RuleName { get; }
 
-    /// <summary>The target system's name — plaintext org configuration, snapshotted at write, for rotation/target events.</summary>
+    /// <summary>The target system's name, for rotation and target events.</summary>
     public string? TargetSystemName { get; }
 
-    /// <summary>The access connector's name — plaintext org configuration, snapshotted at write, for rotation/connector events.</summary>
+    /// <summary>The access connector's name, for rotation and connector events.</summary>
     public string? AccessConnectorName { get; }
 
-    /// <summary>True for a system/automatic event with no human actor.</summary>
+    /// <summary>True for a system event with no human actor.</summary>
     public bool Automated { get; }
 
-    /// <summary>
-    /// True when only the write-ahead Attempt was recorded and no outcome landed; the action is in-doubt.
-    /// </summary>
+    /// <summary>True when the action's outcome was never recorded, so it may not have completed.</summary>
     public bool Incomplete { get; }
 }

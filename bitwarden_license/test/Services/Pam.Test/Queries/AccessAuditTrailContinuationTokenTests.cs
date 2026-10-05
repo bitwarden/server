@@ -4,9 +4,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Queries;
 
-/// <summary>
-/// The trail's page position; carries the last row's id, since a shared timestamp is ordinary in this store.
-/// </summary>
 public class AccessAuditTrailContinuationTokenTests
 {
     [Fact]
@@ -15,7 +12,7 @@ public class AccessAuditTrailContinuationTokenTests
         var row = new AccessAuditEvent
         {
             Id = Guid.NewGuid(),
-            // A tick-precision instant, which is what DATETIME2(7) stores and what the token must not round.
+            // Tick precision, as DATETIME2(7) stores.
             OccurredDate = new DateTime(638_600_123_456_789_012L, DateTimeKind.Utc),
         };
 
@@ -55,7 +52,7 @@ public class AccessAuditTrailContinuationTokenTests
     [InlineData("638000000000000000_")]
     [InlineData("_0123456789abcdef0123456789abcdef")]
     [InlineData("638000000000000000_not-a-guid")]
-    // The dashed Guid form is not what From emits, so it is not one of ours either.
+    // Not the format From emits.
     [InlineData("638000000000000000_01234567-89ab-cdef-0123-456789abcdef")]
     [InlineData("-1_0123456789abcdef0123456789abcdef")]
     [InlineData("99999999999999999999_0123456789abcdef0123456789abcdef")]

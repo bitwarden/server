@@ -80,7 +80,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
-        // A holder self-end and an operator revoke both settle to the single LeaseRevoked kind.
+        // Ending by the holder and revocation by an operator are both LeaseRevoked.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseRevoked,

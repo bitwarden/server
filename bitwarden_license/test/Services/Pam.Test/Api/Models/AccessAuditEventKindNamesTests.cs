@@ -5,11 +5,9 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Models;
 
 /// <summary>
-/// The wire vocabulary is a contract with the web client, which keeps its own copy in
-/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. A kind added
-/// here and not there renders as "Unknown event" in the audit trail, which is how the rotation and fleet kinds
-/// shipped (PM-43606). If the pinned list below fails, update the client enum, its label map, and the copy in
-/// <c>apps/web/src/locales/en/messages.json</c> in the same change.
+/// The wire names are a contract with the web client's copy in
+/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. If the pinned
+/// list below fails, update the client enum, its label map, and <c>apps/web/src/locales/en/messages.json</c> too.
 /// </summary>
 public class AccessAuditEventKindNamesTests
 {

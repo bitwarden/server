@@ -34,7 +34,6 @@ public static class AccessHistoryWindow
                 $"The requested range is wider than the {RetentionDays}-day audit retention window.");
         }
 
-        // The outer clamp: no parameter reaches past retention, whatever the span between the two bounds.
         return (since < retentionFloor ? retentionFloor : since, until);
     }
 }

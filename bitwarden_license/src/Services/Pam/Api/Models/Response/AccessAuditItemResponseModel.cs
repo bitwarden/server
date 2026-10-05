@@ -4,11 +4,8 @@ using Bit.Pam.Models;
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// One subject the access-audit trail names within a range, as the trail's Item filter offers it. Exactly one of
-/// the two pairs is set, distinguishing a credential from an access rule.
-///
-/// No cipher name is here: it's Vault Data, so the client resolves it from its own vault instead. A rule's name is
-/// plaintext organization configuration, so it travels with the id.
+/// One subject the access-audit trail names within a range, for the Item filter: either a credential or an access
+/// rule. Cipher names are vault data, so the client resolves them itself.
 /// </summary>
 public class AccessAuditItemResponseModel : ResponseModel
 {
@@ -27,14 +24,14 @@ public class AccessAuditItemResponseModel : ResponseModel
     public Guid? CipherId { get; }
 
     /// <summary>
-    /// The collection the cipher was most recently gated through — what tells two items sharing a decrypted name
-    /// apart. Null on a rule item, or where the events named no collection.
+    /// The collection the cipher was most recently accessed through. Null on a rule item, or where the events named no
+    /// collection.
     /// </summary>
     public Guid? CollectionId { get; }
 
     /// <summary>The subject access rule. Null on a cipher item.</summary>
     public Guid? RuleId { get; }
 
-    /// <summary>The rule's name as the most recent event in range recorded it. Null on a cipher item.</summary>
+    /// <summary>The rule's most recently recorded name. Null on a cipher item.</summary>
     public string? RuleName { get; }
 }

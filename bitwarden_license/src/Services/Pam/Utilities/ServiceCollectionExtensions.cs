@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
-        // Side channels the commands emit through: two push notifiers and the PAM audit store appender.
+        // Side channels the commands emit through.
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();
         services.AddScoped<IRequesterNotifier, RequesterNotifier>();
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();

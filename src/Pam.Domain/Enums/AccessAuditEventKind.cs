@@ -35,112 +35,94 @@ public enum AccessAuditEventKind : byte
     LeasingFreezeLifted = 42, // not emitted yet
 
     // Rotation lifecycle
-    /// <summary>A rotation config was created for a cipher. Spec outcome <c>config_created</c>.</summary>
+    /// <summary>A rotation config was created for a cipher.</summary>
     RotationConfigCreated = 50,
 
-    /// <summary>A rotation config's schedule/rotate-on-access-end settings were updated. Spec outcome <c>settings_updated</c>.</summary>
+    /// <summary>A rotation config's schedule settings were updated.</summary>
     RotationSettingsUpdated = 51,
 
-    /// <summary>A rotation config's target/account/termination settings were updated. Spec outcome <c>account_updated</c>.</summary>
+    /// <summary>A rotation config's target, account, or termination settings were updated.</summary>
     RotationAccountUpdated = 52,
 
-    /// <summary>A rotation config was paused. Spec outcome <c>paused</c>.</summary>
+    /// <summary>A rotation config was paused.</summary>
     RotationPaused = 53,
 
-    /// <summary>A rotation config was resumed. Spec outcome <c>resumed</c>.</summary>
+    /// <summary>A rotation config was resumed.</summary>
     RotationResumed = 54,
 
-    /// <summary>A rotation config was deleted. Spec outcome <c>config_deleted</c>.</summary>
+    /// <summary>A rotation config was deleted.</summary>
     RotationConfigDeleted = 55,
 
-    /// <summary>A rotation job was created for a config (the single creation point, <c>OfferRotation</c>). Spec outcome <c>offered</c>.</summary>
+    /// <summary>A rotation job was created for a config.</summary>
     RotationOffered = 56,
 
-    /// <summary>A rotation job was claimed by an access connector. Spec outcome <c>dispatched</c>.</summary>
+    /// <summary>A rotation job was claimed by an access connector.</summary>
     RotationDispatched = 57,
 
-    /// <summary>A rotation job succeeded. Spec outcome <c>succeeded</c>.</summary>
+    /// <summary>A rotation job succeeded.</summary>
     RotationSucceeded = 58,
 
-    /// <summary>A rotation attempt failed but the job still has retry budget left. Spec outcome <c>attempt_failed</c>.</summary>
+    /// <summary>A rotation attempt failed and the job will retry.</summary>
     RotationAttemptFailed = 59,
 
-    /// <summary>A rotation job failed after exhausting its retry budget. Spec outcome <c>failed</c>.</summary>
+    /// <summary>A rotation job failed after exhausting its retries.</summary>
     RotationFailed = 60,
 
-    /// <summary>A claimed rotation job was released back to Pending by the sweep (stale access connector heartbeat past the claim lease). Spec outcome <c>released</c>.</summary>
+    /// <summary>A claimed rotation job was released back to pending after its access connector went stale.</summary>
     RotationJobReleased = 61,
 
-    /// <summary>A rotation job timed out past its TTL with no successful attempt. Spec outcome <c>timed_out</c>.</summary>
+    /// <summary>A rotation job timed out with no successful attempt.</summary>
     RotationJobTimedOut = 62,
 
-    /// <summary>An access connector's cipher write was rejected by the atomic write-capability check. Spec outcome <c>write_rejected</c>.</summary>
+    /// <summary>An access connector's cipher write was rejected.</summary>
     RotationCipherWriteRejected = 63,
 
-    /// <summary>A stale success/failure report was rejected (attempt no longer executing, or claimant mismatch). Spec outcome <c>report_rejected</c>.</summary>
+    /// <summary>A stale rotation success or failure report was rejected.</summary>
     RotationReportRejected = 64,
 
-    /// <summary>A manual-method rotation config's obligation became due. Spec outcome <c>manual_rotation_due</c>.</summary>
+    /// <summary>A manual rotation became due.</summary>
     ManualRotationDue = 65,
 
-    /// <summary>An admin recorded a manual rotation as completed. Spec outcome <c>manual_recorded</c>.</summary>
+    /// <summary>An admin recorded a manual rotation as completed.</summary>
     ManualRotationRecorded = 66,
 
-    // 67-69 reserved for rotation-lifecycle growth.
-
-    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or connector_credential_reissued.
-    // Left unassigned rather than reserved.
-
-    // Fleet / target administration.
-    /// <summary>An access connector was registered. Spec outcome <c>connector_registered</c>.</summary>
+    // Access connector and target administration
+    /// <summary>An access connector was registered.</summary>
     AccessConnectorRegistered = 70,
 
-    /// <summary>
-    /// An access connector was revoked. Legacy: the revoke action was replaced by the reversible disable/enable pair
-    /// plus a permanent delete (see <see cref="AccessConnectorDisabled"/>, <see cref="AccessConnectorEnabled"/>,
-    /// <see cref="AccessConnectorDeleted"/>); no action emits this anymore, but it is retained so historical rows still read.
-    /// </summary>
+    /// <summary>An access connector was revoked. No longer emitted.</summary>
     AccessConnectorRevoked = 71,
 
-    /// <summary>An access connector was assigned to a target system. Spec outcome <c>connector_assigned</c>.</summary>
+    /// <summary>An access connector was assigned to a target system.</summary>
     AccessConnectorAssignedToTarget = 72,
 
-    /// <summary>An access connector was unassigned from a target system. Spec outcome <c>connector_unassigned</c>.</summary>
+    /// <summary>An access connector was unassigned from a target system.</summary>
     AccessConnectorUnassignedFromTarget = 73,
 
-    /// <summary>A target system was registered (automatic or manual). Spec outcome <c>target_registered</c>.</summary>
+    /// <summary>A target system was registered.</summary>
     TargetSystemRegistered = 74,
 
-    /// <summary>A target system was disabled. Spec outcome <c>target_disabled</c>.</summary>
+    /// <summary>A target system was disabled.</summary>
     TargetSystemDisabled = 75,
 
-    /// <summary>A target system was enabled. Spec outcome <c>target_enabled</c>.</summary>
+    /// <summary>A target system was enabled.</summary>
     TargetSystemEnabled = 76,
 
-    /// <summary>A target system was renamed. Spec outcome <c>target_renamed</c>.</summary>
+    /// <summary>A target system was renamed.</summary>
     TargetSystemRenamed = 77,
 
-    /// <summary>A target system's password policy or session-termination capability was updated. Spec outcome <c>target_policy_updated</c>.</summary>
+    /// <summary>A target system's password policy or session-termination capability was updated.</summary>
     TargetSystemPolicyUpdated = 78,
 
-    // Access connector lifecycle (continued). The fleet range above (70-73) is full, so the disable/enable/delete kinds that
-    // replaced revoke continue here.
-
-    /// <summary>An access connector was disabled (reversible pause; credential retained).</summary>
+    /// <summary>An access connector was disabled.</summary>
     AccessConnectorDisabled = 79,
 
     /// <summary>A disabled access connector was re-enabled.</summary>
     AccessConnectorEnabled = 80,
 
-    /// <summary>An access connector was permanently deleted (row removed and its credential invalidated).</summary>
+    /// <summary>An access connector was permanently deleted.</summary>
     AccessConnectorDeleted = 81,
 
-    // Target administration (continued). The fleet/target range above (74-78) is followed by the access connector lifecycle
-    // kinds, so the target delete kind continues from here.
-
-    /// <summary>
-    /// A target system was permanently deleted, taking its access connector assignments with it. Spec outcome
-    /// <c>target_deleted</c>.
-    /// </summary>
+    /// <summary>A target system was permanently deleted, along with its access connector assignments.</summary>
     TargetSystemDeleted = 82,
 }

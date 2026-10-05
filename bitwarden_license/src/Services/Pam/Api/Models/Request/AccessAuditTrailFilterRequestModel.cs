@@ -9,16 +9,13 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
-/// How a read of the organization's access-audit trail is narrowed, as query parameters. Every dimension is
-/// optional and an unset one matches everything, so a bare <c>GET</c> still reads the trail. Each dimension
-/// is a list (mirroring the Admin Console's multi-select filter chips); values within a dimension are OR-ed,
-/// dimensions are AND-ed together.
+/// How a read of the organization's access-audit trail is narrowed, as query parameters. An unset dimension matches
+/// everything; values within a dimension are OR-ed, dimensions are AND-ed.
 /// </summary>
 public class AccessAuditTrailFilterRequestModel : IValidatableObject
 {
     /// <summary>
-    /// Inclusive lower bound on the event's instant. Absent reaches back as far as the retention window allows, which
-    /// is also as far as the store holds anything.
+    /// Inclusive lower bound on the event's instant. Absent reaches back as far as the retention window allows.
     /// </summary>
     public DateTime? Start { get; set; }
 
@@ -26,9 +23,8 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
     public DateTime? End { get; set; }
 
     /// <summary>
-    /// The event kinds to keep, in the governance vocabulary the response reports
-    /// (<see cref="AccessAuditEventKindNames"/>) — <c>requestApproved</c>, not the underlying number. Repeat the
-    /// parameter to select more than one.
+    /// The event kinds to keep, by their <see cref="AccessAuditEventKindNames"/> name. Repeat the parameter to select
+    /// more than one.
     /// </summary>
     public string[]? Kind { get; set; }
 
@@ -36,36 +32,23 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
     public Guid[]? ActorId { get; set; }
 
     /// <summary>
-    /// Whether to also keep the system / automatic events, which have no actor id to be selected by. Unions
-    /// with <see cref="ActorId"/> rather than narrowing it.
+    /// Whether to also keep system events, which have no actor. Unions with <see cref="ActorId"/>.
     /// </summary>
-    /// <remarks>
-    /// Nullable so the parameter stays optional: <c>[AsParameters]</c> treats a non-nullable value type as
-    /// required and answers a request that omits it with a 400.
-    /// </remarks>
     public bool? IncludeAutomatedActor { get; set; }
 
     /// <summary>The access requester the event concerns. Repeat the parameter to select more than one.</summary>
     public Guid[]? RequesterId { get; set; }
 
-    /// <summary>
-    /// The subject credentials to keep. Repeat the parameter to select more than one.
-    /// </summary>
+    /// <summary>The subject credentials to keep. Repeat the parameter to select more than one.</summary>
     public Guid[]? CipherId { get; set; }
 
     /// <summary>
-    /// The subject access rules to keep. Repeat the parameter to select more than one.
-    ///
-    /// Unions with <see cref="CipherId"/> rather than narrowing it — the two are the halves of one Item selection, and
-    /// a rule-administration event names a rule and no cipher, so asking for a credential and a rule together must
-    /// mean either rather than the empty intersection.
+    /// The subject access rules to keep. Repeat the parameter to select more than one. Unions with
+    /// <see cref="CipherId"/>.
     /// </summary>
     public Guid[]? RuleId { get; set; }
 
-    /// <summary>
-    /// Where the previous page stopped, as that page's response reported it. Absent starts at the newest event in
-    /// range.
-    /// </summary>
+    /// <summary>The previous page's continuation token. Absent starts at the newest event in range.</summary>
     public string? ContinuationToken { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -74,13 +57,7 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
         return errors;
     }
 
-    /// <summary>
-    /// The validated read this describes.
-    /// </summary>
-    /// <remarks>
-    /// <c>PamValidationEndpointFilter</c> already runs <see cref="Validate"/> before a handler calls this, so
-    /// the throw is unreachable from the endpoint; it exists for any other caller.
-    /// </remarks>
+    /// <summary>The validated read this describes.</summary>
     public AccessAuditTrailQueryOptions ToQueryOptions()
     {
         if (!TryBuild(out var options, out var errors))
@@ -105,8 +82,6 @@ public class AccessAuditTrailFilterRequestModel : IValidatableObject
             }
             else
             {
-                // Named rather than ignored, since an audit surface reporting an empty trail reads as
-                // "this never happened".
                 errors.Add(new ValidationResult($"'{name}' is not a known audit event kind.", [nameof(Kind)]));
             }
         }

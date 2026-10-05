@@ -92,7 +92,7 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
         };
         decision.SetNewId();
 
-        // Audit before/after: the verdict is known up front, so both phases carry the resulting kind.
+        // Both phases carry the verdict's kind.
         var auditKind = approved ? AccessAuditEventKind.RequestApproved : AccessAuditEventKind.RequestDenied;
         var audit = new AccessAuditEventData
         {

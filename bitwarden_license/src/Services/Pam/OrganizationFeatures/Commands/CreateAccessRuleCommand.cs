@@ -38,8 +38,7 @@ public class CreateAccessRuleCommand : ICreateAccessRuleCommand
         rule.CreationDate = now;
         rule.RevisionDate = now;
 
-        // The attempt cannot name the rule, since CreateAsync assigns the id; the outcome is emitted only once
-        // the collection links are written too, so an attempt with no outcome flags a half-created rule.
+        // Only the outcome carries the rule id, emitted once the collection links are written.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleCreated,

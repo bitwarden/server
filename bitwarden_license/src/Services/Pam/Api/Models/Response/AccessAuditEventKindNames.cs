@@ -3,10 +3,7 @@
 namespace Bit.Services.Pam.Api.Models.Response;
 
 /// <summary>
-/// Maps <see cref="AccessAuditEventKind"/> to the string vocabulary the governance client expects. The projection
-/// emits the request, lease, rule administration, and rotation-lifecycle/fleet-administration kinds today; the
-/// remaining names (credential access, system controls) are defined so the contract stays stable as those kinds come
-/// online.
+/// Maps <see cref="AccessAuditEventKind"/> to the string names used on the wire.
 /// </summary>
 public static class AccessAuditEventKindNames
 {
@@ -115,10 +112,7 @@ public static class AccessAuditEventKindNames
     };
 
     /// <summary>
-    /// Built from <see cref="From"/> over every declared kind rather than written out a second time, so the two
-    /// directions cannot drift: a kind added to the enum and to <see cref="From"/> is filterable by the same name it
-    /// is reported under, and one missing from <see cref="From"/> fails loudly here on first use instead of quietly
-    /// becoming unfilterable.
+    /// The inverse of <see cref="From"/>, built from it over every declared kind.
     /// </summary>
     private static readonly Dictionary<string, AccessAuditEventKind> _byName =
         Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
@@ -141,9 +135,8 @@ public static class AccessAuditEventKindNames
     };
 
     /// <summary>
-    /// Reads a governance vocabulary name back into its kind, for the trail's event-kind filter. False for anything
-    /// this does not emit — an unknown name is a caller error, not an empty filter — except the pre-rename fleet
-    /// names in <see cref="_preRenameFleetNames"/>, which resolve to the kind they used to name.
+    /// Reads a wire name, or a name in <see cref="_preRenameFleetNames"/>, back into its kind. False for an unknown
+    /// name.
     /// </summary>
     public static bool TryParse(string name, out AccessAuditEventKind kind) =>
         _byName.TryGetValue(name, out kind) || _preRenameFleetNames.TryGetValue(name, out kind);

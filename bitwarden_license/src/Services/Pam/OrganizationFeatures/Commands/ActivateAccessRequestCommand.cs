@@ -109,8 +109,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // Binds only where every cipher path is singleton-governed; enforced under a range lock in the mint proc.
         var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
 
-        // Records the attempt, then the outcome around the mint. A race lost to another activation emits nothing,
-        // leaving the attempt in-doubt.
+        // Attempt before the mint, outcome after. A race lost to another activation leaves the attempt without one.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseActivated,
@@ -137,7 +136,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
                     Kind = AccessAuditEventKind.LeaseActivationRejected,
                     Phase = AccessAuditEventPhase.Outcome,
                     AccessLeaseId = null,
-                    // The internal reason code, not requester-facing copy; stable across translations.
+                    // The reason code, not the localized message.
                     Detail = denial.Reason.ToString(),
                 });
             throw new BadRequestException(AccessDenialMessage.For(denial));

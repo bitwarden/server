@@ -4,8 +4,7 @@ using Bit.Services.Pam.Api.Models.Request;
 namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
-/// The <c>organizations/{orgId}/audit</c> resource: the org-wide governance access-audit trail, authorized by the
-/// AccessEventLogs permission. A read-only projection of existing PAM state — no actions.
+/// The <c>organizations/{orgId}/audit</c> resource: the organization's read-only PAM access-audit trail.
 /// </summary>
 internal static class AuditEndpoints
 {
@@ -18,7 +17,7 @@ internal static class AuditEndpoints
                     handler.GetTrail(orgId, filter))
             .WithName("Pam_Audit_GetTrail");
 
-        // Same resource and authorization as the trail, but answers what it could be filtered by, not what it holds.
+        // The subjects the trail can be filtered by.
         group.MapGet("items",
                 (AuditEndpointsHandler handler, Guid orgId, [AsParameters] AccessAuditRangeRequestModel range) =>
                     handler.GetItems(orgId, range))

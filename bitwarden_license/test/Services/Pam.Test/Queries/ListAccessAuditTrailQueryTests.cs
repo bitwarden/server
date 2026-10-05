@@ -12,11 +12,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Queries;
 
-/// <summary>
-/// The trail read's own responsibilities: what range it asks the store for, and how it reports where a page stopped.
-/// The before/after collapse lives in the store instead, and is covered against a real database in
-/// <c>AccessAuditEventRepositoryTests</c>.
-/// </summary>
 [SutProviderCustomize]
 public class ListAccessAuditTrailQueryTests
 {
@@ -24,7 +19,7 @@ public class ListAccessAuditTrailQueryTests
 
     private static DateTime RetentionFloor => _now.AddDays(-AccessHistoryWindow.RetentionDays);
 
-    // No range means the whole shared retention window, same as the request and lease history views.
+    // No range means the whole retention window.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_WithNoBounds_ReadsTheWholeRetentionWindow(Guid organizationId)
     {
@@ -37,7 +32,6 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(_now, filter.Until);
     }
 
-    // "All time" still means the whole retention window; it just arrives one page at a time.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_ReadsOnePageAtTheFixedSize(Guid organizationId)
     {
@@ -63,7 +57,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(end, filter.Until);
     }
 
-    // The outer clamp: no parameter reaches further back than the store promises to hold.
+    // No bound reaches past the retention window.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_StartBeyondRetention_IsClampedToTheWindow(Guid organizationId)
     {
@@ -78,7 +72,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(RetentionFloor, Assert.Single(filters).Since);
     }
 
-    // Matches ApiHelpers.GetDateRange: an inverted pair is swapped, not refused.
+    // An inverted pair is swapped.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_InvertedRange_IsSwapped(Guid organizationId)
     {
@@ -94,7 +88,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(later, filter.Until);
     }
 
-    // Refused rather than quietly narrowed to what's retained.
+    // A span wider than the retention window is rejected.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_RangeWiderThanRetention_ThrowsBadRequest(Guid organizationId)
     {
@@ -146,7 +140,7 @@ public class ListAccessAuditTrailQueryTests
         Assert.Equal(new AccessAuditEventCursor(beforeOccurredAt, beforeId), filter.Before);
     }
 
-    // The token names the exact row it stopped on, so a boundary among same-instant events resumes exactly.
+    // The token names the last row, so same-instant events resume exactly.
     [Theory, BitAutoData]
     public async Task GetTrailAsync_FullPage_ReturnsATokenNamingTheLastRow(Guid organizationId)
     {
