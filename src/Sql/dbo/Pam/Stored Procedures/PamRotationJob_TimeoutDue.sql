@@ -10,14 +10,14 @@ BEGIN
 
     DECLARE @Affected TABLE (
         [JobId] UNIQUEIDENTIFIER NOT NULL,
-        [PreviousClaimedByDaemonId] UNIQUEIDENTIFIER NULL
+        [PreviousClaimedByAccessConnectorId] UNIQUEIDENTIFIER NULL
     )
 
     UPDATE J
     SET J.[Status] = 4, -- TimedOut
-        J.[ClaimedByDaemonId] = NULL,
+        J.[ClaimedByAccessConnectorId] = NULL,
         J.[ClaimedAt] = NULL
-    OUTPUT deleted.[Id], deleted.[ClaimedByDaemonId] INTO @Affected ([JobId], [PreviousClaimedByDaemonId])
+    OUTPUT deleted.[Id], deleted.[ClaimedByAccessConnectorId] INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
     FROM [dbo].[PamRotationJob] J
     WHERE J.[Status] IN (0, 1) -- Pending, Claimed
         AND J.[ExpiresAt] <= @Now
@@ -41,7 +41,7 @@ BEGIN
         C.[OrganizationId],
         C.[CipherId],
         J.[Source],
-        AF.[PreviousClaimedByDaemonId] AS [ClaimedByDaemonId],
+        AF.[PreviousClaimedByAccessConnectorId] AS [ClaimedByAccessConnectorId],
         (SELECT COUNT(*) FROM [dbo].[PamRotationAttempt] AT WHERE AT.[JobId] = AF.[JobId]) AS [AttemptCount]
     FROM @Affected AF
     INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
