@@ -1270,7 +1270,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.2, )"
+          "HttpExtensions": "[2026.10.0, )"
         }
       },
       "httpextensions": {
