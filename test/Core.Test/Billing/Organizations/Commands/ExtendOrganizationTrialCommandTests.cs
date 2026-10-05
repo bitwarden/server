@@ -233,15 +233,23 @@ public class ExtendOrganizationTrialCommandTests
     }
 
     [Fact]
-    public async Task Run_SubscriptionLookupReturnsNull_ReturnsBadRequest()
+    public async Task Run_SubscriptionNotFoundInStripe_ReturnsConflict()
     {
+        // A dangling GatewaySubscriptionId is a data problem the admin cannot fix from the form, so it is a conflict
+        // rather than a retryable error, and it must never surface as the generic "try again" message.
         _stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>())
-            .Returns((Subscription?)null);
+            .ThrowsAsync(new StripeException { StripeError = new StripeError { Code = ErrorCodes.ResourceMissing } });
 
         var result = await _command.Run(CreateOrganization(), 10);
 
-        Assert.True(result.IsT1);
-        Assert.Equal(TrialExtensionPolicy.NoSubscriptionMessage, result.AsT1.Response);
+        Assert.True(result.IsT2);
+        Assert.Equal(TrialExtensionPolicy.NoSubscriptionMessage, result.AsT2.Response);
         await AssertNoStripeOrDatabaseWritesAsync();
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains(_subscriptionId)),
+            null,
+            Arg.Any<Func<object, Exception?, string>>());
     }
 }

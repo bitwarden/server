@@ -2151,7 +2151,7 @@ public class OrganizationsControllerTests
     [BitAutoData]
     [SutProviderCustomize]
     [Theory]
-    public async Task Edit_Get_TrialExtensionEligible_SetsCanExtendTrial(
+    public async Task Edit_Get_TrialExtensionEligible_SetsExtendableTrialEnd(
         Organization organization,
         SutProvider<OrganizationsController> sutProvider)
     {
@@ -2164,8 +2164,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.True(model.CanExtendTrial);
-        Assert.Equal(subscription.TrialEnd, model.TrialEndDate);
+        Assert.Equal(subscription.TrialEnd, model.ExtendableTrialEnd);
     }
 
     [BitAutoData]
@@ -2183,8 +2182,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
-        Assert.Null(model.TrialEndDate);
+        Assert.Null(model.ExtendableTrialEnd);
     }
 
     [BitAutoData]
@@ -2204,7 +2202,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.ExtendableTrialEnd);
     }
 
     [BitAutoData]
@@ -2220,7 +2218,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.ExtendableTrialEnd);
         await sutProvider.GetDependency<ISubscriberService>()
             .DidNotReceiveWithAnyArgs()
             .GetSubscription(default, default);
@@ -2238,7 +2236,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.ExtendableTrialEnd);
         await sutProvider.GetDependency<ISubscriberService>()
             .DidNotReceiveWithAnyArgs()
             .GetSubscription(default, default);
@@ -2256,7 +2254,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.ExtendableTrialEnd);
         await sutProvider.GetDependency<ISubscriberService>()
             .DidNotReceiveWithAnyArgs()
             .GetSubscription(default, default);
@@ -2270,7 +2268,7 @@ public class OrganizationsControllerTests
         Provider provider,
         SutProvider<OrganizationsController> sutProvider)
     {
-        // Sales must be able to extend trials for provider-managed client organizations too (Product, 2026-10-01).
+        // Provider-managed client organizations are not excluded from trial extension (PM-39077).
         StubTrialExtensionAccess(sutProvider, organization);
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
         var subscription = CreateTrialingSubscription(10);
@@ -2281,8 +2279,7 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.True(model.CanExtendTrial);
-        Assert.Equal(subscription.TrialEnd, model.TrialEndDate);
+        Assert.Equal(subscription.TrialEnd, model.ExtendableTrialEnd);
     }
 
     [BitAutoData]
@@ -2300,7 +2297,6 @@ public class OrganizationsControllerTests
         var result = await sutProvider.Sut.Edit(organization.Id);
 
         var model = Assert.IsType<OrganizationEditModel>(Assert.IsType<ViewResult>(result).Model);
-        Assert.False(model.CanExtendTrial);
-        Assert.Null(model.TrialEndDate);
+        Assert.Null(model.ExtendableTrialEnd);
     }
 }

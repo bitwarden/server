@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
@@ -41,16 +42,20 @@ public class ExtendOrganizationTrialCommand(
             return new BadRequest(TrialExtensionPolicy.NoSubscriptionMessage);
         }
 
-        var subscription = await stripeAdapter.GetSubscriptionAsync(
-            organization.GatewaySubscriptionId,
-            new SubscriptionGetOptions { Expand = ["test_clock"] });
+        var subscription = await OrganizationSubscriptionHelpers.TryGetSubscriptionAsync(
+            stripeAdapter, _logger, organization, ["test_clock"]);
+
+        if (subscription is null)
+        {
+            return new Conflict(TrialExtensionPolicy.NoSubscriptionMessage);
+        }
 
         if (TrialExtensionPolicy.GetIneligibilityReason(subscription) is { } ineligibilityReason)
         {
             return new BadRequest(ineligibilityReason);
         }
 
-        var newTrialEnd = subscription!.TrialEnd!.Value.AddDays(days);
+        var newTrialEnd = subscription.TrialEnd!.Value.AddDays(days);
 
         await stripeAdapter.UpdateSubscriptionAsync(subscription.Id, new SubscriptionUpdateOptions
         {

@@ -317,7 +317,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        var (canExtendTrial, trialEndDate) = await GetTrialExtensionStateAsync(organization);
+        var extendableTrialEnd = await GetExtendableTrialEndAsync(organization);
 
         var model = new OrganizationEditModel(
             organization,
@@ -349,21 +349,22 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
-            CanExtendTrial = canExtendTrial,
-            TrialEndDate = trialEndDate,
+            ExtendableTrialEnd = extendableTrialEnd,
         };
 
         return View(model);
     }
 
-    private async Task<(bool CanExtendTrial, DateTime? TrialEndDate)> GetTrialExtensionStateAsync(
-        Organization organization)
+    /// <summary>
+    /// The trial end when the current user may extend this organization's trial, otherwise null.
+    /// </summary>
+    private async Task<DateTime?> GetExtendableTrialEndAsync(Organization organization)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
             || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial)
             || string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
-            return (false, null);
+            return null;
         }
 
         try
@@ -372,16 +373,15 @@ public class OrganizationsController : Controller
                 organization,
                 new SubscriptionGetOptions { Expand = ["test_clock"] });
 
-            return TrialExtensionPolicy.IsEligible(subscription)
-                ? (true, subscription.TrialEnd)
-                : (false, null);
+            return TrialExtensionPolicy.IsEligible(subscription) ? subscription.TrialEnd : null;
         }
         catch (Exception ex)
         {
+            // Stripe being unreachable must not block the Edit page; the command re-validates on POST.
             _logger.LogError(ex,
-                "Failed to load subscription to determine trial extension eligibility for organization {OrganizationId}.",
-                organization.Id);
-            return (false, null);
+                "Failed to load subscription ({SubscriptionId}) to determine trial extension eligibility for organization {OrganizationId}.",
+                organization.GatewaySubscriptionId, organization.Id);
+            return null;
         }
     }
 
