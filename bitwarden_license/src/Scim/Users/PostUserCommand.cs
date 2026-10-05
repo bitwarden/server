@@ -16,7 +16,6 @@ using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
 
 namespace Bit.Scim.Users;
@@ -27,7 +26,7 @@ public class PostUserCommand(
     IOrganizationService organizationService,
     IStripePaymentService paymentService,
     IScimContext scimContext,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
     ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
     TimeProvider timeProvider)
