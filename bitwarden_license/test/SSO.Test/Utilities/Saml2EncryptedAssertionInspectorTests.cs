@@ -383,6 +383,112 @@ public class Saml2EncryptedAssertionInspectorTests
         Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
+    [Fact]
+    public void UsesRsa15KeyTransport_Rsa15Key_ReturnsTrue()
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(RsaPkcs1));
+
+        Assert.True(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Theory]
+    [InlineData(RsaOaepMgf1P)]
+    [InlineData(RsaOaep)]
+    public void UsesRsa15KeyTransport_AcceptedAlgorithm_ReturnsFalse(string algorithm)
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+
+        Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_PlaintextAssertion_ReturnsFalse()
+    {
+        var envelope = BuildEnvelope("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>");
+
+        Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_NoEncryptedKey_ReturnsFalse()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedData>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Theory]
+    [InlineData("http://www.w3.org/2001/04/xmlenc#kw-aes256")]
+    [InlineData("urn:example:unknown-algorithm")]
+    [InlineData("rsa-1_5\nlevel=something-else")]
+    public void UsesRsa15KeyTransport_UnrecognizedAlgorithm_ReturnsFalse(string algorithm)
+    {
+        var envelope = BuildEnvelope(BuildNestedEncryptedAssertion(algorithm));
+
+        Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_Rsa15BesideAcceptedKeyInOneAssertion_ReturnsTrue()
+    {
+        // One assertion can hold more than one key. An accepted key must not hide rsa-1_5.
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedData>" +
+            "<ds:KeyInfo>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaOaepMgf1P}\" />" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedKey>" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "</xenc:EncryptedKey>" +
+            "</ds:KeyInfo>" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.True(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_Rsa15InSecondAssertion_ReturnsTrue()
+    {
+        var envelope = BuildEnvelope(
+            BuildNestedEncryptedAssertion(RsaOaep) +
+            BuildNestedEncryptedAssertion(RsaPkcs1));
+
+        Assert.True(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_KeyBesideEncryptedData_ReturnsTrue()
+    {
+        var envelope = BuildEnvelope(
+            "<saml:EncryptedAssertion>" +
+            "<xenc:EncryptedKey Id=\"_key\">" +
+            $"<xenc:EncryptionMethod Algorithm=\"{RsaPkcs1}\" />" +
+            "<xenc:CipherData><xenc:CipherValue>a2V5</xenc:CipherValue></xenc:CipherData>" +
+            "<xenc:ReferenceList><xenc:DataReference URI=\"#_data\" /></xenc:ReferenceList>" +
+            "</xenc:EncryptedKey>" +
+            "<xenc:EncryptedData Id=\"_data\">" +
+            "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
+            "</xenc:EncryptedData>" +
+            "</saml:EncryptedAssertion>");
+
+        Assert.True(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(envelope));
+    }
+
+    [Fact]
+    public void UsesRsa15KeyTransport_NullEnvelope_ReturnsFalse()
+    {
+        Assert.False(Saml2EncryptedAssertionInspector.UsesRsa15KeyTransport(null!));
+    }
+
     private static string BuildNestedEncryptedAssertion(string algorithm) =>
         "<saml:EncryptedAssertion>" +
         "<xenc:EncryptedData>" +

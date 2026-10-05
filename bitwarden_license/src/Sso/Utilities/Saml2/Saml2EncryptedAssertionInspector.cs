@@ -35,14 +35,7 @@ public static class Saml2EncryptedAssertionInspector
     {
         try
         {
-            // Only the first-child nodes are relevant. We don't need a recursive check.
-            var encryptedAssertions = envelope.ChildNodes
-                .OfType<XmlElement>()
-                .Where(e => e.LocalName == "EncryptedAssertion"
-                    && e.NamespaceURI == Saml2Namespaces.Saml2Name);
-
-            var unacceptedAlgorithms = encryptedAssertions
-                .SelectMany(ReadKeyEncryptionAlgorithms)
+            var unacceptedAlgorithms = ReadEnvelopeKeyEncryptionAlgorithms(envelope)
                 .Where(algorithm => !Saml2KeyTransportEncryptionAlgorithms.Accepted.Contains(algorithm))
                 .Distinct()
                 .ToArray();
@@ -63,6 +56,40 @@ public static class Saml2EncryptedAssertionInspector
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Determines whether any key of any encrypted assertion in the envelope uses the RSA 1.5 key transport algorithm.
+    /// </summary>
+    /// <param name="envelope">The root element of a SAML response or request.</param>
+    /// <returns><see langword="true"/> when a key uses RSA 1.5. <see langword="false"/> otherwise, or when any exception interrupts the check.</returns>
+    /// <remarks>
+    /// This method runs on the unauthenticated assertion consumer service (ACS) request path.
+    /// It must not throw for any XML shape, because a throw blocks single sign-on (SSO) login.
+    /// </remarks>
+    public static bool UsesRsa15KeyTransport(XmlElement envelope)
+    {
+        try
+        {
+            return ReadEnvelopeKeyEncryptionAlgorithms(envelope)
+                .Any(algorithm => string.Equals(
+                    algorithm, Saml2KeyTransportEncryptionAlgorithms.Rsa15, StringComparison.Ordinal));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static IEnumerable<string?> ReadEnvelopeKeyEncryptionAlgorithms(XmlElement envelope)
+    {
+        // Only the first-child nodes are relevant. We don't need a recursive check.
+        var encryptedAssertions = envelope.ChildNodes
+            .OfType<XmlElement>()
+            .Where(e => e.LocalName == "EncryptedAssertion"
+                && e.NamespaceURI == Saml2Namespaces.Saml2Name);
+
+        return encryptedAssertions.SelectMany(ReadKeyEncryptionAlgorithms);
     }
 
     /// <summary>

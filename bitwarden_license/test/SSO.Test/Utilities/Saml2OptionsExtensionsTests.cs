@@ -2,6 +2,7 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core;
+using Bit.Core.Settings;
 using Bit.Sso.Utilities.Saml2;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
@@ -22,9 +23,9 @@ namespace Bit.SSO.Test.Utilities;
 public class Saml2OptionsExtensionsTests
 {
     // The scheme carries the organization ID on this request path.
-    // The metric never receives this value, so no measurement carries an organization identifier.
-    private const string Scheme = "test-scheme";
-    private const string ModulePath = "/saml2/test-scheme";
+    private static readonly Guid OrganizationId = Guid.Parse("5b6f7c1e-2d3a-4e8f-9a10-0c7d2f4e6b81");
+    private static readonly string Scheme = OrganizationId.ToString();
+    private static readonly string ModulePath = $"/saml2/{Scheme}";
     private const string IdpEntityId = "https://idp.example.com/metadata";
     private const string MeterName = "Bitwarden.Sso.Saml2";
     private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
@@ -337,6 +338,125 @@ public class Saml2OptionsExtensionsTests
         Assert.True(await options.CouldHandleAsync(Scheme, context));
     }
 
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15CloudWithFlagOn_QueuesNoticeForTheSchemeOrganization()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15CloudWithFlagOff_DoesNotQueueNotice()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: false);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15SelfHostedWithFlagOff_QueuesNotice()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), selfHosted: true, rsa15EmailFlagEnabled: false);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_OaepAssertion_DoesNotQueueNotice()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaOaep)), rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_PlaintextAssertion_DoesNotQueueNotice()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"),
+            rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_SchemeIsNotAGuid_DoesNotQueueNotice()
+    {
+        // The module path check reads options.SPOptions.ModulePath, never the scheme argument.
+        // The options keep the Guid module path, so the request passes the path check.
+        // The scheme argument alone is not a Guid, and the query scheme does not match it, so the body is parsed.
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+
+        Assert.True(await options.CouldHandleAsync("test-scheme", context));
+
+        testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_NotifierThrows_StillReturnsTrue()
+    {
+        var options = BuildOptions(wantAssertionsSigned: false);
+        using var testContext = BuildPostContext(
+            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+        testContext.Notifier.When(n => n.TryQueue(Arg.Any<Guid>()))
+            .Do(_ => throw new InvalidOperationException("notifier failure"));
+
+        Assert.True(await options.CouldHandleAsync(Scheme, context));
+
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
+    [Fact]
+    public async Task CouldHandleAsync_Rsa15WithUnsignedAssertion_StillThrowsSignatureError()
+    {
+        // The notice call precedes the signature check, so the notice is queued for the unsigned assertion,
+        // and the signature check then still throws.
+        var decryptionCertificate = Saml2TestXml.CreateSelfSignedCertificate("CN=Test SP");
+        var options = BuildOptions(wantAssertionsSigned: true, decryptionCertificate);
+
+        var unsignedAssertion = Saml2TestXml.BuildAssertionDocument().DocumentElement!;
+        var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
+            unsignedAssertion.OuterXml, decryptionCertificate, EncryptedXml.XmlEncRSA15Url);
+
+        using var testContext = BuildPostContext(
+            BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true, rsa15EmailFlagEnabled: true);
+        var (context, _) = testContext;
+
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => options.CouldHandleAsync(Scheme, context));
+        Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
+        testContext.Notifier.Received(1).TryQueue(OrganizationId);
+    }
+
     private static Saml2Options BuildOptions(bool wantAssertionsSigned,
         X509Certificate2? decryptionCertificate = null, X509Certificate2? signingCertificate = null)
     {
@@ -417,7 +537,9 @@ public class Saml2OptionsExtensionsTests
 
     // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
     // the PM42982_WantAssertionsSigned feature flag, from the request services.
-    private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true)
+    // It also resolves the global settings, the PM43819_Rsa15DeprecationEmail feature flag, and the RSA 1.5 notifier.
+    private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true,
+        bool selfHosted = false, bool rsa15EmailFlagEnabled = false)
     {
         var context = BuildRawPostContext(responseXml);
 
@@ -427,19 +549,29 @@ public class Saml2OptionsExtensionsTests
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(featureFlagEnabled);
+        featureService.IsEnabled(FeatureFlagKeys.PM43819_Rsa15DeprecationEmail).Returns(rsa15EmailFlagEnabled);
         services.AddSingleton(featureService);
+
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.SelfHosted.Returns(selfHosted);
+        services.AddSingleton(globalSettings);
+
+        var notifier = Substitute.For<ISaml2Rsa15DeprecationNotifier>();
+        services.AddSingleton(notifier);
 
         var provider = services.BuildServiceProvider();
 
         var collector = new MetricCollector<long>(
             provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
         context.RequestServices = provider;
-        return new MetricTestContext(context, collector);
+        return new MetricTestContext(context, collector) { Notifier = notifier };
     }
 
     // Disposing this disposes the collector's underlying listener, so a test does not leak it.
     private sealed record MetricTestContext(DefaultHttpContext Context, MetricCollector<long> Collector) : IDisposable
     {
+        public required ISaml2Rsa15DeprecationNotifier Notifier { get; init; }
+
         public void Dispose() => Collector.Dispose();
     }
 
