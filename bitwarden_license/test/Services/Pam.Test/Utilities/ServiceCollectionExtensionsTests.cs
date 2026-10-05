@@ -104,4 +104,11 @@ public class ServiceCollectionExtensionsTests
 
         Assert.Contains(services, d => d.ServiceType == handlerType);
     }
+
+    [Fact]
+    public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
+    {
+        // Guards the guard: a rename that stops matching the suffix would silently empty the theory above.
+        Assert.True(EndpointHandlers().Count >= 10);
+    }
 }

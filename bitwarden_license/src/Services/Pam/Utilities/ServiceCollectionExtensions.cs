@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+        services.AddScoped<AuditEndpointsHandler>();
         services.AddScoped<AccessConnectorEndpointsHandler>();
         services.AddScoped<TargetSystemEndpointsHandler>();
         services.AddScoped<RotationConfigEndpointsHandler>();
@@ -52,6 +53,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
+        services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
         services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
 
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
@@ -63,6 +66,9 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
+
+        // The PAM audit store appender the commands emit through.
+        services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();
 

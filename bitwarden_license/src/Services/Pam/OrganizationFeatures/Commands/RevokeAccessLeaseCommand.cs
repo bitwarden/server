@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -11,15 +12,18 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 {
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RevokeAccessLeaseCommand(
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -60,6 +64,26 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
         };
         auditDecision.SetNewId();
 
+        // A holder self-end and an operator revoke both settle to the single LeaseRevoked kind.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseRevoked,
+            OccurredDate = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = lease.AccessRequestId,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+            Detail = string.IsNullOrWhiteSpace(reason) ? null : reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         await _accessLeaseRepository.RevokeAsync(lease, endAction, auditDecision, now);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }
 }

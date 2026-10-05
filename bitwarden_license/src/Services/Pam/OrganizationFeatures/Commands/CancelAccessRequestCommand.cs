@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
@@ -12,17 +13,20 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public CancelAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -81,6 +85,22 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new BadRequestException("A reason is required when revoking a request.");
         }
 
+        // audit (before/after): both the requester withdrawing and a manager retracting settle to the
+        // single RequestCancelled kind.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestCancelled,
+            OccurredDate = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            Detail = comment,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         bool cancelled;
         if (isRequester)
         {
@@ -107,5 +127,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         {
             throw new ConflictException("This request has already been resolved.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }
 }
