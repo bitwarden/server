@@ -1434,7 +1434,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.9.2, )"
+          "HttpExtensions": "[2026.10.0, )"
         }
       },
       "httpextensions": {
@@ -1444,12 +1444,12 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper": "[14.0.0, 14.0.0]",
-          "Core": "[2026.9.2, )",
+          "Core": "[2026.10.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.SqlServer": "[8.0.11, 8.0.11]",
           "Microsoft.EntityFrameworkCore.Sqlite": "[8.0.11, 8.0.11]",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[8.0.11, 8.0.11]",
-          "Pam.Domain": "[2026.9.2, )",
+          "Pam.Domain": "[2026.10.0, )",
           "Pomelo.EntityFrameworkCore.MySql": "[8.0.2, 8.0.2]",
           "linq2db": "[6.5.0, 6.5.0]",
           "linq2db.EntityFrameworkCore": "[8.8.0, 8.8.0]"
