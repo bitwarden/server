@@ -2,11 +2,11 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Xunit;
 
