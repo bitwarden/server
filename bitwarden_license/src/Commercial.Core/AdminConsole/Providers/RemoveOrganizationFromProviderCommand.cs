@@ -18,7 +18,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
@@ -29,7 +28,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
@@ -41,7 +40,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IOrganizationRepository organizationRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,

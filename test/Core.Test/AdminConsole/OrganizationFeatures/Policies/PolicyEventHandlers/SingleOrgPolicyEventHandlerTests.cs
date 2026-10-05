@@ -21,7 +21,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 
@@ -213,7 +212,7 @@ public class SingleOrgPolicyEventHandlerTests
             .HasVerifiedDomainsAsync(policyUpdate.OrganizationId)
             .Returns(true);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(vfo1Enabled);
 
