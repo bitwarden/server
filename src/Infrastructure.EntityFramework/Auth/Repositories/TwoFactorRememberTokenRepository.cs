@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;

@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
@@ -7,13 +7,13 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
-using DapperTwoFactorRememberTokenRepository = Bit.Infrastructure.Dapper.Auth.Repositories.TwoFactorRememberTokenRepository;
-using EfTwoFactorRememberToken = Bit.Infrastructure.EntityFramework.Auth.Models.TwoFactorRememberToken;
-using EfTwoFactorRememberTokenRepository = Bit.Infrastructure.EntityFramework.Auth.Repositories.TwoFactorRememberTokenRepository;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using DapperTwoFactorRememberTokenRepository = Bit.Infrastructure.Dapper.Auth.Repositories.TwoFactorRememberTokenRepository;
+using EfTwoFactorRememberToken = Bit.Infrastructure.EntityFramework.Auth.Models.TwoFactorRememberToken;
+using EfTwoFactorRememberTokenRepository = Bit.Infrastructure.EntityFramework.Auth.Repositories.TwoFactorRememberTokenRepository;
 
 namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 

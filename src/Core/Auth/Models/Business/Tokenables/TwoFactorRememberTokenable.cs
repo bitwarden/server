@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;

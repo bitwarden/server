@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
