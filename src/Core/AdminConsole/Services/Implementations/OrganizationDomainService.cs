@@ -4,7 +4,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.AdminConsole.Services.Implementations;
 
@@ -18,7 +17,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<OrganizationDomainService> _logger;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
@@ -29,7 +28,7 @@ public class OrganizationDomainService : IOrganizationDomainService
         TimeProvider timeProvider,
         ILogger<OrganizationDomainService> logger,
         IGlobalSettings globalSettings,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _domainRepository = domainRepository;
         _organizationUserRepository = organizationUserRepository;
