@@ -16,15 +16,15 @@ public class PamAccessConnectorResponseModel : ResponseModel
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        Id = item.Daemon.Id;
-        OrganizationId = item.Daemon.OrganizationId;
-        Name = item.Daemon.Name;
-        Status = item.Daemon.Status;
+        Id = item.AccessConnector.Id;
+        OrganizationId = item.AccessConnector.OrganizationId;
+        Name = item.AccessConnector.Name;
+        Status = item.AccessConnector.Status;
         IsConnected = item.IsConnected;
-        LastHeartbeatAt = item.Daemon.LastHeartbeatAt.AsUtc();
+        LastHeartbeatAt = item.AccessConnector.LastHeartbeatAt.AsUtc();
         AssignedTargetSystemIds = item.AssignedTargetSystemIds;
-        CreationDate = item.Daemon.CreationDate.AsUtc();
-        RevisionDate = item.Daemon.RevisionDate.AsUtc();
+        CreationDate = item.AccessConnector.CreationDate.AsUtc();
+        RevisionDate = item.AccessConnector.RevisionDate.AsUtc();
     }
 
     /// <summary>

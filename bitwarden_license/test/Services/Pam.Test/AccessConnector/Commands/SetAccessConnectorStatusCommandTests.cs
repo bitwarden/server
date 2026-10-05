@@ -19,114 +19,140 @@ public class SetAccessConnectorStatusCommandTests
     private static readonly DateTime _now = new(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_DaemonMissing_ThrowsNotFound(Guid organizationId, Guid actingUserId, Guid daemonId)
+    public async Task SetStatusAsync_AccessConnectorMissing_ThrowsNotFound(
+        Guid organizationId, Guid actingUserId, Guid accessConnectorId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns((PamDaemon?)null);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns((PamAccessConnector?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SetStatusAsync(organizationId, actingUserId, daemonId, enable: false));
+            () => sutProvider.Sut.SetStatusAsync(organizationId, actingUserId, accessConnectorId, enable: false));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_WrongOrg_ThrowsNotFound(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_WrongOrg_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Enabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        // daemon.OrganizationId is an unrelated AutoFixture Guid -- a cross-org lookup must 404, never leak existence.
+        // accessConnector.OrganizationId is an unrelated AutoFixture Guid -- a cross-org lookup must 404, never leak
+        // existence.
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SetStatusAsync(Guid.NewGuid(), actingUserId, daemon.Id, enable: false));
+            () => sutProvider.Sut.SetStatusAsync(Guid.NewGuid(), actingUserId, accessConnector.Id, enable: false));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Disable_AlreadyDisabled_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Disable_AlreadyDisabled_ThrowsBadRequest(
+        Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Disabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Disabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: false));
+            () => sutProvider.Sut.SetStatusAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: false));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Enable_AlreadyEnabled_ThrowsBadRequest(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Enable_AlreadyEnabled_ThrowsBadRequest(
+        Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Enabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: true));
+            () => sutProvider.Sut.SetStatusAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: true));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Disable_SetsDisabled(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Disable_SetsDisabled(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Enabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: false);
+        await sutProvider.Sut.SetStatusAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: false);
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).ReplaceAsync(Arg.Is<PamDaemon>(d =>
-            d.Id == daemon.Id && d.Status == PamAccessConnectorStatus.Disabled && d.RevisionDate == _now));
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .Received(1).ReplaceAsync(Arg.Is<PamAccessConnector>(d =>
+            d.Id == accessConnector.Id && d.Status == PamAccessConnectorStatus.Disabled && d.RevisionDate == _now));
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Enable_SetsEnabled(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Enable_SetsEnabled(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Disabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Disabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: true);
+        await sutProvider.Sut.SetStatusAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: true);
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).ReplaceAsync(Arg.Is<PamDaemon>(d =>
-            d.Id == daemon.Id && d.Status == PamAccessConnectorStatus.Enabled && d.RevisionDate == _now));
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .Received(1).ReplaceAsync(Arg.Is<PamAccessConnector>(d =>
+            d.Id == accessConnector.Id && d.Status == PamAccessConnectorStatus.Enabled && d.RevisionDate == _now));
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Disable_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Disable_EmitsAttemptThenOutcome(
+        Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Enabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Enabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: false);
+        await sutProvider.Sut.SetStatusAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: false);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorDisabled && e.Phase == AccessAuditEventPhase.Attempt
-            && e.AccessConnectorId == daemon.Id && e.AccessConnectorName == daemon.Name && e.ActorId == actingUserId));
+            && e.AccessConnectorId == accessConnector.Id && e.AccessConnectorName == accessConnector.Name
+            && e.ActorId == actingUserId));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorDisabled && e.Phase == AccessAuditEventPhase.Outcome
-            && e.AccessConnectorId == daemon.Id));
+            && e.AccessConnectorId == accessConnector.Id));
     }
 
     [Theory, BitAutoData]
-    public async Task SetStatusAsync_Enable_EmitsEnabledKind(Guid actingUserId, PamDaemon daemon)
+    public async Task SetStatusAsync_Enable_EmitsEnabledKind(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.Status = PamAccessConnectorStatus.Disabled;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.Status = PamAccessConnectorStatus.Disabled;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.SetStatusAsync(daemon.OrganizationId, actingUserId, daemon.Id, enable: true);
+        await sutProvider.Sut.SetStatusAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, enable: true);
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(e =>
                 e.Kind == AccessAuditEventKind.AccessConnectorEnabled && e.Phase == AccessAuditEventPhase.Outcome
-                && e.AccessConnectorId == daemon.Id));
+                && e.AccessConnectorId == accessConnector.Id));
     }
 
     private static SutProvider<SetAccessConnectorStatusCommand> Setup()

@@ -117,7 +117,7 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public void MapPamEndpoints_DoesNotGateTheConnectorSurfaceOnAnOrganizationRequirement()
     {
-        // No {orgId} in these routes; authorized by Policies.PamRotationDaemon instead of an org requirement.
+        // No {orgId} in these routes; authorized by Policies.PamAccessConnector instead of an org requirement.
         var endpoints = ConnectorEndpoints();
 
         Assert.NotEmpty(endpoints);
@@ -125,7 +125,7 @@ public class AccessConnectorMachineEndpointsTests
         {
             Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement);
             Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
-                data => data.Policy == Policies.PamRotationDaemon);
+                data => data.Policy == Policies.PamAccessConnector);
         });
     }
 
@@ -133,7 +133,8 @@ public class AccessConnectorMachineEndpointsTests
     public async Task MapPamEndpoints_RunsHeartbeatFilterAheadOfEveryConnectorRoute()
     {
         // AddEndpointFilter<T>() leaves no metadata to assert on, so drive the built endpoint instead: with no
-        // PamDaemonId the filter 404s, whereas a route missing the filter reaches its handler and fails differently.
+        // PamAccessConnectorId the filter 404s, whereas a route missing the filter reaches its handler and fails
+        // differently.
         var endpoints = ConnectorEndpoints();
         Assert.NotEmpty(endpoints);
 
@@ -154,7 +155,7 @@ public class AccessConnectorMachineEndpointsTests
     private static IServiceProvider ConnectorRequestServices()
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.PamDaemonId.Returns((Guid?)null);
+        currentContext.PamAccessConnectorId.Returns((Guid?)null);
 
         var hostEnvironment = Substitute.For<IHostEnvironment>();
         hostEnvironment.EnvironmentName.Returns(Environments.Production);
@@ -163,7 +164,7 @@ public class AccessConnectorMachineEndpointsTests
         services.AddLogging();
         services.AddSingleton(hostEnvironment);
         services.AddSingleton(currentContext);
-        services.AddSingleton(Substitute.For<IPamDaemonRepository>());
+        services.AddSingleton(Substitute.For<IPamAccessConnectorRepository>());
         services.AddSingleton(Substitute.For<IPamRotationJobRepository>());
         services.AddSingleton(Substitute.For<IClaimRotationJobCommand>());
         services.AddSingleton(Substitute.For<IGetRotationCipherQuery>());

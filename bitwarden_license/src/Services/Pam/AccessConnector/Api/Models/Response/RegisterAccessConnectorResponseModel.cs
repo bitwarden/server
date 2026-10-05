@@ -13,12 +13,12 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        Id = result.Daemon.Id;
-        OrganizationId = result.Daemon.OrganizationId;
-        Name = result.Daemon.Name;
-        Status = result.Daemon.Status;
-        CreationDate = result.Daemon.CreationDate.AsUtc();
-        ApiKeyId = result.Daemon.ApiKeyId;
+        Id = result.AccessConnector.Id;
+        OrganizationId = result.AccessConnector.OrganizationId;
+        Name = result.AccessConnector.Name;
+        Status = result.AccessConnector.Status;
+        CreationDate = result.AccessConnector.CreationDate.AsUtc();
+        ApiKeyId = result.AccessConnector.ApiKeyId;
         ClientSecret = result.ClientSecret;
     }
 
@@ -51,7 +51,7 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
     /// <summary>
     /// The id of the access connector's <c>dbo.ApiKey</c> credential. The operator assembles the access connector's
     /// OAuth client id from it (<c>access-connector.&lt;ApiKeyId&gt;</c>, resolved server-side by
-    /// <c>PamDaemonClientProvider</c> in Identity).
+    /// <c>PamAccessConnectorClientProvider</c> in Identity).
     /// </summary>
     public Guid ApiKeyId { get; set; }
 
