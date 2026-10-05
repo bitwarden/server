@@ -409,21 +409,19 @@ public class LoginControllerTests
         bool requireEmailVerified = true,
         bool enablePasswordlessLogin = true)
     {
-        var settings = new AdminSettings { EnablePasswordlessLogin = enablePasswordlessLogin };
-        if (oidcEnabled)
+        var settings = new AdminSettings
         {
-            settings.Oidc = new AdminSettings.OidcSettings
-            {
-                Authority = "https://idp.example.com",
-                ClientId = "admin-portal",
-                ClientSecret = "supersecret",
-                RequireEmailVerifiedClaim = requireEmailVerified,
-            };
-        }
-        else
-        {
-            settings.Oidc = null;
-        }
+            EnablePasswordlessLogin = enablePasswordlessLogin,
+            Oidc = oidcEnabled
+                ? new AdminSettings.OidcSettings
+                {
+                    Authority = "https://idp.example.com",
+                    ClientId = "admin-portal",
+                    ClientSecret = "supersecret",
+                    RequireEmailVerifiedClaim = requireEmailVerified,
+                }
+                : null,
+        };
 
         var userStore = Substitute.For<IUserStore<IdentityUser>>();
         userManager = Substitute.For<UserManager<IdentityUser>>(
