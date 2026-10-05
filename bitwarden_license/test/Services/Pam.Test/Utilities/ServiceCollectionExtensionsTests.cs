@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Pam.Services;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -12,8 +13,9 @@ namespace Bit.Services.Pam.Test.Utilities;
 /// </summary>
 public class ServiceCollectionExtensionsTests
 {
+    // An empty configuration root leaves PamRotationOptions at its default, which is all these need.
     private static IServiceCollection PamServices() =>
-        new ServiceCollection().AddPamServices();
+        new ServiceCollection().AddPamServices(new ConfigurationBuilder().Build());
 
     /// <summary>
     /// Every PAM-owned dependency of every PAM-registered service must itself be registered.
@@ -82,6 +84,26 @@ public class ServiceCollectionExtensionsTests
         Assert.Contains(services, d => d.ServiceType == typeof(TimeProvider));
     }
 
+    /// <summary>
+    /// The audit emitter and the two notifiers are easy to drop by mistake — but every PAM command takes all three,
+    /// so an unregistered one is a resolution failure on every PAM request.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(IAccessAuditEventEmitter), typeof(AccessAuditEventEmitter))]
+    [InlineData(typeof(IApproverInboxNotifier), typeof(ApproverInboxNotifier))]
+    [InlineData(typeof(IRequesterNotifier), typeof(RequesterNotifier))]
+    [InlineData(typeof(IAccessMailNotifier), typeof(AccessMailNotifier))]
+    public void AddPamServices_RegistersSideChannelSeam(Type serviceType, Type expectedImplementation)
+    {
+        var services = PamServices();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == serviceType);
+        Assert.Equal(expectedImplementation, descriptor.ImplementationType);
+    }
+
+    /// <remarks>
+    /// Discovered by reflection rather than listed by hand, which had drifted stale.
+    /// </remarks>
     public static TheoryData<Type> EndpointHandlers()
     {
         var data = new TheoryData<Type>();
@@ -103,5 +125,12 @@ public class ServiceCollectionExtensionsTests
         var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == handlerType);
+    }
+
+    [Fact]
+    public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
+    {
+        // Guards the guard: a rename that stops matching the suffix would silently empty the theory above.
+        Assert.True(EndpointHandlers().Count >= 10);
     }
 }
