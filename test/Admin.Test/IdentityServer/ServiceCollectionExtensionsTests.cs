@@ -1,4 +1,4 @@
-using Bit.Admin;
+﻿using Bit.Admin;
 using Bit.Admin.IdentityServer;
 using Microsoft.Extensions.DependencyInjection;
 

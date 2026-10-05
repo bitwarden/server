@@ -1,4 +1,4 @@
-namespace Bit.Admin.Auth.IdentityServer;
+﻿namespace Bit.Admin.Auth.IdentityServer;
 
 public static class AdminAuthenticationSchemes
 {
