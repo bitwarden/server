@@ -25,7 +25,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -45,7 +44,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
 
     protected ICurrentContext CurrentContext { get; }
-    protected IFeatureService _featureService { get; }
+    protected Bitwarden.Server.Sdk.Features.IFeatureService _featureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
     protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
@@ -63,7 +62,7 @@ public abstract class BaseRequestValidator<T> where T : class
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,

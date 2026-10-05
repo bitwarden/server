@@ -29,7 +29,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers;
@@ -56,7 +55,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly IUserRepository _userRepository;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IMailService _mailService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -72,7 +71,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     {
         _factory = factory;
         _factory.SubstituteService<IPushNotificationService>(_ => { });
-        _factory.SubstituteService<IFeatureService>(_ => { });
+        _factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(_ => { });
         _factory.SubstituteService<IStripeSyncService>(_ => { });
         _factory.SubstituteService<IMailService>(_ => { });
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
@@ -81,7 +80,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _userRepository = _factory.GetService<IUserRepository>();
         _pushNotificationService = _factory.GetService<IPushNotificationService>();
         _mailService = _factory.GetService<IMailService>();
-        _featureService = _factory.GetService<IFeatureService>();
+        _featureService = _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _ssoConfigRepository = _factory.GetService<ISsoConfigRepository>();
@@ -1655,7 +1654,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     // which rotates the master password and wrapped user key as part of the email change. They
     // share the legacy-shaped PostEmailAsync helper at the end of this block.
     //
-    // The class-scoped IFeatureService substitute leaks Returns(...) values across tests in this
+    // The class-scoped Bitwarden.Server.Sdk.Features.IFeatureService substitute leaks Returns(...) values across tests in this
     // class, so every test sets the flag explicitly rather than relying on a default.
     //
     // TODO: PM-39120 - On flag cleanup, delete this entire block (all four _SelfServiceFlagOff_

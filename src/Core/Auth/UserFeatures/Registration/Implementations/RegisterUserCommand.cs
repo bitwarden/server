@@ -21,7 +21,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
@@ -34,7 +33,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IPolicyQuery _policyQuery;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IValidateOrganizationInviteLinkQuery _validateOrganizationInviteLinkQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
@@ -58,7 +57,7 @@ public class RegisterUserCommand : IRegisterUserCommand
             IPolicyQuery policyQuery,
             IOrganizationDomainRepository organizationDomainRepository,
             IValidateOrganizationInviteLinkQuery validateOrganizationInviteLinkQuery,
-            IFeatureService featureService,
+            Bitwarden.Server.Sdk.Features.IFeatureService featureService,
             IDataProtectionProvider dataProtectionProvider,
             IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
             IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,

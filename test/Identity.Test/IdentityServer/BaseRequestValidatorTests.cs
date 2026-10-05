@@ -33,7 +33,6 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 using AuthFixtures = Bit.Identity.Test.AutoFixture;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.Test.IdentityServer;
 
@@ -52,7 +51,7 @@ public class BaseRequestValidatorTests
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
@@ -76,7 +75,7 @@ public class BaseRequestValidatorTests
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
         _userRepository = Substitute.For<IUserRepository>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
         _policyRequirementQuery = Substitute.For<IPolicyRequirementQuery>();

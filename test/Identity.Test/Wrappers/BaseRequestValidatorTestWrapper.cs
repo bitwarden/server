@@ -14,7 +14,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.Test.Wrappers;
 
@@ -60,7 +59,7 @@ IBaseRequestValidatorTestWrapper
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,

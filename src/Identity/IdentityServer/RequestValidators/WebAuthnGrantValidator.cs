@@ -18,7 +18,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -43,7 +42,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
         IPolicyRequirementQuery policyRequirementQuery,

@@ -15,7 +15,6 @@ using Bit.Core.Settings;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -38,7 +37,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         GlobalSettings globalSettings,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IPolicyRequirementQuery policyRequirementQuery,

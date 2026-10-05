@@ -33,7 +33,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Api.Auth.Controllers;
 
@@ -53,7 +52,7 @@ public class AccountsController : Controller
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IReplaceAdminSetTemporaryPasswordCommand _replaceAdminSetTemporaryPasswordCommand;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly ITwoFactorEmailService _twoFactorEmailService;
     private readonly IChangeKdfCommand _changeKdfCommand;
@@ -76,7 +75,7 @@ public class AccountsController : Controller
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IReplaceAdminSetTemporaryPasswordCommand replaceAdminSetTemporaryPasswordCommand,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IUserAccountKeysQuery userAccountKeysQuery,
         ITwoFactorEmailService twoFactorEmailService,
         IChangeKdfCommand changeKdfCommand,

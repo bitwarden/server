@@ -11,7 +11,6 @@ using Duende.IdentityModel;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 
@@ -26,7 +25,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
@@ -60,7 +59,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
@@ -105,7 +104,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
@@ -149,7 +148,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
@@ -191,7 +190,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
@@ -238,7 +237,7 @@ public class SendEmailOtpRequestValidatorIntegrationTests(IdentityApplicationFac
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
+                var featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
                 featureService.IsEnabled(Arg.Any<string>()).Returns(true);
                 services.AddSingleton(featureService);
 
