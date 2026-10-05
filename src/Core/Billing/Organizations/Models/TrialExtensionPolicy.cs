@@ -22,10 +22,7 @@ public static class TrialExtensionPolicy
         "Trial cannot be extended because the subscription has an active subscription schedule.";
 
     /// <summary>
-    /// Whole days left in the trial, rounded up, measured against the subscription's test clock when one is attached
-    /// (callers must expand <c>test_clock</c>) and against wall-clock UTC otherwise. A negative result means the trial
-    /// has already ended. Requires <see cref="Subscription.TrialEnd"/> to be set; <see cref="GetIneligibilityReason"/>
-    /// checks that first.
+    /// Whole days left in the trial, rounded up, measured against the test clock when attached, otherwise UTC now; requires <see cref="Subscription.TrialEnd"/>.
     /// </summary>
     public static int GetRemainingDays(Subscription subscription)
     {
