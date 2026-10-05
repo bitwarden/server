@@ -657,7 +657,7 @@ public class SendControlsSyncPolicyEventTests
     }
 
     [Theory, BitAutoData]
-    public async Task ExecutePostUpsertSideEffectAsync_DoesNotReEnableOwnerDisabledCompliantSend(
+    public async Task ExecutePostUpsertSideEffectAsync_ReEnablesDisabledSendThatIsNowCompliant(
         [PolicyUpdate(PolicyType.SendControls, enabled: true)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SendControls, enabled: true)] Policy postUpsertedPolicy,
         [Policy(PolicyType.DisableSend, enabled: false)] Policy existingDisableSendPolicy,
@@ -680,21 +680,24 @@ public class SendControlsSyncPolicyEventTests
             .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
             .Returns(true);
 
-        // The owner of this Send disabled it themselves via their own kill switch. It is
-        // otherwise fully compliant with the policy (Type = File).
-        var ownerDisabledCompliantSend = new Send
+        // There is no mechanism to distinguish a Send the policy previously disabled from one its
+        // owner disabled themselves. Without that provenance, a relaxed (but still enabled) policy
+        // must re-enable any currently-disabled Send that is now compliant, or a Send disabled while
+        // the policy was stricter would stay disabled forever even after the policy no longer
+        // condemns it and the member never left the org.
+        var disabledCompliantSend = new Send
         {
             Id = Guid.NewGuid(),
             Type = SendType.File,
             Disabled = true,
         };
-        var sendIds = new List<Guid>([ownerDisabledCompliantSend.Id]);
+        var sendIds = new List<Guid>([disabledCompliantSend.Id]);
         sutProvider.GetDependency<ISendRepository>()
             .GetIdsByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(sendIds);
         sutProvider.GetDependency<ISendRepository>()
             .GetManyByIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns([ownerDisabledCompliantSend]);
+            .Returns([disabledCompliantSend]);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(policyUpdate.OrganizationId, Enums.OrganizationUserType.Admin)
             .Returns([]);
@@ -702,11 +705,9 @@ public class SendControlsSyncPolicyEventTests
         await sutProvider.Sut.ExecutePostUpsertSideEffectAsync(
             new SavePolicyModel(policyUpdate), postUpsertedPolicy, null);
 
-        // A Send the owner disabled themselves must not be force re-enabled while the policy
-        // remains active and continues to evaluate the Send as compliant.
         await sutProvider.GetDependency<ISendRepository>()
-            .DidNotReceive()
-            .UpdateManyDisabledAsync(Arg.Any<List<Guid>>(), Arg.Any<bool>());
+            .Received(1)
+            .UpdateManyDisabledAsync(Arg.Is<List<Guid>>(l => l.Contains(disabledCompliantSend.Id)), false);
     }
 
     [Theory, BitAutoData]

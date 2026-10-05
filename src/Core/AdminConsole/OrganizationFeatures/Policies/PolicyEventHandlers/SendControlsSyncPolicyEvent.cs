@@ -104,7 +104,7 @@ public class SendControlsSyncPolicyEvent(
                 .Where(s => !s.Disabled && postUpsertedPolicyState.Enabled && !orgOwnerAndAdminUserIds.Contains(s.UserId) && SendIsNonCompliant(s, sendControlsPolicyData))
                 .ToList();
             var toEnable = sendsChunk
-                .Where(s => s.Disabled && !postUpsertedPolicyState.Enabled)
+                .Where(s => s.Disabled && (!postUpsertedPolicyState.Enabled || !SendIsNonCompliant(s, sendControlsPolicyData)))
                 .ToList();
 
             await UpdateAndLogSendsAsync(toEnable, disabled: false, EventType.Send_PolicyEnabled, postUpsertedPolicyState.OrganizationId);
