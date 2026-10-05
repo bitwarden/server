@@ -23,7 +23,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        // Reset here since the feature service is class-scoped and a flip would leak into later tests.
+        // The feature service is class-scoped, so reset the kill switch.
         FeatureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging).Returns(false);
         await LoginHelper.LoginAsync(OwnerEmail);
     }
@@ -61,17 +61,15 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(Organization.Id, row["organizationId"]!.GetValue<Guid>());
         Assert.Equal(owner.Id, row["actorId"]!.GetValue<Guid>());
         Assert.Equal("approved for the incident", row["detail"]!.GetValue<string>());
-        // Resolved from the User row at write time and frozen into the event, not joined on read.
         Assert.Equal(owner.Email, row["actorEmail"]!.GetValue<string>());
         Assert.Equal(owner.Email, row["requesterEmail"]!.GetValue<string>());
-        // A human actor performed it, and the outcome landed.
         Assert.False(row["automated"]!.GetValue<bool>());
         Assert.False(row["incomplete"]!.GetValue<bool>());
-        // Serialized as UTC, so a client east or west of UTC reads the same instant.
+        // Serialized as UTC.
         Assert.EndsWith("Z", row["occurredAt"]!.GetValue<string>());
     }
 
-    // An action whose Outcome never landed collapses to its lone Attempt, flagged in-doubt rather than dropped.
+    // An action with no recorded outcome reads as its attempt, flagged incomplete.
     [Fact]
     public async Task Audit_APairAndAnOrphanAttempt_CollapseToOneRowEach()
     {
@@ -95,14 +93,14 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var rows = (await GetJsonAsync(AuditUrl))["data"]!.AsArray();
 
         Assert.Equal(2, rows.Count);
-        // Newest first: the orphaned revoke attempt, then the completed activation.
+        // Newest first.
         Assert.Equal("leaseRevoked", rows[0]!["kind"]!.GetValue<string>());
         Assert.True(rows[0]!["incomplete"]!.GetValue<bool>());
         Assert.Equal("leaseActivated", rows[1]!["kind"]!.GetValue<string>());
         Assert.False(rows[1]!["incomplete"]!.GetValue<bool>());
     }
 
-    // End-to-end proof that create/rename/delete rule commands emit and are readable in the trail.
+    // Rule create, rename, and delete each appear in the trail.
     [Fact]
     public async Task Audit_RuleCreateUpdateDelete_AreRecordedWithTheRuleName()
     {
@@ -138,10 +136,9 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var byKind = rows.ToDictionary(row => row!["kind"]!.GetValue<string>(), row => row!);
         Assert.Equal(3, rows.Count);
 
-        // The name is snapshotted per event, so create/rename each read as of their time.
+        // Each event carries the rule name as of that event.
         Assert.Equal("Production database", byKind["ruleCreated"]["ruleName"]!.GetValue<string>());
         Assert.Equal("Production database (paused)", byKind["ruleUpdated"]["ruleName"]!.GetValue<string>());
-        // The rule row is gone; the delete event is the only record of its name.
         Assert.Equal("Production database (paused)", byKind["ruleDeleted"]["ruleName"]!.GetValue<string>());
 
         Assert.All(byKind.Values, row =>
@@ -153,7 +150,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         });
     }
 
-    // The trail is authorized by AccessEventLogs on the route organization; a caller outside it learns nothing.
+    // A caller outside the organization gets a 404.
     [Fact]
     public async Task Audit_AnOrganizationTheCallerIsNotIn_Returns404()
     {
@@ -162,7 +159,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // The kill switch, end to end: writes stop and the trail is withdrawn, not served with a hole.
+    // The kill switch stops writes and withdraws the trail.
     [Fact]
     public async Task Audit_WithSqlAuditLoggingDisabled_WritesNothingAndWithdrawsTheTrail()
     {
@@ -177,7 +174,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
                 conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
                 collections = Array.Empty<Guid>(),
             });
-        // The rule write itself is untouched by the switch; only its audit side channel is.
+        // The rule write itself still succeeds.
         created.EnsureSuccessStatusCode();
 
         var stored = await Factory.GetService<IAccessAuditEventRepository>()
@@ -193,7 +190,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, trail.StatusCode);
     }
 
-    // Filters apply server-side; the refused activation reads as leaseActivationRejected, the collapsed row's Outcome.
+    // Filters apply server-side.
     [Fact]
     public async Task Audit_WithAKindFilter_ReturnsOnlyTheMatchingRows()
     {
@@ -225,7 +222,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
 
         Assert.Equal("leaseActivationRejected", Assert.Single(rejected)!["kind"]!.GetValue<string>());
         Assert.Empty(activated);
-        // Values within a dimension are OR-ed; the chip driving them is multi-select.
+        // Values within a dimension are OR-ed.
         Assert.Equal(2, either.Count);
     }
 
@@ -247,7 +244,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Empty(outOfRange);
     }
 
-    // A filled page carries a resume position; the last page doesn't, so pagination can terminate.
+    // A full page carries a continuation token; the last page doesn't.
     [Fact]
     public async Task Audit_MoreThanOnePage_CarriesAContinuationTokenAndPagesThroughExactlyOnce()
     {
@@ -262,7 +259,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
             {
                 Kind = AccessAuditEventKind.CredentialAccessed,
                 Phase = AccessAuditEventPhase.Outcome,
-                // Same instant for all: the pathological case for a time-only position.
+                // Same instant for all.
                 OccurredDate = occurredAt,
                 OrganizationId = Organization.Id,
                 AccessRequestId = requestId,
@@ -305,7 +302,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.True(body["continuationToken"] == null || body["continuationToken"]!.GetValue<string?>() == null);
     }
 
-    // Refused, not ignored: an unfiltered fallback would misreport, and a bad token would loop paging forever.
+    // Unknown kinds and foreign tokens are rejected.
     [Theory]
     [InlineData("?kind=notAKind")]
     [InlineData("?continuationToken=forged")]
@@ -316,7 +313,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // A range wider than the retention window is a request the store can't answer.
+    // A range wider than the retention window is rejected.
     [Fact]
     public async Task Audit_WithARangeWiderThanRetention_Returns400()
     {
@@ -326,7 +323,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // The Item filter's menu; neither a trail page nor the caller's vault alone can name it.
+    // The distinct subjects for the Item filter.
     [Fact]
     public async Task AuditItems_NamesEverySubjectTheTrailCarries_OncePerSubject()
     {
@@ -335,7 +332,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         var collectionId = Guid.NewGuid();
         var ruleId = Guid.NewGuid();
 
-        // The same cipher twice, so a duplicate would surface as two options for one item.
+        // The same cipher twice, to check it is deduplicated.
         foreach (var kind in new[] { AccessAuditEventKind.LeaseActivated, AccessAuditEventKind.LeaseRevoked })
         {
             await repository.CreateAsync(new AccessAuditEventData
@@ -363,14 +360,13 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(2, items.Count);
         var cipher = Assert.Single(items, item => item!["cipherId"]?.GetValue<Guid?>() == cipherId)!;
         Assert.Equal(collectionId, cipher["collectionId"]!.GetValue<Guid>());
-        // No cipher name: it's Vault Data; the menu carries only the id.
+        // No cipher name: it is vault data.
         Assert.True(cipher["ruleName"] == null || cipher["ruleName"]!.GetValue<string?>() == null);
         var rule = Assert.Single(items, item => item!["ruleId"]?.GetValue<Guid?>() == ruleId)!;
-        // The rule's name is plaintext organization configuration, so it travels with the id.
         Assert.Equal("Production database", rule["ruleName"]!.GetValue<string>());
     }
 
-    // The menu follows the chosen time period, so it can't offer an unmatchable option.
+    // Items are limited to the requested range.
     [Fact]
     public async Task AuditItems_FollowsTheRange()
     {
@@ -402,7 +398,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(recentCipherId, Assert.Single(narrowed)!["cipherId"]!.GetValue<Guid>());
     }
 
-    // One Item selection spanning both columns asks for either, not their intersection.
+    // Cipher and rule filters union.
     [Fact]
     public async Task Audit_WithAnItemFilter_UnionsCiphersWithRules()
     {
@@ -444,7 +440,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(2, byEither.Count);
     }
 
-    // Guarded exactly as the trail is, since it describes the same records.
+    // Guarded exactly as the trail is.
     [Fact]
     public async Task AuditItems_AnOrganizationTheCallerIsNotIn_Returns404()
     {

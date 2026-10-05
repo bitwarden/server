@@ -64,8 +64,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
             LastEditedBy = update.LastEditedBy,
         };
 
-        // audit (before/after): RuleName is the name after the edit. The outcome waits for the collection
-        // links, so an attempt with no outcome flags an edit that may not have applied to them.
+        // RuleName is the name after the edit. The outcome is emitted once the collection links are written.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RuleUpdated,

@@ -85,8 +85,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
             throw new BadRequestException("A reason is required when revoking a request.");
         }
 
-        // audit (before/after): both the requester withdrawing and a manager retracting settle to the
-        // single RequestCancelled kind.
+        // Withdrawal by the requester and retraction by a manager are both RequestCancelled.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestCancelled,

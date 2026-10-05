@@ -110,7 +110,7 @@ public class CreateAccessRuleCommandTests
             .SetAccessRuleAssociationsAsync(default, default, default!, default!);
     }
 
-    // The rule id is assigned by the repository, so only the outcome can name it; the attempt names it by name.
+    // Only the outcome carries the rule id.
     [Theory, BitAutoData]
     public async Task CreateAsync_EmitsAttemptThenOutcome_WithTheRuleNameAndEditorAsActor(AccessRule rule, Guid editorId)
     {
@@ -133,7 +133,7 @@ public class CreateAccessRuleCommandTests
             && e.AccessRuleId == rule.Id && e.RuleName == "Production database"));
     }
 
-    // A failure on the collection links leaves the create in doubt, not recorded as clean.
+    // A failure writing collection links leaves the attempt without an outcome.
     [Theory, BitAutoData]
     public async Task CreateAsync_CollectionLinkWriteFails_EmitsAttemptButNoOutcome(AccessRule rule)
     {

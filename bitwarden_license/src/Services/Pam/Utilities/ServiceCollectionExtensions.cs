@@ -67,7 +67,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
-        // The PAM audit store appender the commands emit through.
         services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();

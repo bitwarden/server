@@ -7,11 +7,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Api.Models.Request;
 
-/// <summary>
-/// The audit trail's query parameters, and what they refuse. Two of the refusals matter more than the rest: an
-/// unknown event kind and a token this endpoint did not issue both have a tempting "just ignore it" reading that
-/// would answer the caller with the wrong trail rather than an error.
-/// </summary>
 public class AccessAuditTrailFilterRequestModelTests
 {
     [Fact]
@@ -30,7 +25,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Null(options.Before);
     }
 
-    // The chips are multi-select, so a dimension carries a list and the values within it are OR-ed.
+    // A dimension carries a list of values.
     [Fact]
     public void ToQueryOptions_ReadsEachKindOffTheGovernanceVocabulary()
     {
@@ -44,7 +39,6 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Empty(Validate(model));
     }
 
-    // Named rather than ignored, since an unrecognized filter reporting an empty trail reads as "never happened".
     [Theory]
     [InlineData("requestapproved")]
     [InlineData("RequestApproved")]
@@ -60,7 +54,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Throws<BadRequestException>(() => model.ToQueryOptions());
     }
 
-    // One Item selection spanning both columns: an auditor picking a credential and a rule is asking for either.
+    // Cipher and rule filters union.
     [Fact]
     public void ToQueryOptions_CarriesBothHalvesOfAnItemSelection()
     {
@@ -93,7 +87,6 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Empty(Validate(model));
     }
 
-    // A caller paging through every page must not be handed page one for a request of page five.
     [Theory]
     [InlineData("not-a-token")]
     [InlineData("638000000000000000")]
@@ -110,7 +103,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Throws<BadRequestException>(() => model.ToQueryOptions());
     }
 
-    // An explicit-offset bound and a designator-less one must land on the same stored instant regardless of host timezone.
+    // Bounds with and without an offset resolve to the same UTC instant.
     [Theory]
     [InlineData(DateTimeKind.Utc)]
     [InlineData(DateTimeKind.Unspecified)]

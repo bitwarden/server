@@ -7,10 +7,7 @@ namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
 public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
 {
-    /// <summary>
-    /// How many rows one page carries. Fixed rather than caller-supplied: the page size is what bounds the read, so
-    /// letting the caller raise it would hand back the unbounded response this replaced.
-    /// </summary>
+    /// <summary>How many rows one page carries.</summary>
     public const int PageSize = 50;
 
     private readonly IAccessAuditEventRepository _accessAuditEventRepository;
@@ -32,7 +29,6 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var (since, until) = AccessHistoryWindow.ResolveRange(options.Start, options.End, now);
 
-        // Authorization is the AccessEventLogs permission, enforced at the endpoint, so the trail is org-wide.
         var events = await _accessAuditEventRepository.GetPageByOrganizationIdAsync(organizationId,
             new AccessAuditTrailFilter
             {
@@ -51,7 +47,7 @@ public class ListAccessAuditTrailQuery : IListAccessAuditTrailQuery
         var page = new PagedResult<AccessAuditEvent>();
         page.Data.AddRange(events);
 
-        // A full page is the only reason to offer another one; a short page has reached the end of the range.
+        // A short page has reached the end of the range.
         if (events.Count >= PageSize)
         {
             page.ContinuationToken = AccessAuditTrailContinuationToken.From(page.Data[^1]);

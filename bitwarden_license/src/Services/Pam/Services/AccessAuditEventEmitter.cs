@@ -20,10 +20,8 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
 
     public async Task EmitAsync(AccessAuditEventData auditEvent)
     {
-        // Read per call, not at registration, so flipping the flag takes effect on the next request.
         if (!_featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
         {
-            // Attempt is written ahead of the action, Outcome after; a failure in between leaves an in-doubt Attempt.
             await _accessAuditEventRepository.CreateAsync(auditEvent);
         }
     }

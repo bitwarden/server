@@ -60,7 +60,7 @@ public class DeleteAccessRuleCommandTests
             .DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
-    // The delete is hard, so the name must be captured from the row before it's gone.
+    // The rule name is captured before the delete.
     [Theory, BitAutoData]
     public async Task DeleteAsync_EmitsAttemptThenOutcome_CarryingTheNameAndActor(AccessRule existing, Guid actorId)
     {
@@ -81,7 +81,7 @@ public class DeleteAccessRuleCommandTests
             && e.RuleName == "Production database"));
     }
 
-    // An unresolvable caller is recorded as a system action rather than costing the event.
+    // No caller is recorded as a system action.
     [Theory, BitAutoData]
     public async Task DeleteAsync_NoResolvableCaller_RecordsASystemActor(AccessRule existing)
     {

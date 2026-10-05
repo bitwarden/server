@@ -15,14 +15,14 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Api.Endpoints;
 
 /// <summary>
-/// Locks the audit wire contract (route, name, method, return type) the OpenAPI spec and client bindings depend on.
+/// Pins the audit endpoints' route, name, method, and return type.
 /// </summary>
 public class AuditEndpointsTests
 {
     private static List<RouteEndpoint> MaterializeEndpoints()
     {
         var builder = WebApplication.CreateSlimBuilder();
-        // Handlers must be registered services, or Minimal API binds the parameter as a request body instead.
+        // Unregistered handlers would bind as a request body.
         builder.Services.AddScoped<LeaseEndpointsHandler>();
         builder.Services.AddScoped<AccessRequestEndpointsHandler>();
         builder.Services.AddScoped<AccessRuleEndpointsHandler>();
@@ -37,14 +37,13 @@ public class AuditEndpointsTests
         var app = builder.Build();
         app.MapPamEndpoints();
 
-        // Enumerating the data sources builds the endpoints without starting the request pipeline.
+        // Builds the endpoints without starting the request pipeline.
         return ((IEndpointRouteBuilder)app).DataSources
             .SelectMany(dataSource => dataSource.Endpoints)
             .OfType<RouteEndpoint>()
             .ToList();
     }
 
-    // Two reads over one resource: the trail itself, and the subjects its Item filter menu names.
     [Fact]
     public void MapPamEndpoints_RegistersTheAuditRoutes_InTheInternalDoc()
     {
@@ -67,7 +66,7 @@ public class AuditEndpointsTests
         var endpoint = Assert.Single(
             endpoints,
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
-        // Trim slashes: the raw pattern carries routing's leading/trailing slashes that the generated spec path does not.
+        // The raw pattern carries leading and trailing slashes.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
     }

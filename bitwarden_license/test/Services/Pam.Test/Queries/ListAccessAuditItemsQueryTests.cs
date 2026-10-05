@@ -10,10 +10,6 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Queries;
 
-/// <summary>
-/// The Item filter's menu read. Its own responsibility is the range: it has to resolve one identically to the page
-/// read, or the menu offers options the page it filters can never match.
-/// </summary>
 [SutProviderCustomize]
 public class ListAccessAuditItemsQueryTests
 {
@@ -31,7 +27,6 @@ public class ListAccessAuditItemsQueryTests
         Assert.Equal((RetentionFloor, _now), Assert.Single(ranges));
     }
 
-    // The menu follows the time period the auditor chose.
     [Theory, BitAutoData]
     public async Task GetItemsAsync_WithBounds_PassesThemThrough(Guid organizationId)
     {
@@ -44,7 +39,7 @@ public class ListAccessAuditItemsQueryTests
         Assert.Equal((start, end), Assert.Single(ranges));
     }
 
-    // Resolved through the same AccessHistoryWindow the page read uses, so the two cannot drift apart.
+    // Resolved through AccessHistoryWindow, as the trail read is.
     [Theory, BitAutoData]
     public async Task GetItemsAsync_StartBeyondRetention_IsClampedToTheWindow(Guid organizationId)
     {
@@ -67,7 +62,6 @@ public class ListAccessAuditItemsQueryTests
             organizationId, _now.AddDays(-AccessHistoryWindow.RetentionDays - 1), _now));
     }
 
-    // Unpaged: one row per subject, bounded by what the organization governs.
     [Theory, BitAutoData]
     public async Task GetItemsAsync_ReturnsEverySubjectTheStoreNames(Guid organizationId, Guid cipherId, Guid ruleId)
     {

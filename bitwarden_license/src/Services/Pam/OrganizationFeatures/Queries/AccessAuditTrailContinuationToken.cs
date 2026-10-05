@@ -4,10 +4,8 @@ using Bit.Pam.Models;
 namespace Bit.Services.Pam.OrganizationFeatures.Queries;
 
 /// <summary>
-/// Where a page of the access-audit trail stopped, as the opaque string the client hands back to resume.
-/// Carries the last row's instant AND its id, since events sharing a timestamp are routine in this store (an
-/// action writes its before/after halves at one instant) and an instant-only token would silently drop the
-/// others recorded at that instant.
+/// Where a page of the access-audit trail stopped, as an opaque string. Carries the last row's instant and id, since
+/// events often share a timestamp.
 /// </summary>
 public static class AccessAuditTrailContinuationToken
 {
@@ -17,10 +15,7 @@ public static class AccessAuditTrailContinuationToken
     public static string From(AccessAuditEvent lastRow) =>
         string.Create(CultureInfo.InvariantCulture, $"{lastRow.OccurredDate.Ticks}{Separator}{lastRow.Id:N}");
 
-    /// <summary>
-    /// Reads a token back into a position. False for anything this did not issue; a caller paging through the
-    /// trail must not be silently restarted from the beginning.
-    /// </summary>
+    /// <summary>Reads a token back into a position. False for anything this did not issue.</summary>
     public static bool TryParse(string token, out DateTime occurredDate, out Guid id)
     {
         occurredDate = default;

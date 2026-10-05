@@ -134,7 +134,6 @@ public class AccessRuleEndpointsHandlerTests
 
         await sutProvider.Sut.Delete(organizationId, id);
 
-        // The audit event is the only record of who deleted it.
         await sutProvider.GetDependency<IDeleteAccessRuleCommand>().Received(1)
             .DeleteAsync(organizationId, id, userId);
     }

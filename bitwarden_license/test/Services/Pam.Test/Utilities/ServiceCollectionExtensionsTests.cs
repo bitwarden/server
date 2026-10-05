@@ -108,7 +108,7 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
     {
-        // Guards the guard: a rename that stops matching the suffix would silently empty the theory above.
+        // Guards against the theory above silently matching nothing.
         Assert.True(EndpointHandlers().Count >= 10);
     }
 }

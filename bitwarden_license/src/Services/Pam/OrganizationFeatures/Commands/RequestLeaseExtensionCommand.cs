@@ -143,8 +143,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
-        // audit (before/after): records the attempt, then the outcome around the point of no return. Only
-        // AlreadyExtended throws with nothing persisted, leaving the attempt with no outcome.
+        // Attempt before the write, outcome after. AlreadyExtended leaves the attempt without one.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.LeaseExtended,

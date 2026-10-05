@@ -1,8 +1,7 @@
 ﻿namespace Bit.Services.Pam.Api.Models.Request;
 
 /// <summary>
-/// The range an Item-filter read covers, as query parameters: the same two bounds the trail read takes, and
-/// deliberately only those two, since narrowing to one actor should not quietly remove items from the menu.
+/// The range an Item-filter read covers, as query parameters.
 /// </summary>
 public class AccessAuditRangeRequestModel
 {
