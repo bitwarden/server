@@ -14,7 +14,7 @@ public enum PamRotationCipherWriteOutcome
     Accepted = 1,
 
     /// <summary>
-    /// The job is not Claimed by the calling daemon, or the attempt is not
+    /// The job is not Claimed by the calling access connector, or the attempt is not
     /// <see cref="PamRotationAttemptStatus.Executing"/> (stored proc returned 0) — the complement of spec
     /// <c>AcceptCipherUpdate</c>, audited as <c>write_rejected</c>. Nothing was persisted.
     /// </summary>

@@ -3,11 +3,11 @@
 namespace Bit.Services.Pam.AccessConnector.Models;
 
 /// <summary>
-/// A rotation daemon together with its derived liveness (spec <c>DaemonConnection</c>, see
+/// An access connector together with its derived liveness (spec <c>ConnectorConnection</c>, see
 /// <c>PamRotationRules.IsConnected</c>) and the target systems it is assigned to — the list view model for the
-/// daemons admin surface.
+/// access connectors admin surface.
 /// </summary>
 public sealed record PamAccessConnectorListItem(
-    PamDaemon Daemon,
+    PamAccessConnector AccessConnector,
     bool IsConnected,
     IReadOnlyList<Guid> AssignedTargetSystemIds);

@@ -83,14 +83,18 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         return Mapper.Map<PamRotationJob>(job);
     }
 
-    public async Task<PamRotationClaimResult> ClaimAsync(Guid jobId, Guid daemonId, DateTime now, TimeSpan releaseDelay)
+    public async Task<PamRotationClaimResult> ClaimAsync(
+        Guid jobId,
+        Guid accessConnectorId,
+        DateTime now,
+        TimeSpan releaseDelay)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         // First-claim-wins: the Pending predicate is evaluated under the row lock this UPDATE itself takes, so concurrent claims serialize.
-        var claimed = await EligibleJobs(dbContext, daemonId)
+        var claimed = await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Id == jobId
                 && x.Job.Status == PamRotationJobStatus.Pending
                 && x.Job.NextClaimableAt <= now
@@ -99,14 +103,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .Select(x => x.Job)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(j => j.Status, PamRotationJobStatus.Claimed)
-                .SetProperty(j => j.ClaimedByDaemonId, daemonId)
+                .SetProperty(j => j.ClaimedByAccessConnectorId, accessConnectorId)
                 .SetProperty(j => j.ClaimedAt, now));
 
         if (claimed == 0)
         {
-            // Classify eligibility first, so an unknown job and one this daemon may not claim produce the same
-            // NotEligible outcome -- the caller maps it to 404, leaving no existence oracle.
-            var eligible = await EligibleJobs(dbContext, daemonId).AnyAsync(x => x.Job.Id == jobId);
+            // Classify eligibility first, so an unknown job and one this access connector may not claim produce the
+            // same NotEligible outcome -- the caller maps it to 404, leaving no existence oracle.
+            var eligible = await EligibleJobs(dbContext, accessConnectorId).AnyAsync(x => x.Job.Id == jobId);
             await transaction.RollbackAsync();
 
             return new PamRotationClaimResult
@@ -121,7 +125,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         {
             Id = CombGuid.Generate(),
             JobId = jobId,
-            ClaimedByDaemonId = daemonId,
+            ClaimedByAccessConnectorId = accessConnectorId,
             CipherUpdated = false,
             Status = PamRotationAttemptStatus.Executing,
             CreationDate = now,
@@ -165,13 +169,16 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         };
     }
 
-    public async Task<ICollection<PamClaimableJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now)
+    public async Task<ICollection<PamClaimableJob>> GetManyClaimableByAccessConnectorIdAsync(
+        Guid accessConnectorId,
+        DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Re-derives every condition ClaimAsync re-checks, so the list a daemon sees and what it can claim agree.
-        return await EligibleJobs(dbContext, daemonId)
+        // Re-derives every condition ClaimAsync re-checks, so the list an access connector sees and what it can claim
+        // agree.
+        return await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Status == PamRotationJobStatus.Pending
                 && x.Job.NextClaimableAt <= now
                 && x.Config.Enabled
@@ -182,7 +189,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 RotationConfigId = x.Job.RotationConfigId,
                 Source = x.Job.Source,
                 Status = x.Job.Status,
-                ClaimedByDaemonId = x.Job.ClaimedByDaemonId,
+                ClaimedByAccessConnectorId = x.Job.ClaimedByAccessConnectorId,
                 ClaimedAt = x.Job.ClaimedAt,
                 CreationDate = x.Job.CreationDate,
                 NextClaimableAt = x.Job.NextClaimableAt,
@@ -226,14 +233,16 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .ToList();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
+        Guid accessConnectorId,
+        int limit)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         var jobs = await dbContext.PamRotationJobs
             .Where(j => dbContext.PamRotationAttempts
-                .Any(a => a.JobId == j.Id && a.ClaimedByDaemonId == daemonId))
+                .Any(a => a.JobId == j.Id && a.ClaimedByAccessConnectorId == accessConnectorId))
             .OrderByDescending(j => j.CreationDate)
             .Take(limit)
             .AsNoTracking()
@@ -245,7 +254,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var jobIds = jobs.Select(j => j.Id).ToList();
         var attempts = await dbContext.PamRotationAttempts
-            .Where(a => a.ClaimedByDaemonId == daemonId && jobIds.Contains(a.JobId))
+            .Where(a => a.ClaimedByAccessConnectorId == accessConnectorId && jobIds.Contains(a.JobId))
             .OrderBy(a => a.CreationDate)
             .AsNoTracking()
             .ToListAsync();
@@ -269,7 +278,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         return Mapper.Map<PamRotationAttempt>(attempt);
     }
 
-    public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid daemonId,
+    public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId,
         string cipherData, DateTime lastKnownRevisionDate, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -280,9 +289,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var target = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Status == PamRotationAttemptStatus.Executing
-                && a.ClaimedByDaemonId == daemonId)
+                && a.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
-            .Where(x => x.Job.Status == PamRotationJobStatus.Claimed && x.Job.ClaimedByDaemonId == daemonId)
+            .Where(x => x.Job.Status == PamRotationJobStatus.Claimed
+                && x.Job.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
                 c.CipherId,
@@ -327,19 +337,19 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         return PamRotationCipherWriteOutcome.Accepted;
     }
 
-    public async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedAsync(Guid attemptId, Guid daemonId,
+    public async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedAsync(Guid attemptId, Guid accessConnectorId,
         PamSessionTerminationOutcome sessionTermination, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // CipherUpdated is the VerifiedBeforeSuccess backstop: a daemon cannot report success for a rotation whose
-        // new secret never reached the vault.
+        // CipherUpdated is the VerifiedBeforeSuccess backstop: an access connector cannot report success for a rotation
+        // whose new secret never reached the vault.
         var jobId = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Status == PamRotationAttemptStatus.Executing
-                && a.ClaimedByDaemonId == daemonId
+                && a.ClaimedByAccessConnectorId == accessConnectorId
                 && a.CipherUpdated)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => j)
             .Where(j => j.Status == PamRotationJobStatus.Claimed)
@@ -363,14 +373,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .Where(j => j.Id == jobId.Value)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(j => j.Status, PamRotationJobStatus.Succeeded)
-                .SetProperty(j => j.ClaimedByDaemonId, (Guid?)null)
+                .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                 .SetProperty(j => j.ClaimedAt, (DateTime?)null));
 
         await transaction.CommitAsync();
         return PamRotationAttemptResolveOutcome.Resolved;
     }
 
-    public async Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid daemonId,
+    public async Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid accessConnectorId,
         string? failureReason, PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -380,7 +390,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var jobId = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Status == PamRotationAttemptStatus.Executing
-                && a.ClaimedByDaemonId == daemonId)
+                && a.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => j)
             .Where(j => j.Status == PamRotationJobStatus.Claimed)
             .Select(j => (Guid?)j.Id)
@@ -414,7 +424,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 .Where(j => j.Id == jobId.Value)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Status, jobStatus)
-                    .SetProperty(j => j.ClaimedByDaemonId, (Guid?)null)
+                    .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null)
                     .SetProperty(j => j.NextClaimableAt, nextClaimableAt));
         }
@@ -425,7 +435,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 .Where(j => j.Id == jobId.Value)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Status, jobStatus)
-                    .SetProperty(j => j.ClaimedByDaemonId, (Guid?)null)
+                    .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null));
         }
 
@@ -457,7 +467,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 c.OrganizationId,
                 c.CipherId,
                 j.Source,
-                PreviousClaimedByDaemonId = j.ClaimedByDaemonId,
+                PreviousClaimedByAccessConnectorId = j.ClaimedByAccessConnectorId,
             })
             .AsNoTracking()
             .ToListAsync();
@@ -475,7 +485,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(j => j.Status, PamRotationJobStatus.TimedOut)
-                .SetProperty(j => j.ClaimedByDaemonId, (Guid?)null)
+                .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                 .SetProperty(j => j.ClaimedAt, (DateTime?)null));
 
         await AbandonExecutingAttemptsAsync(dbContext, jobIds, now);
@@ -492,7 +502,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 OrganizationId = d.OrganizationId,
                 CipherId = d.CipherId,
                 Source = d.Source,
-                ClaimedByDaemonId = d.PreviousClaimedByDaemonId,
+                ClaimedByAccessConnectorId = d.PreviousClaimedByAccessConnectorId,
                 AttemptCount = attemptCounts.TryGetValue(d.JobId, out var count) ? count : 0,
             })
             .ToList();
@@ -507,11 +517,12 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var staleBefore = now - offlineAfter;
 
-        // Releases only at lease expiry (not stale detection) to preserve success-wins; keyed on heartbeat staleness alone, so a disabled daemon's jobs still release.
+        // Releases only at lease expiry (not stale detection) to preserve success-wins; keyed on heartbeat staleness alone, so a disabled access connector's jobs still release.
         var candidates = await dbContext.PamRotationJobs
             .Where(j => j.Status == PamRotationJobStatus.Claimed && j.ClaimedAt != null)
-            .Join(dbContext.PamDaemons, j => j.ClaimedByDaemonId, d => d.Id, (j, d) => new { Job = j, Daemon = d })
-            .Where(x => (x.Daemon.LastHeartbeatAt == null || x.Daemon.LastHeartbeatAt < staleBefore)
+            .Join(dbContext.PamAccessConnectors, j => j.ClaimedByAccessConnectorId, d => d.Id,
+                (j, d) => new { Job = j, AccessConnector = d })
+            .Where(x => (x.AccessConnector.LastHeartbeatAt == null || x.AccessConnector.LastHeartbeatAt < staleBefore)
                 && !dbContext.PamRotationAttempts.Any(a => a.JobId == x.Job.Id && a.Status == PamRotationAttemptStatus.Rotated))
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
@@ -521,7 +532,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 c.OrganizationId,
                 c.CipherId,
                 x.Job.Source,
-                PreviousClaimedByDaemonId = x.Job.ClaimedByDaemonId,
+                PreviousClaimedByAccessConnectorId = x.Job.ClaimedByAccessConnectorId,
             })
             .AsNoTracking()
             .ToListAsync();
@@ -544,7 +555,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(j => j.Status, PamRotationJobStatus.Pending)
                     .SetProperty(j => j.NextClaimableAt, nextClaimableAt)
-                    .SetProperty(j => j.ClaimedByDaemonId, (Guid?)null)
+                    .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null));
         }
 
@@ -560,22 +571,23 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 OrganizationId = r.OrganizationId,
                 CipherId = r.CipherId,
                 Source = r.Source,
-                ClaimedByDaemonId = r.PreviousClaimedByDaemonId!.Value,
+                ClaimedByAccessConnectorId = r.PreviousClaimedByAccessConnectorId!.Value,
             })
             .ToList();
     }
 
     /// <remarks>
-    /// The join set every eligibility decision shares: the job, its config and target, an assignment for this
-    /// daemon, and -- defense in depth -- the daemon itself, enabled and in the config's organization.
+    /// The join set every eligibility decision shares: the job, its config and target, an assignment for this access
+    /// connector, and -- defense in depth -- the access connector itself, enabled and in the config's organization.
     /// </remarks>
-    private static IQueryable<EligibleJob> EligibleJobs(DatabaseContext dbContext, Guid daemonId) =>
+    private static IQueryable<EligibleJob> EligibleJobs(DatabaseContext dbContext, Guid accessConnectorId) =>
         dbContext.PamRotationJobs
             .Join(dbContext.PamRotationConfigs, j => j.RotationConfigId, c => c.Id, (j, c) => new { Job = j, Config = c })
             .Join(dbContext.PamTargetSystems, x => x.Config.TargetSystemId, t => t.Id, (x, t) => new { x.Job, x.Config, Target = t })
-            .Where(x => dbContext.PamDaemonTargetAssignments.Any(a =>
-                a.DaemonId == daemonId && a.TargetSystemId == x.Config.TargetSystemId))
-            .Join(dbContext.PamDaemons.Where(d => d.Id == daemonId && d.Status == PamAccessConnectorStatus.Enabled),
+            .Where(x => dbContext.PamAccessConnectorTargetAssignments.Any(a =>
+                a.AccessConnectorId == accessConnectorId && a.TargetSystemId == x.Config.TargetSystemId))
+            .Join(dbContext.PamAccessConnectors.Where(
+                d => d.Id == accessConnectorId && d.Status == PamAccessConnectorStatus.Enabled),
                 x => x.Config.OrganizationId, d => d.OrganizationId,
                 (x, d) => new EligibleJob { Job = x.Job, Config = x.Config, Target = x.Target });
 

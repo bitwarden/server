@@ -10,30 +10,30 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 /// <inheritdoc cref="ISetAccessConnectorStatusCommand" />
 public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
 {
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public SetAccessConnectorStatusCommand(
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
-    public async Task SetStatusAsync(Guid organizationId, Guid actingUserId, Guid daemonId, bool enable)
+    public async Task SetStatusAsync(Guid organizationId, Guid actingUserId, Guid accessConnectorId, bool enable)
     {
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
-        if (daemon is null || daemon.OrganizationId != organizationId)
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+        if (accessConnector is null || accessConnector.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
         var desired = enable ? PamAccessConnectorStatus.Enabled : PamAccessConnectorStatus.Disabled;
-        if (daemon.Status == desired)
+        if (accessConnector.Status == desired)
         {
             throw new BadRequestException(enable
                 ? "This access connector is already active."
@@ -49,14 +49,14 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
             OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            AccessConnectorId = daemon.Id,
-            AccessConnectorName = daemon.Name,
+            AccessConnectorId = accessConnector.Id,
+            AccessConnectorName = accessConnector.Name,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        daemon.Status = desired;
-        daemon.RevisionDate = now;
-        await _daemonRepository.ReplaceAsync(daemon);
+        accessConnector.Status = desired;
+        accessConnector.RevisionDate = now;
+        await _accessConnectorRepository.ReplaceAsync(accessConnector);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }

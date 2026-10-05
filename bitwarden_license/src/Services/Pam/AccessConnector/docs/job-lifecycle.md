@@ -131,7 +131,7 @@ later offer would be recorded as scheduled on a config an administrator set up a
 
 A claimed job is returned to pending when **both** conditions hold: the claim's lease has expired
 (`ReleaseDelay` after the claim) **and** the claiming access connector's heartbeat is stale
-(`DaemonOfflineAfter`). Its executing attempt is abandoned.
+(`AccessConnectorOfflineAfter`). Its executing attempt is abandoned.
 
 Requiring both is deliberate. Releasing on a stale heartbeat alone would snatch a job from an access
 connector that is mid-rotation on a slow target; releasing on the lease alone would do the same to

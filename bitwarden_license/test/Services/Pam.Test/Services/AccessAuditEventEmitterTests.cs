@@ -190,7 +190,7 @@ public class AccessAuditEventEmitterTests
             .LogPamAccessEventAsync(default, default!);
     }
 
-    // The rotation and fleet kinds stay PAM-internal: their subjects (config, job, daemon, target) have no
+    // The rotation and fleet kinds stay PAM-internal: their subjects (config, job, access connector, target) have no
     // column in dbo.Event, so a fan-out would file high-volume machinery rows with nothing to identify them.
     [Theory]
     [BitAutoData(AccessAuditEventKind.RotationOffered)]

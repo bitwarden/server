@@ -11,26 +11,26 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Pam.Repositories;
 
-public class PamDaemonRepository : Repository<PamDaemon, Guid>, IPamDaemonRepository
+public class PamAccessConnectorRepository : Repository<PamAccessConnector, Guid>, IPamAccessConnectorRepository
 {
-    public PamDaemonRepository(GlobalSettings globalSettings)
+    public PamAccessConnectorRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
-    public PamDaemonRepository(string connectionString, string readOnlyConnectionString)
+    public PamAccessConnectorRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
 
     /// <summary>
-    /// PamDaemon_Update is narrow (Name/Status/RevisionDate only — ApiKeyId, OrganizationId, CreationDate never
-    /// change post-registration, and LastHeartbeatAt has its own conditional-bump sproc), so the generic
+    /// PamAccessConnector_Update is narrow (Name/Status/RevisionDate only — ApiKeyId, OrganizationId, CreationDate
+    /// never change post-registration, and LastHeartbeatAt has its own conditional-bump sproc), so the generic
     /// whole-entity <see cref="Repository{T, TId}.ReplaceAsync"/> would pass parameters the sproc does not declare.
     /// </summary>
-    public override async Task ReplaceAsync(PamDaemon obj)
+    public override async Task ReplaceAsync(PamAccessConnector obj)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            $"[{Schema}].[PamDaemon_Update]",
+            $"[{Schema}].[PamAccessConnector_Update]",
             new
             {
                 obj.Id,
@@ -41,77 +41,78 @@ public class PamDaemonRepository : Repository<PamDaemon, Guid>, IPamDaemonReposi
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<ICollection<PamDaemon>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<PamAccessConnector>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<PamDaemon>(
-            $"[{Schema}].[PamDaemon_ReadByOrganizationId]",
+        var results = await connection.QueryAsync<PamAccessConnector>(
+            $"[{Schema}].[PamAccessConnector_ReadByOrganizationId]",
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
     }
 
-    public async Task<PamDaemonDetails?> GetDetailsByApiKeyIdAsync(Guid apiKeyId)
+    public async Task<PamAccessConnectorDetails?> GetDetailsByApiKeyIdAsync(Guid apiKeyId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<PamDaemonDetails>(
-            $"[{Schema}].[PamDaemonDetails_ReadByApiKeyId]",
+        var results = await connection.QueryAsync<PamAccessConnectorDetails>(
+            $"[{Schema}].[PamAccessConnectorDetails_ReadByApiKeyId]",
             new { ApiKeyId = apiKeyId },
             commandType: CommandType.StoredProcedure);
 
         return results.SingleOrDefault();
     }
 
-    public async Task UpdateHeartbeatAsync(Guid daemonId, DateTime now, TimeSpan minInterval)
+    public async Task UpdateHeartbeatAsync(Guid accessConnectorId, DateTime now, TimeSpan minInterval)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            $"[{Schema}].[PamDaemon_UpdateHeartbeat]",
+            $"[{Schema}].[PamAccessConnector_UpdateHeartbeat]",
             new
             {
-                Id = daemonId,
+                Id = accessConnectorId,
                 Now = now,
                 MinIntervalSeconds = (int)minInterval.TotalSeconds,
             },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task CreateAssignmentAsync(PamDaemonTargetAssignment assignment)
+    public async Task CreateAssignmentAsync(PamAccessConnectorTargetAssignment assignment)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            $"[{Schema}].[PamDaemonTargetAssignment_Create]",
+            $"[{Schema}].[PamAccessConnectorTargetAssignment_Create]",
             assignment,
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task DeleteAssignmentAsync(Guid daemonId, Guid targetSystemId)
+    public async Task DeleteAssignmentAsync(Guid accessConnectorId, Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
-            $"[{Schema}].[PamDaemonTargetAssignment_DeleteByDaemonIdTargetSystemId]",
-            new { DaemonId = daemonId, TargetSystemId = targetSystemId },
+            $"[{Schema}].[PamAccessConnectorTargetAssignment_DeleteByAccessConnectorIdTargetSystemId]",
+            new { AccessConnectorId = accessConnectorId, TargetSystemId = targetSystemId },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<ICollection<PamDaemonTargetAssignment>> GetAssignmentsByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<PamAccessConnectorTargetAssignment>> GetAssignmentsByOrganizationIdAsync(
+        Guid organizationId)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        var results = await connection.QueryAsync<PamDaemonTargetAssignment>(
-            $"[{Schema}].[PamDaemonTargetAssignment_ReadByOrganizationId]",
+        var results = await connection.QueryAsync<PamAccessConnectorTargetAssignment>(
+            $"[{Schema}].[PamAccessConnectorTargetAssignment_ReadByOrganizationId]",
             new { OrganizationId = organizationId },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
     }
 
-    public async Task<bool> AssignmentExistsAsync(Guid daemonId, Guid targetSystemId)
+    public async Task<bool> AssignmentExistsAsync(Guid accessConnectorId, Guid targetSystemId)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var result = await connection.ExecuteScalarAsync<int?>(
-            $"[{Schema}].[PamDaemonTargetAssignment_ExistsByDaemonIdTargetSystemId]",
-            new { DaemonId = daemonId, TargetSystemId = targetSystemId },
+            $"[{Schema}].[PamAccessConnectorTargetAssignment_ExistsByAccessConnectorIdTargetSystemId]",
+            new { AccessConnectorId = accessConnectorId, TargetSystemId = targetSystemId },
             commandType: CommandType.StoredProcedure);
 
         return result.HasValue;

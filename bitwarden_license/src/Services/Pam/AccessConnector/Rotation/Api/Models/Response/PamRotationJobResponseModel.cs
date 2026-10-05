@@ -18,7 +18,7 @@ public class PamRotationJobResponseModel
         RotationConfigId = job.RotationConfigId;
         Source = job.Source;
         Status = job.Status;
-        ClaimedByAccessConnectorId = job.ClaimedByDaemonId;
+        ClaimedByAccessConnectorId = job.ClaimedByAccessConnectorId;
         ClaimedAt = job.ClaimedAt.AsUtc();
         CreationDate = job.CreationDate.AsUtc();
         NextClaimableAt = job.NextClaimableAt.AsUtc();

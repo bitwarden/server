@@ -23,14 +23,14 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_UnknownAttempt_ThrowsNotFound_NoAudit_NoPush(
-        Guid daemonId, Guid attemptId, string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid accessConnectorId, Guid attemptId, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attemptId)
             .Returns((PamRotationAttempt?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SubmitAsync(daemonId, attemptId, cipherDataJson, lastKnownRevisionDate));
+            () => sutProvider.Sut.SubmitAsync(accessConnectorId, attemptId, cipherDataJson, lastKnownRevisionDate));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
             .AcceptCipherWriteAsync(default, default, default!, default, default);
@@ -41,24 +41,25 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_Accepted_PushesCipherSyncUpdate(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
-        Cipher cipher, string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, Cipher cipher, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
         cipher.Id = config.CipherId;
-        daemon.OrganizationId = config.OrganizationId;
+        accessConnector.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
+            .AcceptCipherWriteAsync(attempt.Id, accessConnectorId, cipherDataJson, lastKnownRevisionDate, _now)
             .Returns(PamRotationCipherWriteOutcome.Accepted);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(config.CipherId).Returns(cipher);
 
-        await sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate);
+        await sutProvider.Sut.SubmitAsync(accessConnectorId, attempt.Id, cipherDataJson, lastKnownRevisionDate);
 
         await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
             .PushSyncCipherUpdateAsync(cipher, Arg.Is<IEnumerable<Guid>>(c => !c.Any()));
@@ -67,28 +68,29 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_Rejected_EmitsWriteRejectedAuditAndThrowsConflict_PushNotCalled(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
-        string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
-        daemon.OrganizationId = config.OrganizationId;
+        accessConnector.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
+            .AcceptCipherWriteAsync(attempt.Id, accessConnectorId, cipherDataJson, lastKnownRevisionDate, _now)
             .Returns(PamRotationCipherWriteOutcome.Rejected);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
+            () => sutProvider.Sut.SubmitAsync(accessConnectorId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationCipherWriteRejected
                 && a.OrganizationId == config.OrganizationId
-                && a.AccessConnectorId == daemonId
+                && a.AccessConnectorId == accessConnectorId
                 && a.RotationJobId == job.Id
                 && a.RotationConfigId == config.Id
                 && a.CipherId == config.CipherId));
@@ -98,23 +100,24 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_RevisionMismatch_EmitsWriteRejectedAuditAndThrowsConflict_PushNotCalled(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
-        string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
-        daemon.OrganizationId = config.OrganizationId;
+        accessConnector.OrganizationId = config.OrganizationId;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .AcceptCipherWriteAsync(attempt.Id, daemonId, cipherDataJson, lastKnownRevisionDate, _now)
+            .AcceptCipherWriteAsync(attempt.Id, accessConnectorId, cipherDataJson, lastKnownRevisionDate, _now)
             .Returns(PamRotationCipherWriteOutcome.RevisionMismatch);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<ConflictException>(
-            () => sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
+            () => sutProvider.Sut.SubmitAsync(accessConnectorId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationCipherWriteRejected
@@ -125,21 +128,22 @@ public class SubmitCipherUpdateCommandTests
 
     [Theory, BitAutoData]
     public async Task SubmitAsync_AttemptInAnotherOrganization_ThrowsNotFound_NoWriteNoAudit(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, PamDaemon daemon,
-        string cipherDataJson, DateTime lastKnownRevisionDate)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, string cipherDataJson, DateTime lastKnownRevisionDate)
     {
         var sutProvider = Setup();
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
-        daemon.OrganizationId = Guid.NewGuid();
+        accessConnector.OrganizationId = Guid.NewGuid();
         config.OrganizationId = Guid.NewGuid();
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.SubmitAsync(daemonId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
+            () => sutProvider.Sut.SubmitAsync(accessConnectorId, attempt.Id, cipherDataJson, lastKnownRevisionDate));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
             .AcceptCipherWriteAsync(default, default, default!, default, default);

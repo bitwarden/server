@@ -13,7 +13,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
 {
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IRotationScheduleCalculator _scheduleCalculator;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
@@ -21,35 +21,39 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
     public ReportRotationSucceededCommand(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IRotationScheduleCalculator scheduleCalculator,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _scheduleCalculator = scheduleCalculator;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
     public async Task<PamRotationAttempt> ReportSucceededAsync(
-        Guid daemonId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
+        Guid accessConnectorId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
     {
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
 
-        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
         {
             throw new NotFoundException();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var outcome = await _jobRepository.MarkAttemptRotatedAsync(attemptId, daemonId, sessionTermination, now);
+        var outcome = await _jobRepository.MarkAttemptRotatedAsync(
+            attemptId, accessConnectorId, sessionTermination, now);
 
         if (outcome != PamRotationAttemptResolveOutcome.Resolved)
         {
@@ -60,8 +64,8 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
                 OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
-                AccessConnectorId = daemonId,
-                AccessConnectorName = daemon.Name,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
@@ -84,8 +88,8 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
             OccurredDate = now,
             OrganizationId = config.OrganizationId,
             ActorId = null,
-            AccessConnectorId = daemonId,
-            AccessConnectorName = daemon.Name,
+            AccessConnectorId = accessConnectorId,
+            AccessConnectorName = accessConnector.Name,
             RotationJobId = job?.Id,
             RotationConfigId = config.Id,
             CipherId = config.CipherId,

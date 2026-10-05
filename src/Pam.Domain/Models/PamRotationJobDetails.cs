@@ -3,10 +3,11 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// A <see cref="PamRotationJob"/> together with the <see cref="PamRotationAttempt"/> rows in scope for the read,
-/// oldest first — the read model behind the attempt-history displays, so the caller avoids an N+1 fetching each job's
-/// attempts individually. The config detail read (<c>GET configs/{id}</c>) puts every attempt in scope; the daemon
-/// detail read (<c>GET daemons/{id}</c>) narrows <see cref="Attempts"/> to the ones that daemon recorded.
+/// A <see cref="PamRotationJob"/> together with the <see cref="PamRotationAttempt"/> rows in scope for the read, oldest
+/// first — the read model behind the attempt-history displays, so the caller avoids an N+1 fetching each job's attempts
+/// individually. The config detail read (<c>GET configs/{id}</c>) puts every attempt in scope; the access connector
+/// detail read (<c>GET access connectors/{id}</c>) narrows <see cref="Attempts"/> to the ones that access connector
+/// recorded.
 /// </summary>
 public class PamRotationJobDetails : PamRotationJob
 {
@@ -18,7 +19,7 @@ public class PamRotationJobDetails : PamRotationJob
         RotationConfigId = job.RotationConfigId,
         Source = job.Source,
         Status = job.Status,
-        ClaimedByDaemonId = job.ClaimedByDaemonId,
+        ClaimedByAccessConnectorId = job.ClaimedByAccessConnectorId,
         ClaimedAt = job.ClaimedAt,
         CreationDate = job.CreationDate,
         NextClaimableAt = job.NextClaimableAt,

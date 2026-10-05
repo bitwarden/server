@@ -6,5 +6,5 @@ public enum IdentityClientType : byte
     Organization = 1,
     ServiceAccount = 2,
     Send = 3,
-    RotationDaemon = 4
+    AccessConnector = 4
 }

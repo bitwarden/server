@@ -47,7 +47,11 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return results.SingleOrDefault();
     }
 
-    public async Task<PamRotationClaimResult> ClaimAsync(Guid jobId, Guid daemonId, DateTime now, TimeSpan releaseDelay)
+    public async Task<PamRotationClaimResult> ClaimAsync(
+        Guid jobId,
+        Guid accessConnectorId,
+        DateTime now,
+        TimeSpan releaseDelay)
     {
         await using var connection = new SqlConnection(ConnectionString);
         // The sproc always returns exactly one row (the Outcome column plus a uniform set of nullable snapshot
@@ -58,19 +62,21 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             {
                 JobId = jobId,
                 AttemptId = CombGuid.Generate(),
-                DaemonId = daemonId,
+                AccessConnectorId = accessConnectorId,
                 Now = now,
                 ReleaseDelaySeconds = (int)releaseDelay.TotalSeconds,
             },
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<ICollection<PamClaimableJob>> GetManyClaimableByDaemonIdAsync(Guid daemonId, DateTime now)
+    public async Task<ICollection<PamClaimableJob>> GetManyClaimableByAccessConnectorIdAsync(
+        Guid accessConnectorId,
+        DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<PamClaimableJob>(
-            "[dbo].[PamRotationJob_ReadManyClaimableByDaemonId]",
-            new { DaemonId = daemonId, Now = now },
+            "[dbo].[PamRotationJob_ReadManyClaimableByAccessConnectorId]",
+            new { AccessConnectorId = accessConnectorId, Now = now },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
@@ -96,12 +102,14 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             .ToList();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByDaemonIdAsync(Guid daemonId, int limit)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
+        Guid accessConnectorId,
+        int limit)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
-            "[dbo].[PamRotationJob_ReadManyRecentByDaemonId]",
-            new { DaemonId = daemonId, Limit = limit },
+            "[dbo].[PamRotationJob_ReadManyRecentByAccessConnectorId]",
+            new { AccessConnectorId = accessConnectorId, Limit = limit },
             commandType: CommandType.StoredProcedure);
 
         var jobs = (await results.ReadAsync<PamRotationJob>()).ToList();
@@ -127,7 +135,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return results.SingleOrDefault();
     }
 
-    public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid daemonId, string cipherData,
+    public async Task<PamRotationCipherWriteOutcome> AcceptCipherWriteAsync(Guid attemptId, Guid accessConnectorId, string cipherData,
         DateTime lastKnownRevisionDate, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -136,7 +144,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             new
             {
                 AttemptId = attemptId,
-                DaemonId = daemonId,
+                AccessConnectorId = accessConnectorId,
                 CipherData = cipherData,
                 LastKnownRevisionDate = lastKnownRevisionDate,
                 Now = now,
@@ -146,7 +154,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return (PamRotationCipherWriteOutcome)result;
     }
 
-    public async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedAsync(Guid attemptId, Guid daemonId,
+    public async Task<PamRotationAttemptResolveOutcome> MarkAttemptRotatedAsync(Guid attemptId, Guid accessConnectorId,
         PamSessionTerminationOutcome sessionTermination, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -155,7 +163,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             new
             {
                 AttemptId = attemptId,
-                DaemonId = daemonId,
+                AccessConnectorId = accessConnectorId,
                 SessionTermination = (byte)sessionTermination,
                 Now = now,
             },
@@ -164,7 +172,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return (PamRotationAttemptResolveOutcome)result;
     }
 
-    public async Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid daemonId, string? failureReason,
+    public async Task<PamRotationFailureResult> MarkAttemptErroredAsync(Guid attemptId, Guid accessConnectorId, string? failureReason,
         PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay)
     {
         await using var connection = new SqlConnection(ConnectionString);
@@ -175,7 +183,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
             new
             {
                 AttemptId = attemptId,
-                DaemonId = daemonId,
+                AccessConnectorId = accessConnectorId,
                 FailureReason = failureReason,
                 SyncState = (byte)syncState,
                 Now = now,

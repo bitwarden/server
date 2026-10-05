@@ -67,7 +67,7 @@ one.
 The access connector exchanges its credential for an access token at Identity's token endpoint using
 the client-credentials grant, with client id `access-connector.<apiKeyId>` and scope
 `api.pam.rotation`.
-[`PamDaemonClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamDaemonClientProvider.cs)
+[`PamAccessConnectorClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamAccessConnectorClientProvider.cs)
 resolves the client and refuses to issue a token unless the access connector is enabled and its
 organization is both enabled and licensed for PAM.
 
@@ -112,7 +112,7 @@ already older than `HeartbeatMinInterval`, so polling faster than that gains not
 The contract has two halves:
 
 - An access connector **must** call some connector-facing endpoint more often than
-  `DaemonOfflineAfter` for as long as it holds a claim. If it stops, the release sweep may reclaim
+  `AccessConnectorOfflineAfter` for as long as it holds a claim. If it stops, the release sweep may reclaim
   the job once the claim's lease has also expired.
 - An access connector **should not** poll more often than `HeartbeatMinInterval`.
 

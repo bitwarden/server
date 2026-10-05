@@ -24,18 +24,20 @@ public class GetRotationCipherQuery : IGetRotationCipherQuery
         _cipherRepository = cipherRepository;
     }
 
-    public async Task<Cipher> GetAsync(Guid daemonId, Guid attemptId)
+    public async Task<Cipher> GetAsync(Guid accessConnectorId, Guid attemptId)
     {
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         if (attempt is null
-            || attempt.ClaimedByDaemonId != daemonId
+            || attempt.ClaimedByAccessConnectorId != accessConnectorId
             || attempt.Status != PamRotationAttemptStatus.Executing)
         {
             throw new NotFoundException();
         }
 
         var job = await _jobRepository.GetByIdAsync(attempt.JobId);
-        if (job is null || job.Status != PamRotationJobStatus.Claimed || job.ClaimedByDaemonId != daemonId)
+        if (job is null
+            || job.Status != PamRotationJobStatus.Claimed
+            || job.ClaimedByAccessConnectorId != accessConnectorId)
         {
             throw new NotFoundException();
         }

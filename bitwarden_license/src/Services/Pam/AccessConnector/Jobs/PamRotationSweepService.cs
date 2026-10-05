@@ -108,7 +108,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    AccessConnectorId = job.ClaimedByDaemonId,
+                    AccessConnectorId = job.ClaimedByAccessConnectorId,
                     Detail = job.AttemptCount == 0
                         ? "rotation job timed out (unroutable: no eligible access connector)"
                         : "rotation job timed out (stuck access connector)",
@@ -126,13 +126,13 @@ public class PamRotationSweepService : IPamRotationSweepService
     private async Task SweepReleasesAsync(DateTime now)
     {
         var releasedJobs = await _jobRepository.ReleaseExpiredLeasesAsync(
-            now, _options.Value.DaemonOfflineAfter, _options.Value.ReleaseDelay);
+            now, _options.Value.AccessConnectorOfflineAfter, _options.Value.ReleaseDelay);
         foreach (var job in releasedJobs)
         {
             try
             {
-                // Machinery event: single Outcome-phase, no human actor. The job's claim fields were already
-                // cleared by ReleaseExpiredLeasesAsync -- ClaimedByDaemonId here is the pre-clear value it returned.
+                // Machinery event: single Outcome-phase, no human actor. The job's claim fields were already cleared by
+                // ReleaseExpiredLeasesAsync -- ClaimedByAccessConnectorId here is the pre-clear value it returned.
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobReleased,
@@ -143,7 +143,7 @@ public class PamRotationSweepService : IPamRotationSweepService
                     RotationConfigId = job.RotationConfigId,
                     RotationJobId = job.JobId,
                     RotationSource = job.Source,
-                    AccessConnectorId = job.ClaimedByDaemonId,
+                    AccessConnectorId = job.ClaimedByAccessConnectorId,
                 };
                 await _accessAuditEventEmitter.EmitAsync(audit);
             }

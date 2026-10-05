@@ -88,13 +88,11 @@ public enum AccessAuditEventKind : byte
 
     // 67-69 reserved for rotation-lifecycle growth.
 
-    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or daemon_credential_reissued.
+    // Deferred: no kind allocated yet for access_end_deferred, auto_paused, or connector_credential_reissued.
     // Left unassigned rather than reserved.
 
-    // Fleet / target administration. The spec outcomes here still read daemon_*: the product renamed the
-    // daemon to the access connector, rotation-server.allium has not, and these tokens name the spec's
-    // outcome rather than the product's vocabulary.
-    /// <summary>An access connector was registered. Spec outcome <c>daemon_registered</c>.</summary>
+    // Fleet / target administration.
+    /// <summary>An access connector was registered. Spec outcome <c>connector_registered</c>.</summary>
     AccessConnectorRegistered = 70,
 
     /// <summary>
@@ -104,10 +102,10 @@ public enum AccessAuditEventKind : byte
     /// </summary>
     AccessConnectorRevoked = 71,
 
-    /// <summary>An access connector was assigned to a target system. Spec outcome <c>daemon_assigned</c>.</summary>
+    /// <summary>An access connector was assigned to a target system. Spec outcome <c>connector_assigned</c>.</summary>
     AccessConnectorAssignedToTarget = 72,
 
-    /// <summary>An access connector was unassigned from a target system. Spec outcome <c>daemon_unassigned</c>.</summary>
+    /// <summary>An access connector was unassigned from a target system. Spec outcome <c>connector_unassigned</c>.</summary>
     AccessConnectorUnassignedFromTarget = 73,
 
     /// <summary>A target system was registered (automatic or manual). Spec outcome <c>target_registered</c>.</summary>

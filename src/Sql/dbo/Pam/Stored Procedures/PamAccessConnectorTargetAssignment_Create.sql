@@ -1,6 +1,6 @@
-CREATE PROCEDURE [dbo].[PamDaemonTargetAssignment_Create]
+CREATE PROCEDURE [dbo].[PamAccessConnectorTargetAssignment_Create]
     @Id UNIQUEIDENTIFIER,
-    @DaemonId UNIQUEIDENTIFIER,
+    @AccessConnectorId UNIQUEIDENTIFIER,
     @TargetSystemId UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @CreationDate DATETIME2(7)
@@ -9,11 +9,11 @@ BEGIN
     SET NOCOUNT ON
 
     -- @Id is a plain input, not OUTPUT; caller assigns it first.
-    -- Unique index backstops OneAssignmentPerDaemonTarget on a race.
-    INSERT INTO [dbo].[PamDaemonTargetAssignment]
+    -- Unique index backstops OneAssignmentPerConnectorTarget on a race.
+    INSERT INTO [dbo].[PamAccessConnectorTargetAssignment]
     (
         [Id],
-        [DaemonId],
+        [AccessConnectorId],
         [TargetSystemId],
         [OrganizationId],
         [CreationDate]
@@ -21,7 +21,7 @@ BEGIN
     VALUES
     (
         @Id,
-        @DaemonId,
+        @AccessConnectorId,
         @TargetSystemId,
         @OrganizationId,
         @CreationDate

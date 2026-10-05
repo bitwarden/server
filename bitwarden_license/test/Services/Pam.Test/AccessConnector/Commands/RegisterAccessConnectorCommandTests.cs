@@ -30,17 +30,18 @@ public class RegisterAccessConnectorCommandTests
             () => sutProvider.Sut.RegisterAsync(organizationId, actingUserId, "   ", "payload", "key"));
 
         await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task RegisterAsync_HappyPath_CreatesApiKeyWithHashedSecretAndPamDaemon(
+    public async Task RegisterAsync_HappyPath_CreatesApiKeyWithHashedSecretAndPamAccessConnector(
         Guid organizationId, Guid actingUserId, string name, string encryptedPayload, string key)
     {
         var sutProvider = Setup();
         var apiKeyId = Guid.NewGuid();
-        var daemonId = Guid.NewGuid();
-        SetupCreates(sutProvider, apiKeyId, daemonId);
+        var accessConnectorId = Guid.NewGuid();
+        SetupCreates(sutProvider, apiKeyId, accessConnectorId);
 
         var result = await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key);
 
@@ -54,7 +55,8 @@ public class RegisterAccessConnectorCommandTests
             && !string.IsNullOrEmpty(k.ClientSecretHash)
             && k.ClientSecretHash != result.ClientSecret));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).CreateAsync(Arg.Is<PamDaemon>(d =>
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .Received(1).CreateAsync(Arg.Is<PamAccessConnector>(d =>
             d.OrganizationId == organizationId
             && d.Name == name
             && d.ApiKeyId == apiKeyId
@@ -64,7 +66,7 @@ public class RegisterAccessConnectorCommandTests
 
         // The plaintext client secret is only ever available on this one response.
         Assert.False(string.IsNullOrEmpty(result.ClientSecret));
-        Assert.Equal(daemonId, result.Daemon.Id);
+        Assert.Equal(accessConnectorId, result.AccessConnector.Id);
     }
 
     [Theory, BitAutoData]
@@ -73,8 +75,8 @@ public class RegisterAccessConnectorCommandTests
     {
         var sutProvider = Setup();
         var apiKeyId = Guid.NewGuid();
-        var daemonId = Guid.NewGuid();
-        SetupCreates(sutProvider, apiKeyId, daemonId);
+        var accessConnectorId = Guid.NewGuid();
+        SetupCreates(sutProvider, apiKeyId, accessConnectorId);
 
         await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key);
 
@@ -84,7 +86,7 @@ public class RegisterAccessConnectorCommandTests
             && e.OrganizationId == organizationId && e.ActorId == actingUserId && e.AccessConnectorName == name));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorRegistered && e.Phase == AccessAuditEventPhase.Outcome
-            && e.AccessConnectorId == daemonId));
+            && e.AccessConnectorId == accessConnectorId));
     }
 
     private static SutProvider<RegisterAccessConnectorCommand> Setup()
@@ -94,7 +96,7 @@ public class RegisterAccessConnectorCommandTests
         return sutProvider;
     }
 
-    private static void SetupCreates(SutProvider<RegisterAccessConnectorCommand> sutProvider, Guid apiKeyId, Guid daemonId)
+    private static void SetupCreates(SutProvider<RegisterAccessConnectorCommand> sutProvider, Guid apiKeyId, Guid accessConnectorId)
     {
         sutProvider.GetDependency<IApiKeyRepository>().CreateAsync(Arg.Any<ApiKey>())
             .Returns(call =>
@@ -103,12 +105,12 @@ public class RegisterAccessConnectorCommandTests
                 apiKey.Id = apiKeyId;
                 return Task.FromResult(apiKey);
             });
-        sutProvider.GetDependency<IPamDaemonRepository>().CreateAsync(Arg.Any<PamDaemon>())
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().CreateAsync(Arg.Any<PamAccessConnector>())
             .Returns(call =>
             {
-                var daemon = call.Arg<PamDaemon>();
-                daemon.Id = daemonId;
-                return Task.FromResult(daemon);
+                var accessConnector = call.Arg<PamAccessConnector>();
+                accessConnector.Id = accessConnectorId;
+                return Task.FromResult(accessConnector);
             });
     }
 }

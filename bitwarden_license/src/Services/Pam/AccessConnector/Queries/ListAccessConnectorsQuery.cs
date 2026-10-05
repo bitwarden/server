@@ -9,34 +9,36 @@ namespace Bit.Services.Pam.AccessConnector.Queries;
 /// <inheritdoc cref="IListAccessConnectorsQuery" />
 public class ListAccessConnectorsQuery : IListAccessConnectorsQuery
 {
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
 
     public ListAccessConnectorsQuery(
-        IPamDaemonRepository daemonRepository, IOptions<PamRotationOptions> options, TimeProvider timeProvider)
+        IPamAccessConnectorRepository accessConnectorRepository,
+        IOptions<PamRotationOptions> options,
+        TimeProvider timeProvider)
     {
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _options = options;
         _timeProvider = timeProvider;
     }
 
     public async Task<ICollection<PamAccessConnectorListItem>> ListAsync(Guid organizationId)
     {
-        var daemons = await _daemonRepository.GetManyByOrganizationIdAsync(organizationId);
-        var assignments = await _daemonRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
-        var assignmentsByDaemon = assignments
-            .GroupBy(a => a.DaemonId)
+        var accessConnectors = await _accessConnectorRepository.GetManyByOrganizationIdAsync(organizationId);
+        var assignments = await _accessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
+        var assignmentsByAccessConnector = assignments
+            .GroupBy(a => a.AccessConnectorId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<Guid>)g.Select(a => a.TargetSystemId).ToList());
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var offlineAfter = _options.Value.DaemonOfflineAfter;
+        var offlineAfter = _options.Value.AccessConnectorOfflineAfter;
 
-        return daemons
-            .Select(daemon => new PamAccessConnectorListItem(
-                daemon,
-                PamRotationRules.IsConnected(daemon, now, offlineAfter),
-                assignmentsByDaemon.TryGetValue(daemon.Id, out var targetIds) ? targetIds : []))
+        return accessConnectors
+            .Select(accessConnector => new PamAccessConnectorListItem(
+                accessConnector,
+                PamRotationRules.IsConnected(accessConnector, now, offlineAfter),
+                assignmentsByAccessConnector.TryGetValue(accessConnector.Id, out var targetIds) ? targetIds : []))
             .ToList();
     }
 }

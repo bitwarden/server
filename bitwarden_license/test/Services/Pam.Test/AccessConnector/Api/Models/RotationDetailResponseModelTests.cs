@@ -19,9 +19,9 @@ public class RotationDetailResponseModelTests
     private static readonly DateTime _resolved = new(2026, 8, 25, 9, 5, 0, DateTimeKind.Utc);
 
     [Fact]
-    public void DaemonDetail_CarriesTheDaemonFieldsAndItsActivityOnOneObject()
+    public void AccessConnectorDetail_CarriesTheAccessConnectorFieldsAndItsActivityOnOneObject()
     {
-        var daemon = new PamDaemon
+        var accessConnector = new PamAccessConnector
         {
             Id = Guid.NewGuid(),
             OrganizationId = Guid.NewGuid(),
@@ -33,13 +33,13 @@ public class RotationDetailResponseModelTests
         };
         var targetSystemId = Guid.NewGuid();
         var history = new PamAccessConnectorHistory(
-            new PamAccessConnectorListItem(daemon, IsConnected: true, [targetSystemId]),
-            [Job(daemon.Id)]);
+            new PamAccessConnectorListItem(accessConnector, IsConnected: true, [targetSystemId]),
+            [Job(accessConnector.Id)]);
 
         var json = Serialize(new PamAccessConnectorDetailResponseModel(history));
 
-        Assert.Equal(daemon.Id, json.GetProperty("Id").GetGuid());
-        Assert.Equal(daemon.Name, json.GetProperty("Name").GetString());
+        Assert.Equal(accessConnector.Id, json.GetProperty("Id").GetGuid());
+        Assert.Equal(accessConnector.Name, json.GetProperty("Name").GetString());
         Assert.True(json.GetProperty("IsConnected").GetBoolean());
         Assert.Equal(targetSystemId, json.GetProperty("AssignedTargetSystemIds")[0].GetGuid());
         AssertJobShape(json);
@@ -80,7 +80,7 @@ public class RotationDetailResponseModelTests
         Assert.Equal(_resolved, attempt.GetProperty("ResolvedDate").GetDateTime());
     }
 
-    private static PamRotationJobDetails Job(Guid daemonId)
+    private static PamRotationJobDetails Job(Guid accessConnectorId)
     {
         var job = new PamRotationJob
         {
@@ -97,7 +97,7 @@ public class RotationDetailResponseModelTests
             {
                 Id = Guid.NewGuid(),
                 JobId = job.Id,
-                ClaimedByDaemonId = daemonId,
+                ClaimedByAccessConnectorId = accessConnectorId,
                 CipherUpdated = true,
                 Status = PamRotationAttemptStatus.Rotated,
                 SessionTermination = PamSessionTerminationOutcome.Terminated,

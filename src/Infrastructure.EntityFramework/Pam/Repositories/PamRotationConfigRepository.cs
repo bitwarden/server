@@ -86,7 +86,7 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         var dbContext = GetDatabaseContext(scope);
 
         // Serializable makes the active-job re-check and the deletes one indivisible step, so a job offered in
-        // between can't be torn out from under its daemon.
+        // between can't be torn out from under its access connector.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
