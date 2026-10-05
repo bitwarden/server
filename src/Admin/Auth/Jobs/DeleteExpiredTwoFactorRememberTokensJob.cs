@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Jobs;
 using Quartz;

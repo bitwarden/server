@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
+﻿namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 
 public interface IRevokeTwoFactorRememberTokensCommand
 {

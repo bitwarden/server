@@ -1,4 +1,4 @@
-using Bit.Admin.Auth.Jobs;
+﻿using Bit.Admin.Auth.Jobs;
 using Bit.Core.Auth.Repositories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;

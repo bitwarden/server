@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;

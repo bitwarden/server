@@ -1,4 +1,4 @@
-using Bit.Infrastructure.EntityFramework.Auth.Models;
+﻿using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

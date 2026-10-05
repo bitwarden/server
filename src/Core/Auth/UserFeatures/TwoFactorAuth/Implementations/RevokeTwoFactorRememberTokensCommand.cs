@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Repositories;
 
 namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth.Implementations;
 
