@@ -47,11 +47,11 @@ why it has its own contract below.
 Four checks stand between an access connector request and a change to Vault Data, and each assumes
 the ones before it may have been bypassed.
 
-1. **The token policy.** `PamRotationDaemon` requires an authenticated caller carrying the
-   `api.pam.rotation` scope and the `RotationDaemon` client type. It proves the caller holds an
+1. **The token policy.** `PamAccessConnector` requires an authenticated caller carrying the
+   `api.pam.rotation` scope and the `AccessConnector` client type. It proves the caller holds an
    access connector token. It proves nothing about *which* access connector.
 2. **Token issuance.**
-   [`PamDaemonClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamDaemonClientProvider.cs)
+   [`PamAccessConnectorClientProvider`](../../../../../../src/Identity/IdentityServer/ClientProviders/PamAccessConnectorClientProvider.cs)
    issues a token only to an enabled access connector whose organization is enabled and licensed for
    PAM, and caps the token's life at 15 minutes so a token issued before a revocation is
    short-lived.

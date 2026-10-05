@@ -7,8 +7,8 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions. The connector's identity comes
-/// from <see cref="ICurrentContext.PamDaemonId"/>; the poll query admits only an Enabled connector, and returns
+/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions. The connector's identity comes from
+/// <see cref="ICurrentContext.PamAccessConnectorId"/>; the poll query admits only an Enabled connector, and returns
 /// only jobs belonging to that connector's organization and assigned target systems.
 ///
 /// <see cref="IClaimRotationJobCommand"/> throws 409 on a lost race and 404 when the connector was never eligible
@@ -22,8 +22,8 @@ public class RotationJobEndpointsHandler(
 {
     public async Task<ListResponseModel<ClaimableRotationJobResponseModel>> GetJobs()
     {
-        var connectorId = currentContext.PamDaemonId!.Value;
-        var jobs = await jobRepository.GetManyClaimableByDaemonIdAsync(
+        var connectorId = currentContext.PamAccessConnectorId!.Value;
+        var jobs = await jobRepository.GetManyClaimableByAccessConnectorIdAsync(
             connectorId, timeProvider.GetUtcNow().UtcDateTime);
 
         return new ListResponseModel<ClaimableRotationJobResponseModel>(
@@ -32,7 +32,7 @@ public class RotationJobEndpointsHandler(
 
     public async Task<RotationClaimResponseModel> Claim(Guid id)
     {
-        var connectorId = currentContext.PamDaemonId!.Value;
+        var connectorId = currentContext.PamAccessConnectorId!.Value;
         var result = await claimRotationJobCommand.ClaimAsync(connectorId, id);
         return new RotationClaimResponseModel(result);
     }

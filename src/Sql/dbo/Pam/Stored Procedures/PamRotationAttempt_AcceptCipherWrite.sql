@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[PamRotationAttempt_AcceptCipherWrite]
     @AttemptId UNIQUEIDENTIFIER,
-    @DaemonId UNIQUEIDENTIFIER,
+    @AccessConnectorId UNIQUEIDENTIFIER,
     @CipherData NVARCHAR(MAX),
     @LastKnownRevisionDate DATETIME2(7),
     @Now DATETIME2(7)
@@ -25,9 +25,9 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     WHERE AT.[Id] = @AttemptId
         AND AT.[Status] = 0 -- Executing
-        AND AT.[ClaimedByDaemonId] = @DaemonId
+        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
         AND J.[Status] = 1 -- Claimed
-        AND J.[ClaimedByDaemonId] = @DaemonId
+        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
 
     IF @VerifiedJobId IS NULL
     BEGIN

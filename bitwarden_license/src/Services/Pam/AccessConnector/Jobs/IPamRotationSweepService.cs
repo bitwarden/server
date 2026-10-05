@@ -2,7 +2,7 @@
 
 /// <summary>
 /// Runs the three time-derived rotation sweeps: offering due scheduled configs, timing out expired jobs, and
-/// releasing jobs whose claiming daemon has gone stale. Kept separate from <see cref="PamRotationSweepJob"/>
+/// releasing jobs whose claiming access connector has gone stale. Kept separate from <see cref="PamRotationSweepJob"/>
 /// so the sweep logic is testable without a <c>Quartz.IJobExecutionContext</c>.
 /// </summary>
 public interface IPamRotationSweepService

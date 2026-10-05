@@ -13,5 +13,5 @@ public interface IReportRotationFailedCommand
     /// attempt id and <see cref="Bit.Core.Exceptions.ConflictException"/> for a stale report.
     /// </summary>
     Task<PamRotationAttempt> ReportFailedAsync(
-        Guid daemonId, Guid attemptId, string? failureReason, PamRotationSyncState syncState);
+        Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState);
 }
