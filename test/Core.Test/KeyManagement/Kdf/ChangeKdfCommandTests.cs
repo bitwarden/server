@@ -16,7 +16,6 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using OneOf;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.KeyManagement.Kdf;
 
@@ -192,7 +191,7 @@ public class ChangeKdfCommandTests
         };
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
         sutProvider.GetDependency<IMasterPasswordService>()
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
@@ -204,7 +203,7 @@ public class ChangeKdfCommandTests
                 d.RefreshStamp == true));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }
 
     [Theory]
@@ -234,7 +233,7 @@ public class ChangeKdfCommandTests
         };
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
@@ -248,7 +247,7 @@ public class ChangeKdfCommandTests
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KdfChange));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == user.Id));
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }
 
     [Theory]

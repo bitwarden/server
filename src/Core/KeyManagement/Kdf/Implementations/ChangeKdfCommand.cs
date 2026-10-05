@@ -8,7 +8,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.KeyManagement.Kdf.Implementations;
 
@@ -19,11 +18,11 @@ public class ChangeKdfCommand : IChangeKdfCommand
     private readonly IPushNotificationService _pushService;
     private readonly IMasterPasswordService _masterPasswordService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public ChangeKdfCommand(IUserService userService, IPushNotificationService pushService,
         IMasterPasswordService masterPasswordService, IdentityErrorDescriber describer,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _userService = userService;
         _pushService = pushService;
