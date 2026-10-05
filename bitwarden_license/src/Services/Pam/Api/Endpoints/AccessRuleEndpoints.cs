@@ -37,6 +37,12 @@ internal static class AccessRuleEndpoints
         group.MapGet("{id:guid}", ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.Get(orgId, id))
             .WithName("Pam_AccessRules_Get");
 
+        // Admin-only: names credentials a rule fails to protect.
+        group.MapGet("{id:guid}/bypassable-ciphers",
+                ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.GetBypassableCiphers(orgId, id))
+            .WithName("Pam_AccessRules_GetBypassableCiphers")
+            .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
+
         group.MapPost("", ([FromRoute] Guid orgId, AccessRuleRequestModel model, AccessRuleEndpointsHandler handler) => handler.Post(orgId, model))
             .WithName("Pam_AccessRules_Post")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());

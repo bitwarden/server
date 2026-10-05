@@ -13,6 +13,7 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
 {
     // TODO will be removed with https://bitwarden.atlassian.net/browse/PM-27328
     [Obsolete("Use KeyConnectorKeyWrappedUserKey instead")]
+    [EncryptedString]
     public string? Key { get; set; }
 
     [Obsolete("Use AccountKeys instead")]
