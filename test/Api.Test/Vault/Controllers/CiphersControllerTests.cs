@@ -2636,6 +2636,78 @@ public class CiphersControllerTests
             .AuthorizeReadManyAsync(default, default);
     }
 
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_Unauthorized_ThrowsNotFound(
+        Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetOrganizationLoginCiphers(organizationId));
+    }
+
+    /// <remarks>
+    /// The administrative bulk read strips every gated cipher, so an admin holding a valid lease still
+    /// gets the partial shape in the list — full data is only ever released one cipher at a time.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_StripsGatedCiphers(
+        Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Admin;
+
+        var visible = OrganizationCipher(organization.Id, """{"Name":"2.visible|encrypted"}""");
+        var gated = OrganizationCipher(organization.Id,
+            """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""");
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationCiphersQuery>()
+            .GetOrganizationLoginCiphers(organization.Id)
+            .Returns([visible, gated]);
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeAdminReadManyAsync(userId, organization.Id, Arg.Any<IEnumerable<Cipher>>())
+            .Returns(FullCipherAccess.ForCipher(visible.Id));
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
+
+        Assert.Equal(2, result.Data.Count());
+        Assert.NotNull(result.Data.Single(c => c.Id == visible.Id).Data);
+        Assert.Null(result.Data.Single(c => c.Id == gated.Id).Data);
+        Assert.DoesNotContain("2.password|encrypted", result.Data.Single(c => c.Id == gated.Id).PartialData);
+    }
+
+    /// <remarks>
+    /// This endpoint returns the organization's Login ciphers regardless of caller collection assignments,
+    /// so resolving leasing from the caller's own collections would fail open for every cipher outside them.
+    /// </remarks>
+    [Theory, BitAutoData]
+    public async Task GetOrganizationLoginCiphers_DoesNotConsultTheMemberDecision(
+        Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Admin;
+
+        var cipher = OrganizationCipher(organization.Id, "{}");
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationCiphersQuery>()
+            .GetOrganizationLoginCiphers(organization.Id)
+            .Returns([cipher]);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
+
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .Received(1)
+            .AuthorizeAdminReadManyAsync(userId, organization.Id, Arg.Any<IEnumerable<Cipher>>());
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs()
+            .AuthorizeReadManyAsync(default, default);
+    }
+
     /// <remarks>
     /// A cipher that did not exist a moment ago can hold no lease, so creating a credential in a
     /// leasing-enabled collection does not confer standing access to it. The create is a write-return, so
@@ -3466,5 +3538,87 @@ public class CiphersControllerTests
         Assert.Equal(cipherId, result.Id);
         Assert.Null(result.Data);
         Assert.NotNull(result.PartialData);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAttachmentAdmin_PreservesArchives(
+        CurrentContextOrganization organization, Guid userId, CipherOrganizationDetails cipherOrgDetails,
+        string attachmentId, SutProvider<CiphersController> sutProvider)
+    {
+        cipherOrgDetails.OrganizationId = organization.Id;
+        cipherOrgDetails.Type = CipherType.Login;
+        cipherOrgDetails.Data = "{}";
+        cipherOrgDetails.Archives = "{\"archived\":true}";
+        organization.Type = OrganizationUserType.Owner;
+
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherOrgDetails.Id)
+            .Returns(cipherOrgDetails);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Cipher> { cipherOrgDetails });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility
+            {
+                Id = organization.Id,
+                AllowAdminAccessToAllCollectionItems = true
+            });
+        sutProvider.GetDependency<ICipherService>()
+            .DeleteAttachmentAsync(Arg.Any<CipherDetails>(), attachmentId, userId, true)
+            .Returns(new DeleteAttachmentResponseData(cipherOrgDetails));
+
+        await sutProvider.Sut.DeleteAttachmentAdmin(cipherOrgDetails.Id, attachmentId);
+
+        // Cipher_Update writes [Archives] = @Archives, and the CipherDetails copy constructor does not
+        // copy Archives, so the controller must carry it across or the column is nulled.
+        await sutProvider.GetDependency<ICipherService>()
+            .Received(1)
+            .DeleteAttachmentAsync(
+                Arg.Is<CipherDetails>(c => c.Archives == cipherOrgDetails.Archives),
+                attachmentId, userId, true);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task DeleteAttachmentAdmin_WithLimitItemDeletion_WithoutManagePermission_ThrowsNotFoundException(
+        OrganizationUserType organizationUserType, CipherDetails cipherDetails, Guid userId, string attachmentId,
+        CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
+    {
+        cipherDetails.UserId = null;
+        cipherDetails.OrganizationId = organization.Id;
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+
+        organization.Type = organizationUserType;
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipherDetails.Id)
+            .Returns(cipherDetails);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CipherDetails>
+            {
+                cipherDetails
+            });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organization.Id)
+            .Returns(new OrganizationAbility
+            {
+                Id = organization.Id,
+                LimitItemDeletion = true
+            });
+
+        // The admin route skips the service permission check, so this gate is the whole control:
+        // it must reject for the same reason the sibling item-delete admin routes do.
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.DeleteAttachmentAdmin(cipherDetails.Id, attachmentId));
+
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default, default, default);
     }
 }

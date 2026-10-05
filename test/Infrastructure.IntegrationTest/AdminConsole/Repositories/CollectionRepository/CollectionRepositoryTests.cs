@@ -484,6 +484,116 @@ public class CollectionRepositoryTests
     }
 
     /// <summary>
+    /// Verifies that GetManyOrganizationCollectionsWithPermissionsAsync returns both shared and default
+    /// collections with correct grant data across all database providers.
+    /// Covers three cases the reviewer requested: a shared collection, a default user collection,
+    /// and a collection reached only through a group grant.
+    /// </summary>
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyOrganizationCollectionsWithPermissionsAsync_Success(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+        });
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            Name = "Test Group",
+            OrganizationId = organization.Id,
+        });
+
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id }, DateTime.UtcNow);
+
+        // Case 1: shared collection with a direct user grant
+        var sharedCollection = new Collection { Name = "Shared Collection", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(sharedCollection, null, new[]
+        {
+            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = true, HidePasswords = false, Manage = false }
+        });
+
+        // Case 2: default user collection with a direct user grant
+        var defaultCollection = new Collection
+        {
+            Name = "Default Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null, new[]
+        {
+            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        });
+
+        // Case 3: shared collection reachable only through a group grant (no direct user assignment)
+        var groupOnlyCollection = new Collection { Name = "Group Only Collection", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(groupOnlyCollection, new[]
+        {
+            new CollectionAccessSelection { Id = group.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        }, null);
+
+        var collections = await collectionRepository.GetManyOrganizationCollectionsWithPermissionsAsync(organization.Id, user.Id);
+
+        Assert.NotNull(collections);
+
+        // All three collections — shared, default, group-only — must be returned
+        Assert.Equal(3, collections.Count);
+
+        collections = collections.OrderBy(c => c.Name).ToList();
+
+        // Case 2: default user collection
+        Assert.Collection(collections, defaultCol =>
+        {
+            Assert.Equal(CollectionType.DefaultUserCollection, defaultCol.Type);
+            Assert.Equal(1, defaultCol.Users?.Count());
+            Assert.Equal(0, defaultCol.Groups?.Count());
+            Assert.True(defaultCol.Assigned);
+            Assert.True(defaultCol.Manage);
+        },
+        // Case 3: group-only collection
+        groupOnlyCol =>
+        {
+            Assert.Equal(CollectionType.SharedCollection, groupOnlyCol.Type);
+            Assert.Equal(0, groupOnlyCol.Users?.Count());
+            Assert.Equal(1, groupOnlyCol.Groups?.Count());
+            Assert.True(groupOnlyCol.Assigned);
+            Assert.True(groupOnlyCol.Manage);
+        },
+        // Case 1: shared collection with direct user grant
+        sharedCol =>
+        {
+            Assert.Equal(CollectionType.SharedCollection, sharedCol.Type);
+            Assert.Equal(1, sharedCol.Users?.Count());
+            Assert.Equal(0, sharedCol.Groups?.Count());
+            Assert.True(sharedCol.Assigned);
+            Assert.False(sharedCol.Manage);
+            Assert.True(sharedCol.ReadOnly);
+        });
+    }
+
+    /// <summary>
     /// Test to ensure collections are properly retrieved by organization
     /// </summary>
     [DatabaseTheory, DatabaseData]

@@ -487,6 +487,26 @@ public class CiphersController : Controller
         return new ListResponseModel<CipherMiniDetailsResponseModel>(allOrganizationCipherResponses);
     }
 
+    [HttpGet("organization-details/logins")]
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetOrganizationLoginCiphers(Guid organizationId)
+    {
+        if (!await CanAccessAllCiphersAsync(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var loginCiphers = await _organizationCiphersQuery.GetOrganizationLoginCiphers(organizationId);
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var fullAccess = await _cipherLeaseGate.AuthorizeAdminReadManyAsync(
+            userId, organizationId, loginCiphers);
+        var responses = VisibleToClient(loginCiphers, fullAccess).Select(c =>
+            CipherMiniDetailsResponseModel.From(fullAccess, c, _globalSettings, c.OrganizationUseTotp)
+        );
+
+        return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+    }
+
     [HttpGet("organization-details/assigned")]
     public async Task<ListResponseModel<CipherDetailsResponseModel>> GetAssignedOrganizationCiphers(Guid organizationId)
     {
@@ -1733,14 +1753,17 @@ public class CiphersController : Controller
     public async Task<DeleteAttachmentResponseModel> DeleteAttachmentAdmin(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(id);
+        var cipher = await GetByIdAsyncAdmin(id);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
+            !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
             throw new NotFoundException();
         }
 
-        var result = await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, true);
+        // Archives is copied across explicitly because the CipherDetails copy constructor omits it
+        // and the write-back would otherwise null the column.
+        var cipherDetails = new CipherDetails(cipher) { Archives = cipher.Archives };
+        var result = await _cipherService.DeleteAttachmentAsync(cipherDetails, attachmentId, userId, true);
 
         var access = await AuthorizeAdminWriteReturnOrThrowAsync(userId, cipher.OrganizationId.Value, result.Cipher);
         return new DeleteAttachmentResponseModel(CipherMiniResponseModel.From(

@@ -66,6 +66,23 @@ public class SendAccessResponseModelTests
     }
 
     [Fact]
+    public void ItemSend_ReturnsMetadata()
+    {
+        var itemId = Guid.NewGuid();
+        var send = new Send
+        {
+            Type = SendType.Item,
+            Data = JsonSerializer.Serialize(new SendItemData("name", null, SendEncryptionType.V1, "sealed_blob",
+                new SendItemMetadata { ItemId = itemId })),
+        };
+
+        var responseModel = new SendAccessResponseModel(send);
+
+        Assert.Equal("sealed_blob", responseModel.Data?.Data);
+        Assert.Equal(itemId, responseModel.Data?.Metadata?.ItemId);
+    }
+
+    [Fact]
     public void ItemSend_NullData_Throws()
     {
         var send = new Send

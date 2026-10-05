@@ -75,4 +75,10 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// </summary>
     Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
     GetManyCipherOrganizationDetailsExcludingDefaultCollectionsAsync(Guid organizationId);
+
+    /// <summary>
+    /// Returns all Login-type ciphers belonging to the organization, including those in default user collections.
+    /// </summary>
+    Task<IEnumerable<CipherOrganizationDetailsWithCollections>>
+        GetManyLoginCipherOrganizationDetailsAsync(Guid organizationId);
 }
