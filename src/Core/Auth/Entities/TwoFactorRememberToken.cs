@@ -56,7 +56,7 @@ public class TwoFactorRememberToken : ITableObject<Guid>
     {
         if (Id == default)
         {
-            Id = CoreHelpers.GenerateComb();
+            Id = CombGuid.Generate();
         }
     }
 }

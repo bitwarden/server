@@ -457,7 +457,7 @@ public class TwoFactorRememberTokenRepositoryTests
                 VALUES
                     (@Id, @UserId, @DeviceId, @Stamp, @Now, @Now, @Expiration)
                 """;
-            command.Parameters.Add(new SqlParameter("@Id", CoreHelpers.GenerateComb()));
+            command.Parameters.Add(new SqlParameter("@Id", CombGuid.Generate()));
             command.Parameters.Add(new SqlParameter("@UserId", userId));
             command.Parameters.Add(new SqlParameter("@DeviceId", deviceId));
             command.Parameters.Add(new SqlParameter("@Stamp", "stamp-two"));
@@ -471,7 +471,7 @@ public class TwoFactorRememberTokenRepositoryTests
         var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
         dbContext.TwoFactorRememberTokens.Add(new EfTwoFactorRememberToken
         {
-            Id = CoreHelpers.GenerateComb(),
+            Id = CombGuid.Generate(),
             UserId = userId,
             DeviceId = deviceId,
             Stamp = "stamp-two",
