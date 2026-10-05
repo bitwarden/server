@@ -119,11 +119,11 @@ seat count. A missing organization is a **404**. These map from the `BadRequestE
 ## Stripe boundary
 
 This library **reads** Stripe data directly through `IStripeAdapter` (fetching the organization's
-subscription and its customer's tax ids while building a plan-change preview). That is allowed for now:
-the ideal state is that all Stripe access flows through `Bit.Invoicing`, but until a shared
-`Bit.Subscriptions` library exists, customer-specific read logic lives here. The final preview call —
-turning the composed `InvoiceCreatePreviewOptions` into an `InvoicePreview` — still goes through
-`Bit.Invoicing`'s `IInvoicePreviewService`, and this library performs no Stripe writes.
+subscription and its customer's tax ids while building a plan-change preview). That is allowed for now;
+the ideal end state is that these Stripe calls happen in a lower-level library instead. Until that
+library exists, customer-specific read logic lives here. The final preview call — turning the composed
+`InvoiceCreatePreviewOptions` into an `InvoicePreview` — still goes through `Bit.Invoicing`'s
+`IInvoicePreviewService`.
 
 ## Core debt
 
