@@ -14,7 +14,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
 {
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly ICipherSyncPushService _cipherSyncPushService;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
@@ -23,7 +23,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
     public SubmitCipherUpdateCommand(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         ICipherRepository cipherRepository,
         ICipherSyncPushService cipherSyncPushService,
         IAccessAuditEventEmitter accessAuditEventEmitter,
@@ -31,29 +31,36 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _cipherRepository = cipherRepository;
         _cipherSyncPushService = cipherSyncPushService;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
-    public async Task SubmitAsync(Guid daemonId, Guid attemptId, string cipherDataJson, DateTime lastKnownRevisionDate)
+    public async Task SubmitAsync(
+        Guid accessConnectorId,
+        Guid attemptId,
+        string cipherDataJson,
+        DateTime lastKnownRevisionDate)
     {
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
 
-        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
         {
             throw new NotFoundException();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var outcome = await _jobRepository.AcceptCipherWriteAsync(
-            attemptId, daemonId, cipherDataJson, lastKnownRevisionDate, now);
+            attemptId, accessConnectorId, cipherDataJson, lastKnownRevisionDate, now);
 
         if (outcome != PamRotationCipherWriteOutcome.Accepted)
         {
@@ -63,8 +70,8 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
                 OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
-                AccessConnectorId = daemonId,
-                AccessConnectorName = daemon.Name,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,

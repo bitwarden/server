@@ -16,7 +16,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
 
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IPamRotationConfigRepository _configRepository;
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
@@ -24,39 +24,42 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
     public ReportRotationFailedCommand(
         IPamRotationJobRepository jobRepository,
         IPamRotationConfigRepository configRepository,
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         IOptions<PamRotationOptions> options,
         TimeProvider timeProvider)
     {
         _jobRepository = jobRepository;
         _configRepository = configRepository;
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _options = options;
         _timeProvider = timeProvider;
     }
 
     public async Task<PamRotationAttempt> ReportFailedAsync(
-        Guid daemonId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
+        Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
     {
         // Truncated first: raw target-system error output can echo credentials and must never be forwarded.
         var truncatedReason = Truncate(failureReason);
 
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this daemon's name.
+        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
 
-        if (attempt is null || config is null || daemon is null || config.OrganizationId != daemon.OrganizationId)
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
         {
             throw new NotFoundException();
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var result = await _jobRepository.MarkAttemptErroredAsync(
-            attemptId, daemonId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
+            attemptId, accessConnectorId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
             _options.Value.RetryBaseDelay);
 
         if (result.Outcome != PamRotationAttemptResolveOutcome.Resolved)
@@ -68,8 +71,8 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 OccurredDate = now,
                 OrganizationId = config.OrganizationId,
                 ActorId = null,
-                AccessConnectorId = daemonId,
-                AccessConnectorName = daemon.Name,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
@@ -98,8 +101,8 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 OccurredDate = now,
                 OrganizationId = organizationId,
                 ActorId = null,
-                AccessConnectorId = daemonId,
-                AccessConnectorName = daemon.Name,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,
@@ -118,8 +121,8 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
                 OccurredDate = now,
                 OrganizationId = organizationId,
                 ActorId = null,
-                AccessConnectorId = daemonId,
-                AccessConnectorName = daemon.Name,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
                 RotationJobId = job?.Id,
                 RotationConfigId = config.Id,
                 CipherId = config.CipherId,

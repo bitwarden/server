@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[PamRotationAttempt_MarkErrored]
     @AttemptId UNIQUEIDENTIFIER,
-    @DaemonId UNIQUEIDENTIFIER,
+    @AccessConnectorId UNIQUEIDENTIFIER,
     @FailureReason NVARCHAR(500) = NULL,
     @SyncState TINYINT,
     @Now DATETIME2(7),
@@ -21,7 +21,7 @@ BEGIN
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
     WHERE AT.[Id] = @AttemptId
         AND AT.[Status] = 0 -- Executing
-        AND AT.[ClaimedByDaemonId] = @DaemonId
+        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
         AND J.[Status] = 1 -- Claimed
 
     IF @JobId IS NULL
@@ -52,7 +52,7 @@ BEGIN
         SET @JobStatus = 0 -- Pending
         UPDATE [dbo].[PamRotationJob]
         SET [Status] = @JobStatus,
-            [ClaimedByDaemonId] = NULL,
+            [ClaimedByAccessConnectorId] = NULL,
             [ClaimedAt] = NULL,
             [NextClaimableAt] = DATEADD(SECOND, CAST(@RetryBaseDelaySeconds * POWER(2, @ErroredCount - 1) AS INT), @Now)
         WHERE [Id] = @JobId
@@ -62,7 +62,7 @@ BEGIN
         SET @JobStatus = 3 -- Failed
         UPDATE [dbo].[PamRotationJob]
         SET [Status] = @JobStatus,
-            [ClaimedByDaemonId] = NULL,
+            [ClaimedByAccessConnectorId] = NULL,
             [ClaimedAt] = NULL
         WHERE [Id] = @JobId
     END
