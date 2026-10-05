@@ -21,7 +21,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 using Event = Stripe.Event;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
@@ -43,7 +42,7 @@ public class UpcomingInvoiceHandler(
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
     IMailer mailer,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IBusinessPlanMigrationCoordinator businessPlanMigrationCoordinator)
     : IUpcomingInvoiceHandler
 {

@@ -18,7 +18,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 
 namespace Bit.Api.Billing.Controllers.VNext;
 
@@ -159,7 +158,7 @@ public class AccountBillingVNextController(
     }
 
     [HttpGet("discounts")]
-    [RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM29108_EnablePersonalDiscounts)]
     [InjectUser]
     public async Task<IResult> GetApplicableDiscountsAsync(
         [BindNever] User user)

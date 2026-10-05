@@ -19,7 +19,6 @@ using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 // ReSharper disable RouteTemplates.MethodMissingRouteParameters
 
 namespace Bit.Api.Billing.Controllers.VNext;
@@ -172,7 +171,7 @@ public class OrganizationBillingVNextController(
 
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpGet("annual-upgrade-offer")]
-    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
     [InjectOrganization]
     public async Task<IResult> GetAnnualUpgradeOfferAsync(
         [BindNever] Organization organization)
@@ -183,7 +182,7 @@ public class OrganizationBillingVNextController(
 
     [Authorize<ManageOrganizationBillingRequirement>]
     [HttpPost("annual-upgrade-offer/redeem")]
-    [RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.PM38333_AnnualBillingSavings)]
     [InjectOrganization]
     public async Task<IResult> RedeemAnnualUpgradeOfferAsync(
         [BindNever] Organization organization)

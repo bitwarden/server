@@ -21,7 +21,6 @@ using Bit.Core.Utilities;
 using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Api.Billing.Controllers;
 
@@ -42,7 +41,7 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IPolicyQuery _policyQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly ILogger<OrganizationSponsorshipsController> _logger;
 
     public OrganizationSponsorshipsController(
@@ -60,7 +59,7 @@ public class OrganizationSponsorshipsController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         IPolicyQuery policyQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         ILogger<OrganizationSponsorshipsController> logger)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
