@@ -11,44 +11,44 @@ namespace Bit.Services.Pam.AccessConnector.Queries;
 public class GetAccessConnectorDetailsQuery : IGetAccessConnectorDetailsQuery
 {
     /// <summary>
-    /// How many of the daemon's jobs the detail page shows. A daemon accumulates a job per rotation it executes for
-    /// the lifetime of the fleet, so this read is capped rather than unbounded.
+    /// How many of the access connector's jobs the detail page shows. An access connector accumulates a job per
+    /// rotation it executes for the lifetime of the fleet, so this read is capped rather than unbounded.
     /// </summary>
     private const int RecentJobLimit = 50;
 
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
 
     public GetAccessConnectorDetailsQuery(
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IPamRotationJobRepository jobRepository,
         IOptions<PamRotationOptions> options,
         TimeProvider timeProvider)
     {
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _jobRepository = jobRepository;
         _options = options;
         _timeProvider = timeProvider;
     }
 
-    public async Task<PamAccessConnectorHistory> GetAsync(Guid organizationId, Guid daemonId)
+    public async Task<PamAccessConnectorHistory> GetAsync(Guid organizationId, Guid accessConnectorId)
     {
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
-        if (daemon is null || daemon.OrganizationId != organizationId)
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+        if (accessConnector is null || accessConnector.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
 
-        var assignments = await _daemonRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
-        var jobs = await _jobRepository.GetManyRecentByDaemonIdAsync(daemonId, RecentJobLimit);
+        var assignments = await _accessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
+        var jobs = await _jobRepository.GetManyRecentByAccessConnectorIdAsync(accessConnectorId, RecentJobLimit);
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var listItem = new PamAccessConnectorListItem(
-            daemon,
-            PamRotationRules.IsConnected(daemon, now, _options.Value.DaemonOfflineAfter),
-            assignments.Where(a => a.DaemonId == daemonId).Select(a => a.TargetSystemId).ToList());
+            accessConnector,
+            PamRotationRules.IsConnected(accessConnector, now, _options.Value.AccessConnectorOfflineAfter),
+            assignments.Where(a => a.AccessConnectorId == accessConnectorId).Select(a => a.TargetSystemId).ToList());
 
         return new PamAccessConnectorHistory(listItem, jobs.ToList());
     }

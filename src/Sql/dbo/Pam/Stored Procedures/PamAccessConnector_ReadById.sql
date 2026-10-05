@@ -1,10 +1,10 @@
-CREATE PROCEDURE [dbo].[PamDaemon_ReadById]
+CREATE PROCEDURE [dbo].[PamAccessConnector_ReadById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
     SELECT *
-    FROM [dbo].[PamDaemon]
+    FROM [dbo].[PamAccessConnector]
     WHERE [Id] = @Id
 END

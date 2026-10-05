@@ -1,5 +1,5 @@
--- Automatic (daemon-driven) or Manual (person-driven, Kind/PasswordPolicy null).
--- PasswordPolicy is opaque JSON the daemon applies; the server never inspects it.
+-- Automatic (connector-driven) or Manual (person-driven, Kind/PasswordPolicy null).
+-- PasswordPolicy is opaque JSON the access connector applies; the server never inspects it.
 CREATE TABLE [dbo].[PamTargetSystem] (
     [Id]                            UNIQUEIDENTIFIER    NOT NULL,
     [OrganizationId]                UNIQUEIDENTIFIER    NOT NULL,

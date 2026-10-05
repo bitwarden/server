@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PamDaemon_Update]
+CREATE PROCEDURE [dbo].[PamAccessConnector_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(200),
     @Status TINYINT,
@@ -9,7 +9,7 @@ BEGIN
 
     -- Name + Status only; callers use this narrow parameter set (no ApiKeyId/LastHeartbeatAt).
     UPDATE
-        [dbo].[PamDaemon]
+        [dbo].[PamAccessConnector]
     SET
         [Name] = @Name,
         [Status] = @Status,

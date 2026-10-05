@@ -17,23 +17,23 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 /// <inheritdoc cref="IRegisterAccessConnectorCommand" />
 public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 {
-    /// <summary>The scope every daemon credential carries — mirrors Secrets Manager's access-token scope shape.</summary>
-    private const string DaemonScope = "[\"api.pam.rotation\"]";
+    /// <summary>The scope every access connector credential carries — mirrors Secrets Manager's access-token scope shape.</summary>
+    private const string AccessConnectorScope = "[\"api.pam.rotation\"]";
     private const int ClientSecretLength = 30;
 
     private readonly IApiKeyRepository _apiKeyRepository;
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RegisterAccessConnectorCommand(
         IApiKeyRepository apiKeyRepository,
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _apiKeyRepository = apiKeyRepository;
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -59,8 +59,8 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // The daemon's machine credential is a generic dbo.ApiKey row (ServiceAccountId null), reusing the Secrets
-        // Manager credential store. Hashing mirrors CreateAccessTokenCommand, since the same provider-side
+        // The access connector's machine credential is a generic dbo.ApiKey row (ServiceAccountId null), reusing the
+        // Secrets Manager credential store. Hashing mirrors CreateAccessTokenCommand, since the same provider-side
         // verification reads this hash.
         var clientSecret = CoreHelpers.SecureRandomString(ClientSecretLength);
         var apiKey = new ApiKey
@@ -68,13 +68,13 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
             ServiceAccountId = null,
             Name = name,
             ClientSecretHash = Hash(clientSecret),
-            Scope = DaemonScope,
+            Scope = AccessConnectorScope,
             EncryptedPayload = encryptedPayload,
             Key = key,
         };
         var createdApiKey = await _apiKeyRepository.CreateAsync(apiKey);
 
-        var daemon = new PamDaemon
+        var accessConnector = new PamAccessConnector
         {
             OrganizationId = organizationId,
             Name = name,
@@ -83,13 +83,13 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
             CreationDate = now,
             RevisionDate = now,
         };
-        var createdDaemon = await _daemonRepository.CreateAsync(daemon);
+        var createdAccessConnector = await _accessConnectorRepository.CreateAsync(accessConnector);
 
         await _accessAuditEventEmitter.EmitAsync(
-            audit with { Phase = AccessAuditEventPhase.Outcome, AccessConnectorId = createdDaemon.Id });
+            audit with { Phase = AccessAuditEventPhase.Outcome, AccessConnectorId = createdAccessConnector.Id });
 
         // The plaintext client secret is surfaced here only; the server never persists or logs it again.
-        return new PamAccessConnectorRegistrationResult(createdDaemon, clientSecret);
+        return new PamAccessConnectorRegistrationResult(createdAccessConnector, clientSecret);
     }
 
     private static string Hash(string input)

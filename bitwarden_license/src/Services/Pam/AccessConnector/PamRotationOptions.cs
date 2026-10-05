@@ -17,16 +17,16 @@ public class PamRotationOptions
     /// <summary>The base of the exponential retry backoff: <c>RetryBaseDelay * 2^(erroredCount-1)</c>.</summary>
     public TimeSpan RetryBaseDelay { get; set; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>The claim lease length: how long a claiming daemon has before the release sweep may reclaim its job.</summary>
+    /// <summary>The claim lease length: how long a claiming access connector has before the release sweep may reclaim its job.</summary>
     public TimeSpan ReleaseDelay { get; set; } = TimeSpan.FromMinutes(15);
 
     /// <summary>How far out a config's next rotation is pushed after its job fails outright (budget exhausted).</summary>
     public TimeSpan FailureRetryDelay { get; set; } = TimeSpan.FromHours(1);
 
-    /// <summary>How long since its last heartbeat a daemon is still considered connected (spec <c>DaemonConnection</c>).</summary>
-    public TimeSpan DaemonOfflineAfter { get; set; } = TimeSpan.FromMinutes(5);
+    /// <summary>How long since its last heartbeat an access connector is still considered connected (spec <c>ConnectorConnection</c>).</summary>
+    public TimeSpan AccessConnectorOfflineAfter { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>The minimum gap between conditional heartbeat writes, so a polling daemon does not hammer its row.</summary>
+    /// <summary>The minimum gap between conditional heartbeat writes, so a polling access connector does not hammer its row.</summary>
     public TimeSpan HeartbeatMinInterval { get; set; } = TimeSpan.FromMinutes(1);
 
     /// <summary>The minimum gap the schedule calculator enforces between two consecutive occurrences of a config's cron.</summary>

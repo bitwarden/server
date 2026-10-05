@@ -39,7 +39,7 @@ internal class SecretsManagerApiKeyProvider : IClientProvider
 
         switch (apiKey)
         {
-            // A non-service-account machine credential (e.g. a PAM rotation daemon's) arrives here with
+            // A non-service-account machine credential (e.g. a PAM access connector's) arrives here with
             // ServiceAccountOrganizationId defaulted. Match on the service-account id, not the type, and refuse
             // anything else; those credentials belong to their own provider.
             case ServiceAccountApiKeyDetails { ServiceAccountId: not null } key:

@@ -97,15 +97,15 @@ public static class Policies
     public const string Secrets = "Secrets";
 
     /// <summary>
-    /// Policy to restrict access to API endpoints intended for use by PAM rotation daemons only.
+    /// Policy to restrict access to API endpoints intended for use by PAM access connectors only.
     /// </summary>
     /// <remarks>
     /// <example>
     /// Can be used with the <c>Authorize</c> attribute, for example:
     /// <code>
-    /// [Authorize(Policy = Policies.PamRotationDaemon)]
+    /// [Authorize(Policy = Policies.PamAccessConnector)]
     /// </code>
     /// </example>
     /// </remarks>
-    public const string PamRotationDaemon = "PamRotationDaemon";
+    public const string PamAccessConnector = "PamAccessConnector";
 }

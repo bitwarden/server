@@ -14,7 +14,7 @@ public class PamRotationAttemptResponseModel
 
         Id = attempt.Id;
         JobId = attempt.JobId;
-        ClaimedByAccessConnectorId = attempt.ClaimedByDaemonId;
+        ClaimedByAccessConnectorId = attempt.ClaimedByAccessConnectorId;
         CipherUpdated = attempt.CipherUpdated;
         Status = attempt.Status;
         FailureReason = attempt.FailureReason;

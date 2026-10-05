@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[PamDaemon_Create]
+CREATE PROCEDURE [dbo].[PamAccessConnector_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(200),
@@ -11,7 +11,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[PamDaemon]
+    INSERT INTO [dbo].[PamAccessConnector]
     (
         [Id],
         [OrganizationId],

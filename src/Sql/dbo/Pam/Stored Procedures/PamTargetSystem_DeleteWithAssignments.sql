@@ -20,7 +20,7 @@ BEGIN
         RETURN
     END
 
-    DELETE FROM [dbo].[PamDaemonTargetAssignment]
+    DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
     WHERE [TargetSystemId] = @Id
 
     DELETE FROM [dbo].[PamTargetSystem]

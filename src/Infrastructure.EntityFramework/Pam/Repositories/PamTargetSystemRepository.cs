@@ -50,7 +50,7 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
             return false;
         }
 
-        await dbContext.PamDaemonTargetAssignments
+        await dbContext.PamAccessConnectorTargetAssignments
             .Where(a => a.TargetSystemId == targetSystemId)
             .ExecuteDeleteAsync();
 

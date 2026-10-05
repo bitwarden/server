@@ -4,8 +4,8 @@ namespace Bit.Pam.Models;
 
 /// <summary>
 /// The result of <c>IPamRotationJobRepository.ClaimAsync</c>. On <see cref="PamRotationClaimOutcome.Claimed"/> the
-/// remaining fields carry the work snapshot handed back to the daemon (spec <c>ClaimRotation</c>'s snapshot); they
-/// are null for any other <see cref="Outcome"/>.
+/// remaining fields carry the work snapshot handed back to the access connector (spec <c>ClaimRotation</c>'s snapshot);
+/// they are null for any other <see cref="Outcome"/>.
 /// </summary>
 public class PamRotationClaimResult
 {
@@ -27,6 +27,6 @@ public class PamRotationClaimResult
     public string? AccountIdentity { get; init; }
     public bool? TerminateSessions { get; init; }
 
-    /// <summary>The claim's lease deadline (<c>ClaimedAt + ReleaseDelay</c>) — the daemon should finish before this.</summary>
+    /// <summary>The claim's lease deadline (<c>ClaimedAt + ReleaseDelay</c>) — the access connector should finish before this.</summary>
     public DateTime? ExecuteBy { get; init; }
 }

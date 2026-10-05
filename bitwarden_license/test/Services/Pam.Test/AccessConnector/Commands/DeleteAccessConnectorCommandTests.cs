@@ -19,56 +19,66 @@ public class DeleteAccessConnectorCommandTests
     private static readonly DateTime _now = new(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_DaemonMissing_ThrowsNotFound(Guid organizationId, Guid actingUserId, Guid daemonId)
+    public async Task DeleteAsync_AccessConnectorMissing_ThrowsNotFound(
+        Guid organizationId, Guid actingUserId, Guid accessConnectorId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns((PamDaemon?)null);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns((PamAccessConnector?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(organizationId, actingUserId, daemonId));
+            () => sutProvider.Sut.DeleteAsync(organizationId, actingUserId, accessConnectorId));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_WrongOrg_ThrowsNotFound(Guid actingUserId, PamDaemon daemon)
+    public async Task DeleteAsync_WrongOrg_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        // daemon.OrganizationId is an unrelated AutoFixture Guid -- a cross-org lookup must 404, never leak existence.
+        // accessConnector.OrganizationId is an unrelated AutoFixture Guid -- a cross-org lookup must 404, never leak
+        // existence.
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), actingUserId, daemon.Id));
+            () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), actingUserId, accessConnector.Id));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default!);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_DeletesTheDaemonThroughTheRepositoryCascade(Guid actingUserId, PamDaemon daemon)
+    public async Task DeleteAsync_DeletesTheAccessConnectorThroughTheRepositoryCascade(
+        Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.DeleteAsync(daemon.OrganizationId, actingUserId, daemon.Id);
+        await sutProvider.Sut.DeleteAsync(accessConnector.OrganizationId, actingUserId, accessConnector.Id);
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).DeleteAsync(daemon);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().Received(1).DeleteAsync(accessConnector);
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteAsync_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon)
+    public async Task DeleteAsync_EmitsAttemptThenOutcome(Guid actingUserId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.DeleteAsync(daemon.OrganizationId, actingUserId, daemon.Id);
+        await sutProvider.Sut.DeleteAsync(accessConnector.OrganizationId, actingUserId, accessConnector.Id);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorDeleted && e.Phase == AccessAuditEventPhase.Attempt
-            && e.AccessConnectorId == daemon.Id && e.AccessConnectorName == daemon.Name && e.ActorId == actingUserId));
+            && e.AccessConnectorId == accessConnector.Id && e.AccessConnectorName == accessConnector.Name
+            && e.ActorId == actingUserId));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorDeleted && e.Phase == AccessAuditEventPhase.Outcome
-            && e.AccessConnectorId == daemon.Id));
+            && e.AccessConnectorId == accessConnector.Id));
     }
 
     private static SutProvider<DeleteAccessConnectorCommand> Setup()

@@ -25,7 +25,7 @@ public static class ApiScopes
             new(ApiInstallation, "API Installation Access"),
             new(Internal, "Internal Access"),
             new(ApiSecrets, "Secrets Manager Access"),
-            new(ApiPamRotation, "PAM Rotation Daemon Access"),
+            new(ApiPamRotation, "PAM Rotation AccessConnector Access"),
             new(ApiSendAccess, "API Send Access"),
         };
     }

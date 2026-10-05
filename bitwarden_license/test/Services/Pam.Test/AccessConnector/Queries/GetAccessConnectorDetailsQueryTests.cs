@@ -15,86 +15,94 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Queries;
 
 /// <summary>
-/// ManageAccessConnectorRequirement only proves the caller administers the organization named in the route, so this query's
-/// own OrganizationId check is the sole thing keeping an Owner of one organization from reading another's daemon and
-/// the rotation activity it has worked.
+/// ManageAccessConnectorRequirement only proves the caller administers the organization named in the route, so this
+/// query's own OrganizationId check is the sole thing keeping an Owner of one organization from reading another's
+/// access connector and the rotation activity it has worked.
 /// </summary>
 public class GetAccessConnectorDetailsQueryTests
 {
     private static readonly DateTime _now = new(2026, 8, 25, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task GetAsync_DaemonMissing_ThrowsNotFound(Guid organizationId, Guid daemonId)
+    public async Task GetAsync_AccessConnectorMissing_ThrowsNotFound(Guid organizationId, Guid accessConnectorId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns((PamDaemon?)null);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns((PamAccessConnector?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, daemonId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnectorId));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByDaemonIdAsync(default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_DaemonBelongsToAnotherOrganization_ThrowsNotFound(Guid organizationId, PamDaemon daemon)
+    public async Task GetAsync_AccessConnectorBelongsToAnotherOrganization_ThrowsNotFound(
+        Guid organizationId, PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.OrganizationId = Guid.NewGuid();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.OrganizationId = Guid.NewGuid();
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, daemon.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnector.Id));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByDaemonIdAsync(default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_DaemonInTheRouteOrganization_ReturnsConnectionAssignmentsAndActivity(
-        PamDaemon daemon, List<PamRotationJobDetails> jobs, Guid otherDaemonId)
+    public async Task GetAsync_AccessConnectorInTheRouteOrganization_ReturnsConnectionAssignmentsAndActivity(
+        PamAccessConnector accessConnector, List<PamRotationJobDetails> jobs, Guid otherAccessConnectorId)
     {
         var sutProvider = Setup();
-        daemon.LastHeartbeatAt = _now - new PamRotationOptions().DaemonOfflineAfter + TimeSpan.FromSeconds(1);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
-        var assigned = Assignment(daemon.OrganizationId, daemon.Id);
-        sutProvider.GetDependency<IPamDaemonRepository>()
-            .GetAssignmentsByOrganizationIdAsync(daemon.OrganizationId)
-            .Returns([assigned, Assignment(daemon.OrganizationId, otherDaemonId)]);
+        accessConnector.LastHeartbeatAt =
+            _now - new PamRotationOptions().AccessConnectorOfflineAfter + TimeSpan.FromSeconds(1);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
+        var assigned = Assignment(accessConnector.OrganizationId, accessConnector.Id);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .GetAssignmentsByOrganizationIdAsync(accessConnector.OrganizationId)
+            .Returns([assigned, Assignment(accessConnector.OrganizationId, otherAccessConnectorId)]);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .GetManyRecentByDaemonIdAsync(daemon.Id, Arg.Any<int>())
+            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Any<int>())
             .Returns(jobs);
 
-        var result = await sutProvider.Sut.GetAsync(daemon.OrganizationId, daemon.Id);
+        var result = await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
 
-        Assert.Same(daemon, result.Daemon.Daemon);
-        Assert.True(result.Daemon.IsConnected);
-        // The fleet-wide assignment read is narrowed to this daemon's own targets.
-        Assert.Equal([assigned.TargetSystemId], result.Daemon.AssignedTargetSystemIds);
+        Assert.Same(accessConnector, result.AccessConnector.AccessConnector);
+        Assert.True(result.AccessConnector.IsConnected);
+        // The fleet-wide assignment read is narrowed to this access connector's own targets.
+        Assert.Equal([assigned.TargetSystemId], result.AccessConnector.AssignedTargetSystemIds);
         Assert.Equal(jobs.Count, result.Jobs.Count);
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_HeartbeatOlderThanOfflineAfter_IsNotConnected(PamDaemon daemon)
+    public async Task GetAsync_HeartbeatOlderThanOfflineAfter_IsNotConnected(PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        daemon.LastHeartbeatAt = _now - new PamRotationOptions().DaemonOfflineAfter - TimeSpan.FromSeconds(1);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        accessConnector.LastHeartbeatAt =
+            _now - new PamRotationOptions().AccessConnectorOfflineAfter - TimeSpan.FromSeconds(1);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        var result = await sutProvider.Sut.GetAsync(daemon.OrganizationId, daemon.Id);
+        var result = await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
 
-        Assert.False(result.Daemon.IsConnected);
+        Assert.False(result.AccessConnector.IsConnected);
     }
 
     /// <summary>The activity section is capped rather than unbounded, so the read must carry a positive limit.</summary>
     [Theory, BitAutoData]
-    public async Task GetAsync_ReadsABoundedNumberOfJobs(PamDaemon daemon)
+    public async Task GetAsync_ReadsABoundedNumberOfJobs(PamAccessConnector accessConnector)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
-        await sutProvider.Sut.GetAsync(daemon.OrganizationId, daemon.Id);
+        await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().Received(1)
-            .GetManyRecentByDaemonIdAsync(daemon.Id, Arg.Is<int>(limit => limit > 0));
+            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Is<int>(limit => limit > 0));
     }
 
     private static SutProvider<GetAccessConnectorDetailsQuery> Setup()
@@ -105,10 +113,10 @@ public class GetAccessConnectorDetailsQueryTests
         return sutProvider;
     }
 
-    private static PamDaemonTargetAssignment Assignment(Guid organizationId, Guid daemonId) => new()
+    private static PamAccessConnectorTargetAssignment Assignment(Guid organizationId, Guid accessConnectorId) => new()
     {
         Id = CombGuid.Generate(),
-        DaemonId = daemonId,
+        AccessConnectorId = accessConnectorId,
         TargetSystemId = CombGuid.Generate(),
         OrganizationId = organizationId,
         CreationDate = _now,

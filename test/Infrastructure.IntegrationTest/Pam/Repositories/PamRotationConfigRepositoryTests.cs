@@ -192,7 +192,7 @@ public class PamRotationConfigRepositoryTests
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         IApiKeyRepository apiKeyRepository,
-        IPamDaemonRepository pamDaemonRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
         ICipherRepository cipherRepository,
         IPamRotationConfigRepository pamRotationConfigRepository,
         IPamRotationJobRepository pamRotationJobRepository)
@@ -200,22 +200,24 @@ public class PamRotationConfigRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
-        var daemon = await CreateEnrolledDaemonAsync(apiKeyRepository, pamDaemonRepository, organization.Id);
-        await AssignAsync(pamDaemonRepository, daemon.Id, target.Id, organization.Id, now);
+        var accessConnector = await CreateEnrolledAccessConnectorAsync(
+            apiKeyRepository, pamAccessConnectorRepository, organization.Id);
+        await AssignAsync(pamAccessConnectorRepository, accessConnector.Id, target.Id, organization.Id, now);
         var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
         var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
         var job = BuildPendingJob(config.Id, now);
         Assert.Equal(PamRotationJobCreateOutcome.Created, await pamRotationJobRepository.CreateGuardedAsync(job));
-        var claim = await pamRotationJobRepository.ClaimAsync(job.Id, daemon.Id, now, TimeSpan.FromMinutes(15));
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            job.Id, accessConnector.Id, now, TimeSpan.FromMinutes(15));
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
 
-        // Delete is refused while a daemon holds the claim.
+        // Delete is refused while an access connector holds the claim.
         Assert.False(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
         Assert.NotNull(await pamRotationConfigRepository.GetByIdAsync(config.Id));
         Assert.NotNull(await pamRotationJobRepository.GetByIdAsync(job.Id));
 
         // A terminal job status lets the config and its job/attempt history cascade away.
-        var failure = await pamRotationJobRepository.MarkAttemptErroredAsync(claim.AttemptId!.Value, daemon.Id,
+        var failure = await pamRotationJobRepository.MarkAttemptErroredAsync(claim.AttemptId!.Value, accessConnector.Id,
             "boom", PamRotationSyncState.TargetUnchanged, now, maxAttempts: 1, retryBaseDelay: TimeSpan.FromMinutes(1));
         Assert.Equal(PamRotationJobStatus.Failed, failure.JobStatus);
 
@@ -232,7 +234,7 @@ public class PamRotationConfigRepositoryTests
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         IApiKeyRepository apiKeyRepository,
-        IPamDaemonRepository pamDaemonRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
         ICipherRepository cipherRepository,
         IPamRotationConfigRepository pamRotationConfigRepository,
         IPamRotationJobRepository pamRotationJobRepository)
@@ -240,8 +242,9 @@ public class PamRotationConfigRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
-        var daemon = await CreateEnrolledDaemonAsync(apiKeyRepository, pamDaemonRepository, organization.Id);
-        await AssignAsync(pamDaemonRepository, daemon.Id, target.Id, organization.Id, now);
+        var accessConnector = await CreateEnrolledAccessConnectorAsync(
+            apiKeyRepository, pamAccessConnectorRepository, organization.Id);
+        await AssignAsync(pamAccessConnectorRepository, accessConnector.Id, target.Id, organization.Id, now);
         var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
         var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
@@ -256,11 +259,12 @@ public class PamRotationConfigRepositoryTests
         var withActiveJob = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
         Assert.True(withActiveJob!.HasActiveJob);
 
-        var claim = await pamRotationJobRepository.ClaimAsync(job.Id, daemon.Id, now, TimeSpan.FromMinutes(15));
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            job.Id, accessConnector.Id, now, TimeSpan.FromMinutes(15));
         await pamRotationJobRepository.AcceptCipherWriteAsync(
-            claim.AttemptId!.Value, daemon.Id, "{\"rotated\":true}", cipher.RevisionDate, now);
+            claim.AttemptId!.Value, accessConnector.Id, "{\"rotated\":true}", cipher.RevisionDate, now);
         await pamRotationJobRepository.MarkAttemptRotatedAsync(
-            claim.AttemptId!.Value, daemon.Id, PamSessionTerminationOutcome.NotRequested, now);
+            claim.AttemptId!.Value, accessConnector.Id, PamSessionTerminationOutcome.NotRequested, now);
 
         var afterSuccess = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
         Assert.NotNull(afterSuccess);
@@ -288,32 +292,34 @@ public class PamRotationConfigRepositoryTests
             RevisionDate = now,
         });
 
-    private static async Task<PamDaemon> CreateEnrolledDaemonAsync(
-        IApiKeyRepository apiKeyRepository, IPamDaemonRepository pamDaemonRepository, Guid organizationId)
+    private static async Task<PamAccessConnector> CreateEnrolledAccessConnectorAsync(
+        IApiKeyRepository apiKeyRepository, IPamAccessConnectorRepository pamAccessConnectorRepository,
+        Guid organizationId)
     {
         var apiKey = await apiKeyRepository.CreateAsync(new ApiKey
         {
             ServiceAccountId = null,
-            Name = $"daemon-{Guid.NewGuid()}",
+            Name = $"access-connector-{Guid.NewGuid()}",
             Scope = """["api.pam.rotation"]""",
             EncryptedPayload = "encrypted-payload",
             Key = "encrypted-key",
         });
-        return await pamDaemonRepository.CreateAsync(new PamDaemon
+        return await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organizationId,
-            Name = $"daemon-{Guid.NewGuid()}",
+            Name = $"access-connector-{Guid.NewGuid()}",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
     }
 
     private static async Task AssignAsync(
-        IPamDaemonRepository pamDaemonRepository, Guid daemonId, Guid targetSystemId, Guid organizationId, DateTime now)
-        => await pamDaemonRepository.CreateAssignmentAsync(new PamDaemonTargetAssignment
+        IPamAccessConnectorRepository pamAccessConnectorRepository, Guid accessConnectorId, Guid targetSystemId,
+        Guid organizationId, DateTime now)
+        => await pamAccessConnectorRepository.CreateAssignmentAsync(new PamAccessConnectorTargetAssignment
         {
             Id = CombGuid.Generate(),
-            DaemonId = daemonId,
+            AccessConnectorId = accessConnectorId,
             TargetSystemId = targetSystemId,
             OrganizationId = organizationId,
             CreationDate = now,

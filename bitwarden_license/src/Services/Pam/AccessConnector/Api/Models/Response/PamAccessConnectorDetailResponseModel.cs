@@ -11,7 +11,8 @@ namespace Bit.Services.Pam.AccessConnector.Api.Models.Response;
 public class PamAccessConnectorDetailResponseModel : PamAccessConnectorResponseModel
 {
     public PamAccessConnectorDetailResponseModel(PamAccessConnectorHistory history)
-        : base(history?.Daemon ?? throw new ArgumentNullException(nameof(history)), "pamAccessConnectorDetails")
+        : base(
+            history?.AccessConnector ?? throw new ArgumentNullException(nameof(history)), "pamAccessConnectorDetails")
     {
         Jobs = history.Jobs.Select(job => new PamRotationJobResponseModel(job)).ToList();
     }

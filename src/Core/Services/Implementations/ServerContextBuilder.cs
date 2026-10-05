@@ -15,7 +15,7 @@ public class ServerContextBuilder : IContextBuilder
     private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
-    private const string _contextKindPamRotationDaemon = "pam-rotation-daemon";
+    private const string _contextKindPamAccessConnector = "pam-rotation-daemon";
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
@@ -121,25 +121,27 @@ public class ServerContextBuilder : IContextBuilder
                 }
                 break;
 
-            case IdentityClientType.RotationDaemon:
+            case IdentityClientType.AccessConnector:
                 {
-                    // A PAM rotation daemon's bearer token carries no device/user/organization claim recognized by
+                    // A PAM access connector's bearer token carries no device/user/organization claim recognized by
                     // the other branches above, so it needs its own context kind or every flag falls back to
-                    // defaultValue on every daemon-facing request (mirrors ServiceAccount's fallback).
-                    if (currentContext.PamDaemonId.HasValue)
+                    // defaultValue on every connector-facing request (mirrors ServiceAccount's fallback).
+                    if (currentContext.PamAccessConnectorId.HasValue)
                     {
-                        var ldDaemon = LaunchDarkly.Sdk.Context.Builder(currentContext.PamDaemonId.Value.ToString());
+                        var ldAccessConnector = LaunchDarkly.Sdk.Context.Builder(
+                            currentContext.PamAccessConnectorId.Value.ToString());
 
-                        ldDaemon.Kind(_contextKindPamRotationDaemon);
-                        SetCommonContextAttributes(ldDaemon);
+                        ldAccessConnector.Kind(_contextKindPamAccessConnector);
+                        SetCommonContextAttributes(ldAccessConnector);
 
-                        if (currentContext.PamDaemonOrganizationId.HasValue)
+                        if (currentContext.PamAccessConnectorOrganizationId.HasValue)
                         {
-                            ldDaemon.Set(_contextAttributeOrganizations,
-                                LdValue.ArrayOf(LdValue.Of(currentContext.PamDaemonOrganizationId.Value.ToString())));
+                            ldAccessConnector.Set(_contextAttributeOrganizations,
+                                LdValue.ArrayOf(
+                                    LdValue.Of(currentContext.PamAccessConnectorOrganizationId.Value.ToString())));
                         }
 
-                        builder.Add(ldDaemon.Build());
+                        builder.Add(ldAccessConnector.Build());
                     }
                 }
                 break;

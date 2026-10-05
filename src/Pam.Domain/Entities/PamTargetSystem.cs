@@ -7,8 +7,8 @@ namespace Bit.Pam.Entities;
 
 /// <summary>
 /// A system PAM can rotate credentials against: an <see cref="PamTargetSystemMethod.Automatic"/> target driven by a
-/// <see cref="PamDaemon"/> (Entra, MSSQL, or a custom script), or a <see cref="PamTargetSystemMethod.Manual"/> target
-/// that only tracks a schedule and records rotations a human performs out of band. <see cref="Kind"/> and
+/// <see cref="PamAccessConnector"/> (Entra, MSSQL, or a custom script), or a <see cref="PamTargetSystemMethod.Manual"/>
+/// target that only tracks a schedule and records rotations a human performs out of band. <see cref="Kind"/> and
 /// <see cref="PasswordPolicy"/> are set only for an automatic target.
 /// </summary>
 public class PamTargetSystem : ITableObject<Guid>
@@ -25,14 +25,14 @@ public class PamTargetSystem : ITableObject<Guid>
     public PamTargetSystemKind? Kind { get; set; }
 
     /// <summary>
-    /// JSON document of the <see cref="Models.PamPasswordPolicy"/> the rotation daemon generates candidate passwords
+    /// JSON document of the <see cref="Models.PamPasswordPolicy"/> the access connector generates candidate passwords
     /// against. Null for a <see cref="PamTargetSystemMethod.Manual"/> target.
     /// </summary>
     [MaxLength(2000)]
     public string? PasswordPolicy { get; set; }
 
     /// <summary>
-    /// Whether the target can terminate an account's existing sessions after a rotation. Null until a daemon
+    /// Whether the target can terminate an account's existing sessions after a rotation. Null until an access connector
     /// reports its capability; required true for a <see cref="PamRotationConfig"/> to set
     /// <see cref="PamRotationConfig.TerminateSessions"/>.
     /// </summary>

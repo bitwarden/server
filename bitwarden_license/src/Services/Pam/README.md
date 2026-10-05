@@ -53,7 +53,7 @@ the whole authorization story:
 | -------------------------------------------- | -------------------------------------------------- | -------------------- | ---------------------------------- |
 | Leases, access requests, rules, audit        | `Application`                                      | `Pam`                | A member's token                   |
 | `organizations/{orgId}/access-connectors/...` | `Application` + `ManageAccessConnectorRequirement` | `PamAccessConnector` | An Owner or Admin                  |
-| `access-connectors/rotation/...`             | `PamRotationDaemon`                                | `PamAccessConnector` | An access connector's machine token |
+| `access-connectors/rotation/...`             | `PamAccessConnector`                               | `PamAccessConnector` | An access connector's machine token |
 
 Each group shares one cross-cutting chain: authorization, exception translation to
 `ErrorResponseModel`, the feature gate, and request-model validation. Nested groups inherit it, so a

@@ -4,7 +4,7 @@ namespace Bit.Pam.Models;
 
 /// <summary>
 /// The password-generation policy for an automatic <see cref="Entities.PamTargetSystem"/>, persisted as the JSON
-/// document in <see cref="Entities.PamTargetSystem.PasswordPolicy"/>. The rotation daemon generates a candidate
+/// document in <see cref="Entities.PamTargetSystem.PasswordPolicy"/>. The access connector generates a candidate
 /// password against these constraints before writing it to the target.
 /// </summary>
 public record PamPasswordPolicy
