@@ -39,7 +39,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     private static string KeyFor(Guid organizationId) => $"sso:saml2:rsa15-deprecation-email:{organizationId}";
 
     [Theory, BitAutoData]
-    public async Task TryClaimAsync_NoEntry_ReturnsTrueAndRecordsSendTime(Guid organizationId)
+    public async Task TryClaimIntervalAsync_NoEntry_ReturnsTrueAndRecordsSendTime(Guid organizationId)
     {
         var sutProvider = BuildSut(14);
         var nowTicks = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcTicks;
@@ -56,7 +56,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     }
 
     [Theory, BitAutoData]
-    public async Task TryClaimAsync_EntryWithinInterval_ReturnsFalseAndDoesNotWrite(Guid organizationId)
+    public async Task TryClaimIntervalAsync_EntryWithinInterval_ReturnsFalseAndDoesNotWrite(Guid organizationId)
     {
         var sutProvider = BuildSut(14);
         var now = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow();
@@ -70,7 +70,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     }
 
     [Theory, BitAutoData]
-    public async Task TryClaimAsync_EntryOlderThanInterval_ReturnsTrueAndOverwrites(Guid organizationId)
+    public async Task TryClaimIntervalAsync_EntryOlderThanInterval_ReturnsTrueAndOverwrites(Guid organizationId)
     {
         var sutProvider = BuildSut(14);
         var now = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow();
@@ -87,7 +87,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     }
 
     [Theory, BitAutoData]
-    public async Task TryClaimAsync_IntervalShortenedBelowElapsedTime_ReturnsTrue(Guid organizationId)
+    public async Task TryClaimIntervalAsync_IntervalShortenedBelowElapsedTime_ReturnsTrue(Guid organizationId)
     {
         var sutProvider = BuildSut(7);
         var now = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow();
@@ -106,7 +106,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task TryClaimAsync_IntervalZeroOrLess_ReturnsFalseWithoutCacheCall(int intervalInDays)
+    public async Task TryClaimIntervalAsync_IntervalZeroOrLess_ReturnsFalseWithoutCacheCall(int intervalInDays)
     {
         var sutProvider = BuildSut(intervalInDays);
 
@@ -119,7 +119,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     }
 
     [Theory, BitAutoData]
-    public async Task TryClaimAsync_UnparseableEntry_ReturnsTrue(Guid organizationId)
+    public async Task TryClaimIntervalAsync_UnparseableEntry_ReturnsTrue(Guid organizationId)
     {
         var sutProvider = BuildSut(14);
         SetStoredValue(sutProvider, KeyFor(organizationId), Encoding.UTF8.GetBytes("not-a-number"));
@@ -137,7 +137,7 @@ public class Saml2Rsa15DeprecationNoticeIntervalTests
     [Theory]
     [InlineData(14)]
     [InlineData(7)]
-    public async Task TryClaimAsync_WritesExpiryEqualToIntervalAndKeyWithOrganizationId(int intervalInDays)
+    public async Task TryClaimIntervalAsync_WritesExpiryEqualToIntervalAndKeyWithOrganizationId(int intervalInDays)
     {
         var organizationId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var sutProvider = BuildSut(intervalInDays);
