@@ -8,6 +8,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.KeyManagement.Kdf.Implementations;
 

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using OneOf;
 using Xunit;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.KeyManagement.Kdf;
 
