@@ -9,6 +9,7 @@ using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -18,6 +19,7 @@ using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Authorization;
+using Bit.Core.Vault.Authorization.Ciphers;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -25,6 +27,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
@@ -2495,14 +2498,18 @@ public class CiphersControllerTests
     }
 
     /// <summary>
-    /// Authorizes the caller for <c>GetAdmin</c>, which still guards on the deprecated
-    /// <c>ICurrentContext.ViewAllCollections</c>.
+    /// Sets the outcome of <c>GetAdmin</c>'s <see cref="CipherOrganizationOperations.ReadAnyAsAdmin"/> check.
     /// </summary>
-    private static void CanViewAllCollections(SutProvider<CiphersController> sutProvider, Guid organizationId)
+    private static void AuthorizeGetAdmin(
+        SutProvider<CiphersController> sutProvider, Guid organizationId, bool authorized = true)
     {
-#pragma warning disable CS0618 // GetAdmin authorizes through this deprecated check, so the test must stub it.
-        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organizationId).Returns(true);
-#pragma warning restore CS0618
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                new OrganizationScope(organizationId),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Single() == CipherOrganizationOperations.ReadAnyAsAdmin))
+            .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
     }
 
     private static CipherOrganizationDetailsWithCollections OrganizationCipher(Guid organizationId, string data) =>
@@ -2517,6 +2524,25 @@ public class CiphersControllerTests
             new Dictionary<Guid, IGrouping<Guid, CollectionCipher>>());
 
     [Theory, BitAutoData]
+    public async Task GetAdmin_Unauthorized_ThrowsNotFoundException(
+        Guid userId, Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        var cipher = new CipherOrganizationDetails
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        AuthorizeGetAdmin(sutProvider, organizationId, authorized: false);
+        sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAdmin(cipher.Id.ToString()));
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAdmin_LeasingGatedCipher_WebVault_ReturnsPartialShape(
         Guid userId, CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
@@ -2529,7 +2555,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        CanViewAllCollections(sutProvider, organization.Id);
+        AuthorizeGetAdmin(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
@@ -2560,7 +2586,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        CanViewAllCollections(sutProvider, organization.Id);
+        AuthorizeGetAdmin(sutProvider, organization.Id);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICollectionCipherRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
