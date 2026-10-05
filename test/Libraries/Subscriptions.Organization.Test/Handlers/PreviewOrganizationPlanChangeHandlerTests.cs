@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Invoicing.InvoicePreviews.Models;
@@ -48,7 +47,7 @@ public class PreviewOrganizationPlanChangeHandlerTests
     {
         Tier = PlanTierType.Enterprise,
         Cadence = PlanCadenceType.Annually,
-        BillingAddress = new BillingAddress { Country = "US", PostalCode = "90210" }
+        BillingAddress = new BillingAddressSelections("US", "90210", null)
     };
 
     private static InvoicePreview SamplePreview() => new()

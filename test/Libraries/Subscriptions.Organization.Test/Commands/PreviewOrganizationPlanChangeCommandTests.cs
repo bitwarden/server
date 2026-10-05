@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
@@ -278,7 +277,7 @@ public class PreviewOrganizationPlanChangeCommandTests
             .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
-            country: "DE", postalCode: "10115", taxId: new TaxID("eu_vat", "DE123456789")));
+            country: "DE", postalCode: "10115", taxId: new TaxIdSelection("eu_vat", "DE123456789")));
 
         Assert.NotNull(options);
         var taxId = Assert.Single(options!.CustomerDetails.TaxIds);
@@ -317,6 +316,37 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
+    public async Task Run_RequestTaxId_TakesPrecedenceOverOnFileTaxId()
+    {
+        var organization = new OrganizationEntity
+        {
+            Id = Guid.NewGuid(),
+            GatewayCustomerId = "cus_1",
+            GatewaySubscriptionId = "sub_1",
+            PlanType = PlanType.TeamsAnnually,
+            Seats = 5
+        };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(EnterprisePlan());
+        _stripeAdapter.GetSubscriptionAsync("sub_1", Arg.Any<SubscriptionGetOptions>()).Returns(SubscriptionWithCustomerTaxId());
+        _taxService.GetStripeTaxCode("US", "12-3456789").Returns("us_ein");
+        InvoiceCreatePreviewOptions? options = null;
+        _invoicePreviewService
+            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
+                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
+            .Returns(SampleInvoicePreview());
+
+        await _sut.Run(organization, Request(PlanTierType.Enterprise, PlanCadenceType.Annually,
+            taxId: new TaxIdSelection("us_ein", "12-3456789")));
+
+        Assert.NotNull(options);
+        var taxId = Assert.Single(options!.CustomerDetails.TaxIds);
+        Assert.Equal("us_ein", taxId.Type);
+        Assert.Equal("12-3456789", taxId.Value);
+    }
+
+    [Fact]
     public async Task Run_SpanishNifTaxId_AlsoAddsEuVat()
     {
         var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
@@ -330,7 +360,7 @@ public class PreviewOrganizationPlanChangeCommandTests
             .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
-            country: "ES", postalCode: "28001", taxId: new TaxID(StripeConstants.TaxIdType.SpanishNIF, "A12345678")));
+            country: "ES", postalCode: "28001", taxId: new TaxIdSelection(StripeConstants.TaxIdType.SpanishNIF, "A12345678")));
 
         Assert.NotNull(options);
         var taxIds = options!.CustomerDetails.TaxIds;
@@ -553,7 +583,7 @@ public class PreviewOrganizationPlanChangeCommandTests
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
-                taxId: new TaxID("gb_vat", "invalid"))));
+                taxId: new TaxIdSelection("gb_vat", "invalid"))));
     }
 
     [Fact]
@@ -611,21 +641,25 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     [Fact]
-    public async Task Run_TaxIdWithBlankValue_SendsNoTaxId()
+    public async Task Run_TaxIdWithBlankValue_ThrowsBadRequest()
     {
         var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
 
         _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
-        InvoiceCreatePreviewOptions? options = null;
-        _invoicePreviewService
-            .GetInvoicePreviewAsync(Arg.Do<InvoiceCreatePreviewOptions>(o => options = o),
-                Arg.Any<PlanTierType>(), Arg.Any<PlanCadenceType>())
-            .Returns(SampleInvoicePreview());
 
-        await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually, taxId: new TaxID("us_ein", "")));
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually, taxId: new TaxIdSelection("us_ein", ""))));
+    }
 
-        Assert.NotNull(options);
-        Assert.Null(options!.CustomerDetails.TaxIds);
+    [Fact]
+    public async Task Run_TaxIdWithBlankCode_ThrowsBadRequest()
+    {
+        var organization = new OrganizationEntity { Id = Guid.NewGuid(), PlanType = PlanType.Free, Seats = 5 };
+
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(TeamsPlan());
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually, taxId: new TaxIdSelection("", "A12345678"))));
     }
 
     [Fact]
@@ -691,7 +725,7 @@ public class PreviewOrganizationPlanChangeCommandTests
             .Returns(SampleInvoicePreview());
 
         await _sut.Run(organization, Request(PlanTierType.Teams, PlanCadenceType.Annually,
-            taxId: new TaxID("us_ein", "unknown")));
+            taxId: new TaxIdSelection("us_ein", "unknown")));
 
         Assert.NotNull(options);
         var taxId = Assert.Single(options!.CustomerDetails.TaxIds);
@@ -700,12 +734,12 @@ public class PreviewOrganizationPlanChangeCommandTests
     }
 
     private static PreviewOrganizationPlanChangeRequest Request(
-        PlanTierType tier, PlanCadenceType cadence, string country = "US", string postalCode = "90210", TaxID? taxId = null) =>
+        PlanTierType tier, PlanCadenceType cadence, string country = "US", string postalCode = "90210", TaxIdSelection? taxId = null) =>
         new()
         {
             Tier = tier,
             Cadence = cadence,
-            BillingAddress = new BillingAddress { Country = country, PostalCode = postalCode, TaxId = taxId }
+            BillingAddress = new BillingAddressSelections(country, postalCode, taxId)
         };
 
     private static void AssertSwap(List<InvoiceSubscriptionDetailsItemOptions> items, string id, string price, long quantity)

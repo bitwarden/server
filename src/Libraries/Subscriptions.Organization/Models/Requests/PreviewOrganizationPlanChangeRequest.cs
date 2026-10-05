@@ -1,6 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Utilities;
 using Bit.Invoicing.InvoicePreviews.Models;
 
@@ -14,5 +13,5 @@ internal record PreviewOrganizationPlanChangeRequest
     [JsonConverter(typeof(EnumMemberJsonConverter<PlanCadenceType>))]
     public required PlanCadenceType Cadence { get; init; }
 
-    public BillingAddress? BillingAddress { get; init; }
+    public BillingAddressSelections? BillingAddress { get; init; }
 }
