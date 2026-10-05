@@ -79,7 +79,9 @@ public class Startup
         services.AddAdminUpstreamOidc(adminSettings);
         services.Configure<SecurityStampValidatorOptions>(options =>
         {
-            options.ValidationInterval = TimeSpan.FromMinutes(5);
+            // This interval defines the maximum delay in access changes 
+            // being reflected in the application.
+            options.ValidationInterval = TimeSpan.FromSeconds(30);
         });
         if (globalSettings.SelfHosted)
         {

@@ -153,16 +153,14 @@ public class LoginController : Controller
             return RedirectToAction("Index", new { error = 5 });
         }
 
-        // IsPersistent = false: SSO sessions die when the browser closes, by design. The
-        // passwordless flow uses IsPersistent = true and survives a browser restart; SSO
-        // deliberately doesn't, so a shared/kiosk browser doesn't leave an admin session
-        // reachable after the operator walks away. Combined with prompt=login on every
-        // sign-in, this makes each new browser session pay the full IdP re-auth cost.
+        // Set IsPersistent = false, so SSO sessions die when the browser closes.
+        // The passwordless flow uses IsPersistent = true and survives a browser restart.
         var props = new AuthenticationProperties { IsPersistent = false };
+
         // Store id_token on the cookie. Two purposes:
         //   1. It's the value we'll attach as id_token_hint on RP-initiated logout so the
         //      upstream IdP can identify the client and honor the app-level Allowed Logout
-        //      URLs list (without it, Auth0/Okta fall back to tenant-level URLs).
+        //      URLs list.
         //   2. Its presence at logout time is what tells Logout() this was an SSO session -
         //      the passwordless flow never stores tokens, so no separate marker is needed.
         // Only id_token is stored; access/refresh tokens are unused by the Admin app and
@@ -173,11 +171,6 @@ public class LoginController : Controller
             props.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
         }
 
-        // Direct SignInWithClaimsAsync bypasses PreSignInCheck/CanSignInAsync that the
-        // passwordless path goes through via PasswordlessSignInAsync. Deliberate: impact is
-        // nil against ReadOnlyEnvIdentityUserStore (no lockout, always confirmed), and the
-        // OIDC handler + email_verified + allowlist checks above are the authorization gate
-        // for the SSO path.
         await _signInManager.SignInWithClaimsAsync(user, props, Array.Empty<Claim>());
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         _logger.LogInformation("SSO sign-in succeeded.");
@@ -196,18 +189,16 @@ public class LoginController : Controller
     {
         // Presence of `id_token` on the app cookie means this is an SSO session (the
         // passwordless flow never stores tokens), so it's both the "was SSO" signal and the
-        // value we need for id_token_hint. Read before SignOutAsync so we don't rely on
-        // handler-level caching to serve it back afterward.
-        var auth = await HttpContext.AuthenticateAsync();
-        var idToken = auth.Properties?.GetTokenValue("id_token");
+        // value we need for id_token_hint. Read before SignOutAsync clears the cookie.
+        var idToken = await HttpContext.GetTokenAsync("id_token");
 
         await _signInManager.SignOutAsync();
 
         var loggedOutRedirect = Url.Action(nameof(Index), "Login", new { success = 1 });
 
-        // Also gate on OidcEnabled: if OIDC was removed from config while an SSO-signed-in
+        // If OIDC was removed from config while an SSO-signed-in
         // admin still holds a valid cookie, SignOut against the unregistered scheme would
-        // throw InvalidOperationException (500) on the highest-privilege surface.
+        // throw InvalidOperationException (500).
         if (!string.IsNullOrEmpty(idToken) && _adminSettings.OidcEnabled)
         {
             var props = new AuthenticationProperties { RedirectUri = loggedOutRedirect };
