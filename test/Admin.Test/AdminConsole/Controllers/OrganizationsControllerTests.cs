@@ -29,6 +29,7 @@ using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Stripe;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Admin.Test.AdminConsole.Controllers;

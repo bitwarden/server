@@ -9,6 +9,7 @@ using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 

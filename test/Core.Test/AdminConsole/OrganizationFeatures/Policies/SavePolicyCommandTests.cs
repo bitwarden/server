@@ -17,6 +17,7 @@ using NSubstitute;
 using OneOf.Types;
 using Xunit;
 using EventType = Bit.Core.Enums.EventType;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 

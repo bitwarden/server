@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
 
 namespace Bit.Scim.Users;

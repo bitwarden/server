@@ -28,6 +28,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
@@ -51,7 +52,7 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
@@ -75,7 +76,7 @@ public class OrganizationService : IOrganizationService
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
