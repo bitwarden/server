@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[PamRotationAttempt_MarkRotated]
     @AttemptId UNIQUEIDENTIFIER,
-    @DaemonId UNIQUEIDENTIFIER,
+    @AccessConnectorId UNIQUEIDENTIFIER,
     @SessionTermination TINYINT,
     @Now DATETIME2(7)
 AS
@@ -18,7 +18,7 @@ BEGIN
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
     WHERE AT.[Id] = @AttemptId
         AND AT.[Status] = 0 -- Executing
-        AND AT.[ClaimedByDaemonId] = @DaemonId
+        AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
         AND AT.[CipherUpdated] = 1
         AND J.[Status] = 1 -- Claimed
 
@@ -38,7 +38,7 @@ BEGIN
     -- Clears claim fields leaving Claimed; the attempt already recorded who worked it.
     UPDATE [dbo].[PamRotationJob]
     SET [Status] = 2, -- Succeeded
-        [ClaimedByDaemonId] = NULL,
+        [ClaimedByAccessConnectorId] = NULL,
         [ClaimedAt] = NULL
     WHERE [Id] = @JobId
 

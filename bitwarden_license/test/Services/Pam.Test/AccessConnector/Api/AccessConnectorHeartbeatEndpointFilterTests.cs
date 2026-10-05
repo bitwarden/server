@@ -14,8 +14,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Api;
 
 /// <remarks>
-/// Covers the heartbeat write and its one guard. The filter does not check daemon eligibility, so that is covered
-/// by PamDaemonClientProviderTests and PamRotationJobRepositoryTests instead.
+/// Covers the heartbeat write and its one guard. The filter does not check access connector eligibility, so that is
+/// covered by PamAccessConnectorClientProviderTests and PamRotationJobRepositoryTests instead.
 /// </remarks>
 public class AccessConnectorHeartbeatEndpointFilterTests
 {
@@ -23,52 +23,53 @@ public class AccessConnectorHeartbeatEndpointFilterTests
     private static readonly TimeSpan _heartbeatMinInterval = TimeSpan.FromSeconds(15);
 
     [Fact]
-    public async Task InvokeAsync_NoPamDaemonIdInContext_ThrowsNotFound_SkipsNext()
+    public async Task InvokeAsync_NoPamAccessConnectorIdInContext_ThrowsNotFound_SkipsNext()
     {
         var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.PamDaemonId.Returns((Guid?)null);
-        var daemonRepository = Substitute.For<IPamDaemonRepository>();
-        var (context, nextCalled) = CreateContext(currentContext, daemonRepository);
+        currentContext.PamAccessConnectorId.Returns((Guid?)null);
+        var accessConnectorRepository = Substitute.For<IPamAccessConnectorRepository>();
+        var (context, nextCalled) = CreateContext(currentContext, accessConnectorRepository);
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => new AccessConnectorHeartbeatEndpointFilter().InvokeAsync(context, NextDelegate(nextCalled)).AsTask());
 
         Assert.False(nextCalled.Value);
-        await daemonRepository.DidNotReceiveWithAnyArgs().UpdateHeartbeatAsync(default, default, default);
+        await accessConnectorRepository.DidNotReceiveWithAnyArgs().UpdateHeartbeatAsync(default, default, default);
     }
 
     [Fact]
-    public async Task InvokeAsync_DaemonIdInContext_BumpsHeartbeatAndCallsNext()
+    public async Task InvokeAsync_AccessConnectorIdInContext_BumpsHeartbeatAndCallsNext()
     {
-        var daemonId = Guid.NewGuid();
+        var accessConnectorId = Guid.NewGuid();
         var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.PamDaemonId.Returns(daemonId);
-        var daemonRepository = Substitute.For<IPamDaemonRepository>();
-        var (context, nextCalled) = CreateContext(currentContext, daemonRepository);
+        currentContext.PamAccessConnectorId.Returns(accessConnectorId);
+        var accessConnectorRepository = Substitute.For<IPamAccessConnectorRepository>();
+        var (context, nextCalled) = CreateContext(currentContext, accessConnectorRepository);
 
         var result = await new AccessConnectorHeartbeatEndpointFilter().InvokeAsync(context, NextDelegate(nextCalled));
 
         Assert.True(nextCalled.Value);
         Assert.Equal("ok", result);
-        await daemonRepository.Received(1).UpdateHeartbeatAsync(daemonId, _now, _heartbeatMinInterval);
+        await accessConnectorRepository
+            .Received(1).UpdateHeartbeatAsync(accessConnectorId, _now, _heartbeatMinInterval);
     }
 
     /// <remarks>
-    /// The daemon id comes straight off the token, so the poll route -- the one a daemon hits continuously -- pays
-    /// one conditional write and no reads.
+    /// The access connector id comes straight off the token, so the poll route -- the one an access connector hits
+    /// continuously -- pays one conditional write and no reads.
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_DaemonIdInContext_WritesTheHeartbeatWithoutReadingTheDaemonRow()
+    public async Task InvokeAsync_AccessConnectorIdInContext_WritesTheHeartbeatWithoutReadingTheAccessConnectorRow()
     {
-        var daemonId = Guid.NewGuid();
+        var accessConnectorId = Guid.NewGuid();
         var currentContext = Substitute.For<ICurrentContext>();
-        currentContext.PamDaemonId.Returns(daemonId);
-        var daemonRepository = Substitute.For<IPamDaemonRepository>();
-        var (context, nextCalled) = CreateContext(currentContext, daemonRepository);
+        currentContext.PamAccessConnectorId.Returns(accessConnectorId);
+        var accessConnectorRepository = Substitute.For<IPamAccessConnectorRepository>();
+        var (context, nextCalled) = CreateContext(currentContext, accessConnectorRepository);
 
         await new AccessConnectorHeartbeatEndpointFilter().InvokeAsync(context, NextDelegate(nextCalled));
 
-        await daemonRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+        await accessConnectorRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(default);
     }
 
     private static EndpointFilterDelegate NextDelegate(StrongBox<bool> nextCalled) => _ =>
@@ -78,13 +79,13 @@ public class AccessConnectorHeartbeatEndpointFilterTests
     };
 
     private static (EndpointFilterInvocationContext Context, StrongBox<bool> NextCalled) CreateContext(
-        ICurrentContext currentContext, IPamDaemonRepository daemonRepository)
+        ICurrentContext currentContext, IPamAccessConnectorRepository accessConnectorRepository)
     {
         var timeProvider = new FakeTimeProvider();
         timeProvider.SetUtcNow(_now);
         var services = new ServiceCollection();
         services.AddSingleton(currentContext);
-        services.AddSingleton(daemonRepository);
+        services.AddSingleton(accessConnectorRepository);
         services.AddSingleton<IOptions<PamRotationOptions>>(
             Options.Create(new PamRotationOptions { HeartbeatMinInterval = _heartbeatMinInterval }));
         services.AddSingleton<TimeProvider>(timeProvider);

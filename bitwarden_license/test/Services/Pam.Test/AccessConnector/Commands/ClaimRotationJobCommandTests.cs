@@ -23,10 +23,10 @@ public class ClaimRotationJobCommandTests
 
     [Theory, BitAutoData]
     public async Task ClaimAsync_Claimed_ReturnsSnapshotAndEmitsRotationDispatchedAudit(
-        Guid daemonId, Guid jobId, PamDaemon daemon, PamRotationJob job)
+        Guid accessConnectorId, Guid jobId, PamAccessConnector accessConnector, PamRotationJob job)
     {
         var sutProvider = Setup();
-        daemon.Id = daemonId;
+        accessConnector.Id = accessConnectorId;
         job.Id = jobId;
         var result = new PamRotationClaimResult
         {
@@ -42,20 +42,21 @@ public class ClaimRotationJobCommandTests
             ExecuteBy = _now + _releaseDelay,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
+            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
             .Returns(result);
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(jobId).Returns(job);
 
-        var returned = await sutProvider.Sut.ClaimAsync(daemonId, jobId);
+        var returned = await sutProvider.Sut.ClaimAsync(accessConnectorId, jobId);
 
         Assert.Same(result, returned);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationDispatched
-                && a.OrganizationId == daemon.OrganizationId
+                && a.OrganizationId == accessConnector.OrganizationId
                 && a.ActorId == null
-                && a.AccessConnectorId == daemonId
-                && a.AccessConnectorName == daemon.Name
+                && a.AccessConnectorId == accessConnectorId
+                && a.AccessConnectorName == accessConnector.Name
                 && a.RotationJobId == jobId
                 && a.RotationConfigId == job.RotationConfigId
                 && a.CipherId == result.CipherId
@@ -65,27 +66,27 @@ public class ClaimRotationJobCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ClaimAsync_NotClaimable_ThrowsConflict_NoAudit(Guid daemonId, Guid jobId)
+    public async Task ClaimAsync_NotClaimable_ThrowsConflict_NoAudit(Guid accessConnectorId, Guid jobId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
+            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
             .Returns(new PamRotationClaimResult { Outcome = PamRotationClaimOutcome.NotClaimable });
 
-        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.ClaimAsync(daemonId, jobId));
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.ClaimAsync(accessConnectorId, jobId));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
-    public async Task ClaimAsync_NotEligible_ThrowsNotFound_NoAudit(Guid daemonId, Guid jobId)
+    public async Task ClaimAsync_NotEligible_ThrowsNotFound_NoAudit(Guid accessConnectorId, Guid jobId)
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .ClaimAsync(jobId, daemonId, _now, _releaseDelay)
+            .ClaimAsync(jobId, accessConnectorId, _now, _releaseDelay)
             .Returns(new PamRotationClaimResult { Outcome = PamRotationClaimOutcome.NotEligible });
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ClaimAsync(daemonId, jobId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ClaimAsync(accessConnectorId, jobId));
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }

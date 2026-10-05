@@ -84,17 +84,17 @@ Every timing knob lives on [`PamRotationOptions`](PamRotationOptions.cs), bound 
 than reading configuration — so the defaults in that one file are the whole truth for an
 unconfigured environment. The values worth knowing before reading anything else:
 
-| Option                 | Default    | What it bounds                                                        |
-| ---------------------- | ---------- | --------------------------------------------------------------------- |
-| `JobTtl`               | 1 hour     | How long a job may live before the sweep times it out.                |
-| `ReleaseDelay`         | 15 minutes | The claim lease — how long an access connector holds a job before it can be reclaimed. |
-| `MaxAttempts`          | 5          | Failed attempts a job may accrue before it fails outright.            |
-| `RetryBaseDelay`       | 1 second   | The base of the exponential retry backoff.                            |
-| `DaemonOfflineAfter`   | 5 minutes  | How long since its last heartbeat an access connector still counts as connected. |
-| `HeartbeatMinInterval` | 1 minute   | The server-side throttle on heartbeat writes, and the floor an access connector should not poll faster than. |
-| `MinScheduleInterval`  | 15 minutes | The floor on how often a cron schedule may fire.                      |
-| `OnDemandCooldown`     | 1 minute   | The floor between two on-demand triggers of one config.               |
-| `FailureRetryDelay`    | 1 hour     | How far out a config's next rotation moves after its job fails.       |
+| Option                        | Default    | What it bounds                                                        |
+| ----------------------------- | ---------- | --------------------------------------------------------------------- |
+| `JobTtl`                      | 1 hour     | How long a job may live before the sweep times it out.                |
+| `ReleaseDelay`                | 15 minutes | The claim lease — how long an access connector holds a job before it can be reclaimed. |
+| `MaxAttempts`                 | 5          | Failed attempts a job may accrue before it fails outright.            |
+| `RetryBaseDelay`              | 1 second   | The base of the exponential retry backoff.                            |
+| `AccessConnectorOfflineAfter` | 5 minutes  | How long since its last heartbeat an access connector still counts as connected. |
+| `HeartbeatMinInterval`        | 1 minute   | The server-side throttle on heartbeat writes, and the floor an access connector should not poll faster than. |
+| `MinScheduleInterval`         | 15 minutes | The floor on how often a cron schedule may fire.                      |
+| `OnDemandCooldown`            | 1 minute   | The floor between two on-demand triggers of one config.               |
+| `FailureRetryDelay`           | 1 hour     | How far out a config's next rotation moves after its job fails.       |
 
 ## Feature flags
 

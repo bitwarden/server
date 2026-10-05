@@ -67,7 +67,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             return;
         }
 
-        // Manual target: there is no daemon to offer a job to, so the obligation is pulled due immediately.
+        // Manual target: there is no access connector to offer a job to, so the obligation is pulled due immediately.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var toPersist = new PamRotationConfig
         {

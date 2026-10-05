@@ -65,7 +65,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.Scheduled,
-            ClaimedByDaemonId = null,
+            ClaimedByAccessConnectorId = null,
             AttemptCount = 0,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -96,7 +96,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.AccessEnd,
-            ClaimedByDaemonId = null,
+            ClaimedByAccessConnectorId = null,
             AttemptCount = 0,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -114,7 +114,7 @@ public class PamRotationSweepServiceTests
 
     [Theory, BitAutoData]
     public async Task SweepAsync_TimeoutPhase_StuckJob_EmitsAuditWithStuckDetail(
-        PamRotationConfig config, Guid claimedByDaemonId)
+        PamRotationConfig config, Guid claimedByAccessConnectorId)
     {
         var sutProvider = Setup();
         var timedOutJob = new PamTimedOutJob
@@ -124,7 +124,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = config.OrganizationId,
             CipherId = config.CipherId,
             Source = PamRotationSource.Scheduled,
-            ClaimedByDaemonId = claimedByDaemonId,
+            ClaimedByAccessConnectorId = claimedByAccessConnectorId,
             AttemptCount = 3,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>().TimeoutDueAsync(_now)
@@ -135,12 +135,12 @@ public class PamRotationSweepServiceTests
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut
-                && a.AccessConnectorId == claimedByDaemonId
+                && a.AccessConnectorId == claimedByAccessConnectorId
                 && a.Detail!.Contains("stuck")));
     }
 
     [Theory, BitAutoData]
-    public async Task SweepAsync_ReleasePhase_EmitsReleasedAuditPerRow(Guid daemonId1, Guid daemonId2)
+    public async Task SweepAsync_ReleasePhase_EmitsReleasedAuditPerRow(Guid accessConnectorId1, Guid accessConnectorId2)
     {
         var sutProvider = Setup();
         var released1 = new PamReleasedJob
@@ -150,7 +150,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = Guid.NewGuid(),
             CipherId = Guid.NewGuid(),
             Source = PamRotationSource.Scheduled,
-            ClaimedByDaemonId = daemonId1,
+            ClaimedByAccessConnectorId = accessConnectorId1,
         };
         var released2 = new PamReleasedJob
         {
@@ -159,7 +159,7 @@ public class PamRotationSweepServiceTests
             OrganizationId = Guid.NewGuid(),
             CipherId = Guid.NewGuid(),
             Source = PamRotationSource.OnDemand,
-            ClaimedByDaemonId = daemonId2,
+            ClaimedByAccessConnectorId = accessConnectorId2,
         };
         sutProvider.GetDependency<IPamRotationJobRepository>()
             .ReleaseExpiredLeasesAsync(_now, Arg.Any<TimeSpan>(), Arg.Any<TimeSpan>())
@@ -174,11 +174,11 @@ public class PamRotationSweepServiceTests
                 && a.OrganizationId == released1.OrganizationId
                 && a.CipherId == released1.CipherId
                 && a.RotationSource == released1.Source
-                && a.AccessConnectorId == released1.ClaimedByDaemonId));
+                && a.AccessConnectorId == released1.ClaimedByAccessConnectorId));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobReleased
                 && a.RotationJobId == released2.JobId
-                && a.AccessConnectorId == released2.ClaimedByDaemonId));
+                && a.AccessConnectorId == released2.ClaimedByAccessConnectorId));
     }
 
     private static SutProvider<PamRotationSweepService> Setup()

@@ -11,5 +11,5 @@ public interface IReportRotationSucceededCommand
     /// unknown attempt id, and <see cref="Bit.Core.Exceptions.ConflictException"/> for a stale report.
     /// </summary>
     Task<PamRotationAttempt> ReportSucceededAsync(
-        Guid daemonId, Guid attemptId, PamSessionTerminationOutcome sessionTermination);
+        Guid accessConnectorId, Guid attemptId, PamSessionTerminationOutcome sessionTermination);
 }
