@@ -16,69 +16,69 @@ namespace Bit.Services.Pam.Test.AccessConnector.Commands;
 public class GetRotationCipherQueryTests
 {
     [Theory, BitAutoData]
-    public async Task GetAsync_WrongDaemon_ThrowsNotFound(
-        Guid daemonId, PamRotationAttempt attempt)
+    public async Task GetAsync_WrongAccessConnector_ThrowsNotFound(
+        Guid accessConnectorId, PamRotationAttempt attempt)
     {
         var sutProvider = new SutProvider<GetRotationCipherQuery>().Create();
         attempt.Status = PamRotationAttemptStatus.Executing;
-        // attempt.ClaimedByDaemonId is a different AutoFixture guid than daemonId.
+        // attempt.ClaimedByAccessConnectorId is a different AutoFixture guid than accessConnectorId.
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(daemonId, attempt.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_AttemptNotExecuting_ThrowsNotFound(Guid daemonId, PamRotationAttempt attempt)
+    public async Task GetAsync_AttemptNotExecuting_ThrowsNotFound(Guid accessConnectorId, PamRotationAttempt attempt)
     {
         var sutProvider = new SutProvider<GetRotationCipherQuery>().Create();
-        attempt.ClaimedByDaemonId = daemonId;
+        attempt.ClaimedByAccessConnectorId = accessConnectorId;
         attempt.Status = PamRotationAttemptStatus.Errored;
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(daemonId, attempt.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
     }
 
     [Theory, BitAutoData]
     public async Task GetAsync_JobNotClaimed_ThrowsNotFound(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job)
     {
         var sutProvider = new SutProvider<GetRotationCipherQuery>().Create();
-        attempt.ClaimedByDaemonId = daemonId;
+        attempt.ClaimedByAccessConnectorId = accessConnectorId;
         attempt.Status = PamRotationAttemptStatus.Executing;
         attempt.JobId = job.Id;
         job.Status = PamRotationJobStatus.Pending;
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(daemonId, attempt.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_JobClaimedByDifferentDaemon_ThrowsNotFound(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job)
+    public async Task GetAsync_JobClaimedByDifferentAccessConnector_ThrowsNotFound(
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job)
     {
         var sutProvider = new SutProvider<GetRotationCipherQuery>().Create();
-        attempt.ClaimedByDaemonId = daemonId;
+        attempt.ClaimedByAccessConnectorId = accessConnectorId;
         attempt.Status = PamRotationAttemptStatus.Executing;
         attempt.JobId = job.Id;
         job.Status = PamRotationJobStatus.Claimed;
-        // job.ClaimedByDaemonId is a different AutoFixture guid than daemonId.
+        // job.ClaimedByAccessConnectorId is a different AutoFixture guid than accessConnectorId.
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(daemonId, attempt.Id));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id));
     }
 
     [Theory, BitAutoData]
     public async Task GetAsync_HappyPath_ReturnsCipherOfConfigsCipherId(
-        Guid daemonId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, Cipher cipher)
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config, Cipher cipher)
     {
         var sutProvider = new SutProvider<GetRotationCipherQuery>().Create();
-        attempt.ClaimedByDaemonId = daemonId;
+        attempt.ClaimedByAccessConnectorId = accessConnectorId;
         attempt.Status = PamRotationAttemptStatus.Executing;
         attempt.JobId = job.Id;
         job.Status = PamRotationJobStatus.Claimed;
-        job.ClaimedByDaemonId = daemonId;
+        job.ClaimedByAccessConnectorId = accessConnectorId;
         job.RotationConfigId = config.Id;
         cipher.Id = config.CipherId;
         sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
@@ -86,7 +86,7 @@ public class GetRotationCipherQueryTests
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(config.CipherId).Returns(cipher);
 
-        var result = await sutProvider.Sut.GetAsync(daemonId, attempt.Id);
+        var result = await sutProvider.Sut.GetAsync(accessConnectorId, attempt.Id);
 
         Assert.Same(cipher, result);
     }
