@@ -2,6 +2,7 @@
 #nullable disable
 
 using System.Security.Claims;
+using Bit.Admin.Auth.Filters;
 using Bit.Admin.Auth.IdentityServer;
 using Bit.Admin.Auth.Models;
 using Microsoft.AspNetCore.Authentication;
@@ -52,13 +53,9 @@ public class LoginController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePasswordlessLogin]
     public async Task<IActionResult> Index(LoginModel model)
     {
-        if (!_adminSettings.EnablePasswordlessLogin)
-        {
-            return NotFound();
-        }
-
         if (ModelState.IsValid)
         {
             await _signInManager.PasswordlessSignInAsync(model.Email, model.ReturnUrl);
@@ -74,13 +71,9 @@ public class LoginController : Controller
         return View(model);
     }
 
+    [RequirePasswordlessLogin]
     public async Task<IActionResult> Confirm(string email, string token, string returnUrl)
     {
-        if (!_adminSettings.EnablePasswordlessLogin)
-        {
-            return NotFound();
-        }
-
         var result = await _signInManager.PasswordlessSignInAsync(email, token, true);
         if (!result.Succeeded)
         {
@@ -100,13 +93,9 @@ public class LoginController : Controller
 
     [HttpGet("login/sso")]
     [AllowAnonymous]
+    [RequireOidc]
     public IActionResult Sso(string returnUrl = null)
     {
-        if (!_adminSettings.OidcEnabled)
-        {
-            return NotFound();
-        }
-
         var redirectUrl = Url.Action(nameof(SsoSignIn), "Login", new { returnUrl });
         var properties = _signInManager.ConfigureExternalAuthenticationProperties(
             AdminAuthenticationSchemes.UpstreamOidc, redirectUrl);
@@ -115,13 +104,9 @@ public class LoginController : Controller
 
     [HttpGet("login/sso-signin")]
     [AllowAnonymous]
+    [RequireOidc]
     public async Task<IActionResult> SsoSignIn(string returnUrl = null, string remoteError = null)
     {
-        if (!_adminSettings.OidcEnabled)
-        {
-            return NotFound();
-        }
-
         if (!string.IsNullOrEmpty(remoteError))
         {
             _logger.LogWarning("SSO sign-in rejected: upstream IdP returned remote error.");

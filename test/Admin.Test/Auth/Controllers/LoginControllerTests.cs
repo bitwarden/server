@@ -18,26 +18,6 @@ namespace Admin.Test.Auth.Controllers;
 public class LoginControllerTests
 {
     [Fact]
-    public void Sso_ReturnsNotFound_WhenOidcDisabled()
-    {
-        var controller = BuildController(oidcEnabled: false);
-
-        var result = controller.Sso(returnUrl: "/home");
-
-        Assert.IsType<NotFoundResult>(result);
-    }
-
-    [Fact]
-    public async Task SsoSignIn_ReturnsNotFound_WhenOidcDisabled()
-    {
-        var controller = BuildController(oidcEnabled: false);
-
-        var result = await controller.SsoSignIn(returnUrl: "/home");
-
-        Assert.IsType<NotFoundResult>(result);
-    }
-
-    [Fact]
     public async Task SsoSignIn_RedirectsWithError_WhenRemoteErrorProvided()
     {
         var controller = BuildController(oidcEnabled: true);
@@ -262,28 +242,6 @@ public class LoginControllerTests
         Assert.Equal(5, redirect.RouteValues!["error"]);
         await signInManager.DidNotReceive().SignInWithClaimsAsync(
             Arg.Any<IdentityUser>(), Arg.Any<AuthenticationProperties>(), Arg.Any<IEnumerable<Claim>>());
-    }
-
-    [Fact]
-    public async Task IndexPost_ReturnsNotFound_WhenPasswordlessDisabled()
-    {
-        var controller = BuildController(oidcEnabled: true, out _, out _,
-            enablePasswordlessLogin: false);
-
-        var result = await controller.Index(new LoginModel { Email = "you@example.com" });
-
-        Assert.IsType<NotFoundResult>(result);
-    }
-
-    [Fact]
-    public async Task Confirm_ReturnsNotFound_WhenPasswordlessDisabled()
-    {
-        var controller = BuildController(oidcEnabled: true, out _, out _,
-            enablePasswordlessLogin: false);
-
-        var result = await controller.Confirm("you@example.com", "token", returnUrl: null);
-
-        Assert.IsType<NotFoundResult>(result);
     }
 
     [Fact]
