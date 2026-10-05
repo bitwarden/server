@@ -180,24 +180,35 @@ public class ExtendOrganizationTrialCommandTests
     }
 
     [Fact]
-    public async Task Run_ExpirationSyncThrows_StillWritesAuditLogForStripeExtension()
+    public async Task Run_ExpirationSyncThrows_ReturnsSuccessAndLogsSyncFailure()
     {
-        // Stripe has already moved the trial end by the time the database write runs. If that write fails the
-        // admin sees a retryable error, so the audit record for the Stripe mutation must not depend on it.
+        // Stripe has already moved the trial end by the time the database write runs. Reporting that write's
+        // failure as a failed extension would invite a retry that extends the trial a second time, so the command
+        // must report success, keep the audit record, and leave the expiration date to the subscription webhook.
+        const int days = 5;
         var organization = CreateOrganization();
-        StubSubscription(CreateTrialingSubscription(DateTime.UtcNow, 5));
+        var subscription = CreateTrialingSubscription(DateTime.UtcNow, 5);
+        var expectedTrialEnd = subscription.TrialEnd!.Value.AddDays(days);
+        StubSubscription(subscription);
         _organizationService.UpdateExpirationDateAsync(organization.Id, Arg.Any<DateTime?>())
             .ThrowsAsync(new InvalidOperationException("database unavailable"));
 
-        var result = await _command.Run(organization, 5);
+        var result = await _command.Run(organization, days);
 
-        Assert.True(result.IsT3);
+        Assert.True(result.Success);
+        Assert.Equal(expectedTrialEnd, result.AsT0);
         await _stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
         _logger.Received(1).Log(
             LogLevel.Information,
             Arg.Any<EventId>(),
             Arg.Is<object>(state => state.ToString()!.Contains("Extended trial")),
             null,
+            Arg.Any<Func<object, Exception?, string>>());
+        _logger.Received(1).Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Is<object>(state => state.ToString()!.Contains("failed to sync the expiration date")),
+            Arg.Any<InvalidOperationException>(),
             Arg.Any<Func<object, Exception?, string>>());
     }
 }

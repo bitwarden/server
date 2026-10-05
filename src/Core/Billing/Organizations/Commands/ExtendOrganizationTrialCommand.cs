@@ -75,8 +75,17 @@ public class ExtendOrganizationTrialCommand(
             "{Command}: Extended trial for subscription ({SubscriptionId}) of organization ({OrganizationId}) by {Days} days",
             CommandName, subscription.Id, organization.Id, days);
 
-        // Written synchronously so a subsequent admin Edit save can't overwrite it with the stale value before the webhook lands.
-        await organizationService.UpdateExpirationDateAsync(organization.Id, newTrialEnd);
+        try
+        {
+            // Written synchronously so a subsequent admin Edit save can't overwrite it with the stale value before the webhook lands.
+            await organizationService.UpdateExpirationDateAsync(organization.Id, newTrialEnd);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "{Command}: Extended trial for organization ({OrganizationId}) but failed to sync the expiration date; relying on the subscription webhook",
+                CommandName, organization.Id);
+        }
 
         return newTrialEnd;
     });
