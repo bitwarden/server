@@ -359,7 +359,9 @@ public class CiphersController : Controller
         ValidateCipherEncryptedByUser(model.Cipher, user, model.Cipher.IsOrganizationCipher);
 
         var cipher = model.Cipher.ToCipherDetails(user.Id);
-        if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
+        if (cipher.OrganizationId.HasValue &&
+            (!await _currentContext.OrganizationUser(cipher.OrganizationId.Value) ||
+             !await CanEditItemsInCollections(cipher.OrganizationId.Value, model.CollectionIds)))
         {
             throw new NotFoundException();
         }
