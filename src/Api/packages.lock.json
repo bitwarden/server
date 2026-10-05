@@ -472,8 +472,8 @@
       },
       "Microsoft.AspNetCore.DataProtection": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "5sfrNrBShTlJeXvWNxjPS7ilLY4H6MICZPMZr/2vjoDoBH5Z8sQYJwbhulqfXh4yIpxIto0TcmOQHOElvpq+iQ=="
+        "resolved": "10.0.12",
+        "contentHash": "xafwaJhwtDiwlXvaW66eo5/fQ6hBVfO5dnE0EpOjKCrkwZB+LUyVSJ4k+XhH2+Yc8dl3TN7LzvHiYlJ3aub1Jw=="
       },
       "Microsoft.Azure.Amqp": {
         "type": "Transitive",
@@ -715,30 +715,30 @@
       },
       "Microsoft.Extensions.Caching.SqlServer": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "c5dyhJoeDapja0D3qbt+7iMsG3BFITaM77HCWHW/Yef4zgQSuKkooPw4/SWwc2HfZocbMp0mDvh40U9/iO1p/Q==",
+        "resolved": "10.0.12",
+        "contentHash": "RmXTs59q9uuumK2JQ0bOiuvLgr/n8fMIS74KgODH+ZBpckQEBBgcucPjkkVxF9LHJPM/v8k+PD7SRl6YSJjhJQ==",
         "dependencies": {
-          "Azure.Identity": "1.11.4",
-          "Microsoft.Data.SqlClient": "5.2.2"
+          "Azure.Identity": "1.14.2",
+          "Microsoft.Data.SqlClient": "6.1.1"
         }
       },
       "Microsoft.Extensions.Caching.StackExchangeRedis": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "E+3pfEY68WQh1ZVFTGDNK0JCoayzL3aIDgVHHM85HIbQO7MiABG14A7+ajHH2P/y3a4W2Rla5p2nzut3+mzoyQ==",
+        "resolved": "10.0.12",
+        "contentHash": "iQoMgbt02dl49cv7GLNeh771xstAbg9xKpuWosYmnOU0CJ9ni10F3+1IrgvbjyaV0JGulauGRrNir50QKWonKQ==",
         "dependencies": {
           "StackExchange.Redis": "2.7.27"
         }
       },
       "Microsoft.Extensions.Configuration.EnvironmentVariables": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "KRfFSSCV58vEdU7mPED/YMzeovIWF5P0g8s9K8n9HEfy0/WzMq37SrPdXdFN5/dFT/rPMHpF7AvpoXHckbcBFg=="
+        "resolved": "10.0.12",
+        "contentHash": "OIFhLxKAdvSrZuecX177ZkN4AcAB6OLlbS8y0MQYL68512aMOZI8cJLb8OeuYe2X+gu5uMqbbCxhzAmSp+Q2ow=="
       },
       "Microsoft.Extensions.Configuration.UserSecrets": {
         "type": "Transitive",
-        "resolved": "10.0.10",
-        "contentHash": "1s1sKFTk/Foam64JY6+m/diH8drL3Wx6V3gtSd5v1IEZtszZYyc1pW8uRnMblzpNiR0l0t8gGk7tXj3xHzFgdg=="
+        "resolved": "10.0.12",
+        "contentHash": "2OtyTIt0/tkChr3inq9Y0c34xogxXW//68gvPzIWgKwyVR4x82RSGVSZfV+ZgG13zrKBzqjaI23wpUCfKpY2yQ=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -1239,7 +1239,7 @@
           "Handlebars.Net": "[2.1.6, 2.1.6]",
           "MailKit": "[4.17.0, 4.17.0]",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.8, 10.0.8]",
-          "Microsoft.AspNetCore.DataProtection": "[10.0.10, 10.0.10]",
+          "Microsoft.AspNetCore.DataProtection": "[10.0.12, 10.0.12]",
           "Microsoft.Azure.Cosmos": "[3.52.0, 3.52.0]",
           "Microsoft.Azure.NotificationHubs": "[4.2.0, 4.2.0]",
           "Microsoft.Bot.Builder": "[4.23.0, 4.23.0]",
@@ -1248,10 +1248,10 @@
           "Microsoft.Data.SqlClient": "[7.0.2, 7.0.2]",
           "Microsoft.Data.SqlClient.Extensions.Azure": "[7.0.2, 7.0.2]",
           "Microsoft.Extensions.Caching.Cosmos": "[1.8.0, 1.8.0]",
-          "Microsoft.Extensions.Caching.SqlServer": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.10, 10.0.10]",
-          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.10, 10.0.10]",
+          "Microsoft.Extensions.Caching.SqlServer": "[10.0.12, 10.0.12]",
+          "Microsoft.Extensions.Caching.StackExchangeRedis": "[10.0.12, 10.0.12]",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[10.0.12, 10.0.12]",
+          "Microsoft.Extensions.Configuration.UserSecrets": "[10.0.12, 10.0.12]",
           "Microsoft.Extensions.Identity.Stores": "[10.0.8, 10.0.8]",
           "Newtonsoft.Json": "[13.0.3, 13.0.3]",
           "OneOf": "[3.0.271, 3.0.271]",
