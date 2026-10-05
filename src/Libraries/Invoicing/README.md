@@ -28,8 +28,9 @@ Invoicing owns the projection behind invoice previews — the final `IStripeAdap
 preview invoice — and projects the results into the vendor-neutral models on its public surface. Feature
 libraries above it consume preview data through this surface. Until a shared `Bit.Subscriptions` library
 exists, a feature library may also read Stripe data directly through `IStripeAdapter` (for example, to
-read a subscription while building a plan-change request); reading Stripe this way is allowed for now,
-with the ideal state being that all Stripe access flows through this library.
+read a subscription while building a plan-change request); reading Stripe this way is allowed for now.
+The ideal end state is that these Stripe calls move to a lower-level library that owns Stripe access for
+every library above it — Invoicing included — rather than Invoicing owning all of it.
 
 ### Proration months come from the line period
 
