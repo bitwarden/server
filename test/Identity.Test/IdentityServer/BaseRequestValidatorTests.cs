@@ -33,6 +33,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 using AuthFixtures = Bit.Identity.Test.AutoFixture;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.Test.IdentityServer;
 

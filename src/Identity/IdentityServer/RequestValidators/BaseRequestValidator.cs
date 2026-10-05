@@ -25,6 +25,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 

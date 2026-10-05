@@ -17,6 +17,7 @@ using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 

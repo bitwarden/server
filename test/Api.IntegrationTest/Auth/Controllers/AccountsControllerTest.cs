@@ -29,6 +29,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers;

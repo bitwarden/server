@@ -11,6 +11,7 @@ using Duende.IdentityModel;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation.SendAccess;
 

@@ -31,6 +31,7 @@ using NSubstitute;
 using OneOf.Types;
 using Xunit;
 using EmergencyAccessEntity = Bit.Core.Auth.Entities.EmergencyAccess;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.Auth.UserFeatures.Registration;
 

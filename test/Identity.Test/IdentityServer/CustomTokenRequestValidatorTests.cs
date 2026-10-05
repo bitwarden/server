@@ -22,6 +22,7 @@ using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Identity.Test.IdentityServer;
 

@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
