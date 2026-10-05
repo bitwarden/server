@@ -135,7 +135,7 @@ public class OfferRotationCommandTests
             Arg.Is<PamRotationJob>(j => j.RotationConfigId == config.Id
                 && j.Source == source
                 && j.Status == PamRotationJobStatus.Pending
-                && j.ClaimedByDaemonId == null
+                && j.ClaimedByAccessConnectorId == null
                 && j.ClaimedAt == null));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationOffered

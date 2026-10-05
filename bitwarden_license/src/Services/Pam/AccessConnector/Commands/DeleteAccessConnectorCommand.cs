@@ -10,24 +10,24 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 /// <inheritdoc cref="IDeleteAccessConnectorCommand" />
 public class DeleteAccessConnectorCommand : IDeleteAccessConnectorCommand
 {
-    private readonly IPamDaemonRepository _daemonRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public DeleteAccessConnectorCommand(
-        IPamDaemonRepository daemonRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
-        _daemonRepository = daemonRepository;
+        _accessConnectorRepository = accessConnectorRepository;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
-    public async Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid daemonId)
+    public async Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid accessConnectorId)
     {
-        var daemon = await _daemonRepository.GetByIdAsync(daemonId);
-        if (daemon is null || daemon.OrganizationId != organizationId)
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+        if (accessConnector is null || accessConnector.OrganizationId != organizationId)
         {
             throw new NotFoundException();
         }
@@ -41,12 +41,12 @@ public class DeleteAccessConnectorCommand : IDeleteAccessConnectorCommand
             OccurredDate = now,
             OrganizationId = organizationId,
             ActorId = actingUserId,
-            AccessConnectorId = daemon.Id,
-            AccessConnectorName = daemon.Name,
+            AccessConnectorId = accessConnector.Id,
+            AccessConnectorName = accessConnector.Name,
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        await _daemonRepository.DeleteAsync(daemon);
+        await _accessConnectorRepository.DeleteAsync(accessConnector);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
     }

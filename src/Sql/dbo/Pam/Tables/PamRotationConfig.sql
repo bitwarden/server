@@ -37,7 +37,7 @@ CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_OrganizationId]
     ON [dbo].[PamRotationConfig] ([OrganizationId] ASC);
 GO
 
--- Backs the daemon poll's join, AnyByTargetSystem checks, and DeleteWithAssignments' range lock.
+-- Backs the access connector poll's join, AnyByTargetSystem checks, and DeleteWithAssignments' range lock.
 CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_TargetSystemId]
     ON [dbo].[PamRotationConfig] ([TargetSystemId] ASC);
 GO

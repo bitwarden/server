@@ -107,18 +107,19 @@ public class PamTargetSystemRepositoryTests
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
         IApiKeyRepository apiKeyRepository,
-        IPamDaemonRepository pamDaemonRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
         ICipherRepository cipherRepository,
         IPamRotationConfigRepository pamRotationConfigRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
         var target = await pamTargetSystemRepository.CreateAsync(BuildTarget(organization.Id, "prod-entra", now));
-        var daemon = await CreateEnrolledDaemonAsync(apiKeyRepository, pamDaemonRepository, organization.Id);
-        await pamDaemonRepository.CreateAssignmentAsync(new PamDaemonTargetAssignment
+        var accessConnector = await CreateEnrolledAccessConnectorAsync(
+            apiKeyRepository, pamAccessConnectorRepository, organization.Id);
+        await pamAccessConnectorRepository.CreateAssignmentAsync(new PamAccessConnectorTargetAssignment
         {
             Id = CombGuid.Generate(),
-            DaemonId = daemon.Id,
+            AccessConnectorId = accessConnector.Id,
             TargetSystemId = target.Id,
             OrganizationId = organization.Id,
             CreationDate = now,
@@ -145,7 +146,7 @@ public class PamTargetSystemRepositoryTests
         // Delete is refused while a config names the target.
         Assert.False(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
         Assert.NotNull(await pamTargetSystemRepository.GetByIdAsync(target.Id));
-        Assert.True(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
+        Assert.True(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
 
         Assert.True(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
 
@@ -153,9 +154,9 @@ public class PamTargetSystemRepositoryTests
         Assert.True(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
 
         Assert.Null(await pamTargetSystemRepository.GetByIdAsync(target.Id));
-        Assert.False(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
+        Assert.False(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
         // The access connector itself outlives the target it was assigned to.
-        Assert.NotNull(await pamDaemonRepository.GetByIdAsync(daemon.Id));
+        Assert.NotNull(await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id));
     }
 
     [DatabaseTheory, DatabaseData]
@@ -172,21 +173,22 @@ public class PamTargetSystemRepositoryTests
         Assert.Null(await pamTargetSystemRepository.GetByIdAsync(target.Id));
     }
 
-    private static async Task<PamDaemon> CreateEnrolledDaemonAsync(
-        IApiKeyRepository apiKeyRepository, IPamDaemonRepository pamDaemonRepository, Guid organizationId)
+    private static async Task<PamAccessConnector> CreateEnrolledAccessConnectorAsync(
+        IApiKeyRepository apiKeyRepository, IPamAccessConnectorRepository pamAccessConnectorRepository,
+        Guid organizationId)
     {
         var apiKey = await apiKeyRepository.CreateAsync(new ApiKey
         {
             ServiceAccountId = null,
-            Name = $"daemon-{Guid.NewGuid()}",
+            Name = $"access-connector-{Guid.NewGuid()}",
             Scope = """["api.pam.rotation"]""",
             EncryptedPayload = "encrypted-payload",
             Key = "encrypted-key",
         });
-        return await pamDaemonRepository.CreateAsync(new PamDaemon
+        return await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organizationId,
-            Name = $"daemon-{Guid.NewGuid()}",
+            Name = $"access-connector-{Guid.NewGuid()}",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });

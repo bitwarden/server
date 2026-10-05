@@ -6,10 +6,11 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// One daemon's try at executing a <see cref="PamRotationJob"/>. Invariant <c>AtMostOneInFlightAttemptPerJob</c> — a
-/// job has at most one <see cref="PamRotationAttemptStatus.Executing"/> attempt at a time, inserted atomically with
-/// the claim that creates it. Reaching <see cref="PamRotationAttemptStatus.Rotated"/> requires both a written cipher
-/// (<see cref="CipherUpdated"/>) and a claimant-verified success report — the <c>VerifiedBeforeSuccess</c> backstop.
+/// One access connector's try at executing a <see cref="PamRotationJob"/>. Invariant
+/// <c>AtMostOneInFlightAttemptPerJob</c> — a job has at most one <see cref="PamRotationAttemptStatus.Executing"/>
+/// attempt at a time, inserted atomically with the claim that creates it. Reaching
+/// <see cref="PamRotationAttemptStatus.Rotated"/> requires both a written cipher (<see cref="CipherUpdated"/>) and a
+/// claimant-verified success report — the <c>VerifiedBeforeSuccess</c> backstop.
 /// </summary>
 public class PamRotationAttempt : ITableObject<Guid>
 {
@@ -17,10 +18,10 @@ public class PamRotationAttempt : ITableObject<Guid>
 
     public Guid JobId { get; set; }
 
-    /// <summary>The daemon executing this attempt, fixed for its lifetime (unlike the job's claim fields, this is never cleared).</summary>
-    public Guid ClaimedByDaemonId { get; set; }
+    /// <summary>The access connector executing this attempt, fixed for its lifetime (unlike the job's claim fields, this is never cleared).</summary>
+    public Guid ClaimedByAccessConnectorId { get; set; }
 
-    /// <summary>Whether the daemon has written the rotated secret back to the cipher via the atomic accept-write path.</summary>
+    /// <summary>Whether the access connector has written the rotated secret back to the cipher via the atomic accept-write path.</summary>
     public bool CipherUpdated { get; set; }
 
     public PamRotationAttemptStatus Status { get; set; }

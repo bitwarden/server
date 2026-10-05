@@ -14,18 +14,18 @@ using Xunit;
 
 namespace Bit.Identity.Test.IdentityServer.ClientProviders;
 
-public class PamDaemonClientProviderTests
+public class PamAccessConnectorClientProviderTests
 {
     private readonly IApiKeyRepository _apiKeyRepository;
-    private readonly IPamDaemonRepository _pamDaemonRepository;
-    private readonly PamDaemonClientProvider _sut;
+    private readonly IPamAccessConnectorRepository _pamAccessConnectorRepository;
+    private readonly PamAccessConnectorClientProvider _sut;
 
-    public PamDaemonClientProviderTests()
+    public PamAccessConnectorClientProviderTests()
     {
         _apiKeyRepository = Substitute.For<IApiKeyRepository>();
-        _pamDaemonRepository = Substitute.For<IPamDaemonRepository>();
+        _pamAccessConnectorRepository = Substitute.For<IPamAccessConnectorRepository>();
 
-        _sut = new PamDaemonClientProvider(_apiKeyRepository, _pamDaemonRepository);
+        _sut = new PamAccessConnectorClientProvider(_apiKeyRepository, _pamAccessConnectorRepository);
     }
 
     [Fact]
@@ -57,11 +57,11 @@ public class PamDaemonClientProviderTests
     }
 
     [Fact]
-    public async Task GetAsync_NoDaemonForApiKey_ReturnsNull()
+    public async Task GetAsync_NoAccessConnectorForApiKey_ReturnsNull()
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId));
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId).Returns((PamDaemonDetails?)null);
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId).Returns((PamAccessConnectorDetails?)null);
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -69,12 +69,12 @@ public class PamDaemonClientProviderTests
     }
 
     [Fact]
-    public async Task GetAsync_DaemonDisabled_ReturnsNull()
+    public async Task GetAsync_AccessConnectorDisabled_ReturnsNull()
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId));
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
-            .Returns(CreateDaemonDetails(apiKeyId, status: PamAccessConnectorStatus.Disabled));
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
+            .Returns(CreateAccessConnectorDetails(apiKeyId, status: PamAccessConnectorStatus.Disabled));
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -86,8 +86,8 @@ public class PamDaemonClientProviderTests
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId));
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
-            .Returns(CreateDaemonDetails(apiKeyId, organizationEnabled: false));
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
+            .Returns(CreateAccessConnectorDetails(apiKeyId, organizationEnabled: false));
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -99,8 +99,8 @@ public class PamDaemonClientProviderTests
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId));
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
-            .Returns(CreateDaemonDetails(apiKeyId, organizationUsePam: false));
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
+            .Returns(CreateAccessConnectorDetails(apiKeyId, organizationUsePam: false));
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -108,13 +108,13 @@ public class PamDaemonClientProviderTests
     }
 
     [Fact]
-    public async Task GetAsync_EnabledDaemonLicensedOrg_ReturnsClientCredentialsClient()
+    public async Task GetAsync_EnabledAccessConnectorLicensedOrg_ReturnsClientCredentialsClient()
     {
         var apiKeyId = Guid.NewGuid();
         var apiKey = CreateApiKey(apiKeyId);
-        var daemonDetails = CreateDaemonDetails(apiKeyId);
+        var accessConnectorDetails = CreateAccessConnectorDetails(apiKeyId);
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(apiKey);
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId).Returns(daemonDetails);
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId).Returns(accessConnectorDetails);
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
@@ -130,11 +130,11 @@ public class PamDaemonClientProviderTests
         Assert.Null(client.ClientClaimsPrefix);
         Assert.Equal("encrypted-payload", client.Properties["encryptedPayload"]);
         Assert.Contains(client.Claims, c =>
-            c.Type == JwtClaimTypes.Subject && c.Value == daemonDetails.Id.ToString());
+            c.Type == JwtClaimTypes.Subject && c.Value == accessConnectorDetails.Id.ToString());
         Assert.Contains(client.Claims, c =>
-            c.Type == Claims.Type && c.Value == IdentityClientType.RotationDaemon.ToString());
+            c.Type == Claims.Type && c.Value == IdentityClientType.AccessConnector.ToString());
         Assert.Contains(client.Claims, c =>
-            c.Type == Claims.Organization && c.Value == daemonDetails.OrganizationId.ToString());
+            c.Type == Claims.Organization && c.Value == accessConnectorDetails.OrganizationId.ToString());
     }
 
     [Fact]
@@ -142,11 +142,12 @@ public class PamDaemonClientProviderTests
     {
         var apiKeyId = Guid.NewGuid();
         _apiKeyRepository.GetByIdAsync(apiKeyId).Returns(CreateApiKey(apiKeyId, expireAt: null));
-        _pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKeyId).Returns(CreateDaemonDetails(apiKeyId));
+        _pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKeyId)
+            .Returns(CreateAccessConnectorDetails(apiKeyId));
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
-        // Daemon credentials are long-lived: a null ExpireAt must not be treated as expired.
+        // Access connector credentials are long-lived: a null ExpireAt must not be treated as expired.
         Assert.NotNull(client);
     }
 
@@ -154,7 +155,7 @@ public class PamDaemonClientProviderTests
     {
         Id = apiKeyId,
         ServiceAccountId = null,
-        Name = "daemon-credential",
+        Name = "access-connector-credential",
         ClientSecretHash = "hashed-secret",
         Scope = $"[\"{ApiScopes.ApiPamRotation}\"]",
         EncryptedPayload = "encrypted-payload",
@@ -162,16 +163,16 @@ public class PamDaemonClientProviderTests
         ExpireAt = expireAt,
     };
 
-    private static PamDaemonDetails CreateDaemonDetails(
+    private static PamAccessConnectorDetails CreateAccessConnectorDetails(
         Guid apiKeyId,
         PamAccessConnectorStatus status = PamAccessConnectorStatus.Enabled,
         bool organizationEnabled = true,
-        bool organizationUsePam = true) => PamDaemonDetails.From(
-            new PamDaemon
+        bool organizationUsePam = true) => PamAccessConnectorDetails.From(
+            new PamAccessConnector
             {
                 Id = Guid.NewGuid(),
                 OrganizationId = Guid.NewGuid(),
-                Name = "daemon-1",
+                Name = "access-connector-1",
                 ApiKeyId = apiKeyId,
                 Status = status,
             },

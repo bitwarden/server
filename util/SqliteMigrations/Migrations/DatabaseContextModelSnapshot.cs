@@ -2739,7 +2739,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("AccessRule", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -2774,18 +2774,18 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PamDaemon", (string)null);
+                    b.ToTable("PamAccessConnector", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("CreationDate")
+                    b.Property<Guid>("AccessConnectorId")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("DaemonId")
+                    b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("OrganizationId")
@@ -2800,10 +2800,10 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasIndex("TargetSystemId");
 
-                    b.HasIndex("DaemonId", "TargetSystemId")
+                    b.HasIndex("AccessConnectorId", "TargetSystemId")
                         .IsUnique();
 
-                    b.ToTable("PamDaemonTargetAssignment", (string)null);
+                    b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
@@ -2827,7 +2827,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("ClaimedByDaemonId")
+                    b.Property<Guid>("ClaimedByAccessConnectorId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
@@ -2854,7 +2854,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
 
                     b.HasIndex("JobId", "Status");
 
@@ -2927,7 +2927,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("ClaimedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ClaimedByDaemonId")
+                    b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
@@ -2950,7 +2950,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Status");
 
                     b.HasIndex("RotationConfigId", "Status");
 
@@ -4150,7 +4150,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", null)
                         .WithMany()
@@ -4167,11 +4167,11 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", null)
                         .WithMany()
-                        .HasForeignKey("DaemonId")
+                        .HasForeignKey("AccessConnectorId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 

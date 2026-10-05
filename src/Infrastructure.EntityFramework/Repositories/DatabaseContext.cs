@@ -51,8 +51,8 @@ public class DatabaseContext : DbContext
     public DbSet<AccessDecision> AccessDecisions { get; set; }
     public DbSet<AccessAuditEvent> AccessAuditEvents { get; set; }
     public DbSet<PamTargetSystem> PamTargetSystems { get; set; }
-    public DbSet<PamDaemon> PamDaemons { get; set; }
-    public DbSet<PamDaemonTargetAssignment> PamDaemonTargetAssignments { get; set; }
+    public DbSet<PamAccessConnector> PamAccessConnectors { get; set; }
+    public DbSet<PamAccessConnectorTargetAssignment> PamAccessConnectorTargetAssignments { get; set; }
     public DbSet<PamRotationConfig> PamRotationConfigs { get; set; }
     public DbSet<PamRotationJob> PamRotationJobs { get; set; }
     public DbSet<PamRotationAttempt> PamRotationAttempts { get; set; }
@@ -128,8 +128,8 @@ public class DatabaseContext : DbContext
         var eAccessDecision = builder.Entity<AccessDecision>();
         var eAccessAuditEvent = builder.Entity<AccessAuditEvent>();
         var ePamTargetSystem = builder.Entity<PamTargetSystem>();
-        var ePamDaemon = builder.Entity<PamDaemon>();
-        var ePamDaemonTargetAssignment = builder.Entity<PamDaemonTargetAssignment>();
+        var ePamAccessConnector = builder.Entity<PamAccessConnector>();
+        var ePamAccessConnectorTargetAssignment = builder.Entity<PamAccessConnectorTargetAssignment>();
         var ePamRotationConfig = builder.Entity<PamRotationConfig>();
         var ePamRotationJob = builder.Entity<PamRotationJob>();
         var ePamRotationAttempt = builder.Entity<PamRotationAttempt>();
@@ -265,35 +265,35 @@ public class DatabaseContext : DbContext
             .HasForeignKey(t => t.OrganizationId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        ePamDaemon.Property(p => p.Id).ValueGeneratedNever();
-        ePamDaemon.HasIndex(p => p.ApiKeyId).IsUnique();
-        ePamDaemon.HasIndex(p => p.OrganizationId);
-        ePamDaemon
+        ePamAccessConnector.Property(p => p.Id).ValueGeneratedNever();
+        ePamAccessConnector.HasIndex(p => p.ApiKeyId).IsUnique();
+        ePamAccessConnector.HasIndex(p => p.OrganizationId);
+        ePamAccessConnector
             .HasOne(d => d.Organization)
             .WithMany()
             .HasForeignKey(d => d.OrganizationId)
             .OnDelete(DeleteBehavior.Cascade);
-        ePamDaemon
+        ePamAccessConnector
             .HasOne<ApiKey>()
             .WithMany()
             .HasForeignKey(d => d.ApiKeyId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        ePamDaemonTargetAssignment.Property(p => p.Id).ValueGeneratedNever();
-        ePamDaemonTargetAssignment.HasIndex(p => new { p.DaemonId, p.TargetSystemId }).IsUnique();
-        ePamDaemonTargetAssignment.HasIndex(p => p.TargetSystemId);
-        ePamDaemonTargetAssignment.HasIndex(p => p.OrganizationId);
-        ePamDaemonTargetAssignment
-            .HasOne<PamDaemon>()
+        ePamAccessConnectorTargetAssignment.Property(p => p.Id).ValueGeneratedNever();
+        ePamAccessConnectorTargetAssignment.HasIndex(p => new { p.AccessConnectorId, p.TargetSystemId }).IsUnique();
+        ePamAccessConnectorTargetAssignment.HasIndex(p => p.TargetSystemId);
+        ePamAccessConnectorTargetAssignment.HasIndex(p => p.OrganizationId);
+        ePamAccessConnectorTargetAssignment
+            .HasOne<PamAccessConnector>()
             .WithMany()
-            .HasForeignKey(a => a.DaemonId)
+            .HasForeignKey(a => a.AccessConnectorId)
             .OnDelete(DeleteBehavior.NoAction);
-        ePamDaemonTargetAssignment
+        ePamAccessConnectorTargetAssignment
             .HasOne<PamTargetSystem>()
             .WithMany()
             .HasForeignKey(a => a.TargetSystemId)
             .OnDelete(DeleteBehavior.NoAction);
-        ePamDaemonTargetAssignment
+        ePamAccessConnectorTargetAssignment
             .HasOne(a => a.Organization)
             .WithMany()
             .HasForeignKey(a => a.OrganizationId)
@@ -319,7 +319,7 @@ public class DatabaseContext : DbContext
         ePamRotationJob.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.Status });
         ePamRotationJob.HasIndex(p => new { p.Status, p.ExpiresAt });
-        ePamRotationJob.HasIndex(p => new { p.ClaimedByDaemonId, p.Status });
+        ePamRotationJob.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.Status });
         ePamRotationJob
             .HasOne<PamRotationConfig>()
             .WithMany()
@@ -328,7 +328,7 @@ public class DatabaseContext : DbContext
 
         ePamRotationAttempt.Property(p => p.Id).ValueGeneratedNever();
         ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Status });
-        ePamRotationAttempt.HasIndex(p => new { p.ClaimedByDaemonId, p.JobId });
+        ePamRotationAttempt.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.JobId });
         ePamRotationAttempt
             .HasOne<PamRotationJob>()
             .WithMany()
@@ -363,8 +363,8 @@ public class DatabaseContext : DbContext
         eAccessDecision.ToTable(nameof(AccessDecision));
         eAccessAuditEvent.ToTable(nameof(AccessAuditEvent));
         ePamTargetSystem.ToTable(nameof(PamTargetSystem));
-        ePamDaemon.ToTable(nameof(PamDaemon));
-        ePamDaemonTargetAssignment.ToTable(nameof(PamDaemonTargetAssignment));
+        ePamAccessConnector.ToTable(nameof(PamAccessConnector));
+        ePamAccessConnectorTargetAssignment.ToTable(nameof(PamAccessConnectorTargetAssignment));
         ePamRotationConfig.ToTable(nameof(PamRotationConfig));
         ePamRotationJob.ToTable(nameof(PamRotationJob));
         ePamRotationAttempt.ToTable(nameof(PamRotationAttempt));

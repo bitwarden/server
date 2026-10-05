@@ -3,8 +3,8 @@
 public interface IDeleteAccessConnectorCommand
 {
     /// <summary>
-    /// Permanently deletes a rotation daemon: removes its target assignments, the daemon row, and its
+    /// Permanently deletes an access connector: removes its target assignments, the access connector row, and its
     /// <c>dbo.ApiKey</c> credential. Unlike disable, this is not reversible.
     /// </summary>
-    Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid daemonId);
+    Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid accessConnectorId);
 }

@@ -2756,7 +2756,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("AccessRule", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -2791,19 +2791,19 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PamDaemon", (string)null);
+                    b.ToTable("PamAccessConnector", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("AccessConnectorId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DaemonId")
-                        .HasColumnType("uuid");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
@@ -2817,10 +2817,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("TargetSystemId");
 
-                    b.HasIndex("DaemonId", "TargetSystemId")
+                    b.HasIndex("AccessConnectorId", "TargetSystemId")
                         .IsUnique();
 
-                    b.ToTable("PamDaemonTargetAssignment", (string)null);
+                    b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
@@ -2844,7 +2844,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("ClaimedByDaemonId")
+                    b.Property<Guid>("ClaimedByAccessConnectorId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreationDate")
@@ -2871,7 +2871,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "JobId");
+                    b.HasIndex("ClaimedByAccessConnectorId", "JobId");
 
                     b.HasIndex("JobId", "Status");
 
@@ -2944,7 +2944,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("ClaimedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ClaimedByDaemonId")
+                    b.Property<Guid?>("ClaimedByAccessConnectorId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreationDate")
@@ -2967,7 +2967,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByDaemonId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Status");
 
                     b.HasIndex("RotationConfigId", "Status");
 
@@ -4167,7 +4167,7 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", null)
                         .WithMany()
@@ -4184,11 +4184,11 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemonTargetAssignment", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnectorTargetAssignment", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamDaemon", null)
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamAccessConnector", null)
                         .WithMany()
-                        .HasForeignKey("DaemonId")
+                        .HasForeignKey("AccessConnectorId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 

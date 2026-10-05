@@ -20,8 +20,8 @@ public class PamRotationConfig : ITableObject<Guid>
     public Guid TargetSystemId { get; set; }
 
     /// <summary>
-    /// The account this config rotates on the target system. Opaque to the server — never parsed; only the daemon
-    /// interprets it.
+    /// The account this config rotates on the target system. Opaque to the server — never parsed; only the access
+    /// connector interprets it.
     /// </summary>
     [MaxLength(500)]
     public string AccountIdentity { get; set; } = null!;

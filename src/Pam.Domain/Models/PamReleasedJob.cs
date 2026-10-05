@@ -14,6 +14,7 @@ public record PamReleasedJob
     public required Guid CipherId { get; init; }
     public required PamRotationSource Source { get; init; }
 
-    /// <summary>The daemon whose claim was released — the job's pre-clear <c>ClaimedByDaemonId</c>.</summary>
-    public required Guid ClaimedByDaemonId { get; init; }
+    /// <summary>The access connector whose claim was released — the job's pre-clear
+    /// <c>ClaimedByAccessConnectorId</c>.</summary>
+    public required Guid ClaimedByAccessConnectorId { get; init; }
 }

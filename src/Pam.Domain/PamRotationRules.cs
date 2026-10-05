@@ -4,17 +4,17 @@ using Bit.Pam.Enums;
 namespace Bit.Pam;
 
 /// <summary>
-/// Derived predicates over PAM rotation entities, shared so admin commands, the daemon-facing endpoints, and the
+/// Derived predicates over PAM rotation entities, shared so admin commands, the connector-facing endpoints, and the
 /// sweep jobs cannot drift on a guard's definition.
 /// </summary>
 public static class PamRotationRules
 {
     /// <summary>
-    /// Spec <c>DaemonConnection</c>: connected means heartbeated within <paramref name="offlineAfter"/> of
-    /// <paramref name="now"/>. A daemon that has never heartbeated is not connected.
+    /// Spec <c>ConnectorConnection</c>: connected means heartbeated within <paramref name="offlineAfter"/> of
+    /// <paramref name="now"/>. An access connector that has never heartbeated is not connected.
     /// </summary>
-    public static bool IsConnected(PamDaemon daemon, DateTime now, TimeSpan offlineAfter) =>
-        daemon.LastHeartbeatAt is { } lastHeartbeatAt && lastHeartbeatAt >= now - offlineAfter;
+    public static bool IsConnected(PamAccessConnector accessConnector, DateTime now, TimeSpan offlineAfter) =>
+        accessConnector.LastHeartbeatAt is { } lastHeartbeatAt && lastHeartbeatAt >= now - offlineAfter;
 
     /// <summary>
     /// The "active" job statuses invariant <c>AtMostOneActiveJobPerConfig</c> binds on: a job is active while it is
@@ -34,14 +34,14 @@ public static class PamRotationRules
 
     /// <summary>
     /// Spec <c>awaiting_manual_rotation</c>: a manual-target config surfaces an operator obligation on its schedule,
-    /// since there is no daemon to offer a job to.
+    /// since there is no access connector to offer a job to.
     /// </summary>
     public static bool AwaitingManualRotation(PamRotationConfig config, PamTargetSystemMethod method, DateTime now) =>
         method == PamTargetSystemMethod.Manual && config.Enabled
         && config.NextRotationAt is { } nextRotationAt && nextRotationAt <= now;
 
     /// <summary>
-    /// The point at which the release sweep may reclaim the job from a stale daemon: <see cref="PamRotationJob.ClaimedAt"/>
+    /// The point at which the release sweep may reclaim the job from a stale access connector: <see cref="PamRotationJob.ClaimedAt"/>
     /// plus <paramref name="releaseDelay"/>. Null if the job is not claimed.
     /// </summary>
     public static DateTime? ExecuteBy(PamRotationJob job, TimeSpan releaseDelay) =>

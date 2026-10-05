@@ -19,109 +19,125 @@ public class UnassignAccessConnectorFromTargetCommandTests
     private static readonly DateTime _now = new(2026, 7, 6, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_DaemonMissing_ThrowsNotFound(
-        Guid organizationId, Guid actingUserId, Guid daemonId, Guid targetSystemId)
+    public async Task UnassignAsync_AccessConnectorMissing_ThrowsNotFound(
+        Guid organizationId, Guid actingUserId, Guid accessConnectorId, Guid targetSystemId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemonId).Returns((PamDaemon?)null);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns((PamAccessConnector?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UnassignAsync(organizationId, actingUserId, daemonId, targetSystemId));
+            () => sutProvider.Sut.UnassignAsync(organizationId, actingUserId, accessConnectorId, targetSystemId));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .DeleteAssignmentAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_DaemonWrongOrg_ThrowsNotFound(Guid actingUserId, PamDaemon daemon, Guid targetSystemId)
+    public async Task UnassignAsync_AccessConnectorWrongOrg_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector, Guid targetSystemId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UnassignAsync(Guid.NewGuid(), actingUserId, daemon.Id, targetSystemId));
+            () => sutProvider.Sut.UnassignAsync(Guid.NewGuid(), actingUserId, accessConnector.Id, targetSystemId));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .DeleteAssignmentAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_TargetMissing_ThrowsNotFound(Guid actingUserId, PamDaemon daemon, Guid targetSystemId)
+    public async Task UnassignAsync_TargetMissing_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector, Guid targetSystemId)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(targetSystemId)
             .Returns((PamTargetSystem?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UnassignAsync(daemon.OrganizationId, actingUserId, daemon.Id, targetSystemId));
+            () => sutProvider.Sut.UnassignAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, targetSystemId));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .DeleteAssignmentAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_TargetWrongOrg_ThrowsNotFound(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task UnassignAsync_TargetWrongOrg_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UnassignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id));
+            () => sutProvider.Sut.UnassignAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .DeleteAssignmentAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_AssignmentMissing_ThrowsNotFound(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task UnassignAsync_AssignmentMissing_ThrowsNotFound(Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        target.OrganizationId = daemon.OrganizationId;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        target.OrganizationId = accessConnector.OrganizationId;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        sutProvider.GetDependency<IPamDaemonRepository>().AssignmentExistsAsync(daemon.Id, target.Id).Returns(false);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().AssignmentExistsAsync(accessConnector.Id, target.Id)
+            .Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UnassignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id));
+            () => sutProvider.Sut.UnassignAsync(
+                accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id));
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>().DidNotReceiveWithAnyArgs()
             .DeleteAssignmentAsync(default, default);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_HappyPath_DeletesAssignment(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task UnassignAsync_HappyPath_DeletesAssignment(Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        target.OrganizationId = daemon.OrganizationId;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        target.OrganizationId = accessConnector.OrganizationId;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        sutProvider.GetDependency<IPamDaemonRepository>().AssignmentExistsAsync(daemon.Id, target.Id).Returns(true);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().AssignmentExistsAsync(accessConnector.Id, target.Id)
+            .Returns(true);
 
-        await sutProvider.Sut.UnassignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id);
+        await sutProvider.Sut.UnassignAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id);
 
-        await sutProvider.GetDependency<IPamDaemonRepository>().Received(1).DeleteAssignmentAsync(daemon.Id, target.Id);
+        await sutProvider.GetDependency<IPamAccessConnectorRepository>()
+            .Received(1).DeleteAssignmentAsync(accessConnector.Id, target.Id);
     }
 
     [Theory, BitAutoData]
-    public async Task UnassignAsync_HappyPath_EmitsAttemptThenOutcome(Guid actingUserId, PamDaemon daemon, PamTargetSystem target)
+    public async Task UnassignAsync_HappyPath_EmitsAttemptThenOutcome(Guid actingUserId, PamAccessConnector accessConnector, PamTargetSystem target)
     {
         var sutProvider = Setup();
-        target.OrganizationId = daemon.OrganizationId;
-        sutProvider.GetDependency<IPamDaemonRepository>().GetByIdAsync(daemon.Id).Returns(daemon);
+        target.OrganizationId = accessConnector.OrganizationId;
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
+            .Returns(accessConnector);
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        sutProvider.GetDependency<IPamDaemonRepository>().AssignmentExistsAsync(daemon.Id, target.Id).Returns(true);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().AssignmentExistsAsync(accessConnector.Id, target.Id)
+            .Returns(true);
 
-        await sutProvider.Sut.UnassignAsync(daemon.OrganizationId, actingUserId, daemon.Id, target.Id);
+        await sutProvider.Sut.UnassignAsync(
+            accessConnector.OrganizationId, actingUserId, accessConnector.Id, target.Id);
 
         var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorUnassignedFromTarget && e.Phase == AccessAuditEventPhase.Attempt
-            && e.AccessConnectorId == daemon.Id && e.TargetSystemId == target.Id));
+            && e.AccessConnectorId == accessConnector.Id && e.TargetSystemId == target.Id));
         await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
             e.Kind == AccessAuditEventKind.AccessConnectorUnassignedFromTarget && e.Phase == AccessAuditEventPhase.Outcome
-            && e.AccessConnectorId == daemon.Id && e.TargetSystemId == target.Id));
+            && e.AccessConnectorId == accessConnector.Id && e.TargetSystemId == target.Id));
     }
 
     private static SutProvider<UnassignAccessConnectorFromTargetCommand> Setup()

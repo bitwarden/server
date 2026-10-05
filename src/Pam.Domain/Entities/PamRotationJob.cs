@@ -5,11 +5,11 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// One offer of rotation work for a <see cref="PamRotationConfig"/>. Invariant <c>AtMostOneActiveJobPerConfig</c>:
-/// a config has at most one <see cref="PamRotationJobStatus.Pending"/> or <see cref="PamRotationJobStatus.Claimed"/>
-/// job at a time. Every transition out of <see cref="PamRotationJobStatus.Claimed"/> clears
-/// <see cref="ClaimedByDaemonId"/> and <see cref="ClaimedAt"/>; the executing daemon's history lives on
-/// <see cref="PamRotationAttempt"/> instead.
+/// One offer of rotation work for a <see cref="PamRotationConfig"/>. Invariant <c>AtMostOneActiveJobPerConfig</c>: a
+/// config has at most one <see cref="PamRotationJobStatus.Pending"/> or <see cref="PamRotationJobStatus.Claimed"/> job
+/// at a time. Every transition out of <see cref="PamRotationJobStatus.Claimed"/> clears
+/// <see cref="ClaimedByAccessConnectorId"/> and <see cref="ClaimedAt"/>; the executing access connector's history lives
+/// on <see cref="PamRotationAttempt"/> instead.
 /// </summary>
 public class PamRotationJob : ITableObject<Guid>
 {
@@ -21,8 +21,9 @@ public class PamRotationJob : ITableObject<Guid>
 
     public PamRotationJobStatus Status { get; set; }
 
-    /// <summary>The daemon holding this job's claim. Null outside <see cref="PamRotationJobStatus.Claimed"/>.</summary>
-    public Guid? ClaimedByDaemonId { get; set; }
+    /// <summary>The access connector holding this job's claim. Null outside
+    /// <see cref="PamRotationJobStatus.Claimed"/>.</summary>
+    public Guid? ClaimedByAccessConnectorId { get; set; }
 
     /// <summary>When the current claim was taken. Null outside <see cref="PamRotationJobStatus.Claimed"/>.</summary>
     public DateTime? ClaimedAt { get; set; }

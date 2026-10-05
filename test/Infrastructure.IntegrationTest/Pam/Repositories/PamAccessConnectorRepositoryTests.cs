@@ -11,58 +11,59 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
-public class PamDaemonRepositoryTests
+public class PamAccessConnectorRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_ThenRead_RoundTripsFields(
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
 
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "prod-daemon",
+            Name = "prod-access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
 
-        var persisted = await pamDaemonRepository.GetByIdAsync(daemon.Id);
+        var persisted = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
 
         Assert.NotNull(persisted);
         Assert.Equal(organization.Id, persisted!.OrganizationId);
-        Assert.Equal("prod-daemon", persisted.Name);
+        Assert.Equal("prod-access-connector", persisted.Name);
         Assert.Equal(apiKey.Id, persisted.ApiKeyId);
         Assert.Equal(PamAccessConnectorStatus.Enabled, persisted.Status);
         Assert.Null(persisted.LastHeartbeatAt);
     }
 
-    // PamDaemonClientProvider's token-issuance lookup, keyed by the ApiKey credential rather than the daemon's id.
+    // PamAccessConnectorClientProvider's token-issuance lookup, keyed by the ApiKey credential rather than the access
+    // connector's id.
     [DatabaseTheory, DatabaseData]
-    public async Task GetDetailsByApiKeyIdAsync_ReturnsDaemonWithOrganizationLicensingFlags(
+    public async Task GetDetailsByApiKeyIdAsync_ReturnsAccessConnectorWithOrganizationLicensingFlags(
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         Assert.True(organization.Enabled);
         Assert.True(organization.UsePam);
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "prod-daemon",
+            Name = "prod-access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
 
-        var details = await pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKey.Id);
+        var details = await pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKey.Id);
 
         Assert.NotNull(details);
-        Assert.Equal(daemon.Id, details!.Id);
+        Assert.Equal(accessConnector.Id, details!.Id);
         Assert.Equal(PamAccessConnectorStatus.Enabled, details.Status);
         Assert.True(details.OrganizationEnabled);
         Assert.True(details.OrganizationUsePam);
@@ -71,7 +72,7 @@ public class PamDaemonRepositoryTests
         organization.UsePam = false;
         await organizationRepository.ReplaceAsync(organization);
 
-        var afterLicenseLapse = await pamDaemonRepository.GetDetailsByApiKeyIdAsync(apiKey.Id);
+        var afterLicenseLapse = await pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(apiKey.Id);
         Assert.NotNull(afterLicenseLapse);
         Assert.True(afterLicenseLapse!.OrganizationEnabled);
         Assert.False(afterLicenseLapse.OrganizationUsePam);
@@ -79,9 +80,9 @@ public class PamDaemonRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByApiKeyIdAsync_UnknownApiKeyId_ReturnsNull(
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
-        Assert.Null(await pamDaemonRepository.GetDetailsByApiKeyIdAsync(Guid.NewGuid()));
+        Assert.Null(await pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(Guid.NewGuid()));
     }
 
     // The sproc's WHERE guard turns a poll before MinInterval into a no-op; only one after it bumps the column.
@@ -89,14 +90,14 @@ public class PamDaemonRepositoryTests
     public async Task UpdateHeartbeatAsync_ConditionalBump(
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "prod-daemon",
+            Name = "prod-access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
@@ -104,20 +105,21 @@ public class PamDaemonRepositoryTests
         var firstHeartbeat = DateTime.UtcNow;
 
         // First heartbeat: LastHeartbeatAt was null, so it always bumps.
-        await pamDaemonRepository.UpdateHeartbeatAsync(daemon.Id, firstHeartbeat, minInterval);
-        var afterFirst = await pamDaemonRepository.GetByIdAsync(daemon.Id);
+        await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, firstHeartbeat, minInterval);
+        var afterFirst = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.NotNull(afterFirst!.LastHeartbeatAt);
         var recordedFirst = afterFirst.LastHeartbeatAt!.Value;
 
         // Second poll arrives well within MinInterval: the guard's WHERE clause keeps this a no-op.
-        await pamDaemonRepository.UpdateHeartbeatAsync(daemon.Id, firstHeartbeat.AddSeconds(5), minInterval);
-        var afterSecond = await pamDaemonRepository.GetByIdAsync(daemon.Id);
+        await pamAccessConnectorRepository.UpdateHeartbeatAsync(
+            accessConnector.Id, firstHeartbeat.AddSeconds(5), minInterval);
+        var afterSecond = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.Equal(recordedFirst, afterSecond!.LastHeartbeatAt);
 
         // Third poll arrives after MinInterval has elapsed since the last recorded bump: it updates.
         var thirdHeartbeat = firstHeartbeat.AddSeconds(20);
-        await pamDaemonRepository.UpdateHeartbeatAsync(daemon.Id, thirdHeartbeat, minInterval);
-        var afterThird = await pamDaemonRepository.GetByIdAsync(daemon.Id);
+        await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, thirdHeartbeat, minInterval);
+        var afterThird = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.Equal(thirdHeartbeat, afterThird!.LastHeartbeatAt.Value, LaxDateTimeComparer.Default);
         Assert.NotEqual(recordedFirst, afterThird.LastHeartbeatAt);
     }
@@ -127,7 +129,7 @@ public class PamDaemonRepositoryTests
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
@@ -141,72 +143,72 @@ public class PamDaemonRepositoryTests
             CreationDate = now,
             RevisionDate = now,
         });
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "daemon",
+            Name = "access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
 
-        Assert.False(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
-        Assert.Empty(await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
+        Assert.False(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
+        Assert.Empty(await pamAccessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
 
-        var assignment = new PamDaemonTargetAssignment
+        var assignment = new PamAccessConnectorTargetAssignment
         {
             Id = CombGuid.Generate(),
-            DaemonId = daemon.Id,
+            AccessConnectorId = accessConnector.Id,
             TargetSystemId = target.Id,
             OrganizationId = organization.Id,
             CreationDate = now,
         };
-        await pamDaemonRepository.CreateAssignmentAsync(assignment);
+        await pamAccessConnectorRepository.CreateAssignmentAsync(assignment);
 
-        Assert.True(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
-        var assignments = await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id);
+        Assert.True(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
+        var assignments = await pamAccessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organization.Id);
         var persisted = Assert.Single(assignments);
         Assert.Equal(assignment.Id, persisted.Id);
-        Assert.Equal(daemon.Id, persisted.DaemonId);
+        Assert.Equal(accessConnector.Id, persisted.AccessConnectorId);
         Assert.Equal(target.Id, persisted.TargetSystemId);
 
-        await pamDaemonRepository.DeleteAssignmentAsync(daemon.Id, target.Id);
+        await pamAccessConnectorRepository.DeleteAssignmentAsync(accessConnector.Id, target.Id);
 
-        Assert.False(await pamDaemonRepository.AssignmentExistsAsync(daemon.Id, target.Id));
-        Assert.Empty(await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
+        Assert.False(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
+        Assert.Empty(await pamAccessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
     }
 
-    // PamDaemon_Update only declares Name/Status/RevisionDate; ApiKeyId and OrganizationId must be ignored even
-    // if set on the in-memory entity before ReplaceAsync.
+    // PamAccessConnector_Update only declares Name/Status/RevisionDate; ApiKeyId and OrganizationId must be ignored
+    // even if set on the in-memory entity before ReplaceAsync.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_OnlyPersistsNameStatusRevisionDate(
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "daemon",
+            Name = "access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
-        var originalOrganizationId = daemon.OrganizationId;
-        var originalApiKeyId = daemon.ApiKeyId;
+        var originalOrganizationId = accessConnector.OrganizationId;
+        var originalApiKeyId = accessConnector.ApiKeyId;
         var newRevisionDate = DateTime.UtcNow.AddMinutes(10);
 
-        daemon.Name = "renamed-daemon";
-        daemon.Status = PamAccessConnectorStatus.Disabled;
-        daemon.RevisionDate = newRevisionDate;
-        daemon.OrganizationId = Guid.NewGuid();
-        daemon.ApiKeyId = Guid.NewGuid();
-        await pamDaemonRepository.ReplaceAsync(daemon);
+        accessConnector.Name = "renamed-access-connector";
+        accessConnector.Status = PamAccessConnectorStatus.Disabled;
+        accessConnector.RevisionDate = newRevisionDate;
+        accessConnector.OrganizationId = Guid.NewGuid();
+        accessConnector.ApiKeyId = Guid.NewGuid();
+        await pamAccessConnectorRepository.ReplaceAsync(accessConnector);
 
-        var persisted = await pamDaemonRepository.GetByIdAsync(daemon.Id);
+        var persisted = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.NotNull(persisted);
-        Assert.Equal("renamed-daemon", persisted!.Name);
+        Assert.Equal("renamed-access-connector", persisted!.Name);
         Assert.Equal(PamAccessConnectorStatus.Disabled, persisted.Status);
         Assert.Equal(newRevisionDate, persisted.RevisionDate, LaxDateTimeComparer.Default);
         Assert.Equal(originalOrganizationId, persisted.OrganizationId);
@@ -214,11 +216,11 @@ public class PamDaemonRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task DeleteAsync_RemovesTheDaemonWithItsCredentialAndAssignments(
+    public async Task DeleteAsync_RemovesTheAccessConnectorWithItsCredentialAndAssignments(
         IApiKeyRepository apiKeyRepository,
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,
-        IPamDaemonRepository pamDaemonRepository)
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
@@ -232,46 +234,46 @@ public class PamDaemonRepositoryTests
             CreationDate = now,
             RevisionDate = now,
         });
-        var apiKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey());
-        var daemon = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "doomed-daemon",
+            Name = "doomed-access-connector",
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
-        // A daemon with assignments cannot be deleted row-by-row: that FK is ON DELETE NO ACTION.
-        await pamDaemonRepository.CreateAssignmentAsync(new PamDaemonTargetAssignment
+        // An access connector with assignments cannot be deleted row-by-row: that FK is ON DELETE NO ACTION.
+        await pamAccessConnectorRepository.CreateAssignmentAsync(new PamAccessConnectorTargetAssignment
         {
             Id = CombGuid.Generate(),
-            DaemonId = daemon.Id,
+            AccessConnectorId = accessConnector.Id,
             TargetSystemId = target.Id,
             OrganizationId = organization.Id,
             CreationDate = now,
         });
 
-        var survivingKey = await apiKeyRepository.CreateAsync(BuildDaemonApiKey("survivor"));
-        var survivor = await pamDaemonRepository.CreateAsync(new PamDaemon
+        var survivingKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey("survivor"));
+        var survivor = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
         {
             OrganizationId = organization.Id,
-            Name = "surviving-daemon",
+            Name = "surviving-access-connector",
             ApiKeyId = survivingKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
 
         // The delete reads ApiKeyId from the stored row, so this value must be ignored.
-        daemon.ApiKeyId = survivingKey.Id;
-        await pamDaemonRepository.DeleteAsync(daemon);
+        accessConnector.ApiKeyId = survivingKey.Id;
+        await pamAccessConnectorRepository.DeleteAsync(accessConnector);
 
-        Assert.Null(await pamDaemonRepository.GetByIdAsync(daemon.Id));
+        Assert.Null(await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id));
         Assert.Null(await apiKeyRepository.GetByIdAsync(apiKey.Id));
-        Assert.Empty(await pamDaemonRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
+        Assert.Empty(await pamAccessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
 
-        Assert.NotNull(await pamDaemonRepository.GetByIdAsync(survivor.Id));
+        Assert.NotNull(await pamAccessConnectorRepository.GetByIdAsync(survivor.Id));
         Assert.NotNull(await apiKeyRepository.GetByIdAsync(survivingKey.Id));
     }
 
-    private static ApiKey BuildDaemonApiKey(string identifier = "daemon") => new()
+    private static ApiKey BuildAccessConnectorApiKey(string identifier = "accessConnector") => new()
     {
         ServiceAccountId = null,
         Name = $"{identifier}-{Guid.NewGuid()}",

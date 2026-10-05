@@ -3,7 +3,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_Create]
     @RotationConfigId UNIQUEIDENTIFIER,
     @Source TINYINT,
     @Status TINYINT,
-    @ClaimedByDaemonId UNIQUEIDENTIFIER = NULL,
+    @ClaimedByAccessConnectorId UNIQUEIDENTIFIER = NULL,
     @ClaimedAt DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
     @NextClaimableAt DATETIME2(7),
@@ -49,12 +49,12 @@ BEGIN
 
     INSERT INTO [dbo].[PamRotationJob]
     (
-        [Id], [RotationConfigId], [Source], [Status], [ClaimedByDaemonId], [ClaimedAt],
+        [Id], [RotationConfigId], [Source], [Status], [ClaimedByAccessConnectorId], [ClaimedAt],
         [CreationDate], [NextClaimableAt], [ExpiresAt]
     )
     VALUES
     (
-        @Id, @RotationConfigId, @Source, @Status, @ClaimedByDaemonId, @ClaimedAt,
+        @Id, @RotationConfigId, @Source, @Status, @ClaimedByAccessConnectorId, @ClaimedAt,
         @CreationDate, @NextClaimableAt, @ExpiresAt
     )
 
