@@ -736,6 +736,7 @@ public class EventServiceTests
             .GetOrganizationAbilityAsync(organizationId)
             .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns((Guid?)null);
 
         await sutProvider.Sut.LogSendEventsAsync(
             new[] { (send1, eventType), (send2, eventType) }, organizationId);
@@ -744,12 +745,32 @@ public class EventServiceTests
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
                 events.Count() == 2
-                && events.All(e => e.Type == eventType && e.OrganizationId == organizationId && e.ActingUserId == actingUserId)
+                && events.All(e => e.Type == eventType && e.OrganizationId == organizationId && e.ActingUserId == actingUserId && e.ProviderId == null)
                 && events.Any(e => e.SendId == send1.Id && e.UserId == send1.UserId)
                 && events.Any(e => e.SendId == send2.Id && e.UserId == send2.UserId)));
         await sutProvider.GetDependency<ICurrentContext>()
             .DidNotReceiveWithAnyArgs()
             .OrganizationMembershipAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task LogSendEventsAsync_ActingUserIsProviderForOrg_AttributesRowToProvider(
+        Send send, EventType eventType, Guid organizationId, Guid providerId,
+        SutProvider<EventService> sutProvider)
+    {
+        // A provider user (e.g. MSP staff) managing the org via the provider relationship, rather than
+        // a direct org member, should still surface in that provider's own event log.
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { UseEvents = true, Enabled = true });
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(organizationId).Returns(providerId);
+
+        await sutProvider.Sut.LogSendEventsAsync(new[] { (send, eventType) }, organizationId);
+
+        await sutProvider.GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<IEvent>>(events =>
+                events.Single().ProviderId == providerId && events.Single().OrganizationId == organizationId));
     }
 
     [Theory, BitAutoData]

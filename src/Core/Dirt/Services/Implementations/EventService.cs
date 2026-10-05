@@ -804,11 +804,14 @@ public class EventService : IEventService
             return;
         }
 
+        var providerId = await GetProviderIdAsync(organizationId);
+
         var eventMessages = events
             .Where(e => e.send.UserId.HasValue)
             .Select(e => new EventMessage(_currentContext)
             {
                 OrganizationId = organizationId,
+                ProviderId = providerId,
                 UserId = e.send.UserId,
                 ActingUserId = _currentContext?.UserId,
                 Type = e.type,
