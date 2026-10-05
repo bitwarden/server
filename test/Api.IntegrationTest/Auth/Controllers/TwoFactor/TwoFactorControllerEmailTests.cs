@@ -1,30 +1,68 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Globalization;
+using System.Net;
+using System.Security.Claims;
+using System.Text.Json;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.Identity;
+using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Helpers;
+using Core.Auth.Enums;
+using Duende.IdentityModel;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
 
+/// <summary>
+/// Covers the email two-factor endpoints of <c>TwoFactorController</c> with the real two-factor email service.
+/// Only the mail service is substituted, so tests read the emailed code from it. The API host shares the
+/// Identity host's persistent cache, so a login code emailed by the API can be redeemed against the Identity
+/// token endpoint, as it is in a deployed environment.
+/// </summary>
+/// <remarks>
+/// Login requests identify their device the way shipped clients do: the <c>Device-Identifier</c> header, a
+/// <c>DeviceIdentifier</c> body field, or both.
+/// </remarks>
 public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
+    private const string DeviceIdentifier = "two-factor-email-device";
+    private const string AuthRequestAccessCode = "auth-request-access-code";
+    private const string SsoRedirectUri = "https://localhost:8080/sso-connector.html";
+    private const string InvalidTwoFactorTokenMessage = "Two-step token is invalid. Try again.";
+    private const string CannotSendTwoFactorEmailMessage = "Cannot send two-factor email.";
+    private const string InvalidSsoSessionTokenMessage =
+        "a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.";
+
+    /// <summary>
+    /// Authorization codes the substituted Identity code store hands out, keyed by code. The store is created
+    /// once per class fixture, so each SSO test registers its own uniquely named code here.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, AuthorizationCode> _ssoAuthorizationCodes = new();
+
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
+    private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable> _userVerificationTokenFactory;
 
@@ -38,9 +76,14 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
             svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
         _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
             svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
+        _factory.SubstituteService<IMailService>(_ => { });
+        _factory.ShareIdentityPersistentCache();
+        _factory.Identity.SubstituteService<IAuthorizationCodeStore>(store =>
+            store.GetAuthorizationCodeAsync(Arg.Any<string>())
+                .Returns(call => Task.FromResult(_ssoAuthorizationCodes.GetValueOrDefault(call.Arg<string>()))));
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
+        _mailService = _factory.GetService<IMailService>();
         _userRepository = _factory.GetService<IUserRepository>();
         _userVerificationTokenFactory = _factory.GetService<IDataProtectorTokenFactory<TwoFactorUserVerificationTokenable>>();
     }
@@ -58,6 +101,13 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         return Task.CompletedTask;
     }
 
+    // ---------------------------------------------------------------------
+    // get-email and delete
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// get-email reports the provider as enabled and returns a user verification token that delete accepts.
+    /// </summary>
     [Fact]
     public async Task GetEmail_ValidSecret_ReturnsTokenUsableForDelete()
     {
@@ -78,10 +128,13 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Null(refreshed!.GetTwoFactorProvider(TwoFactorProviderType.Email));
     }
 
+    /// <summary>
+    /// Delete rejects a user verification token minted for a different provider.
+    /// </summary>
     [Fact]
     public async Task DeleteEmail_CrossProviderToken_BadRequest()
     {
-        var user = (await _userRepository.GetByEmailAsync(_userEmail))!;
+        var user = await GetUserAsync();
         var duoToken = ProtectUserVerificationToken(_userVerificationTokenFactory, user, TwoFactorProviderType.Duo);
 
         var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
@@ -91,6 +144,9 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
+    /// <summary>
+    /// Delete rejects a user verification token minted for a different user.
+    /// </summary>
     [Fact]
     public async Task DeleteEmail_WrongUserToken_BadRequest()
     {
@@ -107,6 +163,9 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
+    /// <summary>
+    /// Delete rejects a user verification token that cannot be unprotected.
+    /// </summary>
     [Fact]
     public async Task DeleteEmail_TamperedToken_BadRequest()
     {
@@ -117,88 +176,92 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
     }
 
-    [Fact]
-    public async Task PutEmail_ValidTokenAndCode_UpdatesProvider()
-    {
-        // Full enrollment chain: GET mints the UV token, SendEmailSetup validates it and triggers
-        // the email service, and PUT consumes the UV token + OTP.
-        //
-        // The OTP itself cannot be intercepted from the substituted email service — production
-        // computes it inside SendTwoFactorSetupEmailAsync (from SecurityStamp + Email metadata
-        // + time window) and ships it out of band via the user's inbox. SendEmailSetup also doesn't
-        // persist the Email metadata it temporarily attaches via model.ToUser, so a fresh fetch
-        // post-SendEmailSetup has no metadata for OTP generation.
-        //
-        // The test reproduces the OTP locally by applying the same in-memory mutation SendEmailSetup
-        // applied (Email metadata = _userEmail) and asking UserManager to generate a token. The
-        // resulting OTP matches what PutEmail will validate because PutEmail's server-side flow
-        // applies the same mutation against the same SecurityStamp before checking.
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = MasterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+    // ---------------------------------------------------------------------
+    // Setup: send-email and PUT email
+    // ---------------------------------------------------------------------
 
-        // Received-call bookkeeping is per-substitute and IClassFixture keeps the same substitute
-        // for the whole test class, so clear here to isolate this test's ordering assertion.
-        var emailService = _factory.GetService<ITwoFactorEmailService>();
-        emailService.ClearReceivedCalls();
+    /// <summary>
+    /// Full setup: send-email emails a setup code to the new address, and PUT with that code enables the provider.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_CodeFromSendEmail_EnablesProvider()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
 
         var sendResponse = await _client.PostAsJsonAsync("/two-factor/send-email",
-            new
+            new { Email = _userEmail, UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Setup);
+
+        var response = await _client.PutAsJsonAsync("/two-factor/email",
+            new TwoFactorEmailUpdateRequestModel { Email = _userEmail, Token = code, UserVerificationToken = uvToken });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var provider = (await GetUserAsync()).GetTwoFactorProvider(TwoFactorProviderType.Email);
+        Assert.NotNull(provider);
+        Assert.True(provider.Enabled);
+    }
+
+    /// <summary>
+    /// Setup for an address other than the account email: send-email emails the setup code to that address, and
+    /// PUT with the code enables the provider for it.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_CodeSentToDifferentAddress_EnablesProviderForThatAddress()
+    {
+        var twoFactorAddress = $"two-factor-inbox-{Guid.NewGuid()}@bitwarden.com";
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+
+        var sendResponse = await _client.PostAsJsonAsync("/two-factor/send-email",
+            new { Email = twoFactorAddress, UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
+        var emailed = FindLatestEmailedTwoFactorCode(_mailService, _userEmail);
+        Assert.NotNull(emailed);
+        Assert.Equal(TwoFactorEmailPurpose.Setup, emailed.Purpose);
+        Assert.Equal(twoFactorAddress, emailed.Recipient);
+
+        var response = await _client.PutAsJsonAsync("/two-factor/email",
+            new TwoFactorEmailUpdateRequestModel
             {
-                Email = _userEmail,
+                Email = twoFactorAddress,
+                Token = emailed.Code,
                 UserVerificationToken = uvToken,
             });
-        Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
-        // Ordering: send-email fires SendTwoFactorSetupEmailAsync before PUT is exercised.
-        await emailService.Received(1).SendTwoFactorSetupEmailAsync(Arg.Any<User>());
 
-        var userManager = _factory.GetService<UserManager<User>>();
-        var userForOtp = (await _userRepository.GetByEmailAsync(_userEmail))!;
-        userForOtp.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new TwoFactorProvider
-            {
-                MetaData = new Dictionary<string, object> { ["Email"] = _userEmail.ToLowerInvariant() },
-                Enabled = true,
-            },
-        });
-        var emailOtp = await userManager.GenerateTwoFactorTokenAsync(userForOtp,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var provider = (await GetUserAsync()).GetTwoFactorProvider(TwoFactorProviderType.Email);
+        Assert.NotNull(provider);
+        Assert.Equal(twoFactorAddress, provider.MetaData["Email"]);
+    }
+
+    /// <summary>
+    /// PUT with a code other than the one emailed by send-email is rejected and leaves the provider off.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_WrongCode_BadRequestAndProviderNotEnabled()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        var sendResponse = await _client.PostAsJsonAsync("/two-factor/send-email",
+            new { Email = _userEmail, UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Setup);
 
         var response = await _client.PutAsJsonAsync("/two-factor/email",
             new TwoFactorEmailUpdateRequestModel
             {
                 Email = _userEmail,
-                Token = emailOtp,
-                UserVerificationToken = uvToken,
-            });
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var afterPut = await _userRepository.GetByEmailAsync(_userEmail);
-        Assert.NotNull(afterPut!.GetTwoFactorProvider(TwoFactorProviderType.Email));
-    }
-
-    [Fact]
-    public async Task SendEmailSetup_ValidToken_InvokesEmailService()
-    {
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = MasterPasswordHash });
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
-        var emailService = _factory.GetService<ITwoFactorEmailService>();
-
-        var response = await _client.PostAsJsonAsync("/two-factor/send-email",
-            new
-            {
-                Email = _userEmail,
+                Token = WrongCodeFor(code),
                 UserVerificationToken = uvToken,
             });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        await emailService.Received().SendTwoFactorSetupEmailAsync(Arg.Any<User>());
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Invalid token.", await response.Content.ReadAsStringAsync());
+        Assert.Null((await GetUserAsync()).GetTwoFactorProvider(TwoFactorProviderType.Email));
     }
 
+    /// <summary>
+    /// send-email requires a user verification token.
+    /// </summary>
     [Fact]
     public async Task SendEmailSetup_MissingUserVerificationToken_BadRequest()
     {
@@ -207,18 +270,22 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// send-email requires the email address to set up.
+    /// </summary>
     [Fact]
     public async Task SendEmailSetup_MissingEmail_BadRequest()
     {
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = MasterPasswordHash });
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+        var uvToken = await GetEmailUserVerificationTokenAsync();
 
         var response = await _client.PostAsJsonAsync("/two-factor/send-email",
             new { UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// PUT requires a user verification token.
+    /// </summary>
     [Fact]
     public async Task PutEmail_MissingUserVerificationToken_BadRequest()
     {
@@ -227,45 +294,555 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    /// <summary>
+    /// PUT requires the emailed code.
+    /// </summary>
     [Fact]
     public async Task PutEmail_MissingToken_BadRequest()
     {
-        var getResponse = await _client.PostAsJsonAsync("/two-factor/get-email",
-            new { MasterPasswordHash = MasterPasswordHash });
-        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(getResponse, "email");
+        var uvToken = await GetEmailUserVerificationTokenAsync();
 
         var response = await _client.PutAsJsonAsync("/two-factor/email",
             new { Email = _userEmail, UserVerificationToken = uvToken });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task SendEmailLogin_ValidMasterPassword_InvokesEmailService()
-    {
-        var emailService = _factory.GetService<ITwoFactorEmailService>();
+    // ---------------------------------------------------------------------
+    // send-email-login
+    // ---------------------------------------------------------------------
 
-        var response = await _client.PostAsJsonAsync("/two-factor/send-email-login",
-            new
-            {
-                Email = _userEmail,
-                MasterPasswordHash = MasterPasswordHash,
-            });
+    /// <summary>
+    /// Web and CLI shape: master password plus <c>Device-Identifier</c> header. The emailed code logs the device in.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_MasterPasswordAndDeviceHeader_EmailsCodeThatLogsIn()
+    {
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail), headerDeviceIdentifier: DeviceIdentifier);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        await emailService.Received().SendTwoFactorEmailAsync(Arg.Any<User>());
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
     }
 
+    /// <summary>
+    /// Mobile shape: master password with the device identifier in the body, no header, and the unused SSO token
+    /// field sent as null. The emailed code logs the device in.
+    /// </summary>
     [Fact]
-    public async Task SendEmailLogin_NoCredentials_BadRequest()
+    public async Task SendEmailLogin_MasterPasswordAndDeviceInBodyOnly_EmailsCodeThatLogsIn()
     {
-        // Body carries only Email — no MasterPasswordHash, OTP, AuthRequestAccessCode,
-        // or SsoEmail2FaSessionToken. The model's Validate must reject before the controller runs.
-        var response = await _client.PostAsJsonAsync("/two-factor/send-email-login",
-            new { Email = _userEmail });
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+        var body = MasterPasswordBody(_userEmail, DeviceIdentifier);
+        body["SsoEmail2FaSessionToken"] = null;
+
+        var response = await SendEmailLoginAsync(body, headerDeviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
     }
+
+    /// <summary>
+    /// Web shape: master password with the same device identifier in both the header and the body, and the unused
+    /// credential fields sent as empty strings. The emailed code logs the device in.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_MasterPasswordAndDeviceInHeaderAndBody_EmailsCodeThatLogsIn()
+    {
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+        var body = MasterPasswordBody(_userEmail, DeviceIdentifier);
+        body["SsoEmail2FaSessionToken"] = "";
+        body["AuthRequestAccessCode"] = "";
+        body["AuthRequestId"] = "";
+
+        var response = await SendEmailLoginAsync(body, headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    /// <summary>
+    /// SSO: the server validates the session token from the two-factor challenge, and only a valid token lets it
+    /// email the two-factor code. That emailed code logs the device in through the authorization code grant.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_SsoSessionToken_EmailsCodeThatLogsInThroughSso()
+    {
+        await EnrollUserInEmail();
+        var sso = await ArrangeSsoLoginAsync();
+
+        var challenge = await PostSsoTokenAsync(sso, DeviceIdentifier, twoFactorToken: null);
+        Assert.Equal("Two factor required.", challenge.GetProperty("error_description").GetString());
+        var ssoSessionToken = challenge.GetProperty("SsoEmail2faSessionToken").GetString();
+
+        var response = await SendEmailLoginAsync(
+            new Dictionary<string, string?>
+            {
+                ["Email"] = _userEmail,
+                ["SsoEmail2FaSessionToken"] = ssoSessionToken,
+            },
+            headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertLoggedIn(await PostSsoTokenAsync(sso, DeviceIdentifier, code));
+    }
+
+    /// <summary>
+    /// Log in with device: the server validates the approved auth request's access code, and only a valid code
+    /// lets it email the two-factor code. That emailed code logs the device in.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_ApprovedAuthRequest_EmailsCodeThatLogsIn()
+    {
+        await EnrollUserInEmail();
+        var authRequest = await CreateApprovedAuthRequestAsync();
+        await ChallengeAsync(DeviceIdentifier);
+
+        var response = await SendEmailLoginAsync(
+            AuthRequestBody(_userEmail, authRequest.Id, AuthRequestAccessCode),
+            headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    /// <summary>
+    /// The login code goes to the two-factor email address, which can differ from the account email, and still
+    /// logs the device in.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_TwoFactorAddressDiffersFromAccountEmail_EmailsCodeToTwoFactorAddress()
+    {
+        var twoFactorAddress = $"two-factor-inbox-{Guid.NewGuid()}@bitwarden.com";
+        await SetUserTwoFactorProvidersJsonAsync(
+            _userRepository, _userEmail, BuildEmailProvidersJson(twoFactorAddress));
+        await ChallengeAsync(DeviceIdentifier);
+
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail), headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var emailed = FindLatestEmailedTwoFactorCode(_mailService, _userEmail);
+        Assert.NotNull(emailed);
+        Assert.Equal(twoFactorAddress, emailed.Recipient);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, emailed.Code));
+    }
+
+    /// <summary>
+    /// A user without email two-factor gets a server error even with the correct master password, and no code
+    /// is emailed. The service finds no two-factor email address and throws, and the API does not map that
+    /// exception to a client error.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_UserWithoutEmailTwoFactor_ServerErrorAndNoEmail()
+    {
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail), headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    /// <summary>
+    /// A request to email a two-factor code is rejected when it carries no master password, OTP, access code, or
+    /// SSO session token, and no code is emailed.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_NoCredentials_BadRequestAndNoEmail()
+    {
+        await EnrollUserInEmail();
+
+        var response = await SendEmailLoginAsync(
+            new Dictionary<string, string?> { ["Email"] = _userEmail }, headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    /// <summary>
+    /// A wrong master password is rejected, and no code is emailed.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_WrongMasterPassword_BadRequestAndNoEmail()
+    {
+        await EnrollUserInEmail();
+
+        var response = await SendEmailLoginAsync(
+            new Dictionary<string, string?>
+            {
+                ["Email"] = _userEmail,
+                ["MasterPasswordHash"] = "wrong_master_password_hash",
+            },
+            headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(CannotSendTwoFactorEmailMessage, await response.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    /// <summary>
+    /// An email with no account gets the same rejection as a wrong password, and no code is emailed.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_UnknownEmail_BadRequestAndNoEmail()
+    {
+        var unknownEmail = $"unknown-{Guid.NewGuid()}@bitwarden.com";
+
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(unknownEmail), headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(CannotSendTwoFactorEmailMessage, await response.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(unknownEmail);
+    }
+
+    /// <summary>
+    /// An SSO session token that cannot be unprotected is rejected with a message naming the token, and no code is
+    /// emailed.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_InvalidSsoSessionToken_BadRequestAndNoEmail()
+    {
+        await EnrollUserInEmail();
+
+        var response = await SendEmailLoginAsync(
+            new Dictionary<string, string?>
+            {
+                ["Email"] = _userEmail,
+                ["SsoEmail2FaSessionToken"] = "not-a-session-token",
+            },
+            headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(InvalidSsoSessionTokenMessage, await response.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    /// <summary>
+    /// An auth request with the wrong access code gets the same rejection as a wrong password, and no code is
+    /// emailed.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_WrongAuthRequestAccessCode_BadRequestAndNoEmail()
+    {
+        await EnrollUserInEmail();
+        var authRequest = await CreateApprovedAuthRequestAsync();
+
+        var response = await SendEmailLoginAsync(
+            AuthRequestBody(_userEmail, authRequest.Id, "wrong-access-code"), headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(CannotSendTwoFactorEmailMessage, await response.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    // ---------------------------------------------------------------------
+    // Emailed login code lifecycle
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// A login code works once. A second login with the same code is rejected.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_UsedTwice_SecondLoginRejected()
+    {
+        await EnrollUserInEmail();
+        var code = await ChallengeAndEmailLoginCodeAsync(DeviceIdentifier);
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+
+        var secondLogin = await LogInWithTwoFactorAsync(DeviceIdentifier, code);
+
+        AssertTwoFactorRejected(secondLogin);
+    }
+
+    /// <summary>
+    /// Sending a new login code replaces the previous one: only the newer code logs in.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_NewerCodeSent_OlderCodeRejectedAndNewerCodeLogsIn()
+    {
+        await EnrollUserInEmail();
+        var olderCode = await ChallengeAndEmailLoginCodeAsync(DeviceIdentifier);
+        var newerCode = await EmailLoginCodeAsync(DeviceIdentifier);
+
+        // Two random codes can coincide, which would hide whether the older code was replaced, so resend until
+        // they differ.
+        for (var attempt = 0; attempt < 5 && newerCode == olderCode; attempt++)
+        {
+            newerCode = await EmailLoginCodeAsync(DeviceIdentifier);
+        }
+
+        Assert.NotEqual(olderCode, newerCode);
+        AssertTwoFactorRejected(await LogInWithTwoFactorAsync(DeviceIdentifier, olderCode));
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, newerCode));
+    }
+
+    /// <summary>
+    /// A security stamp change, such as a password change, invalidates a pending login code.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_SecurityStampChangedBeforeUse_LoginRejected()
+    {
+        await EnrollUserInEmail();
+        var code = await ChallengeAndEmailLoginCodeAsync(DeviceIdentifier);
+
+        var user = await GetUserAsync();
+        user.SecurityStamp = Guid.NewGuid().ToString();
+        await _userRepository.ReplaceAsync(user);
+
+        AssertTwoFactorRejected(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+
+    private sealed record SsoLogin(string AuthorizationCode, string CodeVerifier);
 
     private Task EnrollUserInEmail() =>
         SetUserTwoFactorProvidersJsonAsync(
             _userRepository, _userEmail, BuildEmailProvidersJson(_userEmail));
+
+    private async Task<User> GetUserAsync()
+    {
+        var user = await _userRepository.GetByEmailAsync(_userEmail);
+        Assert.NotNull(user);
+        return user;
+    }
+
+    private async Task<string> GetEmailUserVerificationTokenAsync()
+    {
+        var response = await _client.PostAsJsonAsync("/two-factor/get-email",
+            new { MasterPasswordHash = MasterPasswordHash });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(response, "email");
+        return uvToken;
+    }
+
+    /// <summary>Requests a token without a two-factor code and asserts the two-factor challenge comes back.</summary>
+    private async Task ChallengeAsync(string deviceIdentifier)
+    {
+        var context = await _factory.Identity.ContextFromPasswordAsync(
+            _userEmail, MasterPasswordHash, deviceIdentifier);
+        var root = await ReadIdentityJsonAsync(context);
+        Assert.True(root.TryGetProperty("error_description", out var errorDescription), root.ToString());
+        Assert.Equal("Two factor required.", errorDescription.GetString());
+    }
+
+    private async Task<string> ChallengeAndEmailLoginCodeAsync(string deviceIdentifier)
+    {
+        await ChallengeAsync(deviceIdentifier);
+        return await EmailLoginCodeAsync(deviceIdentifier);
+    }
+
+    /// <summary>Requests a login code with the master password and returns the code that was emailed.</summary>
+    private async Task<string> EmailLoginCodeAsync(string deviceIdentifier)
+    {
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail), headerDeviceIdentifier: deviceIdentifier);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+    }
+
+    private async Task<JsonElement> LogInWithTwoFactorAsync(string deviceIdentifier, string code)
+    {
+        var context = await _factory.Identity.ContextFromPasswordWithTwoFactorAsync(
+            _userEmail,
+            MasterPasswordHash,
+            deviceIdentifier,
+            twoFactorProviderType: ((int)TwoFactorProviderType.Email).ToString(CultureInfo.InvariantCulture),
+            twoFactorToken: code);
+        return await ReadIdentityJsonAsync(context);
+    }
+
+    private static async Task<JsonElement> ReadIdentityJsonAsync(HttpContext context)
+    {
+        using var document = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.NotNull(document);
+        return document.RootElement.Clone();
+    }
+
+    private static void AssertLoggedIn(JsonElement tokenResponse)
+    {
+        Assert.True(tokenResponse.TryGetProperty("access_token", out var accessToken), tokenResponse.ToString());
+        Assert.False(string.IsNullOrWhiteSpace(accessToken.GetString()));
+    }
+
+    private static void AssertTwoFactorRejected(JsonElement tokenResponse)
+    {
+        Assert.False(tokenResponse.TryGetProperty("access_token", out _), tokenResponse.ToString());
+        Assert.Equal(InvalidTwoFactorTokenMessage,
+            tokenResponse.GetProperty("ErrorModel").GetProperty("Message").GetString());
+    }
+
+    private static Dictionary<string, string?> MasterPasswordBody(string email, string? bodyDeviceIdentifier = null)
+    {
+        var body = new Dictionary<string, string?>
+        {
+            ["Email"] = email,
+            ["MasterPasswordHash"] = MasterPasswordHash,
+        };
+        if (bodyDeviceIdentifier != null)
+        {
+            body["DeviceIdentifier"] = bodyDeviceIdentifier;
+        }
+
+        return body;
+    }
+
+    private static Dictionary<string, string?> AuthRequestBody(string email, Guid authRequestId, string accessCode) =>
+        new()
+        {
+            ["Email"] = email,
+            ["AuthRequestId"] = authRequestId.ToString(),
+            ["AuthRequestAccessCode"] = accessCode,
+        };
+
+    /// <summary>Calls send-email-login without a bearer token, as a client does in the middle of login.</summary>
+    private async Task<HttpResponseMessage> SendEmailLoginAsync(
+        Dictionary<string, string?> body, string? headerDeviceIdentifier)
+    {
+        using var client = _factory.CreateClient();
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/two-factor/send-email-login");
+        if (headerDeviceIdentifier != null)
+        {
+            message.Headers.Add("Device-Identifier", headerDeviceIdentifier);
+        }
+
+        message.Content = JsonContent.Create(body);
+        return await client.SendAsync(message);
+    }
+
+    /// <summary>
+    /// Asserts a code was emailed for the given purpose and that it has the six-digit numeric shape clients
+    /// accept, then returns it.
+    /// </summary>
+    private string AssertCodeEmailed(TwoFactorEmailPurpose purpose)
+    {
+        var emailed = FindLatestEmailedTwoFactorCode(_mailService, _userEmail);
+        Assert.NotNull(emailed);
+        Assert.Equal(purpose, emailed.Purpose);
+        Assert.Matches("^[0-9]{6}$", emailed.Code);
+        return emailed.Code;
+    }
+
+    private void AssertNoCodeEmailed(string accountEmail) =>
+        Assert.Null(FindLatestEmailedTwoFactorCode(_mailService, accountEmail));
+
+    /// <summary>Returns a code of the same shape that is guaranteed not to match.</summary>
+    private static string WrongCodeFor(string code) => code == "000000" ? "111111" : "000000";
+
+    private async Task<AuthRequest> CreateApprovedAuthRequestAsync()
+    {
+        var user = await GetUserAsync();
+        return await _factory.GetService<IAuthRequestRepository>().CreateAsync(new AuthRequest
+        {
+            UserId = user.Id,
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            RequestDeviceIdentifier = DeviceIdentifier,
+            RequestDeviceType = DeviceType.FirefoxBrowser,
+            RequestIpAddress = FactoryConstants.WhitelistedIp,
+            AccessCode = AuthRequestAccessCode,
+            PublicKey = "public-key",
+            Key = "key",
+            Approved = true,
+            ResponseDate = DateTime.UtcNow,
+        });
+    }
+
+    /// <summary>
+    /// Puts the user in an organization that uses SSO and registers an authorization code that signs the user in
+    /// through it.
+    /// </summary>
+    private async Task<SsoLogin> ArrangeSsoLoginAsync()
+    {
+        var user = await GetUserAsync();
+
+        var organization = await _factory.GetService<IOrganizationRepository>().CreateAsync(new Organization
+        {
+            Name = "Two Factor Email SSO Org",
+            BillingEmail = "billing-email@example.com",
+            Plan = "Enterprise",
+            UsePolicies = true,
+            UseSso = true,
+            Use2fa = true,
+        });
+
+        await _factory.GetService<IOrganizationUserRepository>().CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        await _factory.GetService<ISsoConfigRepository>().CreateAsync(new SsoConfig
+        {
+            OrganizationId = organization.Id,
+            Enabled = true,
+            Data = JsonSerializer.Serialize(
+                new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.MasterPassword },
+                JsonHelpers.CamelCase),
+        });
+
+        var codeVerifier = new string('c', 50);
+        var authorizationCodeKey = $"sso-code-{Guid.NewGuid()}";
+        _ssoAuthorizationCodes[authorizationCodeKey] = new AuthorizationCode
+        {
+            ClientId = "web",
+            CreationTime = DateTime.UtcNow,
+            Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
+            RedirectUri = SsoRedirectUri,
+            RequestedScopes = ["api", "offline_access"],
+            CodeChallenge = codeVerifier.Sha256(),
+            CodeChallengeMethod = "plain",
+            Subject = new ClaimsPrincipal(new ClaimsIdentity([
+                new Claim(JwtClaimTypes.Subject, user.Id.ToString()),
+                new Claim(JwtClaimTypes.Name, _userEmail),
+                new Claim(JwtClaimTypes.IdentityProvider, "sso"),
+                new Claim("organizationId", organization.Id.ToString()),
+                new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
+                new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
+                new Claim(JwtClaimTypes.AuthenticationTime,
+                    new DateTimeOffset(DateTime.UtcNow.AddMinutes(-1)).ToUnixTimeSeconds()
+                        .ToString(CultureInfo.InvariantCulture))
+            ], "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role)),
+        };
+
+        return new SsoLogin(authorizationCodeKey, codeVerifier);
+    }
+
+    private async Task<JsonElement> PostSsoTokenAsync(SsoLogin sso, string deviceIdentifier, string? twoFactorToken)
+    {
+        var form = new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", ((int)DeviceType.FirefoxBrowser).ToString(CultureInfo.InvariantCulture) },
+            { "deviceIdentifier", deviceIdentifier },
+            { "deviceName", "firefox" },
+            { "grant_type", "authorization_code" },
+            { "code", sso.AuthorizationCode },
+            { "code_verifier", sso.CodeVerifier },
+            { "redirect_uri", SsoRedirectUri },
+        };
+        if (twoFactorToken != null)
+        {
+            form["twoFactorToken"] = twoFactorToken;
+            form["twoFactorProvider"] = ((int)TwoFactorProviderType.Email).ToString(CultureInfo.InvariantCulture);
+            form["twoFactorRemember"] = "0";
+        }
+
+        var context = await _factory.Identity.Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
+        return await ReadIdentityJsonAsync(context);
+    }
 }

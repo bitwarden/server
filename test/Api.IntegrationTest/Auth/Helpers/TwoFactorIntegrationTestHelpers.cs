@@ -4,8 +4,11 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.IntegrationTestCommon.Fido2;
+using Core.Auth.Enums;
+using NSubstitute;
 
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
@@ -109,6 +112,25 @@ internal static class TwoFactorIntegrationTestHelpers
         user.Premium = true;
         await userRepository.UpsertAsync(user);
     }
+
+    // ---------------------------------------------------------------------
+    // Emailed two-factor codes
+    // ---------------------------------------------------------------------
+
+    public sealed record EmailedTwoFactorCode(string Recipient, string Code, TwoFactorEmailPurpose Purpose);
+
+    /// <summary>
+    /// Returns the most recent two-factor email the substituted mail service was asked to send for an account, or
+    /// null. Calls are filtered by account email, so tests that share one substitute do not see each other's emails.
+    /// </summary>
+    public static EmailedTwoFactorCode? FindLatestEmailedTwoFactorCode(IMailService mailService, string accountEmail) =>
+        mailService.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(IMailService.SendTwoFactorEmailAsync))
+            .Select(call => call.GetArguments())
+            .Where(arguments => (string?)arguments[1] == accountEmail)
+            .Select(arguments => new EmailedTwoFactorCode(
+                (string)arguments[0]!, (string)arguments[2]!, (TwoFactorEmailPurpose)arguments[5]!))
+            .LastOrDefault();
 
     // ---------------------------------------------------------------------
     // JSON response parsing

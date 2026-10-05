@@ -3,6 +3,7 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Seeder.Queries;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -97,6 +98,37 @@ public class UserEmailTokenCodeQueryTests
         Assert.Null(response.Code);
     }
 
+    [Fact]
+    public async Task Execute_EmailTwoFactor_ReturnsIssuedCode()
+    {
+        var (query, cache, user) = Arrange();
+        var issuedCode = await IssueEmailTwoFactorCodeAsync(cache, user);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
+        });
+
+        Assert.True(response.Found);
+        Assert.Equal(issuedCode, response.Code);
+    }
+
+    [Fact]
+    public async Task Execute_EmailTwoFactor_LeavesTheCodeRedeemable()
+    {
+        var (query, cache, user) = Arrange();
+        await IssueEmailTwoFactorCodeAsync(cache, user);
+
+        var response = await query.Execute(new UserEmailTokenCodeQuery.Request
+        {
+            Email = user.Email,
+            CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
+        });
+
+        Assert.True(await ValidateEmailTwoFactorCodeAsync(cache, user, response.Code!));
+    }
+
     /// <summary>
     /// The user-verification OTP is written as a bare string under a different key, and stays that way. This
     /// pins that the envelope handling added for new device verification did not change it.
@@ -156,6 +188,28 @@ public class UserEmailTokenCodeQueryTests
     {
         return new MemoryDistributedCache(
             new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
+    }
+
+    private const string EmailTwoFactorPurpose = "TwoFactor";
+
+    /// <summary>
+    /// Issues an email two-factor code through the provider registered for email two-factor, under the purpose
+    /// ASP.NET Identity uses for every two-factor token.
+    /// </summary>
+    private static Task<string> IssueEmailTwoFactorCodeAsync(IDistributedCache cache, User user)
+    {
+        user.TwoFactorProviders = "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + user.Email + "\"}}}";
+        return BuildEmailTwoFactorTokenProvider(cache).GenerateAsync(EmailTwoFactorPurpose, null!, user);
+    }
+
+    private static Task<bool> ValidateEmailTwoFactorCodeAsync(IDistributedCache cache, User user, string code)
+    {
+        return BuildEmailTwoFactorTokenProvider(cache).ValidateAsync(EmailTwoFactorPurpose, code, null!, user);
+    }
+
+    private static EmailTwoFactorTokenProvider BuildEmailTwoFactorTokenProvider(IDistributedCache cache)
+    {
+        return new EmailTwoFactorTokenProvider(cache, Substitute.For<IFeatureService>());
     }
 
     private static NewDeviceVerificationOtpStore BuildOtpStore(IDistributedCache cache)

@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -26,6 +27,7 @@ using Duende.IdentityServer.Stores;
 using LinqToDB;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
+using OtpNet;
 using Xunit;
 
 // #nullable enable
@@ -37,6 +39,9 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     const string _organizationTwoFactor = """{"6":{"Enabled":true,"MetaData":{"ClientId":"DIEFB13LB49IEB3459N2","ClientSecret":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
     const string _testEmail = "test+2farequired@email.com";
     const string _testPassword = "master_password_hash";
+    const string _authenticatorKey = "JBSWY3DPEHPK3PXP";
+    const string _userAuthenticatorTwoFactor =
+        $$"""{"0": { "Enabled": true, "MetaData": { "Key": "{{_authenticatorKey}}" } } }""";
     const string _userEmailTwoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
 
     // WebAuthn keys are persisted through JsonHelpers.LegacySerialize (Newtonsoft), which writes
@@ -164,6 +169,33 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
 
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("invalid_username_or_password", error);
+    }
+
+    /// <summary>
+    /// A wrong email two-factor code is rejected, counts as a failed login, and emails the owner a failed-attempt
+    /// notice.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_InvalidEmailTwoFactorCode_FailedLoginCountedAndOwnerNotified()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var userRepository = _factory.GetService<IUserRepository>();
+        var failedLoginCountBefore = (await userRepository.GetByEmailAsync(email)).FailedLoginCount;
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: "000000");
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("Two-step token is invalid. Try again.",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
+        Assert.Equal(failedLoginCountBefore + 1, (await userRepository.GetByEmailAsync(email)).FailedLoginCount);
+        await _factory.GetService<IMailService>().Received(1).SendFailedTwoFactorAttemptEmailAsync(
+            email, TwoFactorProviderType.Email, Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
     [Theory, BitAutoData]
@@ -425,6 +457,139 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
     }
+
+    /// <summary>
+    /// The email two-factor challenge returns the redacted two-factor email, the account email, and the session
+    /// token SSO clients use to request the emailed code.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorRequired_ChallengeIncludesRedactedEmailAndSessionToken()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+        var providers = AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
+        var emailProvider = AssertHelper.AssertJsonProperty(
+            providers, ProviderKey(TwoFactorProviderType.Email), JsonValueKind.Object);
+        Assert.Equal(CoreHelpers.RedactEmailAddress(email),
+            AssertHelper.AssertJsonProperty(emailProvider, "Email", JsonValueKind.String).GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            AssertHelper.AssertJsonProperty(root, "SsoEmail2faSessionToken", JsonValueKind.String).GetString()));
+        Assert.Equal(email, AssertHelper.AssertJsonProperty(root, "Email", JsonValueKind.String).GetString());
+    }
+
+    /// <summary>
+    /// A user with both email and WebAuthn two-factor gets a challenge for each, including the WebAuthn
+    /// assertion options.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailAndWebAuthnTwoFactorRequired_ChallengeIncludesBothProviders()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        var emailAndWebAuthnTwoFactor = BuildUserEmailTwoFactor(email)[..^1] + "," + _userWebAuthnTwoFactor[1..];
+        await CreateUserAsync(_factory, email, emailAndWebAuthnTwoFactor);
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.Premium = true;
+        await userRepository.ReplaceAsync(user);
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var providers = AssertHelper.AssertJsonProperty(body.RootElement, "TwoFactorProviders2", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(providers, ProviderKey(TwoFactorProviderType.Email), JsonValueKind.Object);
+        var webAuthn = AssertHelper.AssertJsonProperty(
+            providers, ProviderKey(TwoFactorProviderType.WebAuthn), JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(webAuthn, "challenge", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// A current authenticator app code completes two-factor login.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidAuthenticatorCode_Success()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, _userAuthenticatorTwoFactor);
+        var authenticatorCode = new Totp(Base32Encoding.ToBytes(_authenticatorKey)).ComputeTotp();
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Authenticator), twoFactorToken: authenticatorCode);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// The recovery code completes login and removes the user's two-factor providers.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidRecoveryCode_SuccessAndTwoFactorRemoved()
+    {
+        // Arrange
+        const string recoveryCode = "abcdefghijklmnopqrstuvwxyz012345";
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.TwoFactorRecoveryCode = recoveryCode;
+        await userRepository.ReplaceAsync(user);
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.RecoveryCode), twoFactorToken: recoveryCode);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+        Assert.Null((await userRepository.GetByEmailAsync(email)).TwoFactorProviders);
+    }
+
+    /// <summary>
+    /// The remember-me token returned by an earlier two-factor login completes a later login on its own.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_ValidRememberToken_Success()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, _userAuthenticatorTwoFactor);
+        var authenticatorCode = new Totp(Base32Encoding.ToBytes(_authenticatorKey)).ComputeTotp();
+        var firstLogin = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Authenticator), twoFactorToken: authenticatorCode);
+        using var firstLoginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(firstLogin);
+        var rememberToken = AssertHelper.AssertJsonProperty(
+            firstLoginBody.RootElement, "TwoFactorToken", JsonValueKind.String).GetString();
+
+        // Act
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember), twoFactorToken: rememberToken);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    private static string NewUniqueEmail() => $"two-factor-{Guid.NewGuid()}@bitwarden.com";
+
+    private static string BuildUserEmailTwoFactor(string email) =>
+        "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + email + "\"}}}";
+
+    private static string ProviderKey(TwoFactorProviderType providerType) =>
+        ((int)providerType).ToString(CultureInfo.InvariantCulture);
 
     private async Task CreateUserAsync(
         IdentityApplicationFactory factory,
