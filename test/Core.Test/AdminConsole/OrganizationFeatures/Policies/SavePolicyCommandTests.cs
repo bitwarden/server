@@ -17,7 +17,6 @@ using NSubstitute;
 using OneOf.Types;
 using Xunit;
 using EventType = Bit.Core.Enums.EventType;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies;
 
@@ -539,7 +538,7 @@ public class SavePolicyCommandTests
 
     private static void ArrangeVfo1Enabled(SutProvider<SavePolicyCommand> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
     }

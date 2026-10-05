@@ -51,7 +51,6 @@ using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 using V1_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1.IRevokeOrganizationUserCommand;
 using V2_RevokeOrganizationUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
@@ -917,7 +916,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/confirm")]
-    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
     public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);

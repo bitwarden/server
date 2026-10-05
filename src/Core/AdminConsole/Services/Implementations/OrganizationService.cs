@@ -28,7 +28,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
