@@ -27,7 +27,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
@@ -130,7 +129,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetCountByOrganizationIdAsync(organization.Id)
             .Returns(6);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
 
@@ -497,7 +496,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationId)
             .Returns(Task.FromResult<Organization>(null));
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -514,7 +513,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
         sutProvider.GetDependency<IPricingClient>()
@@ -544,7 +543,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization.Id)
             .Returns(organization);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
         sutProvider.GetDependency<IPricingClient>()

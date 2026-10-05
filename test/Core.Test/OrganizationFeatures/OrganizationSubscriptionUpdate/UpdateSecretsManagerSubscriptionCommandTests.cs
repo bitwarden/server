@@ -22,7 +22,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 using Customer = Stripe.Customer;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using StripeConstants = Bit.Core.Billing.Constants.StripeConstants;
 using Subscription = Stripe.Subscription;
 using SubscriptionGetOptions = Stripe.SubscriptionGetOptions;
@@ -809,7 +808,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 351
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -856,7 +855,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 351
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -903,7 +902,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 351
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -957,7 +956,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1004,7 +1003,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1051,7 +1050,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1099,7 +1098,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1143,7 +1142,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1185,7 +1184,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 400
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(true);
 
@@ -1230,7 +1229,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 301
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM32581_UseUpdateOrganizationSubscriptionCommand)
             .Returns(false);
 
