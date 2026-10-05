@@ -27,6 +27,7 @@ using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Address = Stripe.Address;
 using Event = Stripe.Event;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 namespace Bit.Billing.Test.Services;

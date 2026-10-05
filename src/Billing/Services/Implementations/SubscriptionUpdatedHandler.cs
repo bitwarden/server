@@ -23,6 +23,7 @@ using Bit.Core.Services;
 using Stripe;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Billing.Services.Implementations;
 

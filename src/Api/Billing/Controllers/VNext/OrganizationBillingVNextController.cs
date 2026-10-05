@@ -19,6 +19,7 @@ using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 // ReSharper disable RouteTemplates.MethodMissingRouteParameters
 
 namespace Bit.Api.Billing.Controllers.VNext;

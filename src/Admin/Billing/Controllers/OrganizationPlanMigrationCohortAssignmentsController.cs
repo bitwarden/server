@@ -3,7 +3,7 @@ using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.Billing.Organizations.PlanMigration.Commands;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

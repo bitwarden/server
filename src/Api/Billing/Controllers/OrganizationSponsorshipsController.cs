@@ -21,6 +21,7 @@ using Bit.Core.Utilities;
 using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Api.Billing.Controllers;
 

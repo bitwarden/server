@@ -12,6 +12,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Core.Billing.Organizations.Commands;
 

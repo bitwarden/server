@@ -18,6 +18,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using RequireFeatureAttribute = Bitwarden.Server.Sdk.Features.RequireFeatureAttribute;
 
 namespace Bit.Api.Billing.Controllers.VNext;
 

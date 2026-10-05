@@ -30,6 +30,7 @@ using Stripe.TestHelpers;
 using Xunit;
 using static Bit.Core.Billing.Constants.StripeConstants;
 using Event = Stripe.Event;
+using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Billing.Test.Services;
 
