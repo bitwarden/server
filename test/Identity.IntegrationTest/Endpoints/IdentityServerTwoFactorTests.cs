@@ -189,6 +189,42 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             email, TwoFactorProviderType.Email, Arg.Any<DateTime>(), Arg.Any<string>());
     }
 
+    /// <summary>
+    /// A token request without a device identifier fails two-factor even with the correct email code, and the code
+    /// still logs in the device it was issued to.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailCodeWithoutDeviceIdentifier_TwoFactorRejected()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var code = await EmailLoginCodeAsync(_factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+
+        // Act
+        var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "grant_type", "password" },
+                { "username", email },
+                { "password", _testPassword },
+                { "TwoFactorToken", code },
+                { "TwoFactorProvider", ProviderKey(TwoFactorProviderType.Email) },
+            }));
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var errorModel = AssertHelper.AssertJsonProperty(body.RootElement, "ErrorModel", JsonValueKind.Object);
+        Assert.Equal("Two-step token is invalid. Try again.",
+            AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
+        var issuedDeviceContext = await _factory.ContextFromPasswordWithTwoFactorAsync(email, _testPassword,
+            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: code);
+        using var issuedDeviceBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(issuedDeviceContext);
+        AssertHelper.AssertJsonProperty(issuedDeviceBody.RootElement, "access_token", JsonValueKind.String);
+    }
+
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypePassword_OrgDuoTwoFactorRequired_NoTwoFactorProvided_Fails(string deviceId)
     {

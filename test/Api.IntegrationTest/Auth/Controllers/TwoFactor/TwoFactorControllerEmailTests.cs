@@ -768,6 +768,35 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
+    /// A setup code is bound to the session's device even when the request also sends a <c>Device-Identifier</c>
+    /// header naming another device: a session on the named device is rejected, and the requesting session succeeds.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailSetup_DeviceHeaderNamesOtherDevice_CodeBoundToSessionDevice()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        using var sendRequest = new HttpRequestMessage(HttpMethod.Post, "/two-factor/send-email");
+        sendRequest.Headers.Add("Device-Identifier", OtherDeviceIdentifier);
+        sendRequest.Content = JsonContent.Create(new { Email = _userEmail, UserVerificationToken = uvToken });
+        var sendResponse = await _client.SendAsync(sendRequest);
+        Assert.Equal(HttpStatusCode.OK, sendResponse.StatusCode);
+        var setupCode = AssertCodeEmailed(TwoFactorEmailPurpose.Setup);
+        using var otherDeviceClient = await CreateClientForDeviceAsync(OtherDeviceIdentifier);
+        var model = new TwoFactorEmailUpdateRequestModel
+        {
+            Email = _userEmail,
+            Token = setupCode,
+            UserVerificationToken = uvToken,
+        };
+
+        var otherDeviceResponse = await otherDeviceClient.PutAsJsonAsync("/two-factor/email", model);
+        var requestingDeviceResponse = await _client.PutAsJsonAsync("/two-factor/email", model);
+
+        Assert.Equal(HttpStatusCode.BadRequest, otherDeviceResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, requestingDeviceResponse.StatusCode);
+    }
+
+    /// <summary>
     /// Refreshing the access token between requesting and submitting a setup code keeps the session's device, so
     /// the code still works.
     /// </summary>
