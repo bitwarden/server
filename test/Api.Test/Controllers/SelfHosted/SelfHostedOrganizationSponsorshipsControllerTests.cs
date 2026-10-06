@@ -14,10 +14,6 @@ namespace Bit.Api.Test.Controllers.SelfHosted;
 [SutProviderCustomize]
 public class SelfHostedOrganizationSponsorshipsControllerTests
 {
-    /// <summary>
-    /// A member-initiated sponsorship is hidden from GET {orgId}/sponsored, so the admin revoke
-    /// route must not act on it either.
-    /// </summary>
     [Theory]
     [BitAutoData]
     public async Task AdminInitiatedRevokeSponsorshipAsync_MemberInitiatedSponsorship_ThrowsBadRequest(

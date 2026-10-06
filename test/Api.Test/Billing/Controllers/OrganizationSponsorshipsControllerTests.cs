@@ -269,11 +269,6 @@ public class OrganizationSponsorshipsControllerTests
             .GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
     }
 
-    /// <summary>
-    /// A member-initiated sponsorship belongs to the member's own personal Families organization.
-    /// It is hidden from GET {orgId}/sponsored, so the admin revoke route must not act on it
-    /// either, and must be indistinguishable from a friendly name that does not exist.
-    /// </summary>
     [Theory]
     [BitAutoData]
     public async Task AdminInitiatedRevokeSponsorshipAsync_MemberInitiatedSponsorship_ThrowsBadRequest(
@@ -320,10 +315,6 @@ public class OrganizationSponsorshipsControllerTests
             .RevokeSponsorshipAsync(sponsorship);
     }
 
-    /// <summary>
-    /// The resend route shares the same manageUsers gate and the same friendly-name lookup, so it
-    /// must not re-offer a colleague's member-initiated sponsorship either.
-    /// </summary>
     [Theory]
     [BitAutoData]
     public async Task ResendSponsorshipOffer_AnotherMembersMemberInitiatedSponsorship_DoesNotSend(
@@ -355,10 +346,6 @@ public class OrganizationSponsorshipsControllerTests
             .SendSponsorshipOfferAsync(default, default, default);
     }
 
-    /// <summary>
-    /// The personal Settings > Sponsored families page posts to this same admin route, so an
-    /// Owner/Admin/manageUsers member must still be able to resend their OWN member-initiated offer.
-    /// </summary>
     [Theory]
     [BitAutoData]
     public async Task ResendSponsorshipOffer_OwnMemberInitiatedSponsorship_Sends(
@@ -392,10 +379,6 @@ public class OrganizationSponsorshipsControllerTests
             .SendSponsorshipOfferAsync(sponsoringOrg, callingOrgUser, sponsorship);
     }
 
-    /// <summary>
-    /// Admin-initiated sponsorships are the ones this route exists for, so a manageUsers holder
-    /// must still be able to resend one granted by a different member.
-    /// </summary>
     [Theory]
     [BitAutoData]
     public async Task ResendSponsorshipOffer_AnotherMembersAdminInitiatedSponsorship_Sends(

@@ -413,9 +413,8 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
     #endregion
 
     /// <summary>
-    /// A Custom member holding only manageUsers must not be able to revoke a colleague's
-    /// member-initiated (personal) Families sponsorship. The list route hides that row from them,
-    /// so the revoke route must answer the same 400 it gives for an unknown friendly name.
+    /// A Custom member holding only manageUsers cannot revoke a colleague's member-initiated
+    /// sponsorship, and gets the same 400 as for an unknown friendly name.
     /// </summary>
     [Fact]
     public async Task AdminInitiatedRevokeSponsorship_MemberInitiatedSponsorship_IsNotRevoked()
