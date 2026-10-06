@@ -127,7 +127,7 @@ public class OrganizationSponsorshipsController : Controller
 
         var sponsorships = await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(sponsoringOrgId);
         var filteredSponsorship = sponsorships.FirstOrDefault(s =>
-            (s.IsAdminInitiated || s.SponsoringOrganizationUserId == sponsoringOrgUser?.Id) &&
+            s.IsAdminInitiated &&
             s.FriendlyName != null && s.FriendlyName.Equals(sponsoredFriendlyName, StringComparison.OrdinalIgnoreCase));
         if (filteredSponsorship != null)
         {

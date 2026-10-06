@@ -348,9 +348,8 @@ public class OrganizationSponsorshipsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task ResendSponsorshipOffer_OwnMemberInitiatedSponsorship_Sends(
+    public async Task ResendSponsorshipOffer_OwnMemberInitiatedSponsorship_DoesNotSend(
         Guid sponsoringOrgId,
-        Organization sponsoringOrg,
         OrganizationUser callingOrgUser,
         OrganizationSponsorship sponsorship,
         [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
@@ -368,15 +367,14 @@ public class OrganizationSponsorshipsControllerTests
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
             .Returns(new List<OrganizationSponsorship> { sponsorship });
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(sponsoringOrgId).Returns(sponsoringOrg);
 
         // Act
         await sutProvider.Sut.ResendSponsorshipOffer(sponsoringOrgId, sponsorship.FriendlyName);
 
         // Assert
-        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>().Received(1)
-            .SendSponsorshipOfferAsync(sponsoringOrg, callingOrgUser, sponsorship);
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSponsorshipOfferAsync(default, default, default);
     }
 
     [Theory]
