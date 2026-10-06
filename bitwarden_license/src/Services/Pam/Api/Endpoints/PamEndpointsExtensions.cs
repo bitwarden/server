@@ -58,7 +58,7 @@ public static class PamEndpointsExtensions
     }
 
     /// <summary>
-    /// The connector-facing surface: <see cref="Policies.PamAccessConnector"/> instead of the user-token
+    /// The connector-facing surface: <see cref="Policies.AccessConnector"/> instead of the user-token
     /// <see cref="Policies.Application"/>, and <see cref="AccessConnectorHeartbeatEndpointFilter"/> on every
     /// route, added last so a disabled flag or malformed body short-circuits ahead of the heartbeat write.
     /// These routes carry no {orgId}; a connector's organization comes from its token instead.
@@ -66,7 +66,7 @@ public static class PamEndpointsExtensions
     /// TODO(PM-39040): rate-limit this group by client_id.
     /// </summary>
     private static RouteGroupBuilder WithPamAccessConnectorMachineDefaults(this RouteGroupBuilder group) =>
-        group.WithPamDefaults(Policies.PamAccessConnector, FeatureFlagKeys.PamAccessConnector)
+        group.WithPamDefaults(Policies.AccessConnector, FeatureFlagKeys.PamAccessConnector)
             .AddEndpointFilter<AccessConnectorHeartbeatEndpointFilter>();
 
     /// <summary>

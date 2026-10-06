@@ -13,7 +13,7 @@ namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 /// </summary>
 /// <remarks>
 /// This filter authorizes nothing. An access connector's eligibility is established at token issuance
-/// (<see cref="Bit.Core.Auth.Identity.Policies.PamAccessConnector"/>, <c>PamAccessConnectorClientProvider</c>) and
+/// (<see cref="Bit.Core.Auth.Identity.Policies.AccessConnector"/>, <c>PamAccessConnectorClientProvider</c>) and
 /// re-established by the work queries themselves, which join <c>PamAccessConnector</c> on Enabled and organization.
 /// </remarks>
 public class AccessConnectorHeartbeatEndpointFilter : IEndpointFilter
