@@ -8,18 +8,20 @@ See [LIBRARY.md](../LIBRARY.md) for the shape all libraries under `src/Libraries
 
 ## Public surface
 
-`AddOrganizationSubscriptions()` registers the library's services — the scoped
-`OrganizationSubscriptionEndpointsHandler`, the scoped `PreviewOrganizationSubscriptionPurchaseHandler`
-and the `IPreviewOrganizationSubscriptionPurchaseQuery` behind it, and the
-`StandaloneOrganizationOwnerRequirementHandler` authorization handler — and the `Bit.Invoicing`
-library they depend on.
+`AddOrganizationSubscriptions()` registers the group's services — a scoped handler class per endpoint
+(`GetOrganizationSubscriptionPreviewHandler`, `PreviewOrganizationPlanChangeHandler`, `PreviewOrganizationSubscriptionPurchaseHandler`), each depending
+only on `IOrganizationRepository` (or `IUserService` for purchases) and the query or command it runs; the plan-change command
+(`IPreviewOrganizationPlanChangeCommand`) and the purchase query (`IPreviewOrganizationSubscriptionPurchaseQuery`); the `StandaloneOrganizationOwnerRequirementHandler`
+authorization handler; and the `Bit.Invoicing` library they depend on. One handler class per endpoint
+avoids a shared handler that accumulates a dependency per route.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
 `/organizations/{organizationId:guid}/billing/subscription`. The chain applies the
 `OrganizationSubscriptions` tag, the `internal` group name (keeps these endpoints out of the public
 API spec), the authenticated `Application` policy, the `OrganizationBillingRequirement`, basic
-exception handling (from `Bit.ExceptionHandling`), and the `PM36631_PreviewDrivenCart` feature gate.
+exception handling (from `Bit.ExceptionHandling`), the `PM36631_PreviewDrivenCart` feature gate, and a
+`Cache-Control: no-store` filter (previews are per-organization billing data, never cached).
 
 `MapOrganizationSubscriptionPurchaseEndpoints()` attaches a second group, which the host mounts at
 `/organizations/billing/subscription`. Its chain applies the `OrganizationSubscriptions` tag, the
@@ -38,8 +40,8 @@ The organization-scoped group authorizes **every** endpoint — the `Application
 library, enforced via `AuthorizeAttribute<OrganizationBillingRequirement>`. It admits organization
 Owners and confirmed provider users managing the organization; Admin and Custom are excluded.
 
-Individual endpoints may narrow this baseline further. The `preview` endpoint additionally requires
-`StandaloneOrganizationOwnerRequirement`, so it admits **only** an Owner of a standalone organization:
+Individual endpoints may narrow this baseline further. Both organization-scoped endpoints additionally require
+`StandaloneOrganizationOwnerRequirement`, so they admit **only** an Owner of a standalone organization:
 an owner of a provider-managed (MSP, reseller, or business unit) organization, and a confirmed provider user, are both
 denied. This is deliberately stricter than legacy `ICurrentContext.EditSubscription`, which still admits
 a provider user for a provider-managed organization; provider-managed billing is administered through the
@@ -49,18 +51,21 @@ provider surface, so none of the organization's users reach the preview here.
 
 | Route | Handler | Returns |
 | --- | --- | --- |
-| `GET .../preview` | `OrganizationSubscriptionEndpointsHandler.GetPreviewAsync` | `SubscriptionPreview` |
-| `POST /organizations/billing/subscription/purchase/preview` | `PreviewOrganizationSubscriptionPurchaseHandler.HandleAsync` | `InvoicePreview` |
+| `GET .../preview` | `GetOrganizationSubscriptionPreviewHandler` | `SubscriptionPreview` |
+| `POST .../plan-change/preview` | `PreviewOrganizationPlanChangeHandler` | `InvoicePreview` |
+| `POST /organizations/billing/subscription/purchase/preview` | `PreviewOrganizationSubscriptionPurchaseHandler` | `InvoicePreview` |
 
 GET endpoints are named `Get…` and POST previews are named `Preview…`, and the same prefix carries
-down through the handler, query, and request (`PreviewOrganizationSubscriptionPurchase`,
-`PreviewOrganizationSubscriptionPurchaseHandler`, `IPreviewOrganizationSubscriptionPurchaseQuery`,
-`PreviewOrganizationSubscriptionPurchaseRequest`).
+down through the handler, query, and request.
 
-`GetPreviewAsync` resolves the organization via `IOrganizationRepository` (404 if missing), runs
-`Bit.Invoicing`'s `IGetSubscriptionPreviewQuery` (404 if the organization has no Stripe subscription
-to preview), and returns the resulting `SubscriptionPreview`. The 404s are `NotFoundException`s
-(`Bit.ExceptionHandling`), which the group's exception handling maps to `404 Not Found`.
+Each handler resolves the organization via `IOrganizationRepository` (404 if missing).
+`GetOrganizationSubscriptionPreviewHandler` runs `Bit.Invoicing`'s `IGetSubscriptionPreviewQuery` and
+returns the resulting `SubscriptionPreview`. `PreviewOrganizationPlanChangeHandler` runs this library's
+`IPreviewOrganizationPlanChangeCommand`, which reads the subscription through `IStripeAdapter`, composes
+the plan change, and hands the finished `InvoiceCreatePreviewOptions` to `Bit.Invoicing`'s
+`IInvoicePreviewService`. It prorates the change against the live subscription — matching the real
+upgrade, which invoices the change immediately — or previews the new plan at full price for a Free org
+with no subscription.
 
 ### Organization purchase preview
 
@@ -88,11 +93,37 @@ to the client's code and logs a warning naming only the country and that code, n
 value. A missing seats line or a plan the pricing service doesn't have is a catalog fault the user
 can't fix and returns a 409.
 
+### Organization plan-change preview
+
+Its request is a JSON body: `tier` and `cadence` (the target plan, as their `EnumMember` string values,
+e.g. `enterprise`/`monthly`) and a `billingAddress` (`country`, `postalCode`, and an optional tax id).
+The address is passed to Stripe via `CustomerDetails` so tax can be estimated without a stored customer —
+a Free org has none until it adds a payment method. The tax id sent in the request, or the customer's
+on-file tax id when the request omits one, is forwarded so a VAT-registered business is quoted the tax it
+will actually be charged. Its Stripe tax-id type is derived from the value with `ITaxService`, falling
+back to the submitted code when it can't be derived. A trialing subscription's change prorates to $0 mid-trial, so the preview ends
+the trial in the hypothetical (`trial_end = now`) and returns what the subscriber pays once it converts.
+It returns the resulting `InvoicePreview` cart.
+
+A missing or unrecognized `tier`/`cadence` fails JSON binding with a 400 before the command runs. The
+command validates the rest itself. Caller-fixable problems are **400s**: the `premium` tier, Families on
+a monthly cadence, a move to the same tier (including a cadence-only change), a downgrade, a plan without Secrets Manager
+support for an SM-enabled org, an invalid billing address, or a tax location or tax id Stripe rejects.
+Data or Stripe state the caller
+cannot influence is logged with the organization id and surfaced as a **409**: a paid org with no
+subscription, a subscription Stripe no longer has, a subscription in a status other than `trialing`,
+`active`, or `past_due`, a subscription whose line items don't match the current plan, or a missing
+seat count. A missing organization is a **404**. These map from the `BadRequestException`,
+`ConflictException`, and `NotFoundException` types in `Bit.ExceptionHandling`.
+
 ## Stripe boundary
 
-This library never calls Stripe. It makes no Stripe API calls and never touches `IStripeAdapter`;
-all Stripe interaction is delegated to `Bit.Invoicing`'s public surface. Referencing Stripe SDK
-types to pass data across that surface is fine — calling Stripe from here is not.
+This library **reads** Stripe data directly through `IStripeAdapter` (fetching the organization's
+subscription and its customer's tax ids while building a plan-change preview). That is allowed for now;
+the ideal end state is that these Stripe calls happen in a lower-level library instead. Until that
+library exists, customer-specific read logic lives here. The final preview call — turning the composed
+`InvoiceCreatePreviewOptions` into an `InvoicePreview` — still goes through `Bit.Invoicing`'s
+`IInvoicePreviewService`.
 
 ## Core debt
 
@@ -106,12 +137,14 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `CurrentContextOrganization` (`Bit.Core.Context`), `OrganizationUserType` (`Bit.Core.Enums`) | Evaluating the org-billing requirement (Owner vs. confirmed provider user) |
 | `IProviderOrganizationRepository` (`Bit.Core.AdminConsole.Repositories`) | The provider-managed-organization check behind `StandaloneOrganizationOwnerRequirement` |
 | `IUserService`, `User` (`Bit.Core.Services`, `Bit.Core.Entities`) | Resolving the purchase preview's caller |
-| `IPricingClient` (`Bit.Core.Billing.Pricing`) | The plan being purchased |
-| `Plan` (`Bit.Core.Models.StaticStore`) | Price ids of the plan being purchased |
+| `IStripeAdapter` (`Bit.Core.Billing.Services`) | Reading the organization's subscription (and its customer's tax ids) for the plan-change preview |
+| `IPricingClient` (`Bit.Core.Billing.Pricing`), `Plan` (`Bit.Core.Models.StaticStore`) | Resolving the current and target plans' Stripe price ids and seat/flat shape |
+| `OrganizationSubscriptionChangeSet` (`Bit.Core.Billing.Organizations.Models`) | Composing the plan change the same way the real upgrade does, then translating it into preview line items |
 | `ISubscriptionDiscountService`, `DiscountTierType` (`Bit.Core.Billing.Services`, `Bit.Core.Billing.Enums`) | Eligibility-checking Families purchase coupons |
-| `ITaxService` (`Bit.Core.Billing.Tax.Services`) | Deriving the Stripe tax ID type |
+| `ITaxService` (`Bit.Core.Billing.Tax.Services`), `StripeConstants.TaxIdType` | Deriving the Stripe tax-id code (and the Spanish-NIF EU-VAT pairing) for `CustomerDetails.TaxIds` |
 | `SponsoredPlans`, `PlanSponsorshipType` (`Bit.Core.Billing.Models`, `Bit.Core.Enums`) | The Families-for-Enterprise sponsored price |
-| `ProductTierType`, `PlanType`, `PlanCadenceType` (`Bit.Core.Billing.Enums`) | Purchase request contract and the `Bit.Invoicing` call |
+| `TaxID` (`Bit.Core.Billing.Payment.Models`) | The organization's on-file tax id and the mapped request tax id |
+| `PlanCadenceType`, `PlanType`, `ProductTierType` (`Bit.Core.Billing.Enums`), `StripeConstants.SubscriptionStatus` | Resolving the target plan and gating the previewable subscription statuses |
 | `StripeConstants` (`Bit.Core.Billing.Constants`) | `classic` billing mode, the `sm-standalone` coupon, `customer_tax_location_invalid`, `tax_id_invalid`, the `es_cif` and `eu_vat` tax ID types |
 | `BadRequestException`, `ConflictException` (`Bit.Core.Exceptions`) | Purchase preview 400 and 409 responses via the group's exception handling |
 
