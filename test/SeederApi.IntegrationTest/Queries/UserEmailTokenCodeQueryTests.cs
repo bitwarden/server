@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -99,10 +100,12 @@ public class UserEmailTokenCodeQueryTests
     }
 
     [Fact]
-    public async Task Execute_EmailTwoFactor_ReturnsIssuedCode()
+    public async Task Execute_EmailTwoFactor_ReturnsCodeAndBoundDevice()
     {
         var (query, cache, user) = Arrange();
-        var issuedCode = await IssueEmailTwoFactorCodeAsync(cache, user);
+        EnableEmailTwoFactor(user);
+        var (twoFactorEmailService, mailService) = BuildTwoFactorEmailService(cache);
+        await twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -111,14 +114,21 @@ public class UserEmailTokenCodeQueryTests
         });
 
         Assert.True(response.Found);
-        Assert.Equal(issuedCode, response.Code);
+        Assert.Equal(EmailedCode(mailService), response.Code);
+        Assert.Equal(DeviceIdentifier, response.DeviceIdentifier);
     }
 
+    /// <summary>
+    /// Reading a code must not consume it, or the flow under test would be unable to redeem the code the
+    /// automation just fetched.
+    /// </summary>
     [Fact]
     public async Task Execute_EmailTwoFactor_LeavesTheCodeRedeemable()
     {
         var (query, cache, user) = Arrange();
-        await IssueEmailTwoFactorCodeAsync(cache, user);
+        EnableEmailTwoFactor(user);
+        var (twoFactorEmailService, _) = BuildTwoFactorEmailService(cache);
+        await twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, DeviceIdentifier);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -126,7 +136,7 @@ public class UserEmailTokenCodeQueryTests
             CodeType = UserEmailTokenCodeQuery.CodeType.EmailTwoFactor,
         });
 
-        Assert.True(await ValidateEmailTwoFactorCodeAsync(cache, user, response.Code!));
+        Assert.True(await twoFactorEmailService.VerifyTwoFactorLoginTokenAsync(user, DeviceIdentifier, response.Code));
     }
 
     /// <summary>
@@ -190,33 +200,40 @@ public class UserEmailTokenCodeQueryTests
             new OptionsWrapper<MemoryDistributedCacheOptions>(new MemoryDistributedCacheOptions()));
     }
 
-    private const string EmailTwoFactorPurpose = "TwoFactor";
-
-    /// <summary>
-    /// Issues an email two-factor code through the provider registered for email two-factor, under the purpose
-    /// ASP.NET Identity uses for every two-factor token.
-    /// </summary>
-    private static Task<string> IssueEmailTwoFactorCodeAsync(IDistributedCache cache, User user)
+    private static void EnableEmailTwoFactor(User user)
     {
         user.TwoFactorProviders = "{\"1\":{\"Enabled\":true,\"MetaData\":{\"Email\":\"" + user.Email + "\"}}}";
-        return BuildEmailTwoFactorTokenProvider(cache).GenerateAsync(EmailTwoFactorPurpose, null!, user);
     }
 
-    private static Task<bool> ValidateEmailTwoFactorCodeAsync(IDistributedCache cache, User user, string code)
+    /// <summary>
+    /// Builds the service that issues email two-factor codes over the given cache, with a mail substitute that
+    /// receives the emailed code.
+    /// </summary>
+    private static (TwoFactorEmailService Service, IMailService MailService) BuildTwoFactorEmailService(
+        IDistributedCache cache)
     {
-        return BuildEmailTwoFactorTokenProvider(cache).ValidateAsync(EmailTwoFactorPurpose, code, null!, user);
+        var mailService = Substitute.For<IMailService>();
+        var service = new TwoFactorEmailService(
+            Substitute.For<ICurrentContext>(),
+            mailService,
+            Substitute.For<INewDeviceVerificationOtpStore>(),
+            BuildOtpTokenProvider(cache));
+        return (service, mailService);
     }
 
-    private static EmailTwoFactorTokenProvider BuildEmailTwoFactorTokenProvider(IDistributedCache cache)
+    private static string EmailedCode(IMailService mailService) =>
+        (string)mailService.ReceivedCalls()
+            .Single(call => call.GetMethodInfo().Name == nameof(IMailService.SendTwoFactorEmailAsync))
+            .GetArguments()[2]!;
+
+    private static OtpTokenProvider<DefaultOtpTokenProviderOptions> BuildOtpTokenProvider(IDistributedCache cache)
     {
-        return new EmailTwoFactorTokenProvider(cache, Substitute.For<IFeatureService>());
+        return new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
+            cache, new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()));
     }
 
     private static NewDeviceVerificationOtpStore BuildOtpStore(IDistributedCache cache)
     {
-        var otpTokenProvider = new OtpTokenProvider<DefaultOtpTokenProviderOptions>(
-            cache, new OptionsWrapper<DefaultOtpTokenProviderOptions>(new DefaultOtpTokenProviderOptions()));
-
-        return new NewDeviceVerificationOtpStore(otpTokenProvider, cache);
+        return new NewDeviceVerificationOtpStore(BuildOtpTokenProvider(cache), cache);
     }
 }
