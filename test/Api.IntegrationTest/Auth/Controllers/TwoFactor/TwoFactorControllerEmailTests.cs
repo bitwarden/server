@@ -316,7 +316,8 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Web and CLI shape: master password plus <c>Device-Identifier</c> header. The emailed code logs the device in.
+    /// The request as the CLI sends it: master password, with the device identifier in the <c>Device-Identifier</c>
+    /// header only. The emailed code logs the device in.
     /// </summary>
     [Fact]
     public async Task SendEmailLogin_MasterPasswordAndDeviceHeader_EmailsCodeThatLogsIn()
@@ -335,8 +336,8 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     // TODO: PM-44555 - When the body fallback is removed, a request without the header is rejected; change this
     // test to expect a 400, or delete it.
     /// <summary>
-    /// Mobile shape: master password with the device identifier in the body, no header, and the unused SSO token
-    /// field sent as null. The emailed code logs the device in.
+    /// The request as the mobile apps send it: master password, with the device identifier in the body only and the
+    /// unused SSO token field sent as null. The emailed code logs the device in.
     /// </summary>
     [Fact]
     public async Task SendEmailLogin_MasterPasswordAndDeviceInBodyOnly_EmailsCodeThatLogsIn()
@@ -354,8 +355,9 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     /// <summary>
-    /// Web shape: master password with the same device identifier in both the header and the body, and the unused
-    /// credential fields sent as empty strings. The emailed code logs the device in.
+    /// The request as the web, browser, and desktop clients send it: master password, with the same device identifier
+    /// in the header and the body, and the unused credential fields sent as empty strings. The emailed code logs the
+    /// device in.
     /// </summary>
     [Fact]
     public async Task SendEmailLogin_MasterPasswordAndDeviceInHeaderAndBody_EmailsCodeThatLogsIn()
