@@ -167,6 +167,13 @@ public static class ServiceCollectionExtensions
                 // stolen IdP session cookie to ride into the Admin Portal silently.
                 options.AdditionalAuthorizationParameters.Add("prompt", "login");
 
+                // Server-enforced complement to prompt=login. Unlike prompt (a SHOULD), max_age
+                // is a MUST: the IdP returns an auth_time claim and the handler validates
+                // now - auth_time <= MaxAge. Zero means the user must have authenticated at or
+                // after this authorize request, so a stale IdP session cookie cannot ride into
+                // the Admin Portal even if the IdP ignores prompt=login.
+                options.MaxAge = TimeSpan.Zero;
+
                 // Pin the OIDC helper cookies explicitly (default is SameSite=None, which the
                 // framework requires for the redirect-back cross-site POST). SecurePolicy is
                 // safe as Always because the OIDC handler is only registered when OidcEnabled
