@@ -57,6 +57,30 @@ public class AccessAuditEventEmitterTests
             .CreateAsync(default!);
     }
 
+    // A failed attempt stops the action.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_AttemptStoreFailure_Throws(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Attempt };
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.EmitAsync(auditEvent));
+    }
+
+    // The action has already happened, so a failed outcome does not fail it.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OutcomeStoreFailure_DoesNotThrow(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Outcome };
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await sutProvider.Sut.EmitAsync(auditEvent);
+    }
+
     // The kill switch is scoped to its own store; the organization event log is a separate sink.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithSqlAuditLoggingDisabled_StillWritesToTheOrganizationEventLog(
@@ -223,5 +247,19 @@ public class AccessAuditEventEmitterTests
         await sutProvider.Sut.EmitAsync(auditEvent);
 
         await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
+    }
+
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OutcomeStoreFailure_StillWritesToTheOrganizationEventLog(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEventOfKind(organizationId, AccessAuditEventKind.RequestApproved);
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await sutProvider.Sut.EmitAsync(auditEvent);
+
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogPamAccessEventAsync(EventType.Pam_AccessRequest_Approved, Arg.Any<PamAccessEventContext>());
     }
 }

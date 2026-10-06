@@ -33,7 +33,16 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         // Gates the PAM store only, not the organization event log fan-out.
         if (!_featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
         {
-            await _accessAuditEventRepository.CreateAsync(auditEvent);
+            try
+            {
+                await _accessAuditEventRepository.CreateAsync(auditEvent);
+            }
+            catch (Exception ex) when (auditEvent.Phase == AccessAuditEventPhase.Outcome)
+            {
+                _logger.LogError(ex,
+                    "Failed to record the outcome of PAM audit event {Kind} ({CorrelationId}). The trail shows the action as incomplete.",
+                    auditEvent.Kind, auditEvent.CorrelationId);
+            }
         }
 
         await FanOutToOrganizationEventLogAsync(auditEvent);
