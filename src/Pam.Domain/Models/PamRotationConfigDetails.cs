@@ -12,7 +12,11 @@ public class PamRotationConfigDetails : PamRotationConfig
     public string TargetSystemName { get; set; } = null!;
     public PamTargetSystemMethod TargetSystemMethod { get; set; }
 
-    /// <summary>Whether the config has a Pending or Claimed job — spec <c>has_active_job</c>, see <c>PamRotationRules.IsActiveJobStatus</c>.</summary>
+    /// <summary>
+    /// Whether a job still occupies the config — spec <c>has_active_job</c>: unresolved, and its timeout not yet
+    /// recorded by the sweep. Can trail a job's derived TimedOut by one sweep, so the sweep's reschedule lands before
+    /// the config is offered again.
+    /// </summary>
     public bool HasActiveJob { get; set; }
 
     public static PamRotationConfigDetails From(PamRotationConfig config, string targetSystemName,

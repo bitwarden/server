@@ -134,7 +134,7 @@ public class OfferRotationCommandTests
         await sutProvider.GetDependency<IPamRotationJobRepository>().Received(1).CreateGuardedAsync(
             Arg.Is<PamRotationJob>(j => j.RotationConfigId == config.Id
                 && j.Source == source
-                && j.Status == PamRotationJobStatus.Pending
+                && j.Action == PamRotationJobAction.None
                 && j.ClaimedByAccessConnectorId == null
                 && j.ClaimedAt == null));
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(

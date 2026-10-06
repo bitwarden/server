@@ -24,7 +24,11 @@ public class PamRotationAttempt : ITableObject<Guid>
     /// <summary>Whether the access connector has written the rotated secret back to the cipher via the atomic accept-write path.</summary>
     public bool CipherUpdated { get; set; }
 
-    public PamRotationAttemptStatus Status { get; set; }
+    /// <summary>
+    /// What the claimant reported, if anything. Executing vs Abandoned is derived via
+    /// <see cref="PamRotationStatusDerivation.ComputeAttemptStatus"/>.
+    /// </summary>
+    public PamRotationAttemptAction Action { get; set; }
 
     /// <summary>
     /// A bounded, human-readable failure reason, truncated to 500 characters server-side. Set only on
@@ -42,7 +46,8 @@ public class PamRotationAttempt : ITableObject<Guid>
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
-    /// <summary>When the attempt left <see cref="PamRotationAttemptStatus.Executing"/>, or null while still executing.</summary>
+    /// <summary>When the claimant reported, or when a release ended the claim. A timeout writes nothing, so a timed-out
+    /// attempt has none stored.</summary>
     public DateTime? ResolvedDate { get; set; }
 
     public void SetNewId()

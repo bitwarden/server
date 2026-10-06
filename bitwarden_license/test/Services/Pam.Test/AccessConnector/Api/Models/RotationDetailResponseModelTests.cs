@@ -87,7 +87,7 @@ public class RotationDetailResponseModelTests
             Id = Guid.NewGuid(),
             RotationConfigId = Guid.NewGuid(),
             Source = PamRotationSource.Scheduled,
-            Status = PamRotationJobStatus.Succeeded,
+            Action = PamRotationJobAction.Succeeded,
             CreationDate = _created,
             NextClaimableAt = _created,
             ExpiresAt = _resolved,
@@ -99,12 +99,12 @@ public class RotationDetailResponseModelTests
                 JobId = job.Id,
                 ClaimedByAccessConnectorId = accessConnectorId,
                 CipherUpdated = true,
-                Status = PamRotationAttemptStatus.Rotated,
+                Action = PamRotationAttemptAction.Rotated,
                 SessionTermination = PamSessionTerminationOutcome.Terminated,
                 CreationDate = _created,
                 ResolvedDate = _resolved,
             }
-        ]);
+        ], _resolved);
     }
 
     private static JsonElement Serialize<T>(T model) =>

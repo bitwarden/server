@@ -6,7 +6,7 @@ CREATE TABLE [dbo].[PamRotationAttempt] (
     [JobId]                         UNIQUEIDENTIFIER    NOT NULL,
     [ClaimedByAccessConnectorId]    UNIQUEIDENTIFIER    NOT NULL,
     [CipherUpdated]                 BIT                 NOT NULL,
-    [Status]                        TINYINT             NOT NULL,
+    [Action]                        TINYINT             NOT NULL,
     [FailureReason]                 NVARCHAR(500)       NULL,
     [SyncState]                     TINYINT             NULL,
     [SessionTermination]            TINYINT             NULL,
@@ -17,9 +17,9 @@ CREATE TABLE [dbo].[PamRotationAttempt] (
 );
 GO
 
--- Backs PamRotationJob_ReadManyByConfigId and the "no Rotated attempt" timeout/release checks.
-CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Status]
-    ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Status] ASC);
+-- Backs PamRotationJob_ReadManyByConfigId and PamRotationAttempt_MarkErrored's retry-budget count.
+CREATE NONCLUSTERED INDEX [IX_PamRotationAttempt_JobId_Action]
+    ON [dbo].[PamRotationAttempt] ([JobId] ASC, [Action] ASC);
 GO
 
 -- Both of PamRotationJob_ReadManyRecentByAccessConnectorId's result sets seek on ClaimedByAccessConnectorId.
