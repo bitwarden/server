@@ -1,5 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Dirt.Reports.Models.Data;
+using Bit.DataMigrations;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
@@ -107,6 +108,7 @@ public class DatabaseContext : DbContext
         //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
         //   from this module.
         builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+        builder.ApplyConfigurationsFromAssembly(typeof(DataMigrationState).Assembly);
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
