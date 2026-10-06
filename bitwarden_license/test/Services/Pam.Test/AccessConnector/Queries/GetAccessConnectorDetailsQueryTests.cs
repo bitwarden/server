@@ -33,7 +33,7 @@ public class GetAccessConnectorDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnectorId));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByAccessConnectorIdAsync(default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -48,7 +48,7 @@ public class GetAccessConnectorDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, accessConnector.Id));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyRecentByAccessConnectorIdAsync(default, default);
+            .GetManyRecentByAccessConnectorIdAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -65,7 +65,7 @@ public class GetAccessConnectorDetailsQueryTests
             .GetAssignmentsByOrganizationIdAsync(accessConnector.OrganizationId)
             .Returns([assigned, Assignment(accessConnector.OrganizationId, otherAccessConnectorId)]);
         sutProvider.GetDependency<IPamRotationJobRepository>()
-            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Any<int>())
+            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Any<int>(), _now)
             .Returns(jobs);
 
         var result = await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
@@ -102,7 +102,7 @@ public class GetAccessConnectorDetailsQueryTests
         await sutProvider.Sut.GetAsync(accessConnector.OrganizationId, accessConnector.Id);
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().Received(1)
-            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Is<int>(limit => limit > 0));
+            .GetManyRecentByAccessConnectorIdAsync(accessConnector.Id, Arg.Is<int>(limit => limit > 0), _now);
     }
 
     private static SutProvider<GetAccessConnectorDetailsQuery> Setup()

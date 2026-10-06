@@ -1,5 +1,5 @@
-﻿using Bit.Pam.Entities;
-using Bit.Pam.Enums;
+﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
@@ -8,7 +8,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 /// <see cref="PamRotationJobResponseModel.Attempts"/>.</summary>
 public class PamRotationAttemptResponseModel
 {
-    public PamRotationAttemptResponseModel(PamRotationAttempt attempt)
+    public PamRotationAttemptResponseModel(PamRotationAttemptDetails attempt)
     {
         ArgumentNullException.ThrowIfNull(attempt);
 

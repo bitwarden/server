@@ -7,13 +7,13 @@ CREATE PROCEDURE [dbo].[PamRotationJob_Claim]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- First-claim-wins: the UPDATE's WHERE Status = 0 takes the row lock, serializing concurrent claims.
+    -- First-claim-wins: the UPDATE's WHERE Action = 0 takes the row lock, serializing concurrent claims.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
 
     UPDATE J
-    SET J.[Status] = 1, -- Claimed
+    SET J.[Action] = 1, -- Claimed
         J.[ClaimedByAccessConnectorId] = @AccessConnectorId,
         J.[ClaimedAt] = @Now
     FROM [dbo].[PamRotationJob] J
@@ -23,7 +23,8 @@ BEGIN
     -- Defense in depth: re-checks Enabled and org match already checked by the caller's token.
     INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
-        AND J.[Status] = 0 -- Pending
+        AND J.[Action] = 0 -- None
+        AND J.[ExpiresAt] > @Now
         AND J.[NextClaimableAt] <= @Now
         AND C.[Enabled] = 1
         AND T.[Status] = 0 -- Active
@@ -61,15 +62,16 @@ BEGIN
         RETURN
     END
 
-    -- AtMostOneInFlightAttemptPerJob: the Executing attempt is created in the same transaction as the claim.
+    -- AtMostOneInFlightAttemptPerJob: the attempt is created in the same transaction as the claim.
+    -- Its CreationDate equals the job's ClaimedAt, which is how the claim's own attempt is recognised later.
     INSERT INTO [dbo].[PamRotationAttempt]
     (
-        [Id], [JobId], [ClaimedByAccessConnectorId], [CipherUpdated], [Status], [FailureReason], [SyncState],
+        [Id], [JobId], [ClaimedByAccessConnectorId], [CipherUpdated], [Action], [FailureReason], [SyncState],
         [SessionTermination], [CreationDate], [ResolvedDate]
     )
     VALUES
     (
-        @AttemptId, @JobId, @AccessConnectorId, 0, 0 /* Executing */, NULL, NULL,
+        @AttemptId, @JobId, @AccessConnectorId, 0, 0 /* None */, NULL, NULL,
         NULL, @Now, NULL
     )
 

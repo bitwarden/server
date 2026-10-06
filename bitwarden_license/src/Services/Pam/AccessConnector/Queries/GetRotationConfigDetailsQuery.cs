@@ -10,12 +10,15 @@ public class GetRotationConfigDetailsQuery : IGetRotationConfigDetailsQuery
 {
     private readonly IPamRotationConfigRepository _configRepository;
     private readonly IPamRotationJobRepository _jobRepository;
+    private readonly TimeProvider _timeProvider;
 
     public GetRotationConfigDetailsQuery(
-        IPamRotationConfigRepository configRepository, IPamRotationJobRepository jobRepository)
+        IPamRotationConfigRepository configRepository, IPamRotationJobRepository jobRepository,
+        TimeProvider timeProvider)
     {
         _configRepository = configRepository;
         _jobRepository = jobRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task<PamRotationConfigHistory> GetAsync(Guid organizationId, Guid configId)
@@ -26,7 +29,7 @@ public class GetRotationConfigDetailsQuery : IGetRotationConfigDetailsQuery
             throw new NotFoundException();
         }
 
-        var jobs = await _jobRepository.GetManyByConfigIdAsync(configId);
+        var jobs = await _jobRepository.GetManyByConfigIdAsync(configId, _timeProvider.GetUtcNow().UtcDateTime);
 
         return new PamRotationConfigHistory(details, jobs.ToList());
     }

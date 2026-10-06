@@ -17,7 +17,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -2832,6 +2832,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("tinyint(1)");
 
@@ -2854,9 +2857,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte?>("SessionTermination")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<byte?>("SyncState")
                         .HasColumnType("tinyint unsigned");
 
@@ -2864,7 +2864,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("ClaimedByAccessConnectorId", "JobId");
 
-                    b.HasIndex("JobId", "Status");
+                    b.HasIndex("JobId", "Action");
 
                     b.ToTable("PamRotationAttempt", (string)null);
                 });
@@ -2932,6 +2932,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<DateTime?>("ClaimedAt")
                         .HasColumnType("datetime(6)");
 
@@ -2953,18 +2956,28 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<byte>("Source")
                         .HasColumnType("tinyint unsigned");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint unsigned");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "Status");
+                    b.HasIndex("Action", "ExpiresAt");
 
-                    b.HasIndex("RotationConfigId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
-                    b.HasIndex("Status", "ExpiresAt");
+                    b.HasIndex("RotationConfigId", "Action");
 
                     b.ToTable("PamRotationJob", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.Property<Guid>("RotationJobId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("SweptDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("RotationJobId");
+
+                    b.ToTable("PamRotationJobTimeoutSweep", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamTargetSystem", b =>
@@ -4239,6 +4252,15 @@ namespace Bit.MySqlMigrations.Migrations
                         .WithMany()
                         .HasForeignKey("RotationConfigId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
+                        .WithMany()
+                        .HasForeignKey("RotationJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

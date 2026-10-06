@@ -57,6 +57,7 @@ public class DatabaseContext : DbContext
     public DbSet<PamRotationJob> PamRotationJobs { get; set; }
     public DbSet<PamRotationAttempt> PamRotationAttempts { get; set; }
     public DbSet<PamLeaseExpirySweep> PamLeaseExpirySweeps { get; set; }
+    public DbSet<PamRotationJobTimeoutSweep> PamRotationJobTimeoutSweeps { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -134,6 +135,7 @@ public class DatabaseContext : DbContext
         var ePamRotationJob = builder.Entity<PamRotationJob>();
         var ePamRotationAttempt = builder.Entity<PamRotationAttempt>();
         var ePamLeaseExpirySweep = builder.Entity<PamLeaseExpirySweep>();
+        var ePamRotationJobTimeoutSweep = builder.Entity<PamRotationJobTimeoutSweep>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -317,9 +319,9 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.NoAction);
 
         ePamRotationJob.Property(p => p.Id).ValueGeneratedNever();
-        ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.Status });
-        ePamRotationJob.HasIndex(p => new { p.Status, p.ExpiresAt });
-        ePamRotationJob.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.Status });
+        ePamRotationJob.HasIndex(p => new { p.RotationConfigId, p.Action });
+        ePamRotationJob.HasIndex(p => new { p.Action, p.ExpiresAt });
+        ePamRotationJob.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.Action });
         ePamRotationJob
             .HasOne<PamRotationConfig>()
             .WithMany()
@@ -327,13 +329,21 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.NoAction);
 
         ePamRotationAttempt.Property(p => p.Id).ValueGeneratedNever();
-        ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Status });
+        ePamRotationAttempt.HasIndex(p => new { p.JobId, p.Action });
         ePamRotationAttempt.HasIndex(p => new { p.ClaimedByAccessConnectorId, p.JobId });
         ePamRotationAttempt
             .HasOne<PamRotationJob>()
             .WithMany()
             .HasForeignKey(a => a.JobId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        ePamRotationJobTimeoutSweep.HasKey(p => p.RotationJobId);
+        ePamRotationJobTimeoutSweep.Property(p => p.RotationJobId).ValueGeneratedNever();
+        ePamRotationJobTimeoutSweep
+            .HasOne<PamRotationJob>()
+            .WithMany()
+            .HasForeignKey(p => p.RotationJobId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         eOrganizationMemberBaseDetail.HasNoKey();
 
@@ -369,6 +379,7 @@ public class DatabaseContext : DbContext
         ePamRotationJob.ToTable(nameof(PamRotationJob));
         ePamRotationAttempt.ToTable(nameof(PamRotationAttempt));
         ePamLeaseExpirySweep.ToTable(nameof(PamLeaseExpirySweep));
+        ePamRotationJobTimeoutSweep.ToTable(nameof(PamRotationJobTimeoutSweep));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));
