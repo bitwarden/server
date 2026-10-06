@@ -12,6 +12,7 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -23,6 +24,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization;
+using Bit.Core.Vault.Authorization.Ciphers;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Entities;
@@ -55,6 +57,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly IAuthorizationService _authorizationService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -70,7 +73,8 @@ public class CiphersController : Controller
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        ICipherLeaseGate cipherLeaseGate)
+        ICipherLeaseGate cipherLeaseGate,
+        IAuthorizationService authorizationService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -86,6 +90,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _authorizationService = authorizationService;
     }
 
     /// <summary>
@@ -260,11 +265,13 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
-        if (cipher == null || !cipher.OrganizationId.HasValue ||
-            !await _currentContext.ViewAllCollections(cipher.OrganizationId.Value))
+        if (cipher == null || !cipher.OrganizationId.HasValue)
         {
             throw new NotFoundException();
         }
+
+        await _authorizationService.AuthorizeOrThrowAsync(User, new OrganizationScope(cipher.OrganizationId.Value),
+            CipherOrganizationOperations.ReadAnyAsAdmin);
 
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
         var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
@@ -352,7 +359,9 @@ public class CiphersController : Controller
         ValidateCipherEncryptedByUser(model.Cipher, user, model.Cipher.IsOrganizationCipher);
 
         var cipher = model.Cipher.ToCipherDetails(user.Id);
-        if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
+        if (cipher.OrganizationId.HasValue &&
+            (!await _currentContext.OrganizationUser(cipher.OrganizationId.Value) ||
+             !await CanEditItemsInCollections(cipher.OrganizationId.Value, model.CollectionIds)))
         {
             throw new NotFoundException();
         }
