@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Send_ReadIdsByOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[Send_ReadIdsByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -24,3 +24,4 @@ BEGIN
     WHERE
         [UserId] IN (SELECT [Id] FROM @OrgUserIds)
 END
+GO
