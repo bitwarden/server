@@ -428,13 +428,30 @@ public class TwoFactorController : Controller
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
-        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
+        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, _currentContext.DeviceIdentifier);
     }
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
     public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailLoginRequestModel requestModel)
     {
+        // The emailed code is bound to the requesting device. This endpoint is anonymous, so the current context
+        // takes the device from the Device-Identifier header.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // TODO: PM-44555 - Delete this body fallback, and TwoFactorEmailLoginRequestModel.DeviceIdentifier, once
+        // every supported mobile client version sends the Device-Identifier header on this request.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            deviceIdentifier = requestModel.DeviceIdentifier;
+        }
+
+        // Checked before the user lookup, so this rejection never reveals whether the email or credential is valid.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || deviceIdentifier.Length > Device.MaxIdentifierLength)
+        {
+            throw new BadRequestException("Device-Identifier", "A valid device identifier is required.");
+        }
+
         var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 
         if (user != null)
@@ -446,7 +463,7 @@ public class TwoFactorController : Controller
                 if (authRequest != null &&
                     authRequest.IsValidForAuthentication(user.Id, requestModel.AuthRequestAccessCode))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
             }
@@ -454,7 +471,7 @@ public class TwoFactorController : Controller
             {
                 if (ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
 
@@ -463,7 +480,7 @@ public class TwoFactorController : Controller
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
             {
-                await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                 return;
             }
         }
@@ -477,8 +494,8 @@ public class TwoFactorController : Controller
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
         model.ToUser(user);
 
-        if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
+        if (!await _twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(
+                user, _currentContext.DeviceIdentifier, model.Token))
         {
             throw new BadRequestException("Token", "Invalid token.");
         }
