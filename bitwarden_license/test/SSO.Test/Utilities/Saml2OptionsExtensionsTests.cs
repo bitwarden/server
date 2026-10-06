@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.Metrics;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Bit.Core;
 using Bit.Core.Settings;
@@ -8,7 +7,6 @@ using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
 using Sustainsys.Saml2;
@@ -27,8 +25,6 @@ public class Saml2OptionsExtensionsTests
     private static readonly string Scheme = OrganizationId.ToString();
     private static readonly string ModulePath = $"/saml2/{Scheme}";
     private const string IdpEntityId = "https://idp.example.com/metadata";
-    private const string MeterName = "Bitwarden.Sso.Saml2";
-    private const string InstrumentName = "bitwarden.sso.saml2.unsupported_key_transport_algorithm";
     private const string RsaPkcs1 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5";
     private const string RsaOaep = "http://www.w3.org/2009/xmlenc11#rsa-oaep";
 
@@ -163,13 +159,11 @@ public class Saml2OptionsExtensionsTests
         // so it must not hide this throw.
         // The throw must occur in both the flag-on and the legacy flag-off signature checks.
         var options = BuildOptions(wantAssertionsSigned: true);
-        using var testContext = BuildPostContext(BuildResponseXml(string.Empty), featureFlagEnabled);
-        var (context, collector) = testContext;
+        var testContext = BuildPostContext(BuildResponseXml(string.Empty), featureFlagEnabled);
 
         var exception = await Assert.ThrowsAsync<Exception>(
-            () => options.CouldHandleAsync(Scheme, context));
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
-        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Theory]
@@ -188,10 +182,9 @@ public class Saml2OptionsExtensionsTests
         var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
             signedAssertion.OuterXml, decryptionCertificate, keyTransportAlgorithm);
 
-        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
-        var (context, collector) = testContext;
+        var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
     }
 
     [Theory]
@@ -209,11 +202,10 @@ public class Saml2OptionsExtensionsTests
         var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
             unsignedAssertion.OuterXml, decryptionCertificate, keyTransportAlgorithm);
 
-        using var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
-        var (context, collector) = testContext;
+        var testContext = BuildPostContext(BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true);
 
         var exception = await Assert.ThrowsAsync<Exception>(
-            () => options.CouldHandleAsync(Scheme, context));
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
     }
 
@@ -231,12 +223,11 @@ public class Saml2OptionsExtensionsTests
         var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
             Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
 
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(unsignedPlaintextAssertion + encryptedAssertionXml));
-        var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
-            () => options.CouldHandleAsync(Scheme, context));
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
     }
 
@@ -253,12 +244,11 @@ public class Saml2OptionsExtensionsTests
         var unsignedEncryptedAssertionXml =
             Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildAssertionDocument().DocumentElement!.OuterXml, decryptionCertificate);
 
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(signedPlaintextAssertion.OuterXml + unsignedEncryptedAssertionXml));
-        var (context, collector) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
-            () => options.CouldHandleAsync(Scheme, context));
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
     }
 
@@ -275,78 +265,20 @@ public class Saml2OptionsExtensionsTests
         var signedEncryptedAssertionXml =
             Saml2TestXml.EncryptAssertion(Saml2TestXml.BuildSignedAssertion(signingCertificate).OuterXml, decryptionCertificate);
 
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(signedPlaintextAssertion.OuterXml + signedEncryptedAssertionXml));
-        var (context, collector) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_EncryptedAssertionWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
-    {
-        var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
-        var (context, collector) = testContext;
-
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
-
-        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
-        Assert.Equal(1, measurement.Value);
-        Assert.Equal(RsaPkcs1, measurement.Tags["algorithm"]);
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_PlaintextAssertion_RecordsNoMeasurement()
-    {
-        // An envelope with no encrypted assertion names no key encryption algorithm,
-        // so the inspector records no measurement.
-        var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
-            BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"));
-        var (context, collector) = testContext;
-
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
-        Assert.Empty(collector.GetMeasurementSnapshot());
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_TwoEncryptedAssertionsWithOneUnsupportedAlgorithm_RecordsOneMeasurement()
-    {
-        // A federation proxy can aggregate assertions from two identity providers.
-        // The inspector then records one measurement for each distinct unaccepted algorithm.
-        var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
-            BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1) + BuildEncryptedAssertion(RsaOaep)));
-        var (context, collector) = testContext;
-
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
-
-        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
-        Assert.Equal(RsaPkcs1, measurement.Tags["algorithm"]);
-    }
-
-    [Fact]
-    public async Task CouldHandleAsync_AlgorithmInspectionThrows_DoesNotPropagate()
-    {
-        // An empty service provider makes the metrics resolution throw.
-        // The inspection must swallow that throw, and the login must continue.
-        var options = BuildOptions(wantAssertionsSigned: false);
-        var context = BuildRawPostContext(BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)));
-        context.RequestServices = new ServiceCollection().BuildServiceProvider();
-
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
     }
 
     [Fact]
     public async Task CouldHandleAsync_Rsa15CloudWithFlagOn_QueuesNoticeForTheSchemeOrganization()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -355,11 +287,10 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_Rsa15CloudWithFlagOff_DoesNotQueueNotice()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: false);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
     }
@@ -368,11 +299,10 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_Rsa15SelfHostedWithFlagOff_QueuesNotice()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), selfHosted: true, rsa15EmailFlagEnabled: false);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -381,11 +311,10 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_OaepAssertion_DoesNotQueueNotice()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaOaep)), rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
     }
@@ -394,12 +323,11 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_PlaintextAssertion_DoesNotQueueNotice()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml("<saml:Assertion ID=\"_assertion\"><saml:Issuer>idp</saml:Issuer></saml:Assertion>"),
             rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
     }
@@ -411,11 +339,10 @@ public class Saml2OptionsExtensionsTests
         // The options keep the Guid module path, so the request passes the path check.
         // The scheme argument alone is not a Guid, and the query scheme does not match it, so the body is parsed.
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
 
-        Assert.True(await options.CouldHandleAsync("test-scheme", context));
+        Assert.True(await options.CouldHandleAsync("test-scheme", testContext.Context));
 
         testContext.Notifier.DidNotReceiveWithAnyArgs().TryQueue(default);
     }
@@ -424,13 +351,12 @@ public class Saml2OptionsExtensionsTests
     public async Task CouldHandleAsync_NotifierThrows_StillReturnsTrue()
     {
         var options = BuildOptions(wantAssertionsSigned: false);
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(BuildEncryptedAssertion(RsaPkcs1)), rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
         testContext.Notifier.When(n => n.TryQueue(Arg.Any<Guid>()))
             .Do(_ => throw new InvalidOperationException("notifier failure"));
 
-        Assert.True(await options.CouldHandleAsync(Scheme, context));
+        Assert.True(await options.CouldHandleAsync(Scheme, testContext.Context));
 
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -447,12 +373,11 @@ public class Saml2OptionsExtensionsTests
         var encryptedAssertionXml = Saml2TestXml.EncryptAssertion(
             unsignedAssertion.OuterXml, decryptionCertificate, EncryptedXml.XmlEncRSA15Url);
 
-        using var testContext = BuildPostContext(
+        var testContext = BuildPostContext(
             BuildResponseXml(encryptedAssertionXml), featureFlagEnabled: true, rsa15EmailFlagEnabled: true);
-        var (context, _) = testContext;
 
         var exception = await Assert.ThrowsAsync<Exception>(
-            () => options.CouldHandleAsync(Scheme, context));
+            () => options.CouldHandleAsync(Scheme, testContext.Context));
         Assert.Equal("Cannot verify SAML assertion signature.", exception.Message);
         testContext.Notifier.Received(1).TryQueue(OrganizationId);
     }
@@ -535,17 +460,15 @@ public class Saml2OptionsExtensionsTests
 
     private static string EncodeBase64(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
 
-    // CouldHandleAsync resolves the inspector metrics, and (when WantAssertionsSigned is true)
-    // the PM42982_WantAssertionsSigned feature flag, from the request services.
+    // CouldHandleAsync resolves the PM42982_WantAssertionsSigned feature flag (when WantAssertionsSigned is true)
+    // from the request services.
     // It also resolves the global settings, the PM43819_Rsa15DeprecationEmail feature flag, and the RSA 1.5 notifier.
-    private static MetricTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true,
+    private static PostTestContext BuildPostContext(string responseXml, bool featureFlagEnabled = true,
         bool selfHosted = false, bool rsa15EmailFlagEnabled = false)
     {
         var context = BuildRawPostContext(responseXml);
 
         var services = new ServiceCollection();
-        services.AddMetrics();
-        services.AddSingleton<Saml2AssertionMetrics>();
 
         var featureService = Substitute.For<IFeatureService>();
         featureService.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(featureFlagEnabled);
@@ -559,21 +482,11 @@ public class Saml2OptionsExtensionsTests
         var notifier = Substitute.For<ISaml2Rsa15DeprecationNotifier>();
         services.AddSingleton(notifier);
 
-        var provider = services.BuildServiceProvider();
-
-        var collector = new MetricCollector<long>(
-            provider.GetRequiredService<IMeterFactory>(), MeterName, InstrumentName);
-        context.RequestServices = provider;
-        return new MetricTestContext(context, collector) { Notifier = notifier };
+        context.RequestServices = services.BuildServiceProvider();
+        return new PostTestContext(context, notifier);
     }
 
-    // Disposing this disposes the collector's underlying listener, so a test does not leak it.
-    private sealed record MetricTestContext(DefaultHttpContext Context, MetricCollector<long> Collector) : IDisposable
-    {
-        public required ISaml2Rsa15DeprecationNotifier Notifier { get; init; }
-
-        public void Dispose() => Collector.Dispose();
-    }
+    private sealed record PostTestContext(DefaultHttpContext Context, ISaml2Rsa15DeprecationNotifier Notifier);
 
     private static IFormFeature SpyOnForm(HttpContext context)
     {

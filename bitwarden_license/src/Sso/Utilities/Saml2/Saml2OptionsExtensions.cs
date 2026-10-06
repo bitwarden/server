@@ -93,7 +93,6 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        Saml2EncryptedAssertionInspector.TryRecordUnsupportedKeyTransportAlgorithms(envelope, context);
         NotifyWhenRsa15Deprecated(envelope, scheme, context);
 
         if (options.SPOptions.WantAssertionsSigned)
