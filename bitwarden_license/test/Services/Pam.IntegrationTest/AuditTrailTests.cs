@@ -2,7 +2,10 @@
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
@@ -150,13 +153,46 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         });
     }
 
-    // A caller outside the organization gets a 404.
     [Fact]
-    public async Task Audit_AnOrganizationTheCallerIsNotIn_Returns404()
+    public async Task Audit_AnOrganizationTheCallerIsNotIn_ReturnsForbidden()
     {
         var response = await Client.GetAsync($"organizations/{Guid.NewGuid()}/audit");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Audit_AsPlainMember_ReturnsForbidden()
+    {
+        var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
+            Organization.Id, OrganizationUserType.User);
+        await LoginHelper.LoginAsync(memberEmail);
+
+        var response = await Client.GetAsync(AuditUrl);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Audit_AsProviderUserForTheOrganization_ReturnsForbidden()
+    {
+        await LoginAsProviderForOrganizationAsync();
+
+        var response = await Client.GetAsync(AuditUrl);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Audit_AsCustomUserWithAccessEventLogs_ReturnsTheTrail()
+    {
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
+            Organization.Id, OrganizationUserType.Custom, new Permissions { AccessEventLogs = true });
+        await LoginHelper.LoginAsync(customEmail);
+
+        var response = await Client.GetAsync(AuditUrl);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     // The kill switch stops writes and withdraws the trail.
@@ -440,13 +476,12 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(2, byEither.Count);
     }
 
-    // Guarded exactly as the trail is.
     [Fact]
-    public async Task AuditItems_AnOrganizationTheCallerIsNotIn_Returns404()
+    public async Task AuditItems_AnOrganizationTheCallerIsNotIn_ReturnsForbidden()
     {
         var response = await Client.GetAsync($"organizations/{Guid.NewGuid()}/audit/items");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

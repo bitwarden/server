@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Pam.Enums;
@@ -18,21 +17,7 @@ namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 [SutProviderCustomize]
 public class AuditEndpointsHandlerTests
 {
-    // A caller without AccessEventLogs gets a 404.
-    [Theory, BitAutoData]
-    public async Task GetTrail_WithoutAccessEventLogs_ThrowsNotFound(
-        Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.GetTrail(organizationId, new AccessAuditTrailFilterRequestModel()));
-        await sutProvider.GetDependency<IListAccessAuditTrailQuery>()
-            .DidNotReceiveWithAnyArgs()
-            .GetTrailAsync(default, default!);
-    }
-
-    // The kill switch gives the same 404 as a failed permission check.
+    // The kill switch withdraws the trail.
     [Theory, BitAutoData]
     public async Task GetTrail_WithSqlAuditLoggingDisabled_ThrowsNotFound(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
@@ -40,7 +25,6 @@ public class AuditEndpointsHandlerTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.GetTrail(organizationId, new AccessAuditTrailFilterRequestModel()));
@@ -53,7 +37,6 @@ public class AuditEndpointsHandlerTests
     public async Task GetTrail_ProjectsTheTrailForTheRouteOrganization(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(true);
         sutProvider.GetDependency<IListAccessAuditTrailQuery>()
             .GetTrailAsync(organizationId, Arg.Any<AccessAuditTrailQueryOptions>())
             .Returns(Page(new AccessAuditEvent
@@ -75,7 +58,6 @@ public class AuditEndpointsHandlerTests
     public async Task GetTrail_PassesTheRequestedFilterToTheQuery(
         Guid organizationId, Guid actorId, SutProvider<AuditEndpointsHandler> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(true);
         var options = new List<AccessAuditTrailQueryOptions>();
         sutProvider.GetDependency<IListAccessAuditTrailQuery>()
             .GetTrailAsync(organizationId, Arg.Do<AccessAuditTrailQueryOptions>(options.Add))
@@ -98,7 +80,6 @@ public class AuditEndpointsHandlerTests
     public async Task GetTrail_CarriesTheContinuationTokenOntoTheResponse(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessEventLogs(organizationId).Returns(true);
         var page = Page();
         page.ContinuationToken = "638000000000000000_0123456789abcdef0123456789abcdef";
         sutProvider.GetDependency<IListAccessAuditTrailQuery>()
