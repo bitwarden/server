@@ -171,4 +171,6 @@ public enum EventType : int
     Send_Deleted_File = 2509,
     Send_Accessed_Text = 2510,
     Send_Accessed_File = 2511,
+    Send_PolicyDisabled = 2512,
+    Send_PolicyEnabled = 2513,
 }
