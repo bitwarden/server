@@ -499,9 +499,9 @@ public class SubmitAccessRequestCommandTests
         Assert.Equal(emitted[0].CorrelationId, emitted[1].CorrelationId);
     }
 
-    // The auto-approval is a separate system event, so it must not share the submission's correlation id.
+    // The auto-approval is a separate system event, with its own attempt and correlation id.
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Automatic_EmitsSubmissionThenSeparateApproval(
+    public async Task SubmitAsync_Automatic_EmitsSubmissionAndApprovalAttemptsThenOutcomes(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -513,31 +513,26 @@ public class SubmitAccessRequestCommandTests
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600 });
 
-        Assert.Collection(emitted,
-            attempt =>
-            {
-                Assert.Equal(AccessAuditEventKind.RequestSubmitted, attempt.Kind);
-                Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase);
-                Assert.Equal(userId, attempt.ActorId);
-            },
-            outcome =>
-            {
-                Assert.Equal(AccessAuditEventKind.RequestSubmitted, outcome.Kind);
-                Assert.Equal(AccessAuditEventPhase.Outcome, outcome.Phase);
-                Assert.Equal(emitted[0].CorrelationId, outcome.CorrelationId);
-            },
-            approval =>
-            {
-                Assert.Equal(AccessAuditEventKind.RequestApproved, approval.Kind);
-                Assert.Equal(AccessAuditEventPhase.Outcome, approval.Phase);
-                Assert.Null(approval.ActorId);
-                Assert.NotEqual(emitted[0].CorrelationId, approval.CorrelationId);
-            });
+        Assert.Equal(
+            [
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Outcome),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Outcome),
+            ],
+            emitted.Select(e => (e.Kind, e.Phase)));
+        var submission = emitted.Where(e => e.Kind == AccessAuditEventKind.RequestSubmitted).ToList();
+        var approval = emitted.Where(e => e.Kind == AccessAuditEventKind.RequestApproved).ToList();
+        Assert.All(submission, e => Assert.Equal(userId, e.ActorId));
+        Assert.All(approval, e => Assert.Null(e.ActorId));
+        Assert.Single(submission.Select(e => e.CorrelationId).Distinct());
+        Assert.Single(approval.Select(e => e.CorrelationId).Distinct());
+        Assert.NotEqual(submission[0].CorrelationId, approval[0].CorrelationId);
         Assert.All(emitted, e => Assert.Equal(result.Request.Id, e.AccessRequestId));
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_AutomaticCreateFails_EmitsAttemptWithoutOutcome(
+    public async Task SubmitAsync_AutomaticCreateFails_EmitsAttemptsWithoutOutcomes(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -552,8 +547,12 @@ public class SubmitAccessRequestCommandTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600 }));
 
-        var attempt = Assert.Single(emitted);
-        Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase);
+        Assert.Equal(
+            [
+                (AccessAuditEventKind.RequestSubmitted, AccessAuditEventPhase.Attempt),
+                (AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Attempt),
+            ],
+            emitted.Select(e => (e.Kind, e.Phase)));
     }
 
     private static List<AccessAuditEventData> CaptureEmitted(SutProvider<SubmitAccessRequestCommand> sutProvider)

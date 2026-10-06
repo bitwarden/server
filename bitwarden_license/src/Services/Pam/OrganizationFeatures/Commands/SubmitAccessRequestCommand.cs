@@ -158,7 +158,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
-        // One attempt, then the submission and auto-approval outcomes.
+        // The submission and the auto-approval are separate events, each recorded as an attempt and an outcome.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RequestSubmitted,
@@ -171,21 +171,20 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             AccessRequestId = request.Id,
             Detail = request.Reason,
         };
+        var approvalAudit = audit with
+        {
+            Kind = AccessAuditEventKind.RequestApproved,
+            ActorId = null,
+            CorrelationId = Guid.NewGuid(),
+        };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Attempt });
 
         // No lease here; the requester activates separately.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
-        // A separate event from the submission, so it gets its own correlation id.
-        await _accessAuditEventEmitter.EmitAsync(
-            audit with
-            {
-                Kind = AccessAuditEventKind.RequestApproved,
-                Phase = AccessAuditEventPhase.Outcome,
-                ActorId = null,
-                CorrelationId = Guid.NewGuid(),
-            });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
 
         // Tell the requester's other devices a new approved request exists, so "My requests" can offer to activate it
         // without a manual refresh.
