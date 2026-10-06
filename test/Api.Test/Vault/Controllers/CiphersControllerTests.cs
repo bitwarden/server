@@ -14,6 +14,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
@@ -3245,6 +3246,13 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationUser(organizationId)
             .Returns(true);
+        // Admin-with-full-access short-circuits CanEditItemsInCollections without needing per-collection grants.
+        sutProvider.GetDependency<ICurrentContext>()
+            .GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.Owner });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection>());
         // PostCreate re-reads the saved cipher to build its response.
         sutProvider.GetDependency<ICipherRepository>()
             .GetByIdAsync(Arg.Any<Guid>(), user.Id)
@@ -3256,7 +3264,7 @@ public class CiphersControllerTests
             });
         sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .GetOrganizationAbilityAsync(organizationId)
-            .Returns(new OrganizationAbility { Id = organizationId });
+            .Returns(new OrganizationAbility { Id = organizationId, AllowAdminAccessToAllCollectionItems = true });
 
         var cipherModel = SecureNoteRequestModel(MismatchedKeyId);
         cipherModel.OrganizationId = organizationId.ToString();
@@ -3270,6 +3278,44 @@ public class CiphersControllerTests
 
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .SaveDetailsAsync(Arg.Any<CipherDetails>(), user.Id, Arg.Any<DateTime?>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PostCreate_OrganizationCipher_UserCannotEditRequestedCollection_ThrowsNotFoundException(
+        User user,
+        Guid organizationId,
+        Guid restrictedCollectionId,
+        SutProvider<CiphersController> sutProvider)
+    {
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+        sutProvider.GetDependency<IUserService>()
+            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
+            .Returns(user.Id);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationUser(organizationId)
+            .Returns(true);
+        // A regular (non-admin) member relationship, with no access to restrictedCollectionId.
+        sutProvider.GetDependency<ICurrentContext>()
+            .GetOrganization(organizationId)
+            .Returns(new CurrentContextOrganization { Id = organizationId, Type = OrganizationUserType.User });
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CollectionDetails>());
+
+        var cipherModel = SecureNoteRequestModel(null);
+        cipherModel.OrganizationId = organizationId.ToString();
+        var model = new CipherCreateRequestModel
+        {
+            Cipher = cipherModel,
+            CollectionIds = [restrictedCollectionId]
+        };
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostCreate(model));
+
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .SaveDetailsAsync(default, default, default, default, default);
     }
 
     [Theory, BitAutoData]
