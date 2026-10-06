@@ -58,15 +58,15 @@ public static class Saml2AcsPostHarness
     /// <summary>
     /// Posts the Base64 encoded response in the <c>SAMLResponse</c> form field to the ACS URL of the organization.
     /// </summary>
-    public static Task<HttpResponseMessage> PostAcsAsync(
+    public static async Task<HttpResponseMessage> PostAcsAsync(
         HttpClient client, Guid organizationId, string responseXml)
     {
-        var form = new FormUrlEncodedContent(new Dictionary<string, string>
+        using var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["SAMLResponse"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(responseXml)),
         });
 
-        return client.PostAsync(SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString()), form);
+        return await client.PostAsync(SsoConfigurationData.BuildSaml2AcsUrl(null, organizationId.ToString()), form);
     }
 
     public static string BuildResponseXml(string assertionElement, string issuer = IdpEntityId) =>
