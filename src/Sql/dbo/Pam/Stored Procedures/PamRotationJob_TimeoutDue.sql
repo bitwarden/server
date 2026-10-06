@@ -3,49 +3,36 @@ CREATE PROCEDURE [dbo].[PamRotationJob_TimeoutDue]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Success wins: excludes a Rotated job past ExpiresAt; both updates commit together.
-    SET XACT_ABORT ON
 
-    BEGIN TRANSACTION
+    -- A timeout is derived, not stored; PamRotationJobTimeoutSweep's INSERT decides which run owns a job.
+    -- UPDLOCK/HOLDLOCK serializes concurrent sweeps; a loser re-checks after commit and skips it.
+    -- A Rotated attempt always comes with a Succeeded job, so success wins without checking attempts.
+    DECLARE @Due TABLE ([RotationJobId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY);
 
-    DECLARE @Affected TABLE (
-        [JobId] UNIQUEIDENTIFIER NOT NULL,
-        [PreviousClaimedByAccessConnectorId] UNIQUEIDENTIFIER NULL
-    )
-
-    UPDATE J
-    SET J.[Status] = 4, -- TimedOut
-        J.[ClaimedByAccessConnectorId] = NULL,
-        J.[ClaimedAt] = NULL
-    OUTPUT deleted.[Id], deleted.[ClaimedByAccessConnectorId] INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
+    INSERT INTO [dbo].[PamRotationJobTimeoutSweep] ([RotationJobId], [SweptDate])
+    OUTPUT inserted.[RotationJobId] INTO @Due
+    SELECT
+        J.[Id],
+        @Now
     FROM [dbo].[PamRotationJob] J
-    WHERE J.[Status] IN (0, 1) -- Pending, Claimed
+    WHERE J.[Action] IN (0, 1) -- None, Claimed: unresolved, so the passed deadline is a timeout
         AND J.[ExpiresAt] <= @Now
         AND NOT EXISTS (
             SELECT 1
-            FROM [dbo].[PamRotationAttempt] AT
-            WHERE AT.[JobId] = J.[Id] AND AT.[Status] = 1 -- Rotated
+            FROM [dbo].[PamRotationJobTimeoutSweep] S WITH (UPDLOCK, HOLDLOCK)
+            WHERE S.[RotationJobId] = J.[Id]
         )
-
-    -- Abandons the executing attempt on each timed-out job; doesn't count against the retry budget.
-    UPDATE [dbo].[PamRotationAttempt]
-    SET [Status] = 3, -- Abandoned
-        [ResolvedDate] = @Now
-    WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
-        AND [Status] = 0 -- Executing
 
     -- One row per timed-out job; AttemptCount tells unroutable (never claimed) from stuck (claimed).
     SELECT
-        AF.[JobId],
+        J.[Id] AS [JobId],
         C.[Id] AS [RotationConfigId],
         C.[OrganizationId],
         C.[CipherId],
         J.[Source],
-        AF.[PreviousClaimedByAccessConnectorId] AS [ClaimedByAccessConnectorId],
-        (SELECT COUNT(*) FROM [dbo].[PamRotationAttempt] AT WHERE AT.[JobId] = AF.[JobId]) AS [AttemptCount]
-    FROM @Affected AF
-    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
+        J.[ClaimedByAccessConnectorId],
+        (SELECT COUNT(*) FROM [dbo].[PamRotationAttempt] AT WHERE AT.[JobId] = J.[Id]) AS [AttemptCount]
+    FROM @Due D
+    INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = D.[RotationJobId]
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
-
-    COMMIT TRANSACTION
 END
