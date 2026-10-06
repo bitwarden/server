@@ -16,6 +16,15 @@ public static class DataMigrationsServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<DataMigrationStateRepository>();
         services.TryAddSingleton<IDataMigrationStateRepository>(sp => sp.GetRequiredService<DataMigrationStateRepository>());
+        services.AddMetrics();
+        services.TryAddSingleton<DataMigrationMetrics>();
+        services.TryAddSingleton<IDataMigrationRunner, DataMigrationRunner>();
+        return services;
+    }
+
+    public static IServiceCollection AddDataMigration<T>(this IServiceCollection services) where T : DataMigration
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<DataMigration, T>());
         return services;
     }
 }
