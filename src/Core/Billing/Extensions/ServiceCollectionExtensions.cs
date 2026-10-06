@@ -18,6 +18,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Billing.Subscriptions.Commands;
 using Bit.Core.Billing.Subscriptions.Queries;
+using Bit.Core.Billing.Subscriptions.Schedules;
 using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Billing.Tax.Services.Implementations;
 using Bit.Core.Services;
@@ -38,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddLicenseServices();
         services.AddLicenseOperations();
         services.AddPricingClient();
+        services.AddTransient<ISubscriptionScheduleCreator, SubscriptionScheduleCreator>();
         services.AddTransient<IPriceIncreaseScheduler, PriceIncreaseScheduler>();
         services.AddTransient<IBusinessPlanRenewalNotificationService, BusinessPlanRenewalNotificationService>();
         services.AddTransient<IBusinessPlanMigrationCoordinator, BusinessPlanMigrationCoordinator>();

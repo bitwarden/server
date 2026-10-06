@@ -1549,7 +1549,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip,
-        string deviceTypeAndIdentifier)
+        string deviceTypeDisplayName)
     {
         var message = CreateDefaultMessage("Login request approved", email);
         var model = new TrustedDeviceAdminApprovalViewModel
@@ -1558,7 +1558,7 @@ public class HandlebarsMailService : IMailService
             TheTime = utcNow.ToShortTimeString(),
             TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
-            DeviceType = deviceTypeAndIdentifier,
+            DeviceType = deviceTypeDisplayName,
         };
         await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";
