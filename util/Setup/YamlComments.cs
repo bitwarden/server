@@ -26,6 +26,14 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
         return _innerTypeDescriptor.GetProperties(type, container).Select(d => new CommentsPropertyDescriptor(d));
     }
 
+    public override string GetEnumName(Type type, string name) => _innerTypeDescriptor.GetEnumName(type, name);
+
+    public override string GetEnumValue(object value) => _innerTypeDescriptor.GetEnumValue(value);
+
+    public override bool HasParseMethod(Type type) => _innerTypeDescriptor.HasParseMethod(type);
+
+    public override object Parse(string value, Type type) => _innerTypeDescriptor.Parse(value, type);
+
     private sealed class CommentsPropertyDescriptor : IPropertyDescriptor
     {
         private readonly IPropertyDescriptor _baseDescriptor;
@@ -40,6 +48,9 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
         public int Order { get; set; }
         public Type Type => _baseDescriptor.Type;
         public bool CanWrite => _baseDescriptor.CanWrite;
+        public bool AllowNulls => _baseDescriptor.AllowNulls;
+        public bool Required => _baseDescriptor.Required;
+        public Type ConverterType => _baseDescriptor.ConverterType;
 
         public Type TypeOverride
         {
@@ -95,7 +106,8 @@ public class CommentsObjectGraphVisitor : ChainedObjectGraphVisitor
     public CommentsObjectGraphVisitor(IObjectGraphVisitor<IEmitter> nextVisitor)
         : base(nextVisitor) { }
 
-    public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context)
+    public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context,
+        ObjectSerializer serializer)
     {
         if (value is CommentsObjectDescriptor commentsDescriptor && commentsDescriptor.Comment != null)
         {
@@ -105,6 +117,6 @@ public class CommentsObjectGraphVisitor : ChainedObjectGraphVisitor
                 context.Emit(new Comment(comment, false));
             }
         }
-        return base.EnterMapping(key, value, context);
+        return base.EnterMapping(key, value, context, serializer);
     }
 }

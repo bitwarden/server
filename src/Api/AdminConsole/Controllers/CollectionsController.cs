@@ -3,6 +3,7 @@
 
 using Bit.Api.AdminConsole.Attributes;
 using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
@@ -15,6 +16,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bit.OrganizationAuthorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -113,6 +115,30 @@ public class CollectionsController : Controller
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c)
         ));
+    }
+
+    /// <summary>
+    /// Returns all collections in the organization along with the full list of user and group assignments for each
+    /// collection. Intended for Access Intelligence consumers that need complete member attribution across both shared
+    /// and default collections.
+    /// This endpoint differs from <see cref="GetManyWithDetails"/> in two ways: it always includes default collections
+    /// (Type = 1) and it is restricted to users who can read reports, rather than users who manage collections.
+    /// </summary>
+    [HttpGet("access")]
+    [Authorize<AccessReportsRequirement>]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetAllWithAccess([FromRoute] Guid orgId)
+    {
+        var allOrgCollections = await _collectionRepository
+            .GetManyOrganizationCollectionsWithPermissionsAsync(orgId, _currentContext.UserId.Value);
+
+        if (await _currentContext.ProviderUserForOrgAsync(orgId))
+        {
+            await _providerService.LogProviderAccessToOrganizationAsync(orgId);
+        }
+
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(
+            allOrgCollections.Select(c => new CollectionAccessDetailsResponseModel(c))
+        );
     }
 
     [HttpGet("")]

@@ -167,7 +167,7 @@ public class ChangeKdfCommandTests
     [Theory]
     [BitAutoData]
     public async Task
-        ChangeKdfAsync_WithAuthenticationAndUnlockDataAndNoLogoutOnKdfChangeFeatureFlagOff_UpdatesUserCorrectlyAndLogsOut(
+        ChangeKdfAsync_WithAuthenticationAndUnlockData_UpdatesUserCorrectlyAndDoesNotLogOut(
             SutProvider<ChangeKdfCommand> sutProvider, User user)
     {
         var constantKdf = new KdfSettings
@@ -191,49 +191,6 @@ public class ChangeKdfCommandTests
         };
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
             .Returns(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(false);
-        sutProvider.GetDependency<IMasterPasswordService>()
-            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
-            .Returns(OneOf<User, IdentityError[]>.FromT0(user));
-
-        await sutProvider.Sut.ChangeKdfAsync(user, "masterPassword", authenticationData, unlockData);
-
-        await sutProvider.GetDependency<IMasterPasswordService>().Received(1)
-            .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Is<UpdateExistingKdfConfigurationData>(d =>
-                d.RefreshStamp == true));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task
-        ChangeKdfAsync_WithAuthenticationAndUnlockDataAndNoLogoutOnKdfChangeFeatureFlagOn_UpdatesUserCorrectlyAndDoesNotLogOut(
-            SutProvider<ChangeKdfCommand> sutProvider, User user)
-    {
-        var constantKdf = new KdfSettings
-        {
-            KdfType = KdfType.Argon2id,
-            Iterations = 5,
-            Memory = 1024,
-            Parallelism = 4
-        };
-        var authenticationData = new MasterPasswordAuthenticationData
-        {
-            Kdf = constantKdf,
-            MasterPasswordAuthenticationHash = "new-auth-hash",
-            Salt = user.GetMasterPasswordSalt()
-        };
-        var unlockData = new MasterPasswordUnlockData
-        {
-            Kdf = constantKdf,
-            MasterKeyWrappedUserKey = "new-wrapped-key",
-            Salt = user.GetMasterPasswordSalt()
-        };
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(Arg.Any<User>(), Arg.Any<string>())
-            .Returns(true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Any<string>()).Returns(true);
         sutProvider.GetDependency<IMasterPasswordService>()
             .SaveUpdateExistingKdfConfigurationAsync(user, Arg.Any<UpdateExistingKdfConfigurationData>())
             .Returns(OneOf<User, IdentityError[]>.FromT0(user));
@@ -247,7 +204,6 @@ public class ChangeKdfCommandTests
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id && n.Payload.Reason == PushNotificationLogOutReason.KdfChange));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncSettings && n.TargetId == user.Id));
-        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.NoLogoutOnKdfChange);
     }
 
     [Theory]
