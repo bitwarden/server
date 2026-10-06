@@ -554,6 +554,7 @@ public class UpcomingInvoiceHandler(
                 {
                     StartDate = phase.StartDate,
                     EndDate = phase.EndDate,
+                    TrialEnd = phase.TrialEnd,
                     Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
                     {
                         Price = item.PriceId,
