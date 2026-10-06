@@ -1,21 +1,15 @@
 ﻿using System.Data.Common;
+using Bit.Core;
 using Bit.Core.Utilities;
+using Bit.DataMigrations;
 
 namespace Bit.Admin.HostedServices;
 
-public class DatabaseMigrationHostedService : IHostedService, IDisposable
+public class DatabaseMigrationHostedService(
+    IDbMigrator dbMigrator,
+    IDataMigrationRunner dataMigrationRunner,
+    ILogger<DatabaseMigrationHostedService> logger) : IHostedService, IDisposable
 {
-    private readonly ILogger<DatabaseMigrationHostedService> _logger;
-    private readonly IDbMigrator _dbMigrator;
-
-    public DatabaseMigrationHostedService(
-        IDbMigrator dbMigrator,
-        ILogger<DatabaseMigrationHostedService> logger)
-    {
-        _logger = logger;
-        _dbMigrator = dbMigrator;
-    }
-
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
         var maxMigrationAttempts = 10;
@@ -23,7 +17,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
         {
             try
             {
-                _dbMigrator.MigrateDatabase(true, cancellationToken);
+                dbMigrator.MigrateDatabase(true, name => RunDataMigration(name, cancellationToken), cancellationToken);
                 // TODO: Maybe flip a flag somewhere to indicate migration is complete??
                 break;
             }
@@ -31,17 +25,37 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
             {
                 if (i >= maxMigrationAttempts)
                 {
-                    _logger.LogError(e, "Database failed to migrate.");
+                    logger.LogError(e, "Database failed to migrate.");
                     throw;
                 }
                 else
                 {
-                    _logger.LogError(e,
+                    logger.LogError(e,
                         "Database unavailable for migration. Trying again (attempt #{AttemptNumber})...", i + 1);
                     await Task.Delay(20000, cancellationToken);
                 }
             }
         }
+    }
+
+    private bool RunDataMigration(string name, CancellationToken cancellationToken)
+    {
+        if (!dataMigrationRunner.Names.Contains(name))
+        {
+            logger.LogError(Constants.BypassFiltersEventId, "Data migration {Name} isn't registered.", name);
+            return false;
+        }
+
+        logger.LogInformation(Constants.BypassFiltersEventId, "Running data migration {Name}.", name);
+        // The generic host has no synchronization context, so blocking here can't deadlock.
+        if (dataMigrationRunner.RunToCompletionAsync(name, cancellationToken).GetAwaiter().GetResult())
+        {
+            return true;
+        }
+
+        logger.LogError(Constants.BypassFiltersEventId,
+            "Data migration {Name} has failed rows, so later migrations wait until it reruns on the next start.", name);
+        return false;
     }
 
     public virtual Task StopAsync(CancellationToken cancellationToken)
