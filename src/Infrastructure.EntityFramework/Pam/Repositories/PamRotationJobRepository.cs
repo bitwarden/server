@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using EfAttempt = Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt;
 using EfJob = Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob;
+using EfTimeoutSweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep;
 
 #nullable enable
 
@@ -31,8 +32,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     {
         ArgumentNullException.ThrowIfNull(job);
 
+        return await SerializableRetry.RunAsync(() => WriteGuardedJobAsync(job));
+    }
+
+    private async Task<PamRotationJobCreateOutcome> WriteGuardedJobAsync(PamRotationJob job)
+    {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
+        // A loser aborted at commit by a concurrent Serializable transaction is replayed by SerializableRetry.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
         // Re-checked here, not just by the caller, so a config disabled or target switched to Manual meanwhile can't mint a job.
@@ -49,9 +56,11 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         }
 
         // AtMostOneActiveJobPerConfig: Serializable holds the predicate's range, so a concurrent create for the same config fails to serialize instead of duplicating.
+        // A timed-out job holds its config until the timeout sweep records it, so the sweep's reschedule lands first.
         var hasActiveJob = await dbContext.PamRotationJobs
             .AnyAsync(j => j.RotationConfigId == job.RotationConfigId
-                && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed));
+                && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
+                && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id));
         if (hasActiveJob)
         {
             await transaction.RollbackAsync();
@@ -93,16 +102,17 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // First-claim-wins: the Pending predicate is evaluated under the row lock this UPDATE itself takes, so concurrent claims serialize.
+        // First-claim-wins: the None predicate is evaluated under the row lock this UPDATE itself takes, so concurrent claims serialize.
         var claimed = await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Id == jobId
-                && x.Job.Status == PamRotationJobStatus.Pending
+                && x.Job.Action == PamRotationJobAction.None
+                && x.Job.ExpiresAt > now
                 && x.Job.NextClaimableAt <= now
                 && x.Config.Enabled
                 && x.Target.Status == PamTargetSystemStatus.Active)
             .Select(x => x.Job)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(j => j.Status, PamRotationJobStatus.Claimed)
+                .SetProperty(j => j.Action, PamRotationJobAction.Claimed)
                 .SetProperty(j => j.ClaimedByAccessConnectorId, accessConnectorId)
                 .SetProperty(j => j.ClaimedAt, now));
 
@@ -119,15 +129,16 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             };
         }
 
-        // AtMostOneInFlightAttemptPerJob: the Executing attempt is inserted in the claim's own transaction, so a
-        // claimed job always has exactly one in-flight attempt from the moment it is claimed.
+        // AtMostOneInFlightAttemptPerJob: the attempt is inserted in the claim's own transaction, so a claimed job
+        // always has exactly one in-flight attempt from the moment it is claimed. Its CreationDate equals the job's
+        // ClaimedAt, which is how the claim's own attempt is recognised later.
         var attempt = new EfAttempt
         {
             Id = CombGuid.Generate(),
             JobId = jobId,
             ClaimedByAccessConnectorId = accessConnectorId,
             CipherUpdated = false,
-            Status = PamRotationAttemptStatus.Executing,
+            Action = PamRotationAttemptAction.None,
             CreationDate = now,
         };
         await dbContext.PamRotationAttempts.AddAsync(attempt);
@@ -179,7 +190,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // Re-derives every condition ClaimAsync re-checks, so the list an access connector sees and what it can claim
         // agree.
         return await EligibleJobs(dbContext, accessConnectorId)
-            .Where(x => x.Job.Status == PamRotationJobStatus.Pending
+            .Where(x => x.Job.Action == PamRotationJobAction.None
+                && x.Job.ExpiresAt > now
                 && x.Job.NextClaimableAt <= now
                 && x.Config.Enabled
                 && x.Target.Status == PamTargetSystemStatus.Active)
@@ -188,7 +200,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 Id = x.Job.Id,
                 RotationConfigId = x.Job.RotationConfigId,
                 Source = x.Job.Source,
-                Status = x.Job.Status,
+                Action = x.Job.Action,
                 ClaimedByAccessConnectorId = x.Job.ClaimedByAccessConnectorId,
                 ClaimedAt = x.Job.ClaimedAt,
                 CreationDate = x.Job.CreationDate,
@@ -200,7 +212,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .ToListAsync();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -229,13 +241,15 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         return jobs
             .Select(job => PamRotationJobDetails.From(
                 Mapper.Map<PamRotationJob>(job),
-                attemptsByJob.TryGetValue(job.Id, out var jobAttempts) ? jobAttempts : []))
+                attemptsByJob.TryGetValue(job.Id, out var jobAttempts) ? jobAttempts : [],
+                now))
             .ToList();
     }
 
     public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
         Guid accessConnectorId,
-        int limit)
+        int limit,
+        DateTime now)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -266,7 +280,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         return jobs
             .Select(job => PamRotationJobDetails.From(
                 Mapper.Map<PamRotationJob>(job),
-                attemptsByJob.TryGetValue(job.Id, out var jobAttempts) ? jobAttempts : []))
+                attemptsByJob.TryGetValue(job.Id, out var jobAttempts) ? jobAttempts : [],
+                now))
             .ToList();
     }
 
@@ -288,11 +303,13 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // Serializable stands in for the MSSQL UPDLOCK on the job row, closing the check-then-act window against a concurrent release/timeout sweep.
         var target = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
-                && a.Status == PamRotationAttemptStatus.Executing
+                && a.Action == PamRotationAttemptAction.None
                 && a.ClaimedByAccessConnectorId == accessConnectorId)
             .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
-            .Where(x => x.Job.Status == PamRotationJobStatus.Claimed
-                && x.Job.ClaimedByAccessConnectorId == accessConnectorId)
+            .Where(x => x.Job.Action == PamRotationJobAction.Claimed
+                && x.Job.ExpiresAt > now
+                && x.Job.ClaimedByAccessConnectorId == accessConnectorId
+                && x.Job.ClaimedAt == x.Attempt.CreationDate)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
                 c.CipherId,
@@ -348,12 +365,15 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // whose new secret never reached the vault.
         var jobId = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
-                && a.Status == PamRotationAttemptStatus.Executing
+                && a.Action == PamRotationAttemptAction.None
                 && a.ClaimedByAccessConnectorId == accessConnectorId
                 && a.CipherUpdated)
-            .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => j)
-            .Where(j => j.Status == PamRotationJobStatus.Claimed)
-            .Select(j => (Guid?)j.Id)
+            .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
+            .Where(x => x.Job.Action == PamRotationJobAction.Claimed
+                && x.Job.ExpiresAt > now
+                && x.Job.ClaimedByAccessConnectorId == accessConnectorId
+                && x.Job.ClaimedAt == x.Attempt.CreationDate)
+            .Select(x => (Guid?)x.Job.Id)
             .FirstOrDefaultAsync();
 
         if (jobId is null)
@@ -365,14 +385,15 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(a => a.Status, PamRotationAttemptStatus.Rotated)
+                .SetProperty(a => a.Action, PamRotationAttemptAction.Rotated)
                 .SetProperty(a => a.SessionTermination, sessionTermination)
                 .SetProperty(a => a.ResolvedDate, now));
 
+        // Written with the attempt, so a Rotated attempt always has a Succeeded job: success wins by construction.
         await dbContext.PamRotationJobs
             .Where(j => j.Id == jobId.Value)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(j => j.Status, PamRotationJobStatus.Succeeded)
+                .SetProperty(j => j.Action, PamRotationJobAction.Succeeded)
                 .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                 .SetProperty(j => j.ClaimedAt, (DateTime?)null));
 
@@ -389,11 +410,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var jobId = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
-                && a.Status == PamRotationAttemptStatus.Executing
+                && a.Action == PamRotationAttemptAction.None
                 && a.ClaimedByAccessConnectorId == accessConnectorId)
-            .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => j)
-            .Where(j => j.Status == PamRotationJobStatus.Claimed)
-            .Select(j => (Guid?)j.Id)
+            .Join(dbContext.PamRotationJobs, a => a.JobId, j => j.Id, (a, j) => new { Attempt = a, Job = j })
+            .Where(x => x.Job.Action == PamRotationJobAction.Claimed
+                && x.Job.ExpiresAt > now
+                && x.Job.ClaimedByAccessConnectorId == accessConnectorId
+                && x.Job.ClaimedAt == x.Attempt.CreationDate)
+            .Select(x => (Guid?)x.Job.Id)
             .FirstOrDefaultAsync();
 
         if (jobId is null)
@@ -405,15 +429,16 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(a => a.Status, PamRotationAttemptStatus.Errored)
+                .SetProperty(a => a.Action, PamRotationAttemptAction.Errored)
                 .SetProperty(a => a.FailureReason, failureReason)
                 .SetProperty(a => a.SyncState, syncState)
                 .SetProperty(a => a.ResolvedDate, now));
 
         // Abandoned attempts are deliberately not counted -- a release or timeout does not charge the retry budget.
         var erroredCount = await dbContext.PamRotationAttempts
-            .CountAsync(a => a.JobId == jobId.Value && a.Status == PamRotationAttemptStatus.Errored);
+            .CountAsync(a => a.JobId == jobId.Value && a.Action == PamRotationAttemptAction.Errored);
 
+        // The status the job derives as right after this write; the guard saw it unexpired.
         PamRotationJobStatus jobStatus;
         if (erroredCount < maxAttempts)
         {
@@ -423,7 +448,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             await dbContext.PamRotationJobs
                 .Where(j => j.Id == jobId.Value)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(j => j.Status, jobStatus)
+                    .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null)
                     .SetProperty(j => j.NextClaimableAt, nextClaimableAt));
@@ -434,7 +459,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             await dbContext.PamRotationJobs
                 .Where(j => j.Id == jobId.Value)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(j => j.Status, jobStatus)
+                    .SetProperty(j => j.Action, PamRotationJobAction.Failed)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null));
         }
@@ -453,13 +478,14 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // EF has no OUTPUT, so the affected ids are read then updated with the same predicate re-applied; Serializable keeps another sweep from claiming them meanwhile.
+        // A timeout is derived, not stored; PamRotationJobTimeoutSweep's journal decides which run owns a job.
+        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key. A Rotated
+        // attempt always comes with a Succeeded job, so success wins without checking attempts.
         var due = await dbContext.PamRotationJobs
-            .Where(j => (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed)
+            .Where(j => (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
                 && j.ExpiresAt <= now
-                && !dbContext.PamRotationAttempts.Any(a => a.JobId == j.Id && a.Status == PamRotationAttemptStatus.Rotated))
+                && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id))
             .Join(dbContext.PamRotationConfigs, j => j.RotationConfigId, c => c.Id, (j, c) => new
             {
                 JobId = j.Id,
@@ -467,32 +493,22 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 c.OrganizationId,
                 c.CipherId,
                 j.Source,
-                PreviousClaimedByAccessConnectorId = j.ClaimedByAccessConnectorId,
+                j.ClaimedByAccessConnectorId,
             })
             .AsNoTracking()
             .ToListAsync();
 
         if (due.Count == 0)
         {
-            await transaction.CommitAsync();
             return [];
         }
 
         var jobIds = due.Select(d => d.JobId).ToList();
-
-        await dbContext.PamRotationJobs
-            .Where(j => jobIds.Contains(j.Id)
-                && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed))
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(j => j.Status, PamRotationJobStatus.TimedOut)
-                .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
-                .SetProperty(j => j.ClaimedAt, (DateTime?)null));
-
-        await AbandonExecutingAttemptsAsync(dbContext, jobIds, now);
+        dbContext.PamRotationJobTimeoutSweeps.AddRange(jobIds.Select(id =>
+            new EfTimeoutSweep { RotationJobId = id, SweptDate = now }));
+        await dbContext.SaveChangesAsync();
 
         var attemptCounts = await AttemptCountsAsync(dbContext, jobIds);
-
-        await transaction.CommitAsync();
 
         return due
             .Select(d => new PamTimedOutJob
@@ -502,7 +518,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 OrganizationId = d.OrganizationId,
                 CipherId = d.CipherId,
                 Source = d.Source,
-                ClaimedByAccessConnectorId = d.PreviousClaimedByAccessConnectorId,
+                ClaimedByAccessConnectorId = d.ClaimedByAccessConnectorId,
                 AttemptCount = attemptCounts.TryGetValue(d.JobId, out var count) ? count : 0,
             })
             .ToList();
@@ -518,12 +534,12 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var staleBefore = now - offlineAfter;
 
         // Releases only at lease expiry (not stale detection) to preserve success-wins; keyed on heartbeat staleness alone, so a disabled access connector's jobs still release.
+        // A timed-out claim is the timeout sweep's, not a release; a Rotated attempt always comes with a Succeeded job.
         var candidates = await dbContext.PamRotationJobs
-            .Where(j => j.Status == PamRotationJobStatus.Claimed && j.ClaimedAt != null)
+            .Where(j => j.Action == PamRotationJobAction.Claimed && j.ExpiresAt > now && j.ClaimedAt != null)
             .Join(dbContext.PamAccessConnectors, j => j.ClaimedByAccessConnectorId, d => d.Id,
                 (j, d) => new { Job = j, AccessConnector = d })
-            .Where(x => (x.AccessConnector.LastHeartbeatAt == null || x.AccessConnector.LastHeartbeatAt < staleBefore)
-                && !dbContext.PamRotationAttempts.Any(a => a.JobId == x.Job.Id && a.Status == PamRotationAttemptStatus.Rotated))
+            .Where(x => x.AccessConnector.LastHeartbeatAt == null || x.AccessConnector.LastHeartbeatAt < staleBefore)
             .Join(dbContext.PamRotationConfigs, x => x.Job.RotationConfigId, c => c.Id, (x, c) => new
             {
                 JobId = x.Job.Id,
@@ -551,15 +567,17 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         {
             var nextClaimableAt = job.ClaimedAt!.Value + releaseDelay;
             await dbContext.PamRotationJobs
-                .Where(j => j.Id == job.JobId && j.Status == PamRotationJobStatus.Claimed)
+                .Where(j => j.Id == job.JobId && j.Action == PamRotationJobAction.Claimed)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(j => j.Status, PamRotationJobStatus.Pending)
+                    .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.NextClaimableAt, nextClaimableAt)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null));
         }
 
-        await AbandonExecutingAttemptsAsync(dbContext, released.Select(r => r.JobId).ToList(), now);
+        // Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never
+        // charges.
+        await RecordReleasedAttemptsAsync(dbContext, released.Select(r => r.JobId).ToList(), now);
 
         await transaction.CommitAsync();
 
@@ -591,11 +609,10 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 x => x.Config.OrganizationId, d => d.OrganizationId,
                 (x, d) => new EligibleJob { Job = x.Job, Config = x.Config, Target = x.Target });
 
-    private static Task AbandonExecutingAttemptsAsync(DatabaseContext dbContext, List<Guid> jobIds, DateTime now) =>
+    private static Task RecordReleasedAttemptsAsync(DatabaseContext dbContext, List<Guid> jobIds, DateTime now) =>
         dbContext.PamRotationAttempts
-            .Where(a => jobIds.Contains(a.JobId) && a.Status == PamRotationAttemptStatus.Executing)
+            .Where(a => jobIds.Contains(a.JobId) && a.Action == PamRotationAttemptAction.None && a.ResolvedDate == null)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(a => a.Status, PamRotationAttemptStatus.Abandoned)
                 .SetProperty(a => a.ResolvedDate, now));
 
     private static async Task<Dictionary<Guid, int>> AttemptCountsAsync(DatabaseContext dbContext, List<Guid> jobIds) =>

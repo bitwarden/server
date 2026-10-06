@@ -108,23 +108,28 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
             .Select(d => d.ApiKeyId)
             .FirstOrDefaultAsync();
 
+        // Releases the access connector's live claims; their attempts derive as Abandoned, so only the end is
+        // recorded. A timed-out claim is left as it was.
         var claimedJobIds = await dbContext.PamRotationJobs
-            .Where(j => j.ClaimedByAccessConnectorId == obj.Id && j.Status == PamRotationJobStatus.Claimed)
+            .Where(j => j.ClaimedByAccessConnectorId == obj.Id
+                && j.Action == PamRotationJobAction.Claimed
+                && j.ExpiresAt > now)
             .Select(j => j.Id)
             .ToListAsync();
 
         if (claimedJobIds.Count > 0)
         {
             await dbContext.PamRotationAttempts
-                .Where(a => claimedJobIds.Contains(a.JobId) && a.Status == PamRotationAttemptStatus.Executing)
+                .Where(a => claimedJobIds.Contains(a.JobId)
+                    && a.Action == PamRotationAttemptAction.None
+                    && a.ResolvedDate == null)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(a => a.Status, PamRotationAttemptStatus.Abandoned)
                     .SetProperty(a => a.ResolvedDate, now));
 
             await dbContext.PamRotationJobs
                 .Where(j => claimedJobIds.Contains(j.Id))
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(j => j.Status, PamRotationJobStatus.Pending)
+                    .SetProperty(j => j.Action, PamRotationJobAction.None)
                     .SetProperty(j => j.ClaimedByAccessConnectorId, (Guid?)null)
                     .SetProperty(j => j.ClaimedAt, (DateTime?)null)
                     .SetProperty(j => j.NextClaimableAt, now));

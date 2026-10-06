@@ -12,7 +12,8 @@ BEGIN
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId AND A.[TargetSystemId] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
-    WHERE J.[Status] = 0 -- Pending
+    WHERE J.[Action] = 0 -- None
+        AND J.[ExpiresAt] > @Now
         AND J.[NextClaimableAt] <= @Now
         AND C.[Enabled] = 1
         AND T.[Status] = 0 -- Active

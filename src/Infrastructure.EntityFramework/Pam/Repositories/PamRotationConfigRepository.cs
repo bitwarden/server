@@ -56,8 +56,10 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 && x.Target.Method == PamTargetSystemMethod.Automatic
                 && x.Target.Status == PamTargetSystemStatus.Active
                 // OfferRotation is the single creation point; a config already carrying work is not offered again.
+                // Until the timeout sweep records a timed-out job it still blocks, so its reschedule is never raced.
                 && !dbContext.PamRotationJobs.Any(j => j.RotationConfigId == x.Config.Id
-                    && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed)))
+                    && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
+                    && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id)))
             .Select(x => x.Config)
             .AsNoTracking()
             .ToListAsync();
@@ -81,25 +83,31 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
     }
 
     public async Task<bool> DeleteWithJobsAsync(Guid configId)
+        => await SerializableRetry.RunAsync(() => DeleteGuardedAsync(configId));
+
+    private async Task<bool> DeleteGuardedAsync(Guid configId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         // Serializable makes the active-job re-check and the deletes one indivisible step, so a job offered in
-        // between can't be torn out from under its access connector.
+        // between can't be torn out from under its access connector. A loser aborted at commit is replayed by
+        // SerializableRetry.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 
         var hasActiveJob = await dbContext.PamRotationJobs
             .AnyAsync(j => j.RotationConfigId == configId
-                && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed));
+                && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
+                && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id));
         if (hasActiveJob)
         {
             await transaction.RollbackAsync();
             return false;
         }
 
-        // Attempts reference jobs and jobs reference the config, both NO ACTION, so children go first.
+        // Attempts reference jobs and jobs reference the config, both NO ACTION, so children go first. The timeout
+        // journal cascades from the jobs on its own.
         var jobIds = await dbContext.PamRotationJobs
             .Where(j => j.RotationConfigId == configId)
             .Select(j => j.Id)
@@ -136,8 +144,10 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
                 RevisionDate = c.RevisionDate,
                 TargetSystemName = t.Name,
                 TargetSystemMethod = t.Method,
+                // A timed-out job stays active until the timeout sweep records it.
                 HasActiveJob = dbContext.PamRotationJobs.Any(j => j.RotationConfigId == c.Id
-                    && (j.Status == PamRotationJobStatus.Pending || j.Status == PamRotationJobStatus.Claimed)),
+                    && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
+                    && !dbContext.PamRotationJobTimeoutSweeps.Any(s => s.RotationJobId == j.Id)),
             })
             .AsNoTracking();
 }

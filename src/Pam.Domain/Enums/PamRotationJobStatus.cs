@@ -1,9 +1,10 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// Lifecycle of a <see cref="Entities.PamRotationJob"/>. <see cref="Pending"/> and <see cref="Claimed"/> are the
-/// active statuses a config's invariant <c>AtMostOneActiveJobPerConfig</c> binds on (see
-/// <c>PamRotationRules.IsActiveJobStatus</c>); every other value is terminal.
+/// Where a <see cref="Entities.PamRotationJob"/> stands, derived at read time by
+/// <see cref="PamRotationStatusDerivation.ComputeJobStatus"/> and never stored. <see cref="Pending"/> and
+/// <see cref="Claimed"/> are the active statuses (see <c>PamRotationRules.IsActiveJobStatus</c>); every other value is
+/// terminal.
 /// </summary>
 public enum PamRotationJobStatus : byte
 {
@@ -20,7 +21,6 @@ public enum PamRotationJobStatus : byte
     /// <summary>Every attempt errored and the retry budget (<c>MaxAttempts</c>) is exhausted.</summary>
     Failed = 3,
 
-    /// <summary>Still Pending or Claimed past <see cref="Entities.PamRotationJob.ExpiresAt"/> with no successful
-    /// attempt.</summary>
+    /// <summary>Neither succeeded nor failed by <see cref="Entities.PamRotationJob.ExpiresAt"/>.</summary>
     TimedOut = 4,
 }

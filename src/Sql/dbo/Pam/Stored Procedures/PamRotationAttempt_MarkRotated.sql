@@ -13,14 +13,18 @@ BEGIN
 
     DECLARE @JobId UNIQUEIDENTIFIER
 
+    -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
     SELECT @JobId = J.[Id]
     FROM [dbo].[PamRotationAttempt] AT
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
     WHERE AT.[Id] = @AttemptId
-        AND AT.[Status] = 0 -- Executing
+        AND AT.[Action] = 0 -- None
         AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
         AND AT.[CipherUpdated] = 1
-        AND J.[Status] = 1 -- Claimed
+        AND J.[Action] = 1 -- Claimed
+        AND J.[ExpiresAt] > @Now
+        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+        AND J.[ClaimedAt] = AT.[CreationDate]
 
     IF @JobId IS NULL
     BEGIN
@@ -30,14 +34,14 @@ BEGIN
     END
 
     UPDATE [dbo].[PamRotationAttempt]
-    SET [Status] = 1, -- Rotated
+    SET [Action] = 1, -- Rotated
         [SessionTermination] = @SessionTermination,
         [ResolvedDate] = @Now
     WHERE [Id] = @AttemptId
 
-    -- Clears claim fields leaving Claimed; the attempt already recorded who worked it.
+    -- Written with the attempt, so a Rotated attempt always has a Succeeded job: success wins by construction.
     UPDATE [dbo].[PamRotationJob]
-    SET [Status] = 2, -- Succeeded
+    SET [Action] = 2, -- Succeeded
         [ClaimedByAccessConnectorId] = NULL,
         [ClaimedAt] = NULL
     WHERE [Id] = @JobId

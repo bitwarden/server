@@ -5,7 +5,8 @@ CREATE PROCEDURE [dbo].[PamRotationJob_ReleaseExpiredLeases]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Releases require an expired lease and a stale heartbeat, never Status alone; excludes Rotated.
+    -- Releases require an expired lease and a stale heartbeat, never Action alone. A Rotated attempt always comes
+    -- with a Succeeded job, so success wins without checking attempts.
     SET XACT_ABORT ON
 
     BEGIN TRANSACTION
@@ -16,7 +17,7 @@ BEGIN
     )
 
     UPDATE J
-    SET J.[Status] = 0, -- Pending
+    SET J.[Action] = 0, -- None
         -- Uses the pre-clear ClaimedAt, still visible here, so re-claim time is exactly ExecuteBy.
         J.[NextClaimableAt] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]),
         J.[ClaimedByAccessConnectorId] = NULL,
@@ -24,21 +25,17 @@ BEGIN
     OUTPUT deleted.[Id], deleted.[ClaimedByAccessConnectorId] INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
     FROM [dbo].[PamRotationJob] J
     INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = J.[ClaimedByAccessConnectorId]
-    WHERE J.[Status] = 1 -- Claimed
+    WHERE J.[Action] = 1 -- Claimed
+        AND J.[ExpiresAt] > @Now -- a timed-out claim is the timeout sweep's, not a release
         AND DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]) <= @Now
         AND (D.[LastHeartbeatAt] IS NULL OR D.[LastHeartbeatAt] < DATEADD(SECOND, -@OfflineAfterSeconds, @Now))
-        AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[PamRotationAttempt] AT
-            WHERE AT.[JobId] = J.[Id] AND AT.[Status] = 1 -- Rotated
-        )
 
-    -- Abandoned attempts are never charged against the retry budget.
+    -- Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never charges.
     UPDATE [dbo].[PamRotationAttempt]
-    SET [Status] = 3, -- Abandoned
-        [ResolvedDate] = @Now
+    SET [ResolvedDate] = @Now
     WHERE [JobId] IN (SELECT [JobId] FROM @Affected)
-        AND [Status] = 0 -- Executing
+        AND [Action] = 0 -- None
+        AND [ResolvedDate] IS NULL
 
     -- One row per released job; ClaimedByAccessConnectorId is the pre-clear claimant, always non-null.
     SELECT

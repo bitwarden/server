@@ -14,9 +14,16 @@ BEGIN
         AND C.[NextRotationAt] <= @Now
         AND T.[Method] = 0 -- Automatic
         AND T.[Status] = 0 -- Active
+        -- Until the timeout sweep records a timed-out job it still blocks, so its reschedule is never raced.
         AND NOT EXISTS (
             SELECT 1
             FROM [dbo].[PamRotationJob] J
-            WHERE J.[RotationConfigId] = C.[Id] AND J.[Status] IN (0, 1) -- Pending, Claimed
+            WHERE J.[RotationConfigId] = C.[Id]
+                AND J.[Action] IN (0, 1) -- None, Claimed
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM [dbo].[PamRotationJobTimeoutSweep] S
+                    WHERE S.[RotationJobId] = J.[Id]
+                )
         )
 END

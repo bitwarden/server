@@ -2,7 +2,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_Create]
     @Id UNIQUEIDENTIFIER,
     @RotationConfigId UNIQUEIDENTIFIER,
     @Source TINYINT,
-    @Status TINYINT,
+    @Action TINYINT,
     @ClaimedByAccessConnectorId UNIQUEIDENTIFIER = NULL,
     @ClaimedAt DATETIME2(7) = NULL,
     @CreationDate DATETIME2(7),
@@ -11,7 +11,7 @@ CREATE PROCEDURE [dbo].[PamRotationJob_Create]
 AS
 BEGIN
     SET NOCOUNT ON
-    -- Caller passes an already-populated Pending job; this only re-validates eligibility and the guard.
+    -- Caller passes an already-populated unclaimed job; this only re-validates eligibility and the guard.
     -- Holds the range lock until the INSERT commits.
     SET XACT_ABORT ON
 
@@ -35,11 +35,17 @@ BEGIN
     END
 
     -- AtMostOneActiveJobPerConfig: range lock holds for the transaction, blocking concurrent creation.
+    -- A timed-out job holds its config until the timeout sweep records it, so the sweep's reschedule lands first.
     IF EXISTS (
         SELECT 1
-        FROM [dbo].[PamRotationJob] WITH (UPDLOCK, HOLDLOCK)
-        WHERE [RotationConfigId] = @RotationConfigId
-            AND [Status] IN (0, 1) -- Pending, Claimed
+        FROM [dbo].[PamRotationJob] J WITH (UPDLOCK, HOLDLOCK)
+        WHERE J.[RotationConfigId] = @RotationConfigId
+            AND J.[Action] IN (0, 1) -- None, Claimed
+            AND NOT EXISTS (
+                SELECT 1
+                FROM [dbo].[PamRotationJobTimeoutSweep] S
+                WHERE S.[RotationJobId] = J.[Id]
+            )
     )
     BEGIN
         ROLLBACK TRANSACTION
@@ -49,12 +55,12 @@ BEGIN
 
     INSERT INTO [dbo].[PamRotationJob]
     (
-        [Id], [RotationConfigId], [Source], [Status], [ClaimedByAccessConnectorId], [ClaimedAt],
+        [Id], [RotationConfigId], [Source], [Action], [ClaimedByAccessConnectorId], [ClaimedAt],
         [CreationDate], [NextClaimableAt], [ExpiresAt]
     )
     VALUES
     (
-        @Id, @RotationConfigId, @Source, @Status, @ClaimedByAccessConnectorId, @ClaimedAt,
+        @Id, @RotationConfigId, @Source, @Action, @ClaimedByAccessConnectorId, @ClaimedAt,
         @CreationDate, @NextClaimableAt, @ExpiresAt
     )
 

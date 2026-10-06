@@ -33,6 +33,27 @@ public static class PamRotationRules
         config.Enabled && method == PamTargetSystemMethod.Automatic && targetStatus == PamTargetSystemStatus.Active;
 
     /// <summary>
+    /// Spec <c>is_claimable</c>: pending, past its backoff, on a config that is still live. Pausing the config or
+    /// disabling its target holds a pending job without changing its status. Written against
+    /// <see cref="PamRotationJob.Action"/> and the clock, as the claim and the access connector's poll mirror it in
+    /// their queries.
+    /// </summary>
+    public static bool IsClaimable(
+        PamRotationJob job, PamRotationConfig config, PamTargetSystemStatus targetStatus, DateTime now) =>
+        job.Action == PamRotationJobAction.None && now < job.ExpiresAt && job.NextClaimableAt <= now
+        && config.Enabled && targetStatus == PamTargetSystemStatus.Active;
+
+    /// <summary>
+    /// Whether <paramref name="attempt"/> was created by the claim <paramref name="job"/> records. The claim stamps
+    /// <see cref="PamRotationJob.ClaimedAt"/> and the attempt's <see cref="PamRotationAttempt.CreationDate"/> from
+    /// the same instant, and every write that ends a claim clears it. A claim that timed out still matches, so callers
+    /// pair this with the job's derived status.
+    /// </summary>
+    public static bool IsCurrentAttempt(PamRotationJob job, PamRotationAttempt attempt) =>
+        attempt.JobId == job.Id && job.ClaimedAt == attempt.CreationDate
+        && job.ClaimedByAccessConnectorId == attempt.ClaimedByAccessConnectorId;
+
+    /// <summary>
     /// Spec <c>awaiting_manual_rotation</c>: a manual-target config surfaces an operator obligation on its schedule,
     /// since there is no access connector to offer a job to.
     /// </summary>

@@ -1,7 +1,8 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// Lifecycle of a <see cref="Entities.PamRotationAttempt"/>.
+/// Where a <see cref="Entities.PamRotationAttempt"/> stands, derived at read time by
+/// <see cref="PamRotationStatusDerivation.ComputeAttemptStatus"/> and never stored.
 /// </summary>
 public enum PamRotationAttemptStatus : byte
 {

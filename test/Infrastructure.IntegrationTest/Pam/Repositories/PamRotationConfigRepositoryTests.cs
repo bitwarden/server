@@ -353,7 +353,7 @@ public class PamRotationConfigRepositoryTests
         Id = CombGuid.Generate(),
         RotationConfigId = configId,
         Source = PamRotationSource.Scheduled,
-        Status = PamRotationJobStatus.Pending,
+        Action = PamRotationJobAction.None,
         CreationDate = now,
         NextClaimableAt = now,
         ExpiresAt = now.AddHours(1),

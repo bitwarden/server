@@ -82,7 +82,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return results.ToList();
     }
 
-    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId)
+    public async Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
@@ -98,13 +98,15 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return jobs
             .Select(job => PamRotationJobDetails.From(
                 job,
-                attemptsByJobId.TryGetValue(job.Id, out var attempts) ? attempts : new List<PamRotationAttempt>()))
+                attemptsByJobId.TryGetValue(job.Id, out var attempts) ? attempts : new List<PamRotationAttempt>(),
+                now))
             .ToList();
     }
 
     public async Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(
         Guid accessConnectorId,
-        int limit)
+        int limit,
+        DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
         using var results = await connection.QueryMultipleAsync(
@@ -120,7 +122,8 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return jobs
             .Select(job => PamRotationJobDetails.From(
                 job,
-                attemptsByJobId.TryGetValue(job.Id, out var attempts) ? attempts : new List<PamRotationAttempt>()))
+                attemptsByJobId.TryGetValue(job.Id, out var attempts) ? attempts : new List<PamRotationAttempt>(),
+                now))
             .ToList();
     }
 

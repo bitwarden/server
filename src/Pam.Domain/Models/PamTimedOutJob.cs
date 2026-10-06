@@ -3,7 +3,7 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// One job the sweep moved to <see cref="PamRotationJobStatus.TimedOut"/>: the row the sweep needs to emit the
+/// One job whose <see cref="PamRotationJobStatus.TimedOut"/> the sweep has just recorded: the row it needs to emit the
 /// <c>timed_out</c> audit event with its unroutable-vs-stuck reason.
 /// </summary>
 public record PamTimedOutJob

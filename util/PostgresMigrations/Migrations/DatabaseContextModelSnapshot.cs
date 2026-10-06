@@ -2841,6 +2841,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("smallint");
+
                     b.Property<bool>("CipherUpdated")
                         .HasColumnType("boolean");
 
@@ -2863,9 +2866,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte?>("SessionTermination")
                         .HasColumnType("smallint");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
                     b.Property<byte?>("SyncState")
                         .HasColumnType("smallint");
 
@@ -2873,7 +2873,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("ClaimedByAccessConnectorId", "JobId");
 
-                    b.HasIndex("JobId", "Status");
+                    b.HasIndex("JobId", "Action");
 
                     b.ToTable("PamRotationAttempt", (string)null);
                 });
@@ -2941,6 +2941,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<byte>("Action")
+                        .HasColumnType("smallint");
+
                     b.Property<DateTime?>("ClaimedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -2962,18 +2965,28 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte>("Source")
                         .HasColumnType("smallint");
 
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("ClaimedByAccessConnectorId", "Status");
+                    b.HasIndex("Action", "ExpiresAt");
 
-                    b.HasIndex("RotationConfigId", "Status");
+                    b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
-                    b.HasIndex("Status", "ExpiresAt");
+                    b.HasIndex("RotationConfigId", "Action");
 
                     b.ToTable("PamRotationJob", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.Property<Guid>("RotationJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SweptDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("RotationJobId");
+
+                    b.ToTable("PamRotationJobTimeoutSweep", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamTargetSystem", b =>
@@ -4248,6 +4261,15 @@ namespace Bit.PostgresMigrations.Migrations
                         .WithMany()
                         .HasForeignKey("RotationConfigId")
                         .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJobTimeoutSweep", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationJob", null)
+                        .WithMany()
+                        .HasForeignKey("RotationJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

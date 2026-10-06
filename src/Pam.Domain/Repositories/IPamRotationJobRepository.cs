@@ -21,9 +21,9 @@ public interface IPamRotationJobRepository
     Task<PamRotationJob?> GetByIdAsync(Guid id);
 
     /// <summary>
-    /// Atomic first-claim-wins update: flips the job Pending → Claimed and inserts its Executing
-    /// <see cref="PamRotationAttempt"/> in the same transaction (invariant <c>AtMostOneInFlightAttemptPerJob</c>).
-    /// Re-checks eligibility (config enabled, target active, access connector assigned) before claiming.
+    /// Atomic first-claim-wins update: records the claim and inserts its <see cref="PamRotationAttempt"/> in the same
+    /// transaction, both stamped with <paramref name="now"/> (invariant <c>AtMostOneInFlightAttemptPerJob</c>).
+    /// Re-checks <see cref="PamRotationRules.IsClaimable"/> and the access connector's eligibility before claiming.
     /// </summary>
     Task<PamRotationClaimResult> ClaimAsync(Guid jobId, Guid accessConnectorId, DateTime now, TimeSpan releaseDelay);
 
@@ -34,16 +34,20 @@ public interface IPamRotationJobRepository
     /// </summary>
     Task<ICollection<PamClaimableJob>> GetManyClaimableByAccessConnectorIdAsync(Guid accessConnectorId, DateTime now);
 
-    /// <summary>Returns every job recorded against the config, each with its attempts, oldest first — the config detail page's attempt history.</summary>
-    Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId);
+    /// <summary>
+    /// Returns every job recorded against the config, each with its attempts, oldest first — the config detail page's
+    /// attempt history. Statuses are derived against <paramref name="now"/>.
+    /// </summary>
+    Task<ICollection<PamRotationJobDetails>> GetManyByConfigIdAsync(Guid configId, DateTime now);
 
     /// <summary>
     /// Returns the <paramref name="limit"/> most recent jobs this access connector has worked, newest first — the
     /// access connector detail page's recent activity. Matches on the attempts, not
     /// <see cref="PamRotationJob.ClaimedByAccessConnectorId"/>, since a job's claim fields are cleared once it
-    /// resolves, releases, or times out.
+    /// resolves or is released. Statuses are derived against <paramref name="now"/>.
     /// </summary>
-    Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(Guid accessConnectorId, int limit);
+    Task<ICollection<PamRotationJobDetails>> GetManyRecentByAccessConnectorIdAsync(Guid accessConnectorId, int limit,
+        DateTime now);
 
     Task<PamRotationAttempt?> GetAttemptByIdAsync(Guid attemptId);
 
@@ -75,17 +79,17 @@ public interface IPamRotationJobRepository
         string? failureReason, PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay);
 
     /// <summary>
-    /// Set-based sweep: moves every job still Pending or Claimed past <see cref="PamRotationJob.ExpiresAt"/> with no
-    /// Rotated attempt to <see cref="PamRotationJobStatus.TimedOut"/>, clearing claim fields and abandoning any
-    /// Executing attempt. Returns one row per timed-out job for audit emission.
+    /// Set-based sweep: records each unresolved job past <see cref="PamRotationJob.ExpiresAt"/> in the timeout journal,
+    /// once. Writes nothing to the job or its attempts, whose TimedOut and Abandoned are derived; the journal row is
+    /// what releases the job's hold on its config. Returns one row per newly recorded job for audit emission.
     /// </summary>
     Task<IReadOnlyList<PamTimedOutJob>> TimeoutDueAsync(DateTime now);
 
     /// <summary>
-    /// Set-based sweep: releases claimed jobs back to Pending once the access connector's heartbeat is stale and the
-    /// claim lease has expired, preserving success-wins for a slow-but-live access connector. Keys on heartbeat
-    /// staleness only, never access connector status, so a revoked access connector's jobs release too. Returns one row
-    /// per released job for audit emission.
+    /// Set-based sweep: releases claims that have not timed out back to Pending once the access connector's heartbeat
+    /// is stale and the claim lease has expired, preserving success-wins for a slow-but-live access connector. Keys on
+    /// heartbeat staleness only, never access connector status, so a revoked access connector's jobs release too.
+    /// Returns one row per released job for audit emission.
     /// </summary>
     Task<IReadOnlyList<PamReleasedJob>> ReleaseExpiredLeasesAsync(DateTime now, TimeSpan offlineAfter,
         TimeSpan releaseDelay);

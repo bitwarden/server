@@ -16,23 +16,26 @@ BEGIN
     FROM [dbo].[PamAccessConnector]
     WHERE [Id] = @Id
 
-    -- No FK ties PamRotationJob to PamAccessConnector, so this clears the access connector's claimed jobs directly.
+    -- No FK ties PamRotationJob to PamAccessConnector, so this releases the access connector's live claims
+    -- directly. Their attempts derive as Abandoned; only the end is recorded. A timed-out claim is left as it was.
     UPDATE AT
-    SET AT.[Status] = 3, -- Abandoned
-        AT.[ResolvedDate] = @Now
+    SET AT.[ResolvedDate] = @Now
     FROM [dbo].[PamRotationAttempt] AT
     INNER JOIN [dbo].[PamRotationJob] J ON J.[Id] = AT.[JobId]
-    WHERE AT.[Status] = 0 -- Executing
+    WHERE AT.[Action] = 0 -- None
+        AND AT.[ResolvedDate] IS NULL
         AND J.[ClaimedByAccessConnectorId] = @Id
-        AND J.[Status] = 1 -- Claimed
+        AND J.[Action] = 1 -- Claimed
+        AND J.[ExpiresAt] > @Now
 
     UPDATE [dbo].[PamRotationJob]
-    SET [Status] = 0, -- Pending
+    SET [Action] = 0, -- None
         [ClaimedByAccessConnectorId] = NULL,
         [ClaimedAt] = NULL,
         [NextClaimableAt] = @Now
     WHERE [ClaimedByAccessConnectorId] = @Id
-        AND [Status] = 1 -- Claimed
+        AND [Action] = 1 -- Claimed
+        AND [ExpiresAt] > @Now
 
     DELETE FROM [dbo].[PamAccessConnectorTargetAssignment]
     WHERE [AccessConnectorId] = @Id
