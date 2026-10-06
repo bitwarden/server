@@ -24,10 +24,12 @@ BEGIN
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     WHERE AT.[Id] = @AttemptId
-        AND AT.[Status] = 0 -- Executing
+        AND AT.[Action] = 0 -- None
         AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[Status] = 1 -- Claimed
+        AND J.[Action] = 1 -- Claimed
+        AND J.[ExpiresAt] > @Now
         AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+        AND J.[ClaimedAt] = AT.[CreationDate]
 
     IF @VerifiedJobId IS NULL
     BEGIN
