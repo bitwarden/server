@@ -2589,4 +2589,156 @@ public class CipherServiceTests
             .Received(1)
             .DeleteAttachmentsForCipherAsync(sharedOnlyCipher.Id);
     }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_WithEditPermissionOnly_ThrowsBadRequest(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = true
+            });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId));
+
+        Assert.Contains("do not have permissions", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default);
+        await sutProvider.GetDependency<IAttachmentStorageService>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAttachmentAsync(default, default);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_WithManagePermission_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = false;
+        cipherDetails.Manage = true;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = true
+            });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionDisabled_WithEditPermission_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, User user, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = true;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByIdAsync(deletingUserId)
+            .Returns(user);
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilityAsync(cipherDetails.OrganizationId.Value)
+            .Returns(new OrganizationAbility
+            {
+                Id = cipherDetails.OrganizationId.Value,
+                LimitItemDeletion = false
+            });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_WithLimitItemDeletionEnabled_AsOrgAdmin_DeletesAttachment(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Edit = false;
+        cipherDetails.Manage = false;
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId, orgAdmin: true);
+
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .DeleteAttachmentAsync(cipherDetails.Id, attachmentId);
+    }
+
+    [Theory]
+    [OrganizationCipherCustomize]
+    [BitAutoData]
+    public async Task DeleteAttachmentAsync_AsOrgAdmin_ReplacesWithPlainCipher_PreservingArchives(
+        Guid deletingUserId, CipherDetails cipherDetails, SutProvider<CipherService> sutProvider)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Archives = "{\"archived\":true}";
+        const string attachmentId = "attachment-id";
+        cipherDetails.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            { attachmentId, new CipherAttachment.MetaData { AttachmentId = attachmentId } }
+        });
+
+        await sutProvider.Sut.DeleteAttachmentAsync(cipherDetails, attachmentId, deletingUserId, orgAdmin: true);
+
+        // Cipher_Update only accepts Cipher's own properties and Dapper builds its parameters from
+        // the runtime type, so the org admin path must not hand a CipherDetails to this overload.
+        await sutProvider.GetDependency<ICipherRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<Cipher>(c => c.GetType() == typeof(Cipher) && c.Archives == cipherDetails.Archives));
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<CipherDetails>());
+    }
 }

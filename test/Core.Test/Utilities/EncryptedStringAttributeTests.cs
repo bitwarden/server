@@ -58,6 +58,7 @@ public class EncryptedStringAttributeTests
     [InlineData("2.AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAw==")] // Mac decodes to 4 bytes instead of 32
     [InlineData("AAECAwQFBgcICQoLDA0ODw==|Y3Q=|AAECAw==")] // Short mac, headerless iv|ct|mac
     [InlineData("2.lGD=|lGD=|lGD=")] // Non-canonical padding, but short IV and mac
+    [InlineData("P|CfDJ8AAAAAAAAAAAAAAAAAAAAAAAA")] // Database field protection sentinel, not an encrypted string
     public void IsValid_ReturnsFalse_WhenInvalid(string input)
     {
         var sut = new EncryptedStringAttribute();
