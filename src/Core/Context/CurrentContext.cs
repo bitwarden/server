@@ -448,8 +448,6 @@ public class CurrentContext(
 
     public bool AccessPam(Guid orgId)
     {
-        // No machine-principal escape hatch here: PAM's own machine caller authenticates under
-        // Policies.PamAccessConnector, not Policies.Application, and never travels the leasing paths this guards.
         return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
     }
 
