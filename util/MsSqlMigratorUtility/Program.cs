@@ -35,14 +35,20 @@ internal class Program
     {
         var migrator = new DbMigrator(databaseConnectionString, noTransactionMigration: noTransactionMigration,
             executionTimeoutSeconds: executionTimeoutSeconds);
+        // The published image sets this, so self-hosted installs hand data migrations off to Admin; builds from
+        // source pass their markers through.
+        Func<string, bool>? onDataMigration =
+            Environment.GetEnvironmentVariable("MSSQL_STOP_AT_DATA_MIGRATIONS") == "true" ? null : _ => true;
         bool success;
         if (!string.IsNullOrWhiteSpace(folderName))
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun: dryRun);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, folderName, dryRun: dryRun,
+                onDataMigration: onDataMigration);
         }
         else
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun: dryRun);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(true, repeatable, dryRun: dryRun,
+                onDataMigration: onDataMigration);
         }
 
         return success;
