@@ -8,7 +8,7 @@ namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
 /// Handler for the <c>access-connectors/rotation/attempts/{id}</c> connector-facing actions: reading and writing back
-/// the claimed attempt's cipher, and reporting its outcome. Runs behind <c>Policies.PamAccessConnector</c>; every
+/// the claimed attempt's cipher, and reporting its outcome. Runs behind <c>Policies.AccessConnector</c>; every
 /// command throws 404 for an unknown attempt id (no audit -- nothing to audit against) and 409 for a stale report or
 /// a lost write race (audited as <c>report_rejected</c> / <c>write_rejected</c>).
 /// </summary>
