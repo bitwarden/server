@@ -23,7 +23,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
-    public async Task DeleteAsync(Guid organizationId, Guid id, Guid? userId)
+    public async Task DeleteAsync(Guid organizationId, Guid id, Guid userId)
     {
         var existing = await _repository.GetByIdAsync(id);
         if (existing is null || existing.OrganizationId != organizationId)
