@@ -462,6 +462,25 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     }
 
     /// <summary>
+    /// A disabled email provider does not count as two-factor, so the user logs in without a challenge.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorDisabled_NoTwoFactorChallenge()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserWithStoredTwoFactorProvidersAsync(email,
+            "{\"1\":{\"Enabled\":false,\"MetaData\":{\"Email\":\"" + email + "\"}}}");
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.True(body.RootElement.TryGetProperty("access_token", out _), body.RootElement.ToString());
+    }
+
+    /// <summary>
     /// The two-factor challenge issues no email code, in either the current or the previous cache format. The
     /// client requests the code separately, and only then is one stored and emailed.
     /// </summary>
@@ -593,6 +612,19 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var user = await factory.GetService<IUserRepository>().GetByEmailAsync(email);
         await factory.GetService<ITwoFactorEmailService>().SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
         return factory.TwoFactorEmailCodes[email];
+    }
+
+    /// <summary>
+    /// Creates a user and stores the two-factor provider JSON exactly as given. <see cref="CreateUserAsync"/> saves
+    /// providers through the user service, which marks the provider enabled.
+    /// </summary>
+    private async Task CreateUserWithStoredTwoFactorProvidersAsync(string email, string twoFactorProvidersJson)
+    {
+        await CreateUserAsync(_factory, email);
+        var userRepository = _factory.GetService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(email);
+        user.TwoFactorProviders = twoFactorProvidersJson;
+        await userRepository.ReplaceAsync(user);
     }
 
     private static string NewUniqueEmail() => $"two-factor-{Guid.NewGuid()}@bitwarden.com";
