@@ -16,9 +16,10 @@ namespace Bit.SeederApi.IntegrationTest.Queries;
 
 /// <summary>
 /// Runs the query against codes written by the real generating code, over a real in-memory
-/// <see cref="IDistributedCache"/>. The query rebuilds cache keys and the new device verification envelope
-/// from its own constants, so only a round trip through the actual writer can show those still agree — a
-/// test that seeds the cache by hand would pass against a key nobody writes.
+/// <see cref="IDistributedCache"/>. The query rebuilds cache keys and the code envelope from its own constants,
+/// so only a round trip through the actual writer can show those still agree; a test that seeds the cache by
+/// hand would pass against a key nobody writes. One test writes the cache directly, because it checks a value no
+/// writer produces.
 /// </summary>
 public class UserEmailTokenCodeQueryTests
 {
@@ -140,16 +141,15 @@ public class UserEmailTokenCodeQueryTests
     }
 
     /// <summary>
-    /// The user-verification OTP is written as a bare string under a different key, and stays that way. This
-    /// pins that the envelope handling added for new device verification did not change it.
+    /// The user-verification OTP is written as a bare string under a different key, not in the envelope the other
+    /// code types use, and the query still reads it.
     /// </summary>
     [Fact]
     public async Task Execute_UserVerification_ReturnsBareCachedCode()
     {
         var (query, cache, user) = Arrange();
-        await cache.SetAsync(
-            $"EmailToken_{user.Id}_{user.SecurityStamp}_otp:{user.Email}",
-            Encoding.UTF8.GetBytes("123456"));
+        var issuedCode = await new EmailTokenProvider(cache, Substitute.For<IFeatureService>())
+            .GenerateAsync($"otp:{user.Email}", null!, user);
 
         var response = await query.Execute(new UserEmailTokenCodeQuery.Request
         {
@@ -158,7 +158,7 @@ public class UserEmailTokenCodeQueryTests
         });
 
         Assert.True(response.Found);
-        Assert.Equal("123456", response.Code);
+        Assert.Equal(issuedCode, response.Code);
         Assert.Null(response.DeviceIdentifier);
     }
 
