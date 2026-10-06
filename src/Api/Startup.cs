@@ -149,7 +149,7 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
-            config.AddPolicy(Policies.PamAccessConnector, policy =>
+            config.AddPolicy(Policies.AccessConnector, policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamRotation);
