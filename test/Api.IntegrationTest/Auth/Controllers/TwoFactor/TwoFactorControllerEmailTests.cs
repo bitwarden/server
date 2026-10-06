@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Api.Auth.Models.Request;
@@ -27,6 +28,7 @@ using Core.Auth.Enums;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
+using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
@@ -46,10 +48,12 @@ namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
 public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string DeviceIdentifier = "two-factor-email-device";
+    private const string OtherDeviceIdentifier = "two-factor-email-other-device";
     private const string AuthRequestAccessCode = "auth-request-access-code";
     private const string SsoRedirectUri = "https://localhost:8080/sso-connector.html";
     private const string InvalidTwoFactorTokenMessage = "Two-step token is invalid. Try again.";
     private const string CannotSendTwoFactorEmailMessage = "Cannot send two-factor email.";
+    private const string DeviceIdentifierRequiredMessage = "A valid device identifier is required.";
     private const string InvalidSsoSessionTokenMessage =
         "a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.";
 
@@ -328,6 +332,8 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
     }
 
+    // TODO: PM-44555 - When the body fallback is removed, a request without the header is rejected; change this
+    // test to expect a 400, or delete it.
     /// <summary>
     /// Mobile shape: master password with the device identifier in the body, no header, and the unused SSO token
     /// field sent as null. The emailed code logs the device in.
@@ -603,6 +609,201 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
     }
 
     // ---------------------------------------------------------------------
+    // Device binding
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// A login code only works on the device that requested it. A failed attempt from another device does not
+    /// use the code up.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_SubmittedFromOtherDevice_RejectedAndRequestingDeviceLogsIn()
+    {
+        await EnrollUserInEmail();
+        var code = await ChallengeAndEmailLoginCodeAsync(DeviceIdentifier);
+
+        AssertTwoFactorRejected(await LogInWithTwoFactorAsync(OtherDeviceIdentifier, code));
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    /// <summary>
+    /// A request with no device identifier in the header or the body is rejected, and no code is emailed. The
+    /// response is the same for a known and an unknown account.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_NoDeviceIdentifier_SameRejectionForKnownAndUnknownAccount()
+    {
+        await EnrollUserInEmail();
+        var unknownEmail = $"unknown-{Guid.NewGuid()}@bitwarden.com";
+
+        var knownAccountResponse = await SendEmailLoginAsync(MasterPasswordBody(_userEmail), headerDeviceIdentifier: null);
+        var unknownAccountResponse = await SendEmailLoginAsync(
+            MasterPasswordBody(unknownEmail), headerDeviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, knownAccountResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, unknownAccountResponse.StatusCode);
+        var knownAccountBody = await knownAccountResponse.Content.ReadAsStringAsync();
+        Assert.Contains(DeviceIdentifierRequiredMessage, knownAccountBody);
+        Assert.Equal(knownAccountBody, await unknownAccountResponse.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(_userEmail);
+        AssertNoCodeEmailed(unknownEmail);
+    }
+
+    /// <summary>
+    /// A device identifier longer than a device record can store is rejected, whether it arrives in the header or
+    /// the body, and no code is emailed.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SendEmailLogin_OverLongDeviceIdentifier_BadRequestAndNoEmail(bool inHeader)
+    {
+        await EnrollUserInEmail();
+        var overLongDeviceIdentifier = new string('d', Device.MaxIdentifierLength + 1);
+
+        var response = inHeader
+            ? await SendEmailLoginAsync(MasterPasswordBody(_userEmail), overLongDeviceIdentifier)
+            : await SendEmailLoginAsync(
+                MasterPasswordBody(_userEmail, overLongDeviceIdentifier), headerDeviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(DeviceIdentifierRequiredMessage, await response.Content.ReadAsStringAsync());
+        AssertNoCodeEmailed(_userEmail);
+    }
+
+    /// <summary>
+    /// When the header and the body name different devices, the code is bound to the header's device.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_HeaderAndBodyDevicesDiffer_CodeBoundToHeaderDevice()
+    {
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail, OtherDeviceIdentifier), headerDeviceIdentifier: DeviceIdentifier);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertTwoFactorRejected(await LogInWithTwoFactorAsync(OtherDeviceIdentifier, code));
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    // TODO: PM-44555 - Delete this test once every supported mobile client version sends the Device-Identifier
+    // header on send-email-login and the body fallback is removed.
+    /// <summary>
+    /// Without a header, the code is bound to the device named in the body.
+    /// </summary>
+    [Fact]
+    public async Task SendEmailLogin_DeviceInBodyOnly_CodeBoundToBodyDevice()
+    {
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+
+        var response = await SendEmailLoginAsync(
+            MasterPasswordBody(_userEmail, DeviceIdentifier), headerDeviceIdentifier: null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var code = AssertCodeEmailed(TwoFactorEmailPurpose.Login);
+        AssertTwoFactorRejected(await LogInWithTwoFactorAsync(OtherDeviceIdentifier, code));
+        AssertLoggedIn(await LogInWithTwoFactorAsync(DeviceIdentifier, code));
+    }
+
+    /// <summary>
+    /// A setup code does not work as a login code, even on the device it was issued to.
+    /// </summary>
+    [Fact]
+    public async Task EmailSetupCode_SubmittedAtLogin_Rejected()
+    {
+        await EnrollUserInEmail();
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        var setupCode = await EmailSetupCodeAsync(_client, _userEmail, uvToken);
+
+        var result = await LogInWithTwoFactorAsync(IdentityApplicationFactory.DefaultDeviceIdentifier, setupCode);
+
+        AssertTwoFactorRejected(result);
+    }
+
+    /// <summary>
+    /// A login code does not work as a setup code, even from the device it was issued to.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_SubmittedToPutEmail_BadRequest()
+    {
+        await EnrollUserInEmail();
+        var loginCode = await ChallengeAndEmailLoginCodeAsync(IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+
+        var response = await _client.PutAsJsonAsync("/two-factor/email",
+            new TwoFactorEmailUpdateRequestModel { Email = _userEmail, Token = loginCode, UserVerificationToken = uvToken });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Invalid token.", await response.Content.ReadAsStringAsync());
+    }
+
+    /// <summary>
+    /// A setup code only works from a session on the device that requested it: a session on another device is
+    /// rejected, and the requesting device's session still succeeds.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_SetupCodeFromOtherDeviceSession_RejectedAndRequestingDeviceSucceeds()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        var setupCode = await EmailSetupCodeAsync(_client, _userEmail, uvToken);
+        using var otherDeviceClient = await CreateClientForDeviceAsync(OtherDeviceIdentifier);
+        var model = new TwoFactorEmailUpdateRequestModel
+        {
+            Email = _userEmail,
+            Token = setupCode,
+            UserVerificationToken = uvToken,
+        };
+
+        var otherDeviceResponse = await otherDeviceClient.PutAsJsonAsync("/two-factor/email", model);
+        var requestingDeviceResponse = await _client.PutAsJsonAsync("/two-factor/email", model);
+
+        Assert.Equal(HttpStatusCode.BadRequest, otherDeviceResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, requestingDeviceResponse.StatusCode);
+    }
+
+    /// <summary>
+    /// Refreshing the access token between requesting and submitting a setup code keeps the session's device, so
+    /// the code still works.
+    /// </summary>
+    [Fact]
+    public async Task PutEmail_AccessTokenRefreshedAfterSendEmail_EnablesProvider()
+    {
+        var (accessToken, refreshToken) = await _factory.Identity.TokenFromPasswordAsync(_userEmail, MasterPasswordHash);
+        using var client = CreateAuthenticatedClient(accessToken);
+        var uvToken = await GetEmailUserVerificationTokenAsync(client);
+        var setupCode = await EmailSetupCodeAsync(client, _userEmail, uvToken);
+
+        using var refreshedClient = CreateAuthenticatedClient(await RefreshAccessTokenAsync(refreshToken));
+        var response = await refreshedClient.PutAsJsonAsync("/two-factor/email",
+            new TwoFactorEmailUpdateRequestModel { Email = _userEmail, Token = setupCode, UserVerificationToken = uvToken });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull((await GetUserAsync()).GetTwoFactorProvider(TwoFactorProviderType.Email));
+    }
+
+    /// <summary>
+    /// A login code stored in the previous cache format no longer logs in. A user holding one requests a new code.
+    /// </summary>
+    [Fact]
+    public async Task EmailLoginCode_StoredInPreviousFormat_Rejected()
+    {
+        await EnrollUserInEmail();
+        await ChallengeAsync(DeviceIdentifier);
+        var user = await GetUserAsync();
+        const string previousFormatCode = "123456";
+        var cache = _factory.Identity.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+        await cache.SetStringAsync($"EmailToken_{user.Id}_{user.SecurityStamp}_TwoFactor", previousFormatCode);
+
+        var result = await LogInWithTwoFactorAsync(DeviceIdentifier, previousFormatCode);
+
+        AssertTwoFactorRejected(result);
+    }
+
+    // ---------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------
 
@@ -619,13 +820,53 @@ public class TwoFactorControllerEmailTests : IClassFixture<ApiApplicationFactory
         return user;
     }
 
-    private async Task<string> GetEmailUserVerificationTokenAsync()
+    private Task<string> GetEmailUserVerificationTokenAsync() => GetEmailUserVerificationTokenAsync(_client);
+
+    private static async Task<string> GetEmailUserVerificationTokenAsync(HttpClient client)
     {
-        var response = await _client.PostAsJsonAsync("/two-factor/get-email",
+        var response = await client.PostAsJsonAsync("/two-factor/get-email",
             new { MasterPasswordHash = MasterPasswordHash });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var (_, uvToken) = await ReadEnabledAndUserVerificationTokenAsync(response, "email");
         return uvToken;
+    }
+
+    /// <summary>Requests a setup code for the given address and returns the code that was emailed.</summary>
+    private async Task<string> EmailSetupCodeAsync(HttpClient client, string twoFactorAddress, string uvToken)
+    {
+        var response = await client.PostAsJsonAsync("/two-factor/send-email",
+            new { Email = twoFactorAddress, UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return AssertCodeEmailed(TwoFactorEmailPurpose.Setup);
+    }
+
+    /// <summary>Logs the test user in on the given device and returns an API client for that session.</summary>
+    private async Task<HttpClient> CreateClientForDeviceAsync(string deviceIdentifier)
+    {
+        var (accessToken, _) = await _factory.Identity.TokenFromPasswordAsync(
+            _userEmail, MasterPasswordHash, deviceIdentifier);
+        return CreateAuthenticatedClient(accessToken);
+    }
+
+    private HttpClient CreateAuthenticatedClient(string accessToken)
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        return client;
+    }
+
+    private async Task<string> RefreshAccessTokenAsync(string refreshToken)
+    {
+        var context = await _factory.Identity.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "grant_type", "refresh_token" },
+                { "client_id", "web" },
+                { "refresh_token", refreshToken },
+            }));
+        var root = await ReadIdentityJsonAsync(context);
+        AssertLoggedIn(root);
+        return root.GetProperty("access_token").GetString()!;
     }
 
     /// <summary>Requests a token without a two-factor code and asserts the two-factor challenge comes back.</summary>
