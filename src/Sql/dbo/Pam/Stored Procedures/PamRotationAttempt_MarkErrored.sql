@@ -16,13 +16,17 @@ BEGIN
 
     DECLARE @JobId UNIQUEIDENTIFIER
 
+    -- Executing is derived: unreported, on an unexpired claim, and created by the claim the job still records.
     SELECT @JobId = J.[Id]
     FROM [dbo].[PamRotationAttempt] AT
     INNER JOIN [dbo].[PamRotationJob] J WITH (UPDLOCK) ON J.[Id] = AT.[JobId]
     WHERE AT.[Id] = @AttemptId
-        AND AT.[Status] = 0 -- Executing
+        AND AT.[Action] = 0 -- None
         AND AT.[ClaimedByAccessConnectorId] = @AccessConnectorId
-        AND J.[Status] = 1 -- Claimed
+        AND J.[Action] = 1 -- Claimed
+        AND J.[ExpiresAt] > @Now
+        AND J.[ClaimedByAccessConnectorId] = @AccessConnectorId
+        AND J.[ClaimedAt] = AT.[CreationDate]
 
     IF @JobId IS NULL
     BEGIN
@@ -32,7 +36,7 @@ BEGIN
     END
 
     UPDATE [dbo].[PamRotationAttempt]
-    SET [Status] = 2, -- Errored
+    SET [Action] = 2, -- Errored
         [FailureReason] = @FailureReason,
         [SyncState] = @SyncState,
         [ResolvedDate] = @Now
@@ -43,15 +47,16 @@ BEGIN
 
     SELECT @ErroredCount = COUNT(*)
     FROM [dbo].[PamRotationAttempt]
-    WHERE [JobId] = @JobId AND [Status] = 2 -- Errored
+    WHERE [JobId] = @JobId AND [Action] = 2 -- Errored
 
+    -- The status the job derives as right after this write; the guard saw it unexpired.
     DECLARE @JobStatus TINYINT
 
     IF @ErroredCount < @MaxAttempts
     BEGIN
         SET @JobStatus = 0 -- Pending
         UPDATE [dbo].[PamRotationJob]
-        SET [Status] = @JobStatus,
+        SET [Action] = 0, -- None
             [ClaimedByAccessConnectorId] = NULL,
             [ClaimedAt] = NULL,
             [NextClaimableAt] = DATEADD(SECOND, CAST(@RetryBaseDelaySeconds * POWER(2, @ErroredCount - 1) AS INT), @Now)
@@ -61,7 +66,7 @@ BEGIN
     BEGIN
         SET @JobStatus = 3 -- Failed
         UPDATE [dbo].[PamRotationJob]
-        SET [Status] = @JobStatus,
+        SET [Action] = 3, -- Failed
             [ClaimedByAccessConnectorId] = NULL,
             [ClaimedAt] = NULL
         WHERE [Id] = @JobId

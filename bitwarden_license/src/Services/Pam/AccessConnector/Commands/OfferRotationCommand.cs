@@ -56,7 +56,7 @@ public class OfferRotationCommand : IOfferRotationCommand
         {
             RotationConfigId = configId,
             Source = source,
-            Status = PamRotationJobStatus.Pending,
+            Action = PamRotationJobAction.None,
             ClaimedByAccessConnectorId = null,
             ClaimedAt = null,
             CreationDate = now,
