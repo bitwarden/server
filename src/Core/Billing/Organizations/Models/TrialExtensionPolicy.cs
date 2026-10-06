@@ -44,8 +44,6 @@ public static class TrialExtensionPolicy
         _ => null
     };
 
-    public static bool IsEligible(Subscription? subscription) => GetIneligibilityReason(subscription) is null;
-
     /// <summary>
     /// Returns a validation message when <paramref name="days"/> is not an acceptable extension, otherwise <see langword="null"/>.
     /// </summary>

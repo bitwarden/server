@@ -24,43 +24,6 @@ public class TrialExtensionPolicyTests
     }
 
     [Fact]
-    public void IsEligible_NullSubscription_ReturnsFalse() =>
-        Assert.False(TrialExtensionPolicy.IsEligible(null));
-
-    [Theory]
-    [InlineData(SubscriptionStatus.Active)]
-    [InlineData(SubscriptionStatus.PastDue)]
-    [InlineData(SubscriptionStatus.Canceled)]
-    public void IsEligible_NotTrialing_ReturnsFalse(string status)
-    {
-        var subscription = CreateTrialingSubscription(10);
-        subscription.Status = status;
-
-        Assert.False(TrialExtensionPolicy.IsEligible(subscription));
-    }
-
-    [Fact]
-    public void IsEligible_MissingTrialEnd_ReturnsFalse()
-    {
-        var subscription = CreateTrialingSubscription(10);
-        subscription.TrialEnd = null;
-
-        Assert.False(TrialExtensionPolicy.IsEligible(subscription));
-    }
-
-    [Fact]
-    public void IsEligible_TwentyNineDaysRemaining_ReturnsTrue() =>
-        Assert.True(TrialExtensionPolicy.IsEligible(CreateTrialingSubscription(29)));
-
-    [Fact]
-    public void IsEligible_ThirtyDaysRemaining_ReturnsFalse() =>
-        Assert.False(TrialExtensionPolicy.IsEligible(CreateTrialingSubscription(30)));
-
-    [Fact]
-    public void IsEligible_ScheduleAttached_ReturnsFalse() =>
-        Assert.False(TrialExtensionPolicy.IsEligible(CreateTrialingSubscription(10, scheduleId: "sub_sched_1")));
-
-    [Fact]
     public void GetRemainingDays_PartialDay_RoundsUp() =>
         Assert.Equal(30, TrialExtensionPolicy.GetRemainingDays(CreateTrialingSubscription(29.2)));
 
@@ -87,22 +50,17 @@ public class TrialExtensionPolicyTests
         Assert.Equal(10, TrialExtensionPolicy.GetRemainingDays(CreateTrialingSubscription(9.5, withTestClock: false)));
 
     [Fact]
-    public void IsEligible_NoTestClock_UnderThirtyDays_ReturnsTrue() =>
-        Assert.True(TrialExtensionPolicy.IsEligible(CreateTrialingSubscription(28.5, withTestClock: false)));
-
-    [Fact]
-    public void IsEligible_NoTestClock_ThirtyOrMoreDays_ReturnsFalse() =>
-        Assert.False(TrialExtensionPolicy.IsEligible(CreateTrialingSubscription(29.5, withTestClock: false)));
-
-    [Fact]
     public void GetIneligibilityReason_NullSubscription_ReturnsNoSubscriptionMessage() =>
         Assert.Equal(TrialExtensionPolicy.NoSubscriptionMessage, TrialExtensionPolicy.GetIneligibilityReason(null));
 
-    [Fact]
-    public void GetIneligibilityReason_NotTrialing_ReturnsNotTrialingMessage()
+    [Theory]
+    [InlineData(SubscriptionStatus.Active)]
+    [InlineData(SubscriptionStatus.PastDue)]
+    [InlineData(SubscriptionStatus.Canceled)]
+    public void GetIneligibilityReason_NotTrialing_ReturnsNotTrialingMessage(string status)
     {
         var subscription = CreateTrialingSubscription(10);
-        subscription.Status = SubscriptionStatus.Active;
+        subscription.Status = status;
 
         Assert.Equal(TrialExtensionPolicy.NotTrialingMessage, TrialExtensionPolicy.GetIneligibilityReason(subscription));
     }
@@ -129,4 +87,17 @@ public class TrialExtensionPolicyTests
     [Fact]
     public void GetIneligibilityReason_Eligible_ReturnsNull() =>
         Assert.Null(TrialExtensionPolicy.GetIneligibilityReason(CreateTrialingSubscription(10)));
+
+    [Fact]
+    public void GetIneligibilityReason_TwentyNineDaysRemaining_ReturnsNull() =>
+        Assert.Null(TrialExtensionPolicy.GetIneligibilityReason(CreateTrialingSubscription(29)));
+
+    [Fact]
+    public void GetIneligibilityReason_NoTestClock_UnderThirtyDays_ReturnsNull() =>
+        Assert.Null(TrialExtensionPolicy.GetIneligibilityReason(CreateTrialingSubscription(28.5, withTestClock: false)));
+
+    [Fact]
+    public void GetIneligibilityReason_NoTestClock_ThirtyOrMoreDays_ReturnsTooManyDaysMessage() =>
+        Assert.Equal(TrialExtensionPolicy.TooManyDaysRemainingMessage,
+            TrialExtensionPolicy.GetIneligibilityReason(CreateTrialingSubscription(29.5, withTestClock: false)));
 }

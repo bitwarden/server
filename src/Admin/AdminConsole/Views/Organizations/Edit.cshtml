@@ -107,24 +107,31 @@
                 new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 }
 
-@if (Model.ExtendableTrialEnd is { } extendableTrialEnd)
+@if (Model.TrialEnd is { } trialEnd)
 {
     <h2>Trial</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Trial End</dt>
-        <dd class="col-sm-8 col-lg-9">@extendableTrialEnd.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+        <dd class="col-sm-8 col-lg-9">@trialEnd.ToString("yyyy-MM-dd HH:mm") UTC</dd>
     </dl>
-    <form asp-controller="OrganizationTrial" asp-action="Extend" asp-route-organizationId="@Model.Organization.Id"
-          method="post" class="row g-2 align-items-end mb-4"
-          onsubmit="return confirm('Extend this trial?')">
-        <div class="col-auto">
-            <label for="extend-trial-days" class="form-label">Days to extend (1-30)</label>
-            <input type="number" class="form-control" id="extend-trial-days" name="Days" min="1" max="30" step="1" required />
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">Extend trial</button>
-        </div>
-    </form>
+    @if (Model.CanExtendTrial)
+    {
+        <form asp-controller="OrganizationTrial" asp-action="Extend" asp-route-organizationId="@Model.Organization.Id"
+              method="post" class="row g-2 align-items-end mb-4"
+              onsubmit="return confirm('Extend this trial?')">
+            <div class="col-auto">
+                <label for="extend-trial-days" class="form-label">Days to extend (1-30)</label>
+                <input type="number" class="form-control" id="extend-trial-days" name="Days" min="1" max="30" step="1" required />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Extend trial</button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <p class="text-muted mb-4">@Model.TrialExtensionBlockedReason</p>
+    }
 }
 
 @await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationForm.cshtml", Model)

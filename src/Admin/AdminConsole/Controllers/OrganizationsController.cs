@@ -26,6 +26,7 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Entities;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Organizations.Services;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Providers.Services;
@@ -80,6 +81,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
     private readonly IFeatureService _featureService;
+    private readonly IGetOrganizationTrialQuery _getOrganizationTrialQuery;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -112,7 +114,8 @@ public class OrganizationsController : Controller
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IGetOrganizationTrialQuery getOrganizationTrialQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -145,6 +148,7 @@ public class OrganizationsController : Controller
         _organizationPlanMigrationCohortRepository = organizationPlanMigrationCohortRepository;
         _organizationPlanMigrationCohortAssignmentRepository = organizationPlanMigrationCohortAssignmentRepository;
         _featureService = featureService;
+        _getOrganizationTrialQuery = getOrganizationTrialQuery;
     }
 
     private bool CanManagePlanMigrationCohortAssignment() =>
@@ -317,7 +321,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        var extendableTrialEnd = await GetExtendableTrialEndAsync(organization);
+        var trial = await GetTrialAsync(organization);
 
         var model = new OrganizationEditModel(
             organization,
@@ -349,38 +353,35 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
-            ExtendableTrialEnd = extendableTrialEnd,
+            TrialEnd = trial?.TrialEnd,
+            CanExtendTrial = trial?.CanExtend ?? false,
+            TrialExtensionBlockedReason = trial?.ExtensionBlockedReason,
         };
 
         return View(model);
     }
 
     /// <summary>
-    /// The trial end when the current user may extend this organization's trial, otherwise null.
+    /// The organization's trial when the current user may extend trials, otherwise null.
     /// </summary>
-    private async Task<DateTime?> GetExtendableTrialEndAsync(Organization organization)
+    private async Task<OrganizationTrial> GetTrialAsync(Organization organization)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
-            || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial)
-            || string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+            || !_accessControlService.UserHasPermission(Permission.Org_ExtendTrial))
         {
             return null;
         }
 
         try
         {
-            var subscription = await _subscriberService.GetSubscription(
-                organization,
-                new SubscriptionGetOptions { Expand = ["test_clock"] });
-
-            return TrialExtensionPolicy.IsEligible(subscription) ? subscription.TrialEnd : null;
+            return await _getOrganizationTrialQuery.Run(organization);
         }
         catch (Exception ex)
         {
             // Stripe being unreachable must not block the Edit page; the command re-validates on POST.
             _logger.LogError(ex,
-                "Failed to load subscription ({SubscriptionId}) to determine trial extension eligibility for organization {OrganizationId}.",
-                organization.GatewaySubscriptionId, organization.Id);
+                "Failed to load the trial for organization {OrganizationId}.",
+                organization.Id);
             return null;
         }
     }

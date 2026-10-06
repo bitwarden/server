@@ -234,9 +234,20 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool MigrationCohortOrphaned { get; set; }
 
     /// <summary>
-    /// Trial end shown with the extend-trial form; null when the current user may not extend this organization's trial.
+    /// When the organization's trialing subscription ends; null when there is no trial or the current user may not
+    /// extend trials. Set during the Edit GET.
     /// </summary>
-    public DateTime? ExtendableTrialEnd { get; set; }
+    public DateTime? TrialEnd { get; set; }
+
+    /// <summary>
+    /// Whether the current user can extend the trial right now. Set during the Edit GET; false otherwise.
+    /// </summary>
+    public bool CanExtendTrial { get; set; }
+
+    /// <summary>
+    /// Why the trial cannot be extended, shown in place of the extend-trial form; null when it can.
+    /// </summary>
+    public string TrialExtensionBlockedReason { get; set; }
     /**
      * Creates a Plan[] object for use in Javascript
      * This is mapped manually below to provide some type safety in case the plan objects change

@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
         services.AddTransient<IUpdateOrganizationSubscriptionCommand, UpdateOrganizationSubscriptionCommand>();
         services.TryAddTransient<IExtendOrganizationTrialCommand, ExtendOrganizationTrialCommand>();
+        services.TryAddTransient<IGetOrganizationTrialQuery, GetOrganizationTrialQuery>();
         services.AddTransient<IUpgradeOrganizationPlanVNextCommand, UpgradeOrganizationPlanVNextCommand>();
         services.AddTransient<ICreateBillingPortalSessionCommand, CreateBillingPortalSessionCommand>();
         services.AddTransient<IGetChurnOfferCohortMembershipQuery, GetChurnOfferCohortMembershipQuery>();
