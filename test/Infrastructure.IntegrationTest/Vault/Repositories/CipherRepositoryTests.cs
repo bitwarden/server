@@ -1473,6 +1473,82 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_WithCollections_OnlyAssignsCollectionsTheUserCanEdit(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        ICipherRepository cipherRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        var accessibleCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Accessible Collection",
+            OrganizationId = organization.Id
+        });
+
+        var restrictedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Restricted Collection",
+            OrganizationId = organization.Id
+        });
+
+        // Grant the user edit access to accessibleCollection only; restrictedCollection has no grant.
+        await collectionRepository.UpdateUsersAsync(accessibleCollection.Id, new[]
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id,
+                ReadOnly = false,
+            },
+        });
+
+        var cipher = new CipherDetails
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Data = "",
+        };
+        await cipherRepository.CreateAsync(cipher, new List<Guid>
+        {
+            accessibleCollection.Id,
+            restrictedCollection.Id,
+        });
+
+        var assignedCollectionIds = (await collectionCipherRepository.GetManyByOrganizationIdAsync(organization.Id))
+            .Where(cc => cc.CipherId == cipher.Id)
+            .Select(cc => cc.CollectionId)
+            .ToList();
+
+        Assert.Contains(accessibleCollection.Id, assignedCollectionIds);
+        Assert.DoesNotContain(restrictedCollection.Id, assignedCollectionIds);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyLoginCipherOrganizationDetailsAsync_ReturnsOnlyLoginCiphers(
         IOrganizationRepository organizationRepository,
         IUserRepository userRepository,

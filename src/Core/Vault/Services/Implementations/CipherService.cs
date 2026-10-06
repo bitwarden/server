@@ -479,20 +479,20 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(CipherDetails cipherDetails, string attachmentId, Guid deletingUserId,
         bool orgAdmin = false)
     {
-        if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+        if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
-        if (!cipher.ContainsAttachment(attachmentId))
+        if (!cipherDetails.ContainsAttachment(attachmentId))
         {
             throw new NotFoundException();
         }
 
-        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId], orgAdmin)
+        return await DeleteAttachmentAsync(cipherDetails, cipherDetails.GetAttachments()[attachmentId], orgAdmin)
             ?? throw new NotFoundException();
     }
 
@@ -944,7 +944,9 @@ public class CipherService : ICipherService
         cipher.RevisionDate = DateTime.UtcNow;
         if (orgAdmin)
         {
-            await _cipherRepository.ReplaceAsync(cipher);
+            // Cipher_Update accepts only Cipher's own properties, and Dapper builds its parameters
+            // from the runtime type, so clone to a plain Cipher rather than passing a descendant.
+            await _cipherRepository.ReplaceAsync(cipher.Clone());
         }
         else
         {
