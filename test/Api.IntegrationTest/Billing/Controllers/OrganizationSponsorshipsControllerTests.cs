@@ -57,6 +57,56 @@ public class OrganizationSponsorshipsControllerTests : IClassFixture<ApiApplicat
         return Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task RevokeSponsorship_AsMember_RevokesOwnSponsorship()
+    {
+        // Arrange
+        var (memberEmail, memberOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+
+        var sponsorshipRepository = _factory.GetService<IOrganizationSponsorshipRepository>();
+        var sponsorship = new OrganizationSponsorship
+        {
+            SponsoringOrganizationId = _organization.Id,
+            SponsoringOrganizationUserId = memberOrgUser.Id,
+            FriendlyName = "member-revoke-family@example.com",
+            OfferedToEmail = "member-revoke-family@example.com",
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = false,
+        };
+        sponsorship.SetNewId();
+        await sponsorshipRepository.CreateAsync(sponsorship);
+
+        await _loginHelper.LoginAsync(memberEmail);
+
+        // Act
+        var response = await _client.DeleteAsync($"organization/sponsorship/{_organization.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Null(await sponsorshipRepository.GetByIdAsync(sponsorship.Id));
+    }
+
+    [Theory]
+    [InlineData("DELETE", "")]
+    [InlineData("POST", "/delete")]
+    public async Task RevokeSponsorship_AsNonMember_ReturnsForbidden(string method, string suffix)
+    {
+        // Arrange
+        var attackerEmail = $"member-revoke-attacker-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(attackerEmail);
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        // Act
+        var response = await _client.SendAsync(new HttpRequestMessage(
+            new HttpMethod(method), $"organization/sponsorship/{_organization.Id}{suffix}"));
+
+        // Assert
+        Assert.True(
+            response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized,
+            $"Expected 401 or 403 but got {(int)response.StatusCode} {response.StatusCode}.");
+    }
+
     /// <summary>
     /// Reproduces VULN-441: Any authenticated user (not a member of the org) can revoke
     /// admin-initiated sponsorships by calling DELETE /{sponsoringOrgId}/{friendlyName}/revoke.
