@@ -506,6 +506,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationUnassignedToProviderSearchViewModel model)
     {
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
