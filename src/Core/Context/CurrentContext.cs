@@ -43,6 +43,8 @@ public class CurrentContext(
     public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
+    public virtual Guid? PamAccessConnectorId { get; set; }
+    public virtual Guid? PamAccessConnectorOrganizationId { get; set; }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
@@ -153,6 +155,12 @@ public class CurrentContext(
         if (IdentityClientType == IdentityClientType.ServiceAccount)
         {
             ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
+        }
+
+        if (IdentityClientType == IdentityClientType.AccessConnector)
+        {
+            PamAccessConnectorId = subIdGuid;
+            PamAccessConnectorOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
@@ -440,6 +448,8 @@ public class CurrentContext(
 
     public bool AccessPam(Guid orgId)
     {
+        // No machine-principal escape hatch here: PAM's own machine caller authenticates under
+        // Policies.PamAccessConnector, not Policies.Application, and never travels the leasing paths this guards.
         return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
     }
 
