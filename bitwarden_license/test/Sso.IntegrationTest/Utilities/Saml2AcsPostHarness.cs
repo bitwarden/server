@@ -97,6 +97,15 @@ public static class Saml2AcsPostHarness
         "<xenc:CipherData><xenc:CipherValue>Y2lwaGVydGV4dA==</xenc:CipherValue></xenc:CipherData>" +
         "</xenc:EncryptedData>" +
         "</saml:EncryptedAssertion>";
+
+    public static string BuildSubjectAssertion(string nameIdEmail) =>
+        "<saml:Assertion ID=\"_subject_assertion\" Version=\"2.0\" IssueInstant=\"2026-01-01T00:00:00Z\">" +
+        "<saml:Issuer>idp</saml:Issuer>" +
+        "<saml:Subject>" +
+        "<saml:NameID Format=\"urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress\">" +
+        $"{nameIdEmail}</saml:NameID>" +
+        "</saml:Subject>" +
+        "</saml:Assertion>";
 }
 
 /// <summary>
