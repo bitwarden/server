@@ -117,7 +117,7 @@ public class AccessConnectorMachineEndpointsTests
     [Fact]
     public void MapPamEndpoints_DoesNotGateTheConnectorSurfaceOnAnOrganizationRequirement()
     {
-        // No {orgId} in these routes; authorized by Policies.PamAccessConnector instead of an org requirement.
+        // No {orgId} in these routes; authorized by Policies.AccessConnector instead of an org requirement.
         var endpoints = ConnectorEndpoints();
 
         Assert.NotEmpty(endpoints);
@@ -125,7 +125,7 @@ public class AccessConnectorMachineEndpointsTests
         {
             Assert.DoesNotContain(RequirementsFor(endpoint), r => r is IOrganizationRequirement);
             Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
-                data => data.Policy == Policies.PamAccessConnector);
+                data => data.Policy == Policies.AccessConnector);
         });
     }
 
