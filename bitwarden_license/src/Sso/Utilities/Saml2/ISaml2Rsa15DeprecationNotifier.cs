@@ -1,5 +1,8 @@
 ﻿namespace Bit.Sso.Utilities.Saml2;
 
+/// <summary>
+/// Queues the RSA 1.5 deprecation email for an organization in the background, so the SAML login path does not wait.
+/// </summary>
 public interface ISaml2Rsa15DeprecationNotifier
 {
     /// <summary>

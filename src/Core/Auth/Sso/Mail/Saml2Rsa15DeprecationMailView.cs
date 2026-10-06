@@ -2,6 +2,10 @@
 
 namespace Bit.Core.Auth.Sso.Mail;
 
+/// <summary>
+/// Provides the template values for the RSA 1.5 deprecation email.
+/// The values are the deprecation date and the help page link.
+/// </summary>
 public class Saml2Rsa15DeprecationMailView : BaseMailView
 {
     // ReSharper disable once MemberCanBeMadeStatic.Global
@@ -13,6 +17,10 @@ public class Saml2Rsa15DeprecationMailView : BaseMailView
 #pragma warning restore CA1822
 }
 
+/// <summary>
+/// Represents the RSA 1.5 deprecation email.
+/// The email sets the subject and uses <see cref="Saml2Rsa15DeprecationMailView" /> as its view.
+/// </summary>
 public class Saml2Rsa15DeprecationMail : BaseMail<Saml2Rsa15DeprecationMailView>
 {
     public override string Subject { get; set; } = "Security alert: Update your identity provider's single sign-on encryption method";

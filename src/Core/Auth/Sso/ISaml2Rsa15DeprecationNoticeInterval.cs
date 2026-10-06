@@ -1,5 +1,9 @@
 ﻿namespace Bit.Core.Auth.Sso;
 
+/// <summary>
+/// Limits how often an organization receives the RSA 1.5 deprecation email.
+/// The interval claims the per-organization interval in the persistent cache.
+/// </summary>
 public interface ISaml2Rsa15DeprecationNoticeInterval
 {
     /// <summary>

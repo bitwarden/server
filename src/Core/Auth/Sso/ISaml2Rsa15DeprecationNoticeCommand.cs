@@ -1,5 +1,9 @@
 ﻿namespace Bit.Core.Auth.Sso;
 
+/// <summary>
+/// Notifies the confirmed owners and admins of an organization by email that their 
+/// SAML identity provider uses the deprecated RSA 1.5 encryption method.
+/// </summary>
 public interface ISaml2Rsa15DeprecationNoticeCommand
 {
     /// <summary>
