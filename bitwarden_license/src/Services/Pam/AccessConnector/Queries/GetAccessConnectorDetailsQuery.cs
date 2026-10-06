@@ -41,10 +41,10 @@ public class GetAccessConnectorDetailsQuery : IGetAccessConnectorDetailsQuery
             throw new NotFoundException();
         }
 
-        var assignments = await _accessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
-        var jobs = await _jobRepository.GetManyRecentByAccessConnectorIdAsync(accessConnectorId, RecentJobLimit);
-
         var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var assignments = await _accessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organizationId);
+        var jobs = await _jobRepository.GetManyRecentByAccessConnectorIdAsync(accessConnectorId, RecentJobLimit, now);
+
         var listItem = new PamAccessConnectorListItem(
             accessConnector,
             PamRotationRules.IsConnected(accessConnector, now, _options.Value.AccessConnectorOfflineAfter),
