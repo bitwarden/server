@@ -1,19 +1,17 @@
 ﻿using System.Globalization;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
-using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -118,14 +116,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Arrange
         var factory = new IdentityApplicationFactory();
 
-        // return specified email token from cache
-        var emailToken = "12345678";
-        factory.SubstituteService<IDistributedCache>(distCache =>
-        {
-            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
-                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
-        });
-
         // Create Test User
         await CreateUserAsync(factory, _testEmail, _userEmailTwoFactor);
 
@@ -133,7 +123,8 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var failedTokenContext = await factory.ContextFromPasswordAsync(_testEmail, _testPassword);
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
-        Assert.NotNull(emailToken);
+        var emailToken = await EmailLoginCodeAsync(
+            factory, _testEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
 
         var twoFactorProvidedContext = await factory.ContextFromPasswordWithTwoFactorAsync(
             _testEmail,
@@ -357,21 +348,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Arrange
         var localFactory = new IdentityApplicationFactory();
 
-        // return specified email token from cache
-        var emailToken = "12345678";
-        localFactory.SubstituteService<IDistributedCache>(distCache =>
-        {
-            distCache.GetAsync(Arg.Is<string>(s => s.StartsWith("EmailToken_")))
-                .Returns(Task.FromResult(Encoding.UTF8.GetBytes(emailToken)));
-        });
-
-        // Bypass the FusionCache-backed org abilities lookup. The above IDistributedCache substitution would cause a deserialization error.
-        localFactory.SubstituteService<IOrganizationAbilityCacheService>(svc =>
-        {
-            svc.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
-                .Returns(new Dictionary<Guid, OrganizationAbility>());
-        });
-
         // Create Test User
         var challenge = new string('c', 50);
         var ssoConfigData = new SsoConfigurationData
@@ -396,7 +372,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         }));
 
         Assert.Equal(StatusCodes.Status400BadRequest, failedTokenContext.Response.StatusCode);
-        Assert.NotNull(emailToken);
+        var emailToken = await EmailLoginCodeAsync(localFactory, _testEmail, deviceId);
 
         var twoFactorProvidedContext = await localFactory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -483,6 +459,31 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.False(string.IsNullOrWhiteSpace(
             AssertHelper.AssertJsonProperty(root, "SsoEmail2faSessionToken", JsonValueKind.String).GetString()));
         Assert.Equal(email, AssertHelper.AssertJsonProperty(root, "Email", JsonValueKind.String).GetString());
+    }
+
+    /// <summary>
+    /// The two-factor challenge issues no email code, in either the current or the previous cache format. The
+    /// client requests the code separately, and only then is one stored and emailed.
+    /// </summary>
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_EmailTwoFactorRequired_ChallengeIssuesNoEmailCode()
+    {
+        // Arrange
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var user = await _factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        var cache = _factory.Services.GetRequiredKeyedService<IDistributedCache>("persistent");
+
+        // Act
+        var context = await _factory.ContextFromPasswordAsync(email, _testPassword);
+
+        // Assert
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        Assert.Equal("Two factor required.",
+            AssertHelper.AssertJsonProperty(body.RootElement, "error_description", JsonValueKind.String).GetString());
+        Assert.Null(await cache.GetAsync($"EmailToken_{user.Id}_{user.SecurityStamp}_TwoFactor"));
+        Assert.Null(await cache.GetAsync($"TwoFactorEmail_LoginCode_{user.Id}_{user.SecurityStamp}"));
+        Assert.False(_factory.TwoFactorEmailCodes.ContainsKey(email));
     }
 
     /// <summary>
@@ -581,6 +582,17 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         // Assert
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         AssertHelper.AssertJsonProperty(body.RootElement, "access_token", JsonValueKind.String);
+    }
+
+    /// <summary>
+    /// Emails a real login code for the given device through the Identity host's email service and returns it.
+    /// </summary>
+    private static async Task<string> EmailLoginCodeAsync(
+        IdentityApplicationFactory factory, string email, string deviceIdentifier)
+    {
+        var user = await factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        await factory.GetService<ITwoFactorEmailService>().SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
+        return factory.TwoFactorEmailCodes[email];
     }
 
     private static string NewUniqueEmail() => $"two-factor-{Guid.NewGuid()}@bitwarden.com";

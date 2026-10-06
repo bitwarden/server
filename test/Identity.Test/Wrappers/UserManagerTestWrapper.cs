@@ -20,6 +20,10 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// </summary>
     public string TWO_FACTOR_TOKEN { get; set; } = string.Empty;
     /// <summary>
+    /// Records the token provider name of every UserManager.GenerateTwoFactorTokenAsync() call, in call order.
+    /// </summary>
+    public List<string> GENERATED_TWO_FACTOR_TOKEN_PROVIDERS { get; } = [];
+    /// <summary>
     /// Modify this value to mock the responses from UserManager.VerifyTwoFactorTokenAsync()
     /// </summary>
     public bool TWO_FACTOR_TOKEN_VERIFIED { get; set; } = false;
@@ -79,6 +83,7 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// <returns></returns>
     public override Task<string> GenerateTwoFactorTokenAsync(TUser user, string tokenProvider)
     {
+        GENERATED_TWO_FACTOR_TOKEN_PROVIDERS.Add(tokenProvider);
         return Task.FromResult(TWO_FACTOR_TOKEN);
     }
 
