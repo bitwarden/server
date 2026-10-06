@@ -32,7 +32,8 @@ public class SubscriptionScheduleCreatorTests
     };
 
     private static SubscriptionSchedule CreatedSchedule(
-        List<SubscriptionSchedulePhaseItemDiscount>? itemDiscounts = null) => new()
+        List<SubscriptionSchedulePhaseItemDiscount>? itemDiscounts = null,
+        DateTime? trialEnd = null) => new()
         {
             Id = "sub_sched_1",
             Phases =
@@ -41,6 +42,7 @@ public class SubscriptionScheduleCreatorTests
                 {
                     StartDate = _phase1Start,
                     EndDate = _phase1End,
+                    TrialEnd = trialEnd,
                     Items =
                     [
                         new SubscriptionSchedulePhaseItem
@@ -150,6 +152,24 @@ public class SubscriptionScheduleCreatorTests
         Assert.Equal("price_current", item.Price);
         Assert.Equal(3L, item.Quantity);
         Assert.Equal("item-coupon", Assert.Single(item.Discounts).Coupon);
+    }
+
+    [Fact]
+    public async Task CreateWithPhasesAsync_TrialingSubscription_Phase1CarriesTrialEnd()
+    {
+        var update = await CreateAndCaptureUpdateAsync(
+            CreateSubscription(), CreatedSchedule(trialEnd: _phase1End), Phase2(), ManagingSystems.AnnualUpgrade);
+
+        Assert.Equal(_phase1End, (DateTime?)update.Phases[0].TrialEnd);
+    }
+
+    [Fact]
+    public async Task CreateWithPhasesAsync_NoTrial_LeavesPhase1TrialEndNull()
+    {
+        var update = await CreateAndCaptureUpdateAsync(
+            CreateSubscription(), CreatedSchedule(), Phase2(), ManagingSystems.AnnualUpgrade);
+
+        Assert.Null(update.Phases[0].TrialEnd);
     }
 
     [Fact]
