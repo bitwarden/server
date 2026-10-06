@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Enums;
 using Bit.Core.Dirt.Models.Data.EventIntegrations;
@@ -29,9 +30,11 @@ public class OrganizationIntegrationConfigurationValidator : IOrganizationIntegr
                 return IsConfigurationValid<SlackIntegrationConfiguration>(configuration.Configuration);
             case IntegrationType.Webhook:
                 return IsConfigurationValid<WebhookIntegrationConfiguration>(configuration.Configuration);
+            case IntegrationType.Teams:
+                // Null sends to the channel the app was installed in (the team's General channel).
+                return configuration.Configuration is null || IsTeamsConfigurationValid(configuration.Configuration);
             case IntegrationType.Hec:
             case IntegrationType.Datadog:
-            case IntegrationType.Teams:
                 return configuration.Configuration is null;
             default:
                 return false;
@@ -49,6 +52,28 @@ public class OrganizationIntegrationConfigurationValidator : IOrganizationIntegr
         {
             var config = JsonSerializer.Deserialize<T>(configuration);
             return config is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The key must be exactly <c>ChannelId</c> so it replaces the integration's install channel when the two
+    /// configurations are merged (see <see cref="OrganizationIntegrationConfigurationDetails.MergedConfiguration"/>).
+    /// A differently cased key would be added alongside it instead. No other keys are allowed, because any key here
+    /// overrides the install-time values (such as <c>ServiceUrl</c>) that only the Bot Framework callback may set.
+    /// </summary>
+    private static bool IsTeamsConfigurationValid(string configuration)
+    {
+        try
+        {
+            return JsonNode.Parse(configuration) is JsonObject json
+                && json.Count == 1
+                && json[nameof(TeamsIntegrationConfiguration.ChannelId)] is JsonValue channelId
+                && channelId.TryGetValue<string>(out var value)
+                && !string.IsNullOrWhiteSpace(value);
         }
         catch
         {

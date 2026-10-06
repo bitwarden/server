@@ -23,6 +23,14 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class ConfirmOrganizationInviteLinkValidatorTests
 {
+    // The two confirmations that consume a seat: a brand-new membership (no existing row), or a Staged row,
+    // which is excluded from the occupied seat count.
+    public static IEnumerable<object?[]> SeatConsumingMemberships() =>
+    [
+        [null],
+        [new OrganizationUser { Status = OrganizationUserStatusType.Staged, Type = OrganizationUserType.User }],
+    ];
+
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithLinkNotFound_ReturnsInviteLinkNotFound(
         ConfirmOrganizationInviteLinkValidationRequest request,
@@ -354,6 +362,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Invited)]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Staged)]
     public async Task ValidateAsync_WithUnconfirmedExistingMember_IsAllowed(
         OrganizationUserStatusType status,
         Organization organization,
@@ -382,14 +391,19 @@ public class ConfirmOrganizationInviteLinkValidatorTests
         Assert.Same(existingOrganizationUser, result.AsSuccess.ExistingOrganizationUser);
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_WithNewUserAndNoSeatsAvailable_ReturnsOrganizationHasNoAvailableSeats(
+    [Theory]
+    [BitMemberAutoData(nameof(SeatConsumingMemberships))]
+    public async Task ValidateAsync_WithSeatConsumingMembershipAndNoSeatsAvailable_ReturnsOrganizationHasNoAvailableSeats(
+        OrganizationUser? existingOrganizationUser,
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
         SutProvider<ConfirmOrganizationInviteLinkValidator> sutProvider)
     {
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationEmailAsync(organization.Id, user.Email)
+            .Returns(existingOrganizationUser);
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.Seats = 4;
         organization.MaxAutoscaleSeats = 4;
