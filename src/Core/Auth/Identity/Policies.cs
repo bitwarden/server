@@ -103,9 +103,9 @@ public static class Policies
     /// <example>
     /// Can be used with the <c>Authorize</c> attribute, for example:
     /// <code>
-    /// [Authorize(Policy = Policies.PamAccessConnector)]
+    /// [Authorize(Policy = Policies.AccessConnector)]
     /// </code>
     /// </example>
     /// </remarks>
-    public const string PamAccessConnector = "PamAccessConnector";
+    public const string AccessConnector = "AccessConnector";
 }
