@@ -56,7 +56,7 @@ public class SqlServerTestDatabase : ITestDatabase
         var logger = services.GetRequiredService<ILogger<DbMigrator>>();
 
         var migrator = new SqlServerDbMigrator(globalSettings, logger);
-        migrator.MigrateDatabase();
+        migrator.MigrateDatabase(onDataMigration: _ => true);
     }
 
     public void Dispose()

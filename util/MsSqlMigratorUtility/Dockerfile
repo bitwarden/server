@@ -45,6 +45,7 @@ LABEL com.bitwarden.product="bitwarden"
 
 ENV SSL_CERT_DIR=/etc/bitwarden/ca-certificates
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+ENV MSSQL_STOP_AT_DATA_MIGRATIONS=true
 
 # Copy app from the build stage
 WORKDIR /app
