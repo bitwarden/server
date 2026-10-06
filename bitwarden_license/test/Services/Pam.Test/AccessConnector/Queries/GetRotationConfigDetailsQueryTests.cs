@@ -4,6 +4,7 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.AccessConnector.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 
@@ -27,7 +28,7 @@ public class GetRotationConfigDetailsQueryTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(organizationId, configId));
 
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByConfigIdAsync(default);
+            .GetManyByConfigIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -42,16 +43,19 @@ public class GetRotationConfigDetailsQueryTests
 
         // The history read is expensive and would leak; it must not happen at all.
         await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByConfigIdAsync(default);
+            .GetManyByConfigIdAsync(default, default);
     }
 
     [Theory, BitAutoData]
     public async Task GetAsync_ConfigInTheRouteOrganization_ReturnsDetailsWithJobHistory(
-        SutProvider<GetRotationConfigDetailsQuery> sutProvider, PamRotationConfigDetails details,
-        List<PamRotationJobDetails> jobs)
+        PamRotationConfigDetails details, List<PamRotationJobDetails> jobs)
     {
+        var now = new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc);
+        var sutProvider = new SutProvider<GetRotationConfigDetailsQuery>().WithFakeTimeProvider().Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(now);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
-        sutProvider.GetDependency<IPamRotationJobRepository>().GetManyByConfigIdAsync(details.Id).Returns(jobs);
+        // Statuses are derived against the query's own clock.
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetManyByConfigIdAsync(details.Id, now).Returns(jobs);
 
         var result = await sutProvider.Sut.GetAsync(details.OrganizationId, details.Id);
 
