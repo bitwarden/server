@@ -15,7 +15,7 @@ public class ServerContextBuilder : IContextBuilder
     private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
-    private const string _contextKindPamAccessConnector = "pam-rotation-daemon";
+    private const string _contextKindAccessConnector = "access-connector";
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
@@ -131,7 +131,7 @@ public class ServerContextBuilder : IContextBuilder
                         var ldAccessConnector = LaunchDarkly.Sdk.Context.Builder(
                             currentContext.PamAccessConnectorId.Value.ToString());
 
-                        ldAccessConnector.Kind(_contextKindPamAccessConnector);
+                        ldAccessConnector.Kind(_contextKindAccessConnector);
                         SetCommonContextAttributes(ldAccessConnector);
 
                         if (currentContext.PamAccessConnectorOrganizationId.HasValue)
