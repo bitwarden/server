@@ -149,6 +149,12 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+            config.AddPolicy(Policies.PamAccessConnector, policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPamRotation);
+                policy.RequireClaim(Claims.Type, IdentityClientType.AccessConnector.ToString());
+            });
             config.AddPolicy(Policies.Send, configurePolicy: policy =>
             {
                 policy.RequireAuthenticatedUser();
