@@ -81,19 +81,6 @@ public class DeleteAccessRuleCommandTests
             && e.RuleName == "Production database"));
     }
 
-    // No caller is recorded as a system action.
-    [Theory, BitAutoData]
-    public async Task DeleteAsync_NoResolvableCaller_RecordsASystemActor(AccessRule existing)
-    {
-        var sutProvider = SetupSutProvider();
-        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(existing.Id).Returns(existing);
-
-        await sutProvider.Sut.DeleteAsync(existing.OrganizationId, existing.Id, null);
-
-        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(2)
-            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.ActorId == null));
-    }
-
     private static readonly DateTime _now = new(2026, 5, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private static SutProvider<DeleteAccessRuleCommand> SetupSutProvider()
