@@ -9,6 +9,7 @@ public class TrialInitiationVerifyEmailTests
     private static TrialInitiationVerifyEmail Model(
         IEnumerable<ProductType> products,
         bool isExistingUser = false,
+        int? pamSeatMinimum = null,
         bool paymentOptional = false) =>
         new()
         {
@@ -19,6 +20,7 @@ public class TrialInitiationVerifyEmailTests
             Product = products,
             TrialLength = 7,
             IsExistingUser = isExistingUser,
+            PamSeatMinimum = pamSeatMinimum,
             PaymentOptional = paymentOptional
         };
 
@@ -61,6 +63,19 @@ public class TrialInitiationVerifyEmailTests
         var url = Model([ProductType.PasswordManager, ProductType.PrivilegedControls]).Url;
         Assert.Contains("&product=0,2", url);
         Assert.Contains("&productTier=3", url);
+    }
+
+    [Fact]
+    public void Url_WithPamSeatMinimum_IncludesParam()
+    {
+        var url = Model([ProductType.PasswordManager, ProductType.PrivilegedControls], pamSeatMinimum: 25).Url;
+        Assert.Contains("&pamSeatMinimum=25", url);
+    }
+
+    [Fact]
+    public void Url_WithoutPamSeatMinimum_OmitsParam()
+    {
+        Assert.DoesNotContain("pamSeatMinimum", Model([ProductType.PasswordManager]).Url);
     }
 
     [Fact]

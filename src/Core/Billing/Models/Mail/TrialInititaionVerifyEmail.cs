@@ -27,6 +27,11 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
                 url += "&paymentOptional=true";
             }
 
+            if (PamSeatMinimum.HasValue)
+            {
+                url += $"&pamSeatMinimum={PamSeatMinimum}";
+            }
+
             return url;
         }
     }
@@ -48,6 +53,8 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     public int TrialLength { get; set; }
 
     public bool PaymentOptional { get; set; }
+
+    public int? PamSeatMinimum { get; set; }
 
     /// <summary>
     /// Selects the sign-up route from the trial's products. Supported combinations are Password Manager,
