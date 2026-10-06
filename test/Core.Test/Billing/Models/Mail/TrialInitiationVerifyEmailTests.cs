@@ -1,4 +1,4 @@
-using Bit.Core.Billing.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Xunit;
 

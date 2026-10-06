@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration.Implementations;
 using Bit.Core.Entities;
