@@ -103,19 +103,26 @@ public class TwoFactorEmailServiceTests
     }
 
     /// <summary>
-    /// Without a device, a setup code is still issued, bound to no device.
+    /// A setup code needs a device to bind to; without one nothing is issued or emailed.
     /// </summary>
-    [Theory, BitAutoData]
-    public async Task SendTwoFactorSetupEmailAsync_NoDeviceIdentifier_IssuesCodeBoundToNoDevice(
-        SutProvider<TwoFactorEmailService> sutProvider, User user)
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task SendTwoFactorSetupEmailAsync_NoDeviceIdentifier_ThrowsAndIssuesNoCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         EnrollInEmailTwoFactor(user, user.Email);
 
-        await sutProvider.Sut.SendTwoFactorSetupEmailAsync(user, null);
+        await Assert.ThrowsAnyAsync<ArgumentException>(
+            () => sutProvider.Sut.SendTwoFactorSetupEmailAsync(user, deviceIdentifier));
 
         await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
-            .Received(1)
-            .GenerateTokenAsync(TokenProviderName, SetupPurpose, UniqueIdentifier(user), null);
+            .DidNotReceiveWithAnyArgs()
+            .GenerateTokenAsync(default, default, default, default);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendTwoFactorEmailAsync(default, default, default, default, default, default);
     }
 
     [Theory, BitAutoData]
@@ -363,22 +370,38 @@ public class TwoFactorEmailServiceTests
     }
 
     /// <summary>
-    /// A setup code is verified under the setup purpose against the submitting device, including no device, and
-    /// the provider's answer is returned.
+    /// A setup code is verified under the setup purpose against the submitting device, and the provider's answer
+    /// is returned.
     /// </summary>
     [Theory]
-    [BitAutoData(DeviceIdentifier, true)]
-    [BitAutoData(DeviceIdentifier, false)]
-    [BitAutoData((string)null, true)]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task VerifyTwoFactorSetupTokenAsync_ReturnsProviderResultForSetupPurposeAndDevice(
-        string deviceIdentifier, bool providerResult, SutProvider<TwoFactorEmailService> sutProvider, User user)
+        bool providerResult, SutProvider<TwoFactorEmailService> sutProvider, User user)
     {
         sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
-            .ValidateTokenAsync(Token, TokenProviderName, SetupPurpose, UniqueIdentifier(user), deviceIdentifier)
+            .ValidateTokenAsync(Token, TokenProviderName, SetupPurpose, UniqueIdentifier(user), DeviceIdentifier)
             .Returns(providerResult);
 
         Assert.Equal(providerResult,
-            await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, Token));
+            await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, DeviceIdentifier, Token));
+    }
+
+    /// <summary>
+    /// A setup code never verifies without a device, and the provider is not asked.
+    /// </summary>
+    [Theory]
+    [BitAutoData((string)null)]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    public async Task VerifyTwoFactorSetupTokenAsync_NoDeviceIdentifier_FalseWithoutCheckingCode(
+        string deviceIdentifier, SutProvider<TwoFactorEmailService> sutProvider, User user)
+    {
+        Assert.False(await sutProvider.Sut.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, Token));
+
+        await sutProvider.GetDependency<IOtpTokenProvider<DefaultOtpTokenProviderOptions>>()
+            .DidNotReceiveWithAnyArgs()
+            .ValidateTokenAsync(default, default, default, default, default);
     }
 
     /// <summary>

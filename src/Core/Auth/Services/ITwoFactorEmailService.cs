@@ -15,16 +15,14 @@ public interface ITwoFactorEmailService
     Task SendTwoFactorLoginEmailAsync(User user, string deviceIdentifier);
 
     /// <summary>
-    /// Emails the user a code for setting up email two-factor, bound to the given device. Setup codes are kept
-    /// apart from login codes, so neither can be redeemed in place of the other.
+    /// Emails the user a code for setting up email two-factor that only the requesting device can redeem. Setup
+    /// codes are kept apart from login codes, so neither can be redeemed in place of the other.
     /// </summary>
     /// <param name="user">The user to whom the email should be sent</param>
-    /// <param name="deviceIdentifier">
-    /// Identifier of the device the code is being issued for. <see langword="null"/> binds the code to no device,
-    /// and then only a verification without a device identifier succeeds.
-    /// </param>
+    /// <param name="deviceIdentifier">Identifier of the device the code is being issued for</param>
+    /// <exception cref="ArgumentException">Thrown if the device identifier is not provided</exception>
     /// <exception cref="ArgumentNullException">Thrown if the user does not have an email for email 2FA</exception>
-    Task SendTwoFactorSetupEmailAsync(User user, string? deviceIdentifier);
+    Task SendTwoFactorSetupEmailAsync(User user, string deviceIdentifier);
 
     /// <summary>
     /// Sends a new device verification email to the user with an OTP token that only the requesting device
@@ -70,10 +68,11 @@ public interface ITwoFactorEmailService
     Task<bool> VerifyTwoFactorLoginTokenAsync(User user, string? deviceIdentifier, string? token);
 
     /// <summary>
-    /// Verifies an email two-factor setup code against the device it was issued for. A valid code is consumed.
+    /// Verifies an email two-factor setup code against the device it was issued for. A code issued for a different
+    /// device does not verify, even when the code itself is correct. A valid code is consumed.
     /// </summary>
     /// <param name="user">The user setting up email two-factor</param>
-    /// <param name="deviceIdentifier">Identifier of the device submitting the code; must match the one at issue</param>
+    /// <param name="deviceIdentifier">Identifier of the device submitting the code; a blank value never verifies</param>
     /// <param name="token">The code to verify; a blank code never verifies</param>
     /// <exception cref="ArgumentNullException">Thrown if the user is not provided</exception>
     Task<bool> VerifyTwoFactorSetupTokenAsync(User user, string? deviceIdentifier, string? token);

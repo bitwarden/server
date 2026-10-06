@@ -47,6 +47,8 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     /// <inheritdoc />
     public async Task SendTwoFactorSetupEmailAsync(User user, string deviceIdentifier)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(deviceIdentifier);
+
         await VerifyAndSendTwoFactorEmailAsync(user, SetupPurpose, deviceIdentifier, TwoFactorEmailPurpose.Setup);
     }
 
@@ -103,7 +105,7 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     {
         ArgumentNullException.ThrowIfNull(user);
 
-        if (string.IsNullOrEmpty(token))
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || string.IsNullOrEmpty(token))
         {
             return false;
         }
@@ -118,7 +120,7 @@ public class TwoFactorEmailService : ITwoFactorEmailService
     /// </summary>
     /// <param name="user">The user to whom the email should be sent</param>
     /// <param name="otpPurpose">Which code to issue; login and setup codes are stored apart</param>
-    /// <param name="deviceIdentifier">The device the code is bound to; <see langword="null"/> binds no device</param>
+    /// <param name="deviceIdentifier">The device the code is bound to</param>
     /// <param name="emailPurpose">The purpose of the email</param>
     /// <exception cref="ArgumentNullException">Thrown if the user does not have an email set up for 2FA</exception>
     private async Task VerifyAndSendTwoFactorEmailAsync(
