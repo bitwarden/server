@@ -6,6 +6,7 @@ using Bit.Services.Pam.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Services;
@@ -47,5 +48,29 @@ public class AccessAuditEventEmitterTests
         await sutProvider.GetDependency<IAccessAuditEventRepository>()
             .DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
+    }
+
+    // A failed attempt stops the action.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_AttemptStoreFailure_Throws(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Attempt };
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.EmitAsync(auditEvent));
+    }
+
+    // The action has already happened, so a failed outcome does not fail it.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OutcomeStoreFailure_DoesNotThrow(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Outcome };
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+            .ThrowsAsync(new InvalidOperationException());
+
+        await sutProvider.Sut.EmitAsync(auditEvent);
     }
 }

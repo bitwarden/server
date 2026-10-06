@@ -4,6 +4,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Enums;
@@ -15,6 +16,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Services.Pam.Test.Commands;
@@ -409,6 +411,98 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("already have an approved request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_EmitsSubmittedAttemptThenOutcome(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        SetupHumanCreate(sutProvider);
+        var emitted = CaptureEmitted(sutProvider);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" });
+
+        Assert.Collection(emitted,
+            attempt => Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase),
+            outcome =>
+            {
+                Assert.Equal(AccessAuditEventPhase.Outcome, outcome.Phase);
+                Assert.Equal(result.Request!.Id, outcome.AccessRequestId);
+            });
+        Assert.All(emitted, e =>
+        {
+            Assert.Equal(AccessAuditEventKind.RequestSubmitted, e.Kind);
+            Assert.Equal(userId, e.ActorId);
+        });
+        Assert.Equal(emitted[0].CorrelationId, emitted[1].CorrelationId);
+    }
+
+    // The auto-approval is a separate system event, so it must not share the submission's correlation id.
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_EmitsSubmissionThenSeparateApproval(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+        var emitted = CaptureEmitted(sutProvider);
+
+        var result = await sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        Assert.Collection(emitted,
+            attempt =>
+            {
+                Assert.Equal(AccessAuditEventKind.RequestSubmitted, attempt.Kind);
+                Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase);
+                Assert.Equal(userId, attempt.ActorId);
+            },
+            outcome =>
+            {
+                Assert.Equal(AccessAuditEventKind.RequestSubmitted, outcome.Kind);
+                Assert.Equal(AccessAuditEventPhase.Outcome, outcome.Phase);
+                Assert.Equal(emitted[0].CorrelationId, outcome.CorrelationId);
+            },
+            approval =>
+            {
+                Assert.Equal(AccessAuditEventKind.RequestApproved, approval.Kind);
+                Assert.Equal(AccessAuditEventPhase.Outcome, approval.Phase);
+                Assert.Null(approval.ActorId);
+                Assert.NotEqual(emitted[0].CorrelationId, approval.CorrelationId);
+            });
+        Assert.All(emitted, e => Assert.Equal(result.Request.Id, e.AccessRequestId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticCreateFails_EmitsAttemptWithoutOutcome(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>())
+            .ThrowsAsync(new InvalidOperationException());
+        var emitted = CaptureEmitted(sutProvider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 }));
+
+        var attempt = Assert.Single(emitted);
+        Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase);
+    }
+
+    private static List<AccessAuditEventData> CaptureEmitted(SutProvider<SubmitAccessRequestCommand> sutProvider)
+    {
+        var emitted = new List<AccessAuditEventData>();
+        sutProvider.GetDependency<IAccessAuditEventEmitter>().EmitAsync(Arg.Do<AccessAuditEventData>(emitted.Add));
+        return emitted;
     }
 
     private static SutProvider<SubmitAccessRequestCommand> Setup()
