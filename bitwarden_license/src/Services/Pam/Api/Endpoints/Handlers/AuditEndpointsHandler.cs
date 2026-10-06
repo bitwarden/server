@@ -1,5 +1,4 @@
 ﻿using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.Api.Models.Request;
@@ -10,12 +9,11 @@ using Bitwarden.Server.Sdk.Features;
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/audit</c> resource. Authorized by the AccessEventLogs permission, which
-/// grants the full organization-wide trail.
+/// Handler for the <c>organizations/{orgId}/audit</c> resource. Authorization runs in the middleware (see
+/// <c>AuditEndpoints</c>).
 /// </summary>
 public class AuditEndpointsHandler(
     IFeatureService featureService,
-    ICurrentContext currentContext,
     IListAccessAuditTrailQuery listAccessAuditTrailQuery,
     IListAccessAuditItemsQuery listAccessAuditItemsQuery)
 {
@@ -32,11 +30,6 @@ public class AuditEndpointsHandler(
             throw new NotFoundException();
         }
 
-        if (!await currentContext.AccessEventLogs(orgId))
-        {
-            throw new NotFoundException();
-        }
-
         var page = await listAccessAuditTrailQuery.GetTrailAsync(orgId, filter.ToQueryOptions());
         return new ListResponseModel<AccessAuditEventResponseModel>(
             page.Data.Select(e => new AccessAuditEventResponseModel(e)),
@@ -44,18 +37,13 @@ public class AuditEndpointsHandler(
     }
 
     /// <summary>
-    /// The distinct subjects the trail names in <paramref name="range"/>, for the Item filter. Unpaged, and
-    /// guarded exactly as the trail is.
+    /// The distinct subjects the trail names in <paramref name="range"/>, for the Item filter. Unpaged, and withdrawn
+    /// with the trail by the kill switch.
     /// </summary>
     public async Task<ListResponseModel<AccessAuditItemResponseModel>> GetItems(
         Guid orgId, AccessAuditRangeRequestModel range)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await currentContext.AccessEventLogs(orgId))
         {
             throw new NotFoundException();
         }

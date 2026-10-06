@@ -1,10 +1,13 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core.Auth.Identity;
+using Bit.Core.Models.Api;
 using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
+using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Response;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
@@ -69,6 +72,26 @@ public class AuditEndpointsTests
         // The raw pattern carries leading and trailing slashes.
         Assert.Equal(route, endpoint.RoutePattern.RawText?.Trim('/'));
         Assert.Contains(method, endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods);
+    }
+
+    private static List<IAuthorizationRequirement> RequirementsFor(Endpoint endpoint) =>
+    [
+        .. endpoint.Metadata.GetOrderedMetadata<AuthorizationPolicy>().SelectMany(policy => policy.Requirements),
+        .. endpoint.Metadata.GetOrderedMetadata<IAuthorizationRequirementData>().SelectMany(data => data.GetRequirements())
+    ];
+
+    [Theory]
+    [InlineData("Pam_Audit_GetTrail")]
+    [InlineData("Pam_Audit_GetItems")]
+    public void MapPamEndpoints_AuthorizesAuditRoutesWithAccessAuditTrailRequirement(string name)
+    {
+        var endpoint = Assert.Single(
+            MaterializeEndpoints(),
+            e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
+
+        Assert.Contains(RequirementsFor(endpoint), r => r is AccessAuditTrailRequirement);
+        Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
+            data => data.Policy == Policies.Application);
     }
 
     [Fact]
