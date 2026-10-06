@@ -219,6 +219,44 @@ public class OrganizationUserResetPasswordRequestModelTests
         Assert.False(model.RequestHasNewDataTypes());
     }
 
+    [Theory]
+    [BitAutoData]
+    public void PropertyValidation_LegacyKey_RejectsDatabaseFieldProtectionSentinel(string newHash)
+    {
+        // the legacy Key field must reject a value carrying the server-internal
+        // "P|" storage-protection prefix, otherwise it is treated as pre-encrypted
+        // data and writes the value, permanently corrupting the user record.
+        var model = new OrganizationUserResetPasswordRequestModel
+        {
+            NewMasterPasswordHash = newHash,
+            Key = "P|not-a-protected-value-poc1234"
+        };
+
+        var validationResults = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(
+            model, new ValidationContext(model), validationResults, validateAllProperties: true);
+
+        Assert.False(isValid);
+        Assert.Contains(validationResults, r => r.MemberNames.Contains(nameof(OrganizationUserResetPasswordRequestModel.Key)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void PropertyValidation_LegacyKey_AcceptsWellFormedEncryptedString(string newHash)
+    {
+        var model = new OrganizationUserResetPasswordRequestModel
+        {
+            NewMasterPasswordHash = newHash,
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+        };
+
+        var validationResults = new List<ValidationResult>();
+        var isValid = Validator.TryValidateObject(
+            model, new ValidationContext(model), validationResults, validateAllProperties: true);
+
+        Assert.True(isValid);
+    }
+
     [Fact]
     public void Validate_WhenBothAuthAndUnlockPresent_WithBelowMinimumKdf_NoError()
     {

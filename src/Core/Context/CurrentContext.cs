@@ -321,12 +321,6 @@ public class CurrentContext(
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
     }
 
-    public async Task<bool> ViewAllCollections(Guid orgId)
-    {
-        var org = GetOrganization(orgId);
-        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
-    }
-
     public async Task<bool> ManageGroups(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
