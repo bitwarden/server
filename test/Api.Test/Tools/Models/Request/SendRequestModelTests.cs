@@ -80,7 +80,8 @@ public class SendRequestModelTests
             {
                 EncryptionVersion = SendEncryptionType.V1,
                 Data = "{ \"name\": \"ENCRYPTED_VALUE\" }",
-                Metadata = new SendItemMetadataModel {
+                Metadata = new SendItemMetadataModel
+                {
                     ItemId = Guid.NewGuid(),
                     CreationDate = DateTime.UtcNow,
                     RevisionDate = DateTime.UtcNow,
@@ -122,7 +123,8 @@ public class SendRequestModelTests
             {
                 EncryptionVersion = SendEncryptionType.V1,
                 Data = "sealed_blob",
-                Metadata = new SendItemMetadataModel {
+                Metadata = new SendItemMetadataModel
+                {
                     ItemId = itemId,
                     CreationDate = now,
                     RevisionDate = now,
