@@ -1,4 +1,4 @@
-﻿@using Bit.Admin.Enums;
+@using Bit.Admin.Enums;
 @using Bit.Admin.Models
 @using Bit.Core.AdminConsole.Enums.Provider
 @using Bit.Core.Billing.Enums
@@ -107,14 +107,14 @@
                 new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 }
 
-@if (Model.TrialEnd is { } trialEnd)
+@if (Model.Trial is { } trial)
 {
     <h2>Trial</h2>
     <dl class="row">
         <dt class="col-sm-4 col-lg-3">Trial End</dt>
-        <dd class="col-sm-8 col-lg-9">@trialEnd.ToString("yyyy-MM-dd HH:mm") UTC</dd>
+        <dd class="col-sm-8 col-lg-9">@trial.TrialEnd.ToString("yyyy-MM-dd HH:mm") UTC</dd>
     </dl>
-    @if (Model.CanExtendTrial)
+    @if (trial.CanExtend)
     {
         <form asp-controller="OrganizationTrial" asp-action="Extend" asp-route-organizationId="@Model.Organization.Id"
               method="post" class="row g-2 align-items-end mb-4"
@@ -130,7 +130,7 @@
     }
     else
     {
-        <p class="text-muted mb-4">@Model.TrialExtensionBlockedReason</p>
+        <p class="text-muted mb-4">@trial.ExtensionBlockedReason</p>
     }
 }
 

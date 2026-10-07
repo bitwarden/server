@@ -321,8 +321,6 @@ public class OrganizationsController : Controller
             }
         }
 
-        var trial = await GetTrialAsync(organization);
-
         var model = new OrganizationEditModel(
             organization,
             provider,
@@ -353,9 +351,7 @@ public class OrganizationsController : Controller
                 { ChurnDiscountAppliedDate: not null } => "Locked: a churn-mitigation discount has already been applied to this organization.",
                 _ => null,
             },
-            TrialEnd = trial?.TrialEnd,
-            CanExtendTrial = trial?.CanExtend ?? false,
-            TrialExtensionBlockedReason = trial?.ExtensionBlockedReason,
+            Trial = await GetTrialAsync(organization),
         };
 
         return View(model);

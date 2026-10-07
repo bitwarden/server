@@ -2160,9 +2160,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Equal(trial.TrialEnd, model.TrialEnd);
-        Assert.True(model.CanExtendTrial);
-        Assert.Null(model.TrialExtensionBlockedReason);
+        Assert.Same(trial, model.Trial);
     }
 
     [BitAutoData]
@@ -2180,9 +2178,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Equal(trial.TrialEnd, model.TrialEnd);
-        Assert.False(model.CanExtendTrial);
-        Assert.Equal(TrialExtensionPolicy.TooManyDaysRemainingMessage, model.TrialExtensionBlockedReason);
+        Assert.Same(trial, model.Trial);
     }
 
     [BitAutoData]
@@ -2197,9 +2193,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Null(model.TrialEnd);
-        Assert.False(model.CanExtendTrial);
-        Assert.Null(model.TrialExtensionBlockedReason);
+        Assert.Null(model.Trial);
     }
 
     [BitAutoData]
@@ -2213,8 +2207,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Null(model.TrialEnd);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.Trial);
         await sutProvider.GetDependency<IGetOrganizationTrialQuery>().DidNotReceiveWithAnyArgs().Run(default);
     }
 
@@ -2229,8 +2222,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Null(model.TrialEnd);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.Trial);
         await sutProvider.GetDependency<IGetOrganizationTrialQuery>().DidNotReceiveWithAnyArgs().Run(default);
     }
 
@@ -2250,8 +2242,7 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Equal(trial.TrialEnd, model.TrialEnd);
-        Assert.True(model.CanExtendTrial);
+        Assert.Same(trial, model.Trial);
     }
 
     [BitAutoData]
@@ -2267,7 +2258,6 @@ public class OrganizationsControllerTests
 
         var model = await GetEditModelAsync(sutProvider, organization);
 
-        Assert.Null(model.TrialEnd);
-        Assert.False(model.CanExtendTrial);
+        Assert.Null(model.Trial);
     }
 }
