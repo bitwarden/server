@@ -54,7 +54,6 @@ public class CreateRotationConfigCommandTests
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
 
-        // target.OrganizationId is an unrelated AutoFixture Guid.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(
             Guid.NewGuid(), actingUserId, cipherId, target.Id, accountIdentity, false, null, false));
 

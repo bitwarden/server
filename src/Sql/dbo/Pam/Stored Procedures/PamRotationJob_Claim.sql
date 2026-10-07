@@ -20,7 +20,7 @@ BEGIN
     INNER JOIN [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
     INNER JOIN [dbo].[PamTargetSystem] T ON T.[Id] = C.[TargetSystemId]
     INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A ON A.[AccessConnectorId] = @AccessConnectorId AND A.[TargetSystemId] = C.[TargetSystemId]
-    -- Defense in depth: re-checks Enabled and org match already checked by the caller's token.
+    -- Re-checks Enabled and the org match, which the caller's token already checked.
     INNER JOIN [dbo].[PamAccessConnector] D ON D.[Id] = @AccessConnectorId AND D.[OrganizationId] = C.[OrganizationId] AND D.[Status] = 0 -- Enabled
     WHERE J.[Id] = @JobId
         AND J.[Action] = 0 -- None
@@ -40,8 +40,8 @@ BEGIN
                 INNER JOIN [dbo].[PamAccessConnectorTargetAssignment] A2 ON A2.[AccessConnectorId] = @AccessConnectorId AND A2.[TargetSystemId] = C2.[TargetSystemId]
                 INNER JOIN [dbo].[PamAccessConnector] D2 ON D2.[Id] = @AccessConnectorId AND D2.[OrganizationId] = C2.[OrganizationId] AND D2.[Status] = 0 -- Enabled
                 WHERE J2.[Id] = @JobId
-            ) THEN -1 -- NotEligible (unknown job, or a job outside this access connector's assignment/org)
-            ELSE 0 -- NotClaimable: eligible, but not pending / in backoff / held
+            ) THEN -1 -- NotEligible: unknown, outside the assignment or org, or the access connector is disabled
+            ELSE 0 -- NotClaimable: eligible, but not Pending, in backoff, or its config or target is disabled
         END
 
         ROLLBACK TRANSACTION

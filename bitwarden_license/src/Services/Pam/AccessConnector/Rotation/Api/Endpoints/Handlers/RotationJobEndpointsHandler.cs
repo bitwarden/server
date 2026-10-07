@@ -7,12 +7,8 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions. The connector's identity comes from
-/// <see cref="ICurrentContext.PamAccessConnectorId"/>; the poll query admits only an Enabled connector, and returns
-/// only jobs belonging to that connector's organization and assigned target systems.
-///
-/// <see cref="IClaimRotationJobCommand"/> throws 409 on a lost race and 404 when the connector was never eligible
-/// to claim the job.
+/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions. The poll serves only an enabled
+/// access connector, and only jobs on its organization's assigned target systems.
 /// </summary>
 public class RotationJobEndpointsHandler(
     ICurrentContext currentContext,

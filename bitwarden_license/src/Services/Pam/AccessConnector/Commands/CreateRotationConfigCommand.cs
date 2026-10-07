@@ -65,8 +65,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             throw new BadRequestException("The target system is not active.");
         }
 
-        // The cipher-in-org check is the generic (unfiltered) lookup, not the user-permission-scoped one -- this is
-        // an org-admin operation, not a per-user access check.
+        // An unscoped lookup, since this is an admin operation rather than a per-user access check.
         var cipher = await _cipherRepository.GetByIdAsync(cipherId);
         if (cipher is null || cipher.OrganizationId != organizationId)
         {
@@ -103,8 +102,7 @@ public class CreateRotationConfigCommand : ICreateRotationConfigCommand
             RevisionDate = now,
         };
 
-        // audit (before/after): use an Attempt/Outcome pair for consistency with the other admin commands, even
-        // though the spec models this as a single reaction.
+        // Attempt before the insert, outcome after, as in the other admin commands; the spec models one reaction.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationConfigCreated,

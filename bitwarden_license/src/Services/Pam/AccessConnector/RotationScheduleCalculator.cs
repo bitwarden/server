@@ -27,8 +27,7 @@ public class RotationScheduleCalculator : IRotationScheduleCalculator
 
         var expression = Parse(cron);
 
-        // The schedule must occur at least twice so the interval floor can be checked; a cron firing once or
-        // never is rejected the same as a too-frequent one.
+        // A cron that fires fewer than twice cannot be checked against the floor, so it is rejected.
         var first = expression.GetNextValidTimeAfter(DateTimeOffset.UtcNow);
         if (first is null)
         {
@@ -52,8 +51,8 @@ public class RotationScheduleCalculator : IRotationScheduleCalculator
     {
         try
         {
-            // Quartz evaluates crons in TimeZoneInfo.Local by default; schedules are contractually UTC
-            // (a day-anchored cron must not shift with the server's deployment time zone or DST).
+            // Quartz defaults to TimeZoneInfo.Local; schedules are UTC, so a day-anchored cron must not shift with
+            // the host's time zone or DST.
             return new CronExpression(cron) { TimeZone = TimeZoneInfo.Utc };
         }
         catch (FormatException ex)

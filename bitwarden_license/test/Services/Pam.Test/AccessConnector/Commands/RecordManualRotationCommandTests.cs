@@ -64,7 +64,7 @@ public class RecordManualRotationCommandTests
     {
         var sutProvider = Setup();
         details.TargetSystemMethod = PamTargetSystemMethod.Manual;
-        details.NextRotationAt = _now.AddMinutes(-10); // an overdue obligation, about to be discharged
+        details.NextRotationAt = _now.AddMinutes(-10);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         var nextOccurrence = _now.AddDays(30);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(details.ScheduleCron, _now)
@@ -72,7 +72,6 @@ public class RecordManualRotationCommandTests
 
         await sutProvider.Sut.RecordAsync(details.OrganizationId, actingUserId, details.Id);
 
-        // LastRotationAt = now; the obligation clears by moving NextRotationAt to the next scheduled occurrence.
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
             c.Id == details.Id && c.LastRotationAt == _now && c.NextRotationAt == nextOccurrence
             && c.RevisionDate == _now));
