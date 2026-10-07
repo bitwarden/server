@@ -104,4 +104,11 @@ public class ServiceCollectionExtensionsTests
 
         Assert.Contains(services, d => d.ServiceType == handlerType);
     }
+
+    [Fact]
+    public void EndpointHandlers_DiscoversEveryHandlerInTheAssembly()
+    {
+        // Guards against the theory above silently matching nothing.
+        Assert.True(EndpointHandlers().Count >= 10);
+    }
 }

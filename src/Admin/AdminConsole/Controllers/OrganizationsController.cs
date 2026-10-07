@@ -80,7 +80,7 @@ public class OrganizationsController : Controller
     private readonly ISubscriberService _subscriberService;
     private readonly IOrganizationPlanMigrationCohortRepository _organizationPlanMigrationCohortRepository;
     private readonly IOrganizationPlanMigrationCohortAssignmentRepository _organizationPlanMigrationCohortAssignmentRepository;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IGetOrganizationTrialQuery _getOrganizationTrialQuery;
 
     public OrganizationsController(
@@ -114,7 +114,7 @@ public class OrganizationsController : Controller
         ISubscriberService subscriberService,
         IOrganizationPlanMigrationCohortRepository organizationPlanMigrationCohortRepository,
         IOrganizationPlanMigrationCohortAssignmentRepository organizationPlanMigrationCohortAssignmentRepository,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IGetOrganizationTrialQuery getOrganizationTrialQuery)
     {
         _organizationRepository = organizationRepository;

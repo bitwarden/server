@@ -45,7 +45,7 @@ public class OrganizationsControllerTests
         sutProvider.GetDependency<IAccessControlService>()
             .UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts)
             .Returns(true);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(true);
     }
@@ -386,7 +386,7 @@ public class OrganizationsControllerTests
             .Returns(organization);
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.Free)
             .Returns(new FreePlanStub());
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
 
@@ -711,7 +711,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = cohort.Id,
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(true);
         sutProvider.GetDependency<IAccessControlService>()
@@ -749,7 +749,7 @@ public class OrganizationsControllerTests
             MigrationCohortId = cohort.Id,
         };
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35215_BusinessPlanPriceMigration)
             .Returns(false);
         sutProvider.GetDependency<IAccessControlService>()
@@ -2131,7 +2131,7 @@ public class OrganizationsControllerTests
         bool hasPermission = true)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(Bit.Core.FeatureFlagKeys.PM35092AuthSalesAssistedTrials)
             .Returns(flagEnabled);
         sutProvider.GetDependency<IAccessControlService>()

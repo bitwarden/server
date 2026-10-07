@@ -307,6 +307,11 @@ public static partial class FeatureFlagKeys
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
 
+    /// <summary>
+    /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
+    /// </summary>
+    public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
+
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";
 
