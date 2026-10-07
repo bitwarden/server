@@ -56,7 +56,7 @@ BEGIN
     SET [CipherUpdated] = 1
     WHERE [Id] = @AttemptId
 
-    -- Other writers of dbo.Cipher bump here too, avoiding a stale password.
+    -- Other writers of dbo.Cipher bump here too, so clients do not keep a stale password.
     EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @CipherId, @OrganizationId
 
     COMMIT TRANSACTION

@@ -37,7 +37,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
     public async Task<PamRotationAttempt> ReportSucceededAsync(
         Guid accessConnectorId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
     {
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
@@ -97,8 +97,7 @@ public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit);
 
-        // Re-fetch: the repository just mutated the attempt's Status/ResolvedDate/SessionTermination under the
-        // hood, and the caller expects the resolved snapshot back.
+        // The repository resolved the attempt, so re-read it for the response.
         return await _jobRepository.GetAttemptByIdAsync(attemptId) ?? attempt;
     }
 }

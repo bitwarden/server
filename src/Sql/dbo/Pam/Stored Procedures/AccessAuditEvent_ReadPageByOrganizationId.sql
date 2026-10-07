@@ -4,10 +4,8 @@ CREATE PROCEDURE [dbo].[AccessAuditEvent_ReadPageByOrganizationId]
     @StartDate DATETIME2(7),
     @EndDate DATETIME2(7),
     @PageSize INT,
-    -- The keyset cursor: the last row of the previous page, so it moves inward while the window above stays put,
-    -- and NULL starts at the newest event in range. A separate pair rather than a lowered @EndDate, because
-    -- [OccurredDate] is not unique so resuming needs the [Id] tiebreaker, and because the collapse below is scoped
-    -- to the window, so narrowing @EndDate per page would change which half of an action survives.
+    -- The keyset cursor: the previous page's last row, or NULL for the newest event. Kept apart from @EndDate because
+    -- resuming needs the [Id] tiebreaker, and narrowing the window per page would change which half survives.
     @BeforeDate DATETIME2(7) = NULL,
     @BeforeId UNIQUEIDENTIFIER = NULL,
     -- JSON arrays ([1,13,30], ["<guid>",...]); NULL means the dimension is unfiltered. OPENJSON because [Kind] is a
@@ -63,10 +61,9 @@ BEGIN
             OR E.[OccurredDate] < @BeforeDate
             OR (E.[OccurredDate] = @BeforeDate AND E.[Id] < @BeforeId)
         )
-        -- Collapse each action's Attempt/Outcome pair into one row: the Outcome when it landed, otherwise the lone
-        -- Attempt, which the caller flags as in-doubt. It happens here because the caller sees one page and could
-        -- not tell an Attempt whose Outcome sits on the next page from one that never landed. Scoped to the page's
-        -- range, so an action straddling a bound reads as in-doubt at that edge instead of disappearing.
+        -- Collapse each action to its Outcome, or its lone Attempt, which the caller flags as in-doubt. Done here
+        -- because one page cannot tell a missing Outcome from one on the next page; an action straddling a bound
+        -- reads as in-doubt.
         AND NOT EXISTS (
             SELECT
                 1
@@ -82,9 +79,8 @@ BEGIN
                     OR (P.[Phase] = E.[Phase] AND P.[Id] < E.[Id])
                 )
         )
-        -- The dimensions below apply to whichever row survived the collapse, because the two halves of one action
-        -- need not agree: a refused activation writes LeaseActivated then LeaseActivationRejected, so filtering
-        -- first would answer "activated" with an action that was turned down.
+        -- Filters apply after the collapse, since an action's halves can disagree: a refused activation writes
+        -- LeaseActivated, then LeaseActivationRejected.
         AND (
             @Kinds IS NULL
             OR E.[Kind] IN (SELECT CAST([value] AS TINYINT) FROM OPENJSON(@Kinds))

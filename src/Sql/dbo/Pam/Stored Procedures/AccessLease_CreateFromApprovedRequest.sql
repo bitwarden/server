@@ -47,7 +47,7 @@ BEGIN
         RETURN
     END
 
-    -- [NotBefore] is @Now, never backdated; preconditions restated as defense in depth.
+    -- [NotBefore] is @Now, never backdated; the claim's preconditions are re-checked here.
     INSERT INTO [dbo].[AccessLease]
     (
         [Id], [AccessRequestId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],

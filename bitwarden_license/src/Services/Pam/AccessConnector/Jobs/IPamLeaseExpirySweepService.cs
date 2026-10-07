@@ -1,18 +1,11 @@
 ﻿namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
-/// Runs the lease natural-expiry sweep: finds every lease whose window has closed on its own, emits the deferred
-/// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseExpired"/> audit event, and fires the rotation access-end
-/// trigger for each. Invoked on a Quartz cron by <see cref="PamLeaseExpirySweepJob"/>; kept separate so the sweep
-/// logic is testable without a <c>Quartz.IJobExecutionContext</c>.
+/// The lease natural-expiry sweep: for each lease whose window has closed, emits the deferred
+/// <see cref="Bit.Pam.Enums.AccessAuditEventKind.LeaseExpired"/> event and fires the rotation access-end trigger.
 /// </summary>
 public interface IPamLeaseExpirySweepService
 {
-    /// <summary>
-    /// Expires every due lease and, per lease, emits its audit event then calls
-    /// <see cref="Bit.Services.Pam.AccessConnector.Commands.Interfaces.IHandleAccessGrantEndedCommand"/> -- a failure
-    /// against one lease is logged and swallowed rather than propagated, so it never prevents the rest of the batch
-    /// from being processed.
-    /// </summary>
+    /// <summary>A failure on one lease is logged and swallowed, so it does not stop the rest of the batch.</summary>
     Task SweepAsync();
 }

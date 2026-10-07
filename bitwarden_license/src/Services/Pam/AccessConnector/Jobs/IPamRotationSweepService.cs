@@ -2,15 +2,13 @@
 
 /// <summary>
 /// Runs the three time-derived rotation sweeps: offering due scheduled configs, timing out expired jobs, and
-/// releasing jobs whose claiming access connector has gone stale. Kept separate from <see cref="PamRotationSweepJob"/>
-/// so the sweep logic is testable without a <c>Quartz.IJobExecutionContext</c>.
+/// releasing jobs whose claiming access connector has gone stale.
 /// </summary>
 public interface IPamRotationSweepService
 {
     /// <summary>
-    /// Runs all three phases in sequence. Each phase is independently fault-isolated: an exception in one (or in one
-    /// row within one) is logged and swallowed rather than propagated, so a failure in an earlier phase never
-    /// prevents the later phases -- or later rows in the same phase -- from running.
+    /// Runs the phases in sequence. An exception in one phase, or on one row, is logged and swallowed, so later
+    /// phases and rows still run.
     /// </summary>
     Task SweepAsync();
 }

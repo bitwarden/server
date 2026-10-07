@@ -40,10 +40,11 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
     public async Task<PamRotationAttempt> ReportFailedAsync(
         Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
     {
-        // Truncated first: raw target-system error output can echo credentials and must never be forwarded.
+        // The reason is a connector-defined code and detail, never raw target output, which can echo credentials.
+        // It is truncated rather than rejected, since the two combined can exceed the stored length.
         var truncatedReason = Truncate(failureReason);
 
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
@@ -133,8 +134,7 @@ public class ReportRotationFailedCommand : IReportRotationFailedCommand
             await _accessAuditEventEmitter.EmitAsync(attemptFailedAudit);
         }
 
-        // Re-fetch: the repository just mutated the attempt's Status/FailureReason/SyncState/ResolvedDate under the
-        // hood, and the caller expects the resolved snapshot back.
+        // The repository resolved the attempt, so re-read it for the response.
         return await _jobRepository.GetAttemptByIdAsync(attemptId) ?? attempt;
     }
 
