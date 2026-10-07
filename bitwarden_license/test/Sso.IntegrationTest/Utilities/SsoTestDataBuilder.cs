@@ -47,7 +47,6 @@ public class SsoTestDataBuilder
     private Action<OrganizationUser>? _stagedOrgUserConfig;
     private Action<SsoConfig>? _ssoConfigConfig;
     private Action<SsoUser>? _ssoUserConfig;
-    private Action<SsoApplicationFactory>? _featureFlagConfig;
 
     private bool _includeUser = false;
     private bool _includeSsoUser = false;
@@ -64,6 +63,7 @@ public class SsoTestDataBuilder
     private bool _mockAutoscalePartialFailure = false;
     private bool _mockSendOrganizationInvitesCommand = false;
     private X509Certificate2? _samlSigningCertificate;
+    private bool? _wantAssertionsSignedFlagEnabled;
 
     public SsoTestDataBuilder WithOrganization(Action<Organization> configure)
     {
@@ -110,12 +110,6 @@ public class SsoTestDataBuilder
     {
         _includeSsoUser = true;
         _ssoUserConfig = configure;
-        return this;
-    }
-
-    public SsoTestDataBuilder WithFeatureFlags(Action<SsoApplicationFactory> configure)
-    {
-        _featureFlagConfig = configure;
         return this;
     }
 
@@ -171,19 +165,14 @@ public class SsoTestDataBuilder
     }
 
     /// <summary>
-    /// Enables the <see cref="FeatureFlagKeys.PM34423StagedStatus"/> feature flag for the test.
-    /// SSO Staged-row promotion (Scenario 3 in AutoProvisionUserAsync) is gated behind this
-    /// flag, so tests exercising that branch must opt in.
+    /// Enables the <see cref="FeatureFlagKeys.PM42982_WantAssertionsSigned"/> feature flag for the test.
+    /// The multi-assertion signature verifier (<c>Saml2AssertionSignatureVerifier.EnsureAssertionsSigned</c>)
+    /// is gated behind this flag, so tests exercising that path must opt in.
     /// </summary>
-    public SsoTestDataBuilder WithPM34423StagedStatusFlag(bool enabled = true)
+    public SsoTestDataBuilder WithPM42982WantAssertionsSignedFlag(bool enabled = true)
     {
-        return WithFeatureFlags(factory =>
-        {
-            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
-            {
-                svc.IsEnabled(FeatureFlagKeys.PM34423StagedStatus).Returns(enabled);
-            });
-        });
+        _wantAssertionsSignedFlagEnabled = enabled;
+        return this;
     }
 
     /// <summary>
@@ -278,10 +267,7 @@ public class SsoTestDataBuilder
             globalSettings.SelfHosted.Returns(_isSelfHosted);
         });
 
-        // 1.b configure setting feature flags
-        _featureFlagConfig?.Invoke(factory);
-
-        // 1.b.i Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
+        // 1.b Replace SamlEnvironment with a version that has a test SP signing certificate, if the test requests it
         if (_samlSigningCertificate != null)
         {
             var samlEnvironment = new SamlEnvironment { SpSigningCertificate = _samlSigningCertificate };
@@ -335,6 +321,15 @@ public class SsoTestDataBuilder
                         org.Seats = org.Seats!.Value + 1;
                         throw new Exception("simulated partial-autoscale failure");
                     });
+            });
+        }
+
+        // 1.f Configure IFeatureService to reflect the PM42982_WantAssertionsSigned feature flag, if requested
+        if (_wantAssertionsSignedFlagEnabled is { } wantAssertionsSignedFlagEnabled)
+        {
+            factory.SubstituteService<Bitwarden.Server.Sdk.Features.IFeatureService>(svc =>
+            {
+                svc.IsEnabled(FeatureFlagKeys.PM42982_WantAssertionsSigned).Returns(wantAssertionsSignedFlagEnabled);
             });
         }
 

@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
-using Bit.Subscriptions.User.Commands;
 using Bit.Subscriptions.User.Handlers;
+using Bit.Subscriptions.User.Queries;
 using Bitwarden.Server.Sdk.Environment;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -13,11 +13,12 @@ namespace Bit.Subscriptions.User.Test;
 public class SubscriptionsUserServiceCollectionExtensionsTests
 {
     [Fact]
-    public void AddUserSubscriptions_RegistersTheCommandAndHandler()
+    public void AddUserSubscriptions_RegistersTheQueryAndHandlers()
     {
         var services = new ServiceCollection();
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<ISubscriptionDiscountService>());
         services.AddSingleton(Substitute.For<IUserService>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
@@ -25,7 +26,10 @@ public class SubscriptionsUserServiceCollectionExtensionsTests
         services.AddUserSubscriptions();
         using var scope = services.BuildServiceProvider().CreateScope();
 
-        Assert.IsType<PreviewPremiumUpgradeCommand>(scope.ServiceProvider.GetService<IPreviewPremiumUpgradeCommand>());
-        Assert.NotNull(scope.ServiceProvider.GetService<UserSubscriptionEndpointsHandler>());
+        Assert.IsType<GetSubscriptionUpgradePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionUpgradePreviewQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionUpgradePreviewHandler>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPreviewHandler>());
+        Assert.IsType<GetSubscriptionPurchasePreviewQuery>(scope.ServiceProvider.GetService<IGetSubscriptionPurchasePreviewQuery>());
+        Assert.NotNull(scope.ServiceProvider.GetService<GetAccountSubscriptionPurchasePreviewHandler>());
     }
 }

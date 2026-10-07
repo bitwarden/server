@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyEventHandlers;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
@@ -15,6 +16,7 @@ public static class PolicyServiceCollectionExtensions
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
         services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
         services.AddScoped<IPolicyQuery, PolicyQuery>();
+        services.AddScoped<IPreAccessEnforcerQuery, PreAccessEnforcerQuery>();
         services.AddScoped<IPolicyEventHandlerFactory, PolicyEventHandlerHandlerFactory>();
 
         services.AddScoped<IAutomaticUserConfirmationPolicyEnforcementHandler, AutomaticUserConfirmationPolicyEnforcementHandler>();

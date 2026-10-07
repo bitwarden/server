@@ -65,7 +65,10 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseMyItems BIT = 0,
     @ExemptFromBillingAutomation BIT = 0,
     @UseInviteLinks BIT = 0,
-    @UsePam BIT = 0
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null,
+    @PamSeatMinimum INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -139,7 +142,10 @@ BEGIN
         [UseMyItems] = @UseMyItems,
         [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
         [UseInviteLinks] = @UseInviteLinks,
-        [UsePam] = @UsePam
+        [UsePam] = @UsePam,
+        [PamSeats] = @PamSeats,
+        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats,
+        [PamSeatMinimum] = @PamSeatMinimum
     WHERE
         [Id] = @Id;
 END
