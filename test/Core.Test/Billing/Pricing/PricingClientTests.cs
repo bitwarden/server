@@ -235,6 +235,47 @@ public class PricingClientTests
     }
 
     [Fact]
+    public async Task GetPlan_WithPrivilegedControls_ReturnsPlanWithSeatMinimums()
+    {
+        // Arrange
+        var mockHttp = new MockHttpMessageHandler();
+        var planJson = CreatePlanJson("enterprise-annually", "Enterprise", "enterprise", 72M, "price_id",
+            privilegedControlsJson: """
+                {
+                    "seats": {
+                        "type": "scalable",
+                        "provided": 0,
+                        "price": 72,
+                        "stripePriceId": "privileged-controls-enterprise-seat-annually"
+                    },
+                    "seatMinimum": 10,
+                    "promotionalSeatMinimums": [4, 6, 8]
+                }
+                """);
+
+        mockHttp.When(HttpMethod.Get, "*/plans/organization/*")
+            .Respond("application/json", planJson);
+
+        var globalSettings = new GlobalSettings { SelfHosted = false };
+
+        var httpClient = new HttpClient(mockHttp)
+        {
+            BaseAddress = new Uri("https://test.com/")
+        };
+
+        var logger = Substitute.For<ILogger<PricingClient>>();
+        var pricingClient = new PricingClient(globalSettings, httpClient, logger);
+
+        // Act
+        var result = await pricingClient.GetPlan(PlanType.EnterpriseAnnually);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(10, result.PrivilegedControls.SeatMinimum);
+        Assert.Equal(new[] { 4, 6, 8 }, result.PrivilegedControls.PromotionalSeatMinimums);
+    }
+
+    [Fact]
     public async Task GetPlan_WhenPricingServiceReturnsError_ThrowsBillingException()
     {
         // Arrange
@@ -478,8 +519,10 @@ public class PricingClientTests
         string tier,
         decimal seatsPrice,
         string seatsStripePriceId,
-        int seatsQuantity = 1)
+        int seatsQuantity = 1,
+        string? privilegedControlsJson = null)
     {
+        var privilegedControls = privilegedControlsJson ?? "null";
         return $@"{{
             ""lookupKey"": ""{lookupKey}"",
             ""name"": ""{name}"",
@@ -491,6 +534,7 @@ public class PricingClientTests
                 ""price"": {seatsPrice},
                 ""stripePriceId"": ""{seatsStripePriceId}""
             }},
+            ""privilegedControls"": {privilegedControls},
             ""canUpgradeTo"": [],
             ""additionalData"": {{
                 ""nameLocalizationKey"": ""{lookupKey}Name"",

@@ -41,6 +41,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
         LegacyYear = plan.LegacyYear;
         PasswordManager = ToPasswordManagerPlanFeatures(plan);
         SecretsManager = plan.SecretsManager != null ? ToSecretsManagerPlanFeatures(plan) : null;
+        PrivilegedControls = plan.PrivilegedControls != null ? ToPrivilegedControlsPlanFeatures(plan) : null;
 
         return;
 
@@ -172,6 +173,20 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             MaxSeats = maxSeats,
             AllowSeatAutoscale = allowSeatAutoscale,
             MaxProjects = maxProjects
+        };
+    }
+
+    private static PrivilegedControlsPlanFeatures ToPrivilegedControlsPlanFeatures(Plan plan)
+    {
+        var privilegedControls = plan.PrivilegedControls!;
+
+        return new PrivilegedControlsPlanFeatures
+        {
+            StripeSeatPlanId = privilegedControls.Seats.StripePriceId,
+            SeatPrice = privilegedControls.Seats.Price,
+            BaseSeats = privilegedControls.Seats.Provided,
+            SeatMinimum = privilegedControls.SeatMinimum,
+            PromotionalSeatMinimums = privilegedControls.PromotionalSeatMinimums
         };
     }
 
