@@ -14,6 +14,7 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
+using Bit.DataMigrations;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
@@ -35,6 +36,15 @@ namespace Bit.Infrastructure.EntityFramework;
 
 public static class EntityFrameworkServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers every data migration and the services that run them. The chain tests check each registered migration
+    /// against its markers and test hook.
+    /// </summary>
+    public static IServiceCollection AddDataMigrations(this IServiceCollection services)
+    {
+        return services.AddDataMigrations<DatabaseContext>();
+    }
+
     public static void SetupEntityFramework(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
     {
         if (string.IsNullOrWhiteSpace(connectionString))

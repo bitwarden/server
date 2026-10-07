@@ -11,8 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Controllers;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
-using Bit.DataMigrations;
-using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -57,9 +56,9 @@ public class Startup
         }
         else
         {
-            services.AddSingleton<IDbMigrator, Infrastructure.EntityFramework.EfDbMigrator>();
+            services.AddSingleton<IDbMigrator, EfDbMigrator>();
         }
-        services.AddDataMigrations<DatabaseContext>();
+        services.AddDataMigrations();
         services.AddTestPlayIdTracking(globalSettings);
 
         // Context
