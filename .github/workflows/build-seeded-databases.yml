@@ -225,7 +225,7 @@ jobs:
               done
           # Clean up untagged references. Other matrix cells sweep the same repo,
           # so a delete that fails because the manifest is already gone is fine.
-          az acr manifest list-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}" --query "[?tags==null].digest" -o tsv \
+          az acr manifest list-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}" --query "[?tags[0]==null].digest" -o tsv \
             | while read -r d; do
                 az acr repository delete -n "${_AZ_REGISTRY_NAME}" --image "${REPO}@${d}" --yes \
                   || ! az acr manifest show-metadata -r "${_AZ_REGISTRY_NAME}" -n "${REPO}@${d}" >/dev/null 2>&1
