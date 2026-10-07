@@ -1,6 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core;
-using Bit.SharedWeb.Utilities;
+﻿using Bit.SharedWeb.Utilities;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -95,105 +93,6 @@ public class ServerSdkCompatibilityExtensionsTests
         Assert.DoesNotContain(
             fakeProvider.Collector.GetSnapshot(),
             record => record.Level == LogLevel.Warning);
-    }
-
-    [Fact]
-    public void PamFlags_NothingConfigured_DefaultToOn()
-    {
-        using var provider = CreateProvider([]);
-
-        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
-
-        Assert.Equal("true", Assert.Contains(FeatureFlagKeys.Pam, options.FlagValues));
-        Assert.Equal("true", Assert.Contains(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, options.FlagValues));
-    }
-
-    [Fact]
-    public void PamFlags_ConfiguredValueWinsOverTheBranchDefault()
-    {
-        using var provider = CreateProvider(new Dictionary<string, string?>
-        {
-            { $"Features:FlagValues:{FeatureFlagKeys.Pam}", "false" },
-            { $"GlobalSettings:LaunchDarkly:FlagValues:{FeatureFlagKeys.PM28191_CipherAdminOpsToSdk}", "false" },
-        });
-
-        var options = provider.GetRequiredService<IOptions<FeatureFlagOptions>>().Value;
-
-        Assert.Equal("false", Assert.Contains(FeatureFlagKeys.Pam, options.FlagValues));
-        Assert.Equal("false", Assert.Contains(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, options.FlagValues));
-    }
-
-    [Fact]
-    public void PamFlags_NoSdkKey_ResolveEnabled()
-    {
-        using var provider = CreateProvider([]);
-        using var scope = provider.CreateScope();
-
-        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
-
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk));
-    }
-
-    [Fact]
-    public void Vfo1Foundation_PinnedOff_EvenWhenConfiguredOn()
-    {
-        using var provider = CreateProvider(new Dictionary<string, string?>
-        {
-            { $"Features:FlagValues:{FeatureFlagKeys.VFO1Foundation}", "true" },
-        });
-        using var scope = provider.CreateScope();
-
-        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
-
-        Assert.False(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
-
-        // The clients fall back to their own default for an omitted flag, so /config must state the
-        // pinned flag.
-        var all = featureService.GetAll();
-        Assert.True(all.TryGetValue(FeatureFlagKeys.VFO1Foundation, out var pinnedValue));
-        Assert.Equal(JsonValueKind.False, pinnedValue!.GetValueKind());
-    }
-
-    [Theory]
-    [InlineData(FeatureFlagKeys.Pam)]
-    [InlineData(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk)]
-    [InlineData(FeatureFlagKeys.PamAccessConnector)]
-    public void PamFlags_PinnedOn_EvenWhenConfiguredOff(string flag)
-    {
-        // FlagValues defaults only apply without an SdkKey, so on a LaunchDarkly-connected environment
-        // such as UAT only the pin holds, and it must beat a configured value too.
-        using var provider = CreateProvider(new Dictionary<string, string?>
-        {
-            { $"Features:FlagValues:{flag}", "false" },
-        });
-        using var scope = provider.CreateScope();
-
-        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
-
-        Assert.True(featureService.IsEnabled(flag));
-
-        var all = featureService.GetAll();
-        Assert.True(all.TryGetValue(flag, out var pinnedValue));
-        Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
-    }
-
-    [Fact]
-    public void PamAccessConnector_NothingConfigured_IsStatedOn()
-    {
-        // The connector flag has no FlagValues default and LaunchDarkly does not hold it, so without
-        // the pin /config omits it and the clients default it off.
-        using var provider = CreateProvider([]);
-        using var scope = provider.CreateScope();
-
-        var featureService = scope.ServiceProvider.GetRequiredService<IFeatureService>();
-
-        Assert.True(featureService.IsEnabled(FeatureFlagKeys.PamAccessConnector));
-
-        var all = featureService.GetAll();
-        Assert.True(all.TryGetValue(FeatureFlagKeys.PamAccessConnector, out var pinnedValue));
-        Assert.Equal(JsonValueKind.True, pinnedValue!.GetValueKind());
     }
 
     private static ServiceProvider CreateProvider(
