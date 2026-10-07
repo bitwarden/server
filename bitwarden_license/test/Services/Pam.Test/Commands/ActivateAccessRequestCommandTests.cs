@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -291,6 +292,49 @@ public class ActivateAccessRequestCommandTests
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false);
     }
 
+    // Attempt before the mint, LeaseActivated outcome after.
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_Minted_EmitsActivatedAttemptThenOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.Minted);
+
+        await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now);
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt
+            && e.AccessRequestId == request.Id));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessRequestId == request.Id));
+    }
+
+    // Outcome kind follows the mint result.
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_SingleActiveLeaseConflict_EmitsAttemptThenRejectedOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
+            .Returns(true);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
+            .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
+
+        await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome));
+    }
+
     [Theory, BitAutoData]
     public async Task ActivateAsync_PinnedRuleStillAdmitsCaller_Mints(AccessRequest request)
     {
@@ -426,6 +470,24 @@ public class ActivateAccessRequestCommandTests
 
         // Re-check gates minting, not access; taking back an existing lease is revocation's job.
         Assert.Same(existing, await sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActivateAsync_ConditionsNoLongerAdmitCaller_EmitsAttemptThenRejectedOutcome(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        SetupPinnedRule(sutProvider, request, new IpAllowlistCondition { Cidrs = ["192.168.0.0/16"] });
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivated && e.Phase == AccessAuditEventPhase.Attempt));
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.LeaseActivationRejected && e.Phase == AccessAuditEventPhase.Outcome
+            && e.AccessLeaseId == null && e.Detail == nameof(DenyReason.NotWithinIpRange)));
     }
 
     private static SutProvider<ActivateAccessRequestCommand> Setup()

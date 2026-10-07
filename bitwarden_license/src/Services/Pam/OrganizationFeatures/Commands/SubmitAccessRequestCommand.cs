@@ -3,6 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Vault.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -25,6 +26,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
     private readonly ICurrentContext _currentContext;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IAccessRequestRepository _accessRequestRepository;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public SubmitAccessRequestCommand(
@@ -34,6 +36,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         ICurrentContext currentContext,
         IAccessLeaseRepository accessLeaseRepository,
         IAccessRequestRepository accessRequestRepository,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
@@ -42,6 +45,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         _currentContext = currentContext;
         _accessLeaseRepository = accessLeaseRepository;
         _accessRequestRepository = accessRequestRepository;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -145,8 +149,33 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         decision.SetNewId();
 
+        // The submission and the auto-approval are separate events, each recorded as an attempt and an outcome.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredDate = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            AccessRequestId = request.Id,
+            Detail = request.Reason,
+        };
+        var approvalAudit = audit with
+        {
+            Kind = AccessAuditEventKind.RequestApproved,
+            ActorId = null,
+            CorrelationId = Guid.NewGuid(),
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Attempt });
+
         // No lease here; the requester activates separately.
         await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+        await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
 
         return AccessRequestResult.Automatic(request, decision);
     }
@@ -202,7 +231,24 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
             CreationDate = now,
         };
 
+        // Attempt now, outcome once the request has an id.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RequestSubmitted,
+            OccurredDate = now,
+            OrganizationId = governingRule.OrganizationId,
+            ActorId = userId,
+            RequesterId = userId,
+            CollectionId = governingRule.CollectionId,
+            CipherId = cipherId,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var created = await _accessRequestRepository.CreateAsync(request);
+
+        await _accessAuditEventEmitter.EmitAsync(
+            audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });
 
         return AccessRequestResult.Human(created);
     }
