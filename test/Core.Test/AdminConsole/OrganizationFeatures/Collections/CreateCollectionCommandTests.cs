@@ -196,7 +196,7 @@ public class CreateCollectionCommandTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetCountByOrganizationIdAsync(organization.Id)
             .Returns(maxCollections);
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(true);
 

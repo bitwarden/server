@@ -26,7 +26,7 @@ public class PostUserCommand(
     IOrganizationService organizationService,
     IStripePaymentService paymentService,
     IScimContext scimContext,
-    IFeatureService featureService,
+    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
     ICreateStagedOrganizationUsersCommand createStagedOrganizationUsersCommand,
     TimeProvider timeProvider)
