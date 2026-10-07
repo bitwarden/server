@@ -5,11 +5,11 @@ using Bit.Invoicing.InvoicePreviews.Queries;
 
 namespace Bit.Subscriptions.Organization.Handlers;
 
-internal sealed class OrganizationSubscriptionEndpointsHandler(
+internal sealed class GetOrganizationSubscriptionPreviewHandler(
     IOrganizationRepository organizationRepository,
     IGetSubscriptionPreviewQuery getSubscriptionPreviewQuery)
 {
-    public async Task<SubscriptionPreview> GetPreviewAsync(Guid organizationId)
+    public async Task<SubscriptionPreview> HandleAsync(Guid organizationId)
     {
         var organization = await organizationRepository.GetByIdAsync(organizationId)
             ?? throw new NotFoundException();
