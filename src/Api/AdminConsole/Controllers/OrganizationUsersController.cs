@@ -916,7 +916,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     [HttpPost("/organizations/users/invite-link/confirm")]
-    [RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
+    [Bitwarden.Server.Sdk.Features.RequireFeature(FeatureFlagKeys.InviteLinkAutoConfirm)]
     public async Task<IResult> ConfirmInviteLink([FromBody] ConfirmOrganizationInviteLinkRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);

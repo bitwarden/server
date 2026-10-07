@@ -212,7 +212,7 @@ public class SingleOrgPolicyEventHandlerTests
             .HasVerifiedDomainsAsync(policyUpdate.OrganizationId)
             .Returns(true);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.VFO1Foundation)
             .Returns(vfo1Enabled);
 

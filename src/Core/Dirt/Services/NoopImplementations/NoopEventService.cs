@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
@@ -170,6 +171,11 @@ public class NoopEventService : IEventService
 
     public Task LogSendEventAsync(Guid sendOwnerUserId, Guid sendId, EventType type,
         IReadOnlyDictionary<Guid, SendAccessEventOrgContext>? organizationContext = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId)
     {
         return Task.FromResult(0);
     }

@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Authorization.Requirements;
+﻿using System.Security.Claims;
+using Bit.Api.AdminConsole.Authorization.Requirements;
 using Bit.OrganizationAuthorization;
 using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
@@ -43,18 +44,18 @@ internal static class AccessRuleEndpoints
             .WithName("Pam_AccessRules_GetBypassableCiphers")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
 
-        group.MapPost("", ([FromRoute] Guid orgId, AccessRuleRequestModel model, AccessRuleEndpointsHandler handler) => handler.Post(orgId, model))
+        group.MapPost("", ([FromRoute] Guid orgId, AccessRuleRequestModel model, AccessRuleEndpointsHandler handler, ClaimsPrincipal user) => handler.Post(user, orgId, model))
             .WithName("Pam_AccessRules_Post")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
 
-        group.MapPut("{id:guid}", ([FromRoute] Guid orgId, Guid id, AccessRuleRequestModel model, AccessRuleEndpointsHandler handler) => handler.Put(orgId, id, model))
+        group.MapPut("{id:guid}", ([FromRoute] Guid orgId, Guid id, AccessRuleRequestModel model, AccessRuleEndpointsHandler handler, ClaimsPrincipal user) => handler.Put(user, orgId, id, model))
             .WithName("Pam_AccessRules_Put")
             .RequireAuthorization(new AuthorizeAttribute<ManageAccessRulesRequirement>());
 
         group.MapDelete("{id:guid}",
-            async ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) =>
+            async ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler, ClaimsPrincipal user) =>
             {
-                await handler.Delete(orgId, id);
+                await handler.Delete(user, orgId, id);
                 return TypedResults.NoContent();
             })
             .WithName("Pam_AccessRules_Delete")

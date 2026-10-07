@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
@@ -453,6 +454,23 @@ public class GroupsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/groups", request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_WithSharedCollection_ReturnsSuccess()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+        var collection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory, _organization.Id, "Test Collection");
+
+        var request = new GroupRequestModel
+        {
+            Name = "New Group",
+            Collections = [new SelectionReadOnlyRequestModel { Id = collection.Id, Manage = true }]
+        };
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/groups", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
