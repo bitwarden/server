@@ -568,8 +568,8 @@ public class CipherService : ICipherService
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
     {
-        // Moving a leasing-gated cipher (changing its folder) requires a valid active lease. The gate only
-        // reads each cipher's id, so lightweight placeholders avoid an extra repository read.
+        // Moving a leasing-gated cipher between folders requires a valid active lease. The gate only reads each
+        // cipher's id, so id-only placeholders avoid an extra repository read.
         await _cipherLeaseGate.EnsureCanMutateManyAsync(movingUserId, cipherIds.Select(id => new Cipher { Id = id }));
 
         if (destinationFolderId.HasValue)

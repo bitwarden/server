@@ -5,7 +5,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Authorization;
@@ -17,14 +16,10 @@ using Bitwarden.Server.Sdk.Features;
 namespace Bit.Services.Pam.Services;
 
 /// <summary>
-/// The commercial <see cref="ICipherLeaseGate" />, replacing <c>UnrestrictedCipherLeaseGate</c> in builds that
-/// include this library.
+/// The commercial <see cref="ICipherLeaseGate" />. A lease releases a gated cipher's secrets to a single read only,
+/// since a bulk read would persist them on the client. Mutation follows the single read; its write-return follows the
+/// bulk read.
 /// </summary>
-/// <remarks>
-/// A single read releases a gated cipher's secrets to a caller holding a valid active lease; a bulk read never
-/// does, since a sync or list would persist the secret in the client's local store. Mutation follows the single
-/// read (a lease-holder may edit, delete, restore, or move), but a mutation's write-return follows the bulk read.
-/// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
     private readonly IFeatureService _featureService;
@@ -68,12 +63,12 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        return await IsBlockedAsync(userId, cipher)
+        return await IsBlockedAsync(userId, cipher.Id, cipher.OrganizationId)
             ? null
             : FullCipherAccess.ForCipher(cipher.Id);
     }
 
-    public async Task<FullCipherAccess> AuthorizeReadManyAsync(
+    public Task<FullCipherAccess> AuthorizeReadManyAsync(
         Guid userId,
         IEnumerable<Cipher> ciphers,
         IEnumerable<CollectionDetails>? collections,
@@ -81,11 +76,10 @@ public class CipherLeaseGate : ICipherLeaseGate
     {
         if (!Enabled)
         {
-            return FullCipherAccess.Unrestricted();
+            return Task.FromResult(FullCipherAccess.Unrestricted());
         }
 
-        var gated = await GetGatedCipherIdsAsync(collections, collectionCiphersByCipher);
-        return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id).Where(id => !gated.Contains(id)));
+        return Task.FromResult(BuildBulkWitness(ciphers, collections, collectionCiphersByCipher));
     }
 
     public async Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
@@ -95,42 +89,11 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        var cipherList = ciphers.ToList();
-        if (!await AnyCanGateAsync(cipherList))
-        {
-            return FullCipherAccess.ForCiphers(cipherList.Select(c => c.Id));
-        }
-
         var gated = await GetCallerGatedCipherIdsAsync(userId);
-        return FullCipherAccess.ForCiphers(cipherList.Select(c => c.Id).Where(id => !gated.Contains(id)));
+        return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id).Where(id => !gated.Contains(id)));
     }
 
-    public async Task<FullCipherAccess> AuthorizeReadManyAsync(
-        Guid userId,
-        IEnumerable<Cipher> ciphers,
-        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher)
-    {
-        if (!Enabled)
-        {
-            return FullCipherAccess.Unrestricted();
-        }
-
-        var cipherList = ciphers.ToList();
-        if (!await AnyCanGateAsync(cipherList))
-        {
-            return FullCipherAccess.ForCiphers(cipherList.Select(c => c.Id));
-        }
-
-        collectionCiphersByCipher ??= (await _collectionCipherRepository.GetManyByUserIdAsync(userId))
-            .GroupBy(cc => cc.CipherId)
-            .ToDictionary(g => g.Key);
-        return await AuthorizeReadManyAsync(userId, cipherList,
-            await _collectionRepository.GetManyByUserIdAsync(userId), collectionCiphersByCipher);
-    }
-
-    /// <remarks>
-    /// Ignores leases: a lease does not unlock the echo of a mutation.
-    /// </remarks>
+    /// <remarks>Ignores leases: a lease does not unlock the echo of a mutation.</remarks>
     public async Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher)
     {
         if (!Enabled)
@@ -138,7 +101,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        return await IsGatedForCallerAsync(userId, cipher, _timeProvider.GetUtcNow().UtcDateTime)
+        return await IsGatedForCallerAsync(userId, cipher.Id, _timeProvider.GetUtcNow().UtcDateTime)
             ? null
             : FullCipherAccess.ForCipher(cipher.Id);
     }
@@ -155,7 +118,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        if (await AdminNeedsNoLeaseAsync(organizationId))
+        if (await IsExemptAsync(organizationId))
         {
             return FullCipherAccess.ForCipher(cipher.Id);
         }
@@ -172,7 +135,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        if (await IsBlockedAsync(userId, cipher))
+        if (await IsBlockedAsync(userId, cipher.Id, cipher.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -187,11 +150,10 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        var cipherList = ciphers.ToList();
-        var cipherIds = cipherList.Select(c => c.Id).Distinct().ToList();
-        if (!await AnyCanGateAsync(cipherList))
+        var cipherIds = ciphers.Select(c => c.Id).Distinct().ToList();
+        if (cipherIds.Count == 0)
         {
-            return FullCipherAccess.ForCiphers(cipherIds);
+            return FullCipherAccess.ForCiphers([]);
         }
 
         var gated = await GetCallerGatedCipherIdsAsync(userId);
@@ -206,7 +168,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        if (await AdminNeedsNoLeaseAsync(organizationId))
+        if (await IsExemptAsync(organizationId))
         {
             return FullCipherAccess.ForCipher(cipher.Id);
         }
@@ -238,7 +200,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return FullCipherAccess.Unrestricted();
         }
 
-        if (await AdminNeedsNoLeaseAsync(organizationId))
+        if (await IsExemptAsync(organizationId))
         {
             return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id));
         }
@@ -275,7 +237,7 @@ public class CipherLeaseGate : ICipherLeaseGate
         }
 
         var cipherIds = ciphers.Select(c => c.Id).Distinct().ToList();
-        if (cipherIds.Count == 0 || await AdminNeedsNoLeaseAsync(organizationId))
+        if (cipherIds.Count == 0 || await IsExemptAsync(organizationId))
         {
             return FullCipherAccess.ForCiphers(cipherIds);
         }
@@ -291,53 +253,19 @@ public class CipherLeaseGate : ICipherLeaseGate
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 
     /// <summary>
-    /// Whether the "/admin" decisions need no lease: the organization gates nothing, or the caller is an Owner or
-    /// Admin of an organization that lets admins access all collection items.
+    /// Whether the caller is an Owner or Admin of an organization that lets admins access all collection items,
+    /// and so needs no lease on the "/admin" decisions.
     /// </summary>
-    private async Task<bool> AdminNeedsNoLeaseAsync(Guid organizationId)
+    private async Task<bool> IsExemptAsync(Guid organizationId)
     {
+        if (_currentContext.GetOrganization(organizationId) is not
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin })
+        {
+            return false;
+        }
+
         var ability = await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId);
-        if (!CanGate(ability))
-        {
-            return true;
-        }
-
-        return _currentContext.GetOrganization(organizationId) is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
-               && ability is { AllowAdminAccessToAllCollectionItems: true };
-    }
-
-    /// <summary>
-    /// Whether an access rule can gate anything in the organization: whether it uses Privileged Controls. Rules left
-    /// in an organization without it gate nothing. An unknown organization can gate, so the full check runs.
-    /// </summary>
-    private static bool CanGate(OrganizationAbility? ability) => ability is not { UsePam: false };
-
-    /// <summary>
-    /// The subset of <paramref name="organizationIds" /> in which an access rule can gate anything.
-    /// </summary>
-    private async Task<ISet<Guid>> GetGatingOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
-    {
-        var ids = organizationIds.Distinct().ToList();
-        if (ids.Count == 0)
-        {
-            return new HashSet<Guid>();
-        }
-
-        var abilities = await _organizationAbilityCacheService.GetOrganizationAbilitiesAsync(ids);
-        return ids.Where(id => CanGate(abilities.TryGetValue(id, out var ability) ? ability : null)).ToHashSet();
-    }
-
-    /// <summary>
-    /// Whether any of <paramref name="ciphers" /> belongs to an organization in which an access rule can gate. A
-    /// personal cipher is never gated.
-    /// </summary>
-    private async Task<bool> AnyCanGateAsync(IEnumerable<Cipher> ciphers)
-    {
-        var organizationIds = ciphers
-            .Where(c => c.OrganizationId.HasValue)
-            .Select(c => c.OrganizationId!.Value);
-        return (await GetGatingOrganizationIdsAsync(organizationIds)).Count > 0;
+        return ability is { AllowAdminAccessToAllCollectionItems: true };
     }
 
     /// <summary>
@@ -389,40 +317,41 @@ public class CipherLeaseGate : ICipherLeaseGate
     private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
         collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
 
-    /// <summary>
-    /// <see cref="GetGatedCipherIdsAsync" /> over the caller's own collections and mappings, loaded in two queries.
-    /// </summary>
+    /// <summary>Authorizes the non-gated subset of <paramref name="ciphers" /> in memory, ignoring leases.</summary>
+    private FullCipherAccess BuildBulkWitness(
+        IEnumerable<Cipher> ciphers,
+        IEnumerable<CollectionDetails>? collections,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher)
+    {
+        var gated = GetGatedCipherIds(collections, collectionCiphersByCipher);
+        var authorized = ciphers.Select(c => c.Id).Where(id => !gated.Contains(id));
+        return FullCipherAccess.ForCiphers(authorized);
+    }
+
+    /// <summary><see cref="GetGatedCipherIds" /> over the caller's own collections and mappings.</summary>
     private async Task<ISet<Guid>> GetCallerGatedCipherIdsAsync(Guid userId)
     {
         var collections = await _collectionRepository.GetManyByUserIdAsync(userId);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(userId);
-        return await GetGatedCipherIdsAsync(collections,
-            collectionCiphers.GroupBy(cc => cc.CipherId).ToDictionary(g => g.Key));
+        return GetGatedCipherIds(collections, collectionCiphers.GroupBy(cc => cc.CipherId).ToDictionary(g => g.Key));
     }
 
     /// <summary>
-    /// The cipher ids reachable <em>only</em> through leasing-enabled collections, per
-    /// <see cref="CollectionDetails.HasEnabledAccessRule" />, in organizations where an access rule can gate.
+    /// The cipher ids reachable only through collections with <see cref="CollectionDetails.HasEnabledAccessRule" />.
+    /// A collection read path that omits that column silently gates nothing, since Dapper does not error on it.
     /// </summary>
-    /// <remarks>
-    /// A user-owned cipher is never gated. A collection read path that omits <c>HasEnabledAccessRule</c> silently
-    /// gates nothing, since Dapper does not error on a missing column. A null <paramref name="collections" /> or
-    /// <paramref name="collectionCiphersByCipher" /> is treated as empty.
-    /// </remarks>
-    private async Task<ISet<Guid>> GetGatedCipherIdsAsync(
+    private ISet<Guid> GetGatedCipherIds(
         IEnumerable<CollectionDetails>? collections,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher)
     {
         var gated = new HashSet<Guid>();
-        if (collections == null || collectionCiphersByCipher == null)
+        if (!Enabled || collections == null || collectionCiphersByCipher == null)
         {
             return gated;
         }
 
-        var ruledCollections = collections.Where(c => c.HasEnabledAccessRule).ToList();
-        var gatingOrganizationIds = await GetGatingOrganizationIdsAsync(ruledCollections.Select(c => c.OrganizationId));
-        var leasingCollectionIds = ruledCollections
-            .Where(c => gatingOrganizationIds.Contains(c.OrganizationId))
+        var leasingCollectionIds = collections
+            .Where(c => c.HasEnabledAccessRule)
             .Select(c => c.Id)
             .ToHashSet();
         if (leasingCollectionIds.Count == 0)
@@ -441,49 +370,35 @@ public class CipherLeaseGate : ICipherLeaseGate
         return gated;
     }
 
-    /// <summary>
-    /// True if the cipher is leasing-gated for the caller and they hold no valid active lease.
-    /// </summary>
-    private async Task<bool> IsBlockedAsync(Guid userId, Cipher cipher)
+    /// <summary>True if the cipher is leasing-gated for the caller and they hold no valid active lease.</summary>
+    private async Task<bool> IsBlockedAsync(Guid userId, Guid cipherId, Guid? organizationId)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        if (!await IsGatedForCallerAsync(userId, cipher, now))
+        if (!await IsGatedForCallerAsync(userId, cipherId, now))
         {
             return false;
         }
 
-        if (!LeaseCanRelease(cipher.OrganizationId))
+        if (!LeaseCanRelease(organizationId))
         {
             return true;
         }
 
-        var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipher.Id, now);
+        var activeLease = await _accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(userId, cipherId, now);
         return activeLease is null;
     }
 
     /// <summary>
-    /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything: whether the holder is
-    /// still licensed.
+    /// Whether a lease in <paramref name="organizationId" /> still authorizes anything, which requires the holder to be
+    /// licensed. Claims-based, so de-licensing takes effect at the member's next token refresh.
     /// </summary>
-    /// <remarks>
-    /// Claims-based, so a de-licensed member's leases stop working at their next token refresh.
-    /// </remarks>
     private bool LeaseCanRelease(Guid? organizationId) =>
         organizationId is { } id && _currentContext.AccessPam(id);
 
-    /// <summary>
-    /// Whether an enabled access rule governs the cipher for this caller. A personal cipher, or one in an organization
-    /// without Privileged Controls, is never gated.
-    /// </summary>
-    private async Task<bool> IsGatedForCallerAsync(Guid userId, Cipher cipher, DateTime now)
+    /// <summary>Whether an enabled access rule governs the cipher for this caller.</summary>
+    private async Task<bool> IsGatedForCallerAsync(Guid userId, Guid cipherId, DateTime now)
     {
-        if (cipher.OrganizationId is not { } organizationId
-            || !CanGate(await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)))
-        {
-            return false;
-        }
-
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
-        return await _resolver.ResolveAsync(userId, cipher.Id, signals) is not null;
+        return await _resolver.ResolveAsync(userId, cipherId, signals) is not null;
     }
 }

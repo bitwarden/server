@@ -56,7 +56,6 @@ public class UpdateRotationSettingsCommand : IUpdateRotationSettingsCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Recompute-on-edit: a new cron re-derives NextRotationAt from now; a cleared cron clears it.
         config.ScheduleCron = scheduleCron;
         config.RotateOnAccessEnd = rotateOnAccessEnd;
         config.NextRotationAt = _scheduleCalculator.GetNextOccurrence(scheduleCron, now);

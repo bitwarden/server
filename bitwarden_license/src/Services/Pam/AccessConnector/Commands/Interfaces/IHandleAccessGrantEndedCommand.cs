@@ -3,10 +3,9 @@
 public interface IHandleAccessGrantEndedCommand
 {
     /// <summary>
-    /// Reacts to a lease on <paramref name="cipherId"/> ending — revoke, self-end, or natural expiry. No-op if
-    /// the <see cref="Bit.Core.FeatureFlagKeys.PamAccessConnector"/> flag is off, the cipher has no config, or
-    /// the config doesn't opt in or is paused/disabled. On an automatic target, offers a job
-    /// (<see cref="Bit.Pam.Enums.PamRotationSource.AccessEnd"/>); on a manual target, pulls the obligation due.
+    /// Reacts to a lease on <paramref name="cipherId"/> ending. Gated on
+    /// <see cref="Bit.Core.FeatureFlagKeys.PamAccessConnector"/>; for an enabled config that opts in, offers an
+    /// access-end job on an automatic target or pulls a manual target's rotation due.
     /// </summary>
     Task HandleAsync(Guid cipherId);
 }

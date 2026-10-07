@@ -9,7 +9,6 @@ public class AccessStatusDerivationTests
     private static readonly DateTime _open = new(2026, 8, 27, 13, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _lapsed = new(2026, 8, 27, 11, 0, 0, DateTimeKind.Utc);
 
-    // Full derivation table: recorded action against the clock, with the sticky-Approved carve-outs.
     [Fact]
     public void ComputeStatus_NoneOpenWindow_IsPending() =>
         Assert.Equal(AccessRequestStatus.Pending,
@@ -32,13 +31,13 @@ public class AccessStatusDerivationTests
 
     [Fact]
     public void ComputeStatus_ApprovedWithLease_CannotLapseOutOfApproved() =>
-        // An activated request's story continues on its lease; the lease's own end is the lease read's business.
+        // An activated request continues on its lease, whose end the lease read reports.
         Assert.Equal(AccessRequestStatus.Approved,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.Approved, true, false, _lapsed, _now));
 
     [Fact]
     public void ComputeStatus_ApprovedExtension_CannotLapseOutOfApproved() =>
-        // The client's extensionsByLeaseId folding filters on approved, so this carve-out is load-bearing.
+        // The client's extensionsByLeaseId folding filters on approved, so an extension has to stay Approved.
         Assert.Equal(AccessRequestStatus.Approved,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.Approved, false, true, _lapsed, _now));
 
@@ -60,7 +59,7 @@ public class AccessStatusDerivationTests
 
     [Fact]
     public void ComputeStatus_WindowEndIsExclusive_BoundaryInstantIsExpired() =>
-        // NotAfter is exclusive everywhere (active reads use NotAfter > now), so the boundary instant is outside.
+        // Matches the active reads, which use NotAfter > now.
         Assert.Equal(AccessRequestStatus.Expired,
             AccessStatusDerivation.ComputeStatus(AccessRequestAction.None, false, false, _now, _now));
 
@@ -68,8 +67,6 @@ public class AccessStatusDerivationTests
     public void ComputeStatus_UnknownAction_Throws() =>
         Assert.Throws<ArgumentOutOfRangeException>(() =>
             AccessStatusDerivation.ComputeStatus((AccessRequestAction)99, false, false, _open, _now));
-
-    // The lease table: an early end beats the clock; only an untouched lease is the clock's to judge.
 
     [Fact]
     public void ComputeLeaseStatus_NoneOpenWindow_IsActive() =>
