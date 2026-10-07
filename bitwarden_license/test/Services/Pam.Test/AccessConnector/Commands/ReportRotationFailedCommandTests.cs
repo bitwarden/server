@@ -168,7 +168,7 @@ public class ReportRotationFailedCommandTests
         job.RotationConfigId = config.Id;
         attempt.JobId = job.Id;
         accessConnector.OrganizationId = config.OrganizationId;
-        // On-demand / access-end only -- see PamRotationSweepService's timeout phase for why this must stay null.
+        // With no schedule, nothing would clear a pushed-out NextRotationAt, so the config would stay due forever.
         config.ScheduleCron = null;
         SetupAttempt(sutProvider, attempt);
         sutProvider.GetDependency<IPamRotationJobRepository>()
