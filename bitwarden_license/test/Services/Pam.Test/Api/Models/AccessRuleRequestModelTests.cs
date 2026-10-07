@@ -39,8 +39,7 @@ public class AccessRuleRequestModelTests
     }
 
     /// <summary>
-    /// The conditions document is persisted as the client sent it rather than round-tripped through the condition
-    /// types, so anything this version does not model still reaches whoever reads the rule back.
+    /// Not round-tripped through the condition types, so properties this version does not model survive.
     /// </summary>
     [Fact]
     public void ToAccessRule_StoresTheConditionsDocumentVerbatim()
@@ -55,9 +54,8 @@ public class AccessRuleRequestModelTests
     }
 
     /// <summary>
-    /// Conditions is bound as <c>object</c>, which is a <see cref="JsonElement"/> over the wire but an ordinary CLR
-    /// value for anything constructing the model in process. The fallback has to serialize that value rather than
-    /// store its <c>ToString()</c>.
+    /// Conditions is a <see cref="JsonElement"/> over the wire but a plain CLR value when the model is built in
+    /// process, which has to be serialized rather than stored as its <c>ToString()</c>.
     /// </summary>
     [Fact]
     public void ToAccessRule_SerializesConditionsThatAreNotAJsonElement()

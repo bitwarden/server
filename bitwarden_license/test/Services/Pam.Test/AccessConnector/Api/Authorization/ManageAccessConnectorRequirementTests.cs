@@ -6,22 +6,11 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.AccessConnector.Api.Authorization;
 
-/// <summary>
-/// An access connector holds the organization key and rewrites credentials at the target system, so authority over the
-/// fleet is narrower than the usual custom-permission requirement: Owners, Admins, and Custom users holding
-/// ManageRotation, and nobody else. In particular ManageAccessRules is not a substitute — it is authority over rule
-/// authorship, not the connectors that rotate credentials — and neither is a provider managing the organization,
-/// which is why this requirement implements <c>IOrganizationRequirement</c> directly instead of deriving from
-/// <c>BasePermissionRequirement</c>.
-/// </summary>
 public class ManageAccessConnectorRequirementTests
 {
     private readonly ManageAccessConnectorRequirement _sut = new();
 
-    /// <summary>
-    /// Records whether the requirement consulted provider status. It should never need to: the callback costs a
-    /// database query, and a provider has no authority over the rotation fleet either way.
-    /// </summary>
+    /// <summary>The provider callback costs a database query and cannot change the outcome.</summary>
     private bool _providerConsulted;
 
     private Task<bool> IsProviderUserForOrg(bool result = true)
@@ -44,8 +33,7 @@ public class ManageAccessConnectorRequirementTests
     [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizeCustomUserWithManageAccessRules()
     {
-        // ManageAccessRules is authority over who may lease a credential, not over the access
-        // connectors that rotate it.
+        // ManageAccessRules governs who may lease a credential, not the access connectors that rotate it.
         var claims = Member(OrganizationUserType.Custom, new Permissions { ManageAccessRules = true });
 
         Assert.False(await _sut.AuthorizeAsync(claims, () => IsProviderUserForOrg()));
@@ -62,7 +50,6 @@ public class ManageAccessConnectorRequirementTests
     [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizeCustomUserWithEveryOtherPermission()
     {
-        // ManageRotation is deliberately excluded: it's the one permission that would authorize.
         var claims = Member(OrganizationUserType.Custom, new Permissions
         {
             AccessEventLogs = true,
@@ -93,8 +80,7 @@ public class ManageAccessConnectorRequirementTests
     [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizeProviderForTheOrganization()
     {
-        // A provider user is not a member, so they arrive with no organization claims. BasePermissionRequirement's
-        // final arm would authorize them here; this requirement must not.
+        // A provider user arrives with no organization claims.
         Assert.False(await _sut.AuthorizeAsync(null, () => IsProviderUserForOrg()));
     }
 

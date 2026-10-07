@@ -4,9 +4,8 @@ using Bit.Core.Utilities;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// Grants a <see cref="PamAccessConnector"/> the ability to claim rotation jobs against a
-/// <see cref="PamTargetSystem"/>. Invariant <c>OneAssignmentPerConnectorTarget</c> — at most one assignment may exist
-/// for a given access connector/target pair.
+/// Lets a <see cref="PamAccessConnector"/> claim rotation jobs on a <see cref="PamTargetSystem"/>. At most one exists
+/// per pair (<c>OneAssignmentPerConnectorTarget</c>).
 /// </summary>
 public class PamAccessConnectorTargetAssignment : ITableObject<Guid>
 {

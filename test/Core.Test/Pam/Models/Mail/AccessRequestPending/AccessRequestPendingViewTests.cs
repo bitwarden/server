@@ -11,7 +11,6 @@ public class AccessRequestPendingViewTests
 {
     private static readonly Guid _requestId = Guid.Parse("6d1f2b7c-0b8a-4a1e-9f0d-2f7b3c4d5e6a");
 
-    /// <summary>The only spec that renders, so the only one that catches a misnamed or misplaced <c>.hbs</c>.</summary>
     [Fact]
     public async Task RenderAsync_CarriesTheRequesterWindowAndLinkInBothTemplates()
     {

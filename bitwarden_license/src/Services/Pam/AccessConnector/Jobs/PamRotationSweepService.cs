@@ -65,8 +65,7 @@ public class PamRotationSweepService : IPamRotationSweepService
         {
             try
             {
-                // OfferAsync re-checks can_offer and no-ops silently on ActiveJobExists/ConfigNotOfferable -- the
-                // sweep does not need to inspect the outcome, only isolate genuine failures per config.
+                // OfferAsync no-ops on an active job or a config it cannot offer, so only genuine failures throw.
                 await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.Scheduled);
             }
             catch (Exception ex)
@@ -87,9 +86,8 @@ public class PamRotationSweepService : IPamRotationSweepService
             {
                 var config = await _configRepository.GetByIdAsync(job.RotationConfigId);
 
-                // Only a config that actually has a schedule gets its next rotation pushed out. A cron-less
-                // config has nothing to clear the value again, so it would stay enrolled in the due sweep
-                // permanently.
+                // Only a scheduled config is pushed out. A cron-less config has nothing to clear NextRotationAt
+                // again, so it would stay in the due sweep forever.
                 if (config is { ScheduleCron: not null })
                 {
                     config.NextRotationAt = now + _options.Value.FailureRetryDelay;
@@ -131,8 +129,8 @@ public class PamRotationSweepService : IPamRotationSweepService
         {
             try
             {
-                // Machinery event: single Outcome-phase, no human actor. The job's claim fields were already cleared by
-                // ReleaseExpiredLeasesAsync -- ClaimedByAccessConnectorId here is the pre-clear value it returned.
+                // Machinery event: single Outcome-phase, no human actor. ClaimedByAccessConnectorId is the claimant
+                // from before ReleaseExpiredLeasesAsync cleared it.
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.RotationJobReleased,

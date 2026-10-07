@@ -14,9 +14,8 @@ public interface IRotationScheduleCalculator
     DateTime? GetNextOccurrence(string? cron, DateTime afterUtc);
 
     /// <summary>
-    /// Validates that <paramref name="cron"/> is parseable and that the gap between its next two occurrences is at
-    /// least <paramref name="minInterval"/> (the abuse floor). A null <paramref name="cron"/> is always valid,
-    /// meaning no scheduled rotation; otherwise throws <see cref="Bit.Core.Exceptions.BadRequestException"/>.
+    /// Throws <see cref="Bit.Core.Exceptions.BadRequestException"/> unless <paramref name="cron"/> parses and its next
+    /// two occurrences are at least <paramref name="minInterval"/> apart. A null cron, meaning no schedule, is valid.
     /// </summary>
     void ValidateSchedule(string? cron, TimeSpan minInterval);
 }

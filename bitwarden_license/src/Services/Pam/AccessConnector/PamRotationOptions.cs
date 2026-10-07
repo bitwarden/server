@@ -1,10 +1,8 @@
 ﻿namespace Bit.Services.Pam.AccessConnector;
 
 /// <summary>
-/// Timing knobs for PAM credential rotation, bound from <c>globalSettings:pam:rotation</c> (see
-/// <c>AddPamServices</c>). Every consumer injects <see cref="Microsoft.Extensions.Options.IOptions{TOptions}"/> of
-/// this type rather than reading configuration directly, so the defaults below are the single source of truth for
-/// an unconfigured environment.
+/// Timing settings for PAM credential rotation, bound from <c>globalSettings:pam:rotation</c>. The defaults below
+/// apply to an unconfigured environment.
 /// </summary>
 public class PamRotationOptions
 {
@@ -17,21 +15,26 @@ public class PamRotationOptions
     /// <summary>The base of the exponential retry backoff: <c>RetryBaseDelay * 2^(erroredCount-1)</c>.</summary>
     public TimeSpan RetryBaseDelay { get; set; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>The claim lease length: how long a claiming access connector has before the release sweep may reclaim its job.</summary>
+    /// <summary>
+    /// The claim lease length. Past it, the release sweep may reclaim a job whose access connector has gone offline.
+    /// </summary>
     public TimeSpan ReleaseDelay { get; set; } = TimeSpan.FromMinutes(15);
 
-    /// <summary>How far out a config's next rotation is pushed after its job fails outright (budget exhausted).</summary>
+    /// <summary>How far a scheduled config's next rotation is pushed out after its job fails or times out.</summary>
     public TimeSpan FailureRetryDelay { get; set; } = TimeSpan.FromHours(1);
 
-    /// <summary>How long since its last heartbeat an access connector is still considered connected (spec <c>ConnectorConnection</c>).</summary>
+    /// <summary>
+    /// How long after its last heartbeat an access connector still counts as connected (spec
+    /// <c>ConnectorConnection</c>).
+    /// </summary>
     public TimeSpan AccessConnectorOfflineAfter { get; set; } = TimeSpan.FromMinutes(5);
 
-    /// <summary>The minimum gap between conditional heartbeat writes, so a polling access connector does not hammer its row.</summary>
+    /// <summary>Minimum gap between heartbeat writes, so a polling access connector does not hammer its row.</summary>
     public TimeSpan HeartbeatMinInterval { get; set; } = TimeSpan.FromMinutes(1);
 
-    /// <summary>The minimum gap the schedule calculator enforces between two consecutive occurrences of a config's cron.</summary>
+    /// <summary>Minimum gap between two consecutive occurrences of a config's cron.</summary>
     public TimeSpan MinScheduleInterval { get; set; } = TimeSpan.FromMinutes(15);
 
-    /// <summary>The minimum gap between two on-demand triggers of the same config (abuse floor).</summary>
+    /// <summary>Minimum gap between a config's last rotation and an on-demand trigger (abuse floor).</summary>
     public TimeSpan OnDemandCooldown { get; set; } = TimeSpan.FromMinutes(1);
 }

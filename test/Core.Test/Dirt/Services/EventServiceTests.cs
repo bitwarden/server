@@ -992,7 +992,7 @@ public class EventServiceTests
             e.OrganizationId == organizationId &&
             e.ActingUserId == actingUserId &&
             e.UserId == requesterId &&
-            // Cipher/collection are first-class fields, which files the event under the item's own history.
+            // Cipher/collection are top-level event fields, which files the event under the item's own history.
             e.CipherId == cipherId &&
             e.CollectionId == collectionId &&
             e.AccessRequestId == accessRequestId &&

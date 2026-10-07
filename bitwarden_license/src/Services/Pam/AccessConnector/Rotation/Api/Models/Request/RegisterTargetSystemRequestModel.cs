@@ -4,24 +4,19 @@ using Bit.Pam.Enums;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Request;
 
 /// <summary>
-/// Registers a target system, automatic or manual (spec <c>RegisterAutomaticTargetSystem</c> /
-/// <c>RegisterManualTargetSystem</c>) -- method-discriminated on <see cref="Method"/>: an
-/// <see cref="PamTargetSystemMethod.Automatic"/> target carries <see cref="Kind"/>, <see cref="PasswordPolicy"/>,
-/// and <see cref="SupportsSessionTermination"/>; a <see cref="PamTargetSystemMethod.Manual"/> target carries an
-/// optional <see cref="PasswordPolicy"/> and neither of the other two.
+/// Registers a target system (spec <c>RegisterAutomaticTargetSystem</c> / <c>RegisterManualTargetSystem</c>). An
+/// automatic target carries <see cref="Kind"/>, <see cref="PasswordPolicy"/> and
+/// <see cref="SupportsSessionTermination"/>; a manual one at most a <see cref="PasswordPolicy"/>.
 /// </summary>
 public class RegisterTargetSystemRequestModel : IValidatableObject
 {
-    /// <summary>The target system's display name, shown wherever targets are listed and managed.</summary>
     [Required]
     [StringLength(200)]
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// How the target's credentials are rotated -- by an access connector (automatic) or by a human out of band
-    /// (manual). Decides which of the remaining fields apply. Nullable so an omitted value is rejected rather than
-    /// binding to <see cref="PamTargetSystemMethod.Automatic"/>, which would register an automatic target for a
-    /// caller who never asked for one.
+    /// Rotated by an access connector (automatic) or by a person out of band (manual). Nullable so an omitted value
+    /// is rejected rather than read as <see cref="PamTargetSystemMethod.Automatic"/>.
     /// </summary>
     [Required]
     [EnumDataType(typeof(PamTargetSystemMethod))]
@@ -31,16 +26,12 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
     [EnumDataType(typeof(PamTargetSystemKind))]
     public PamTargetSystemKind? Kind { get; set; }
 
-    /// <summary>
-    /// The password-generation constraints the access connector must satisfy when rotating credentials on this target.
-    /// Required for an automatic target; on a manual one it is optional guidance for the operator rotating by hand,
-    /// and nothing enforces it.
-    /// </summary>
+    /// <summary>Required for an automatic target; unenforced operator guidance on a manual one.</summary>
     public PamPasswordPolicyRequestModel? PasswordPolicy { get; set; }
 
     /// <summary>
-    /// Whether the integration can terminate the account's live sessions after a rotation; gates whether rotation
-    /// configs on this target may request session termination.
+    /// Whether the integration can terminate live sessions after a rotation; configs on this target can request
+    /// termination only when true.
     /// </summary>
     public bool? SupportsSessionTermination { get; set; }
 
@@ -48,8 +39,7 @@ public class RegisterTargetSystemRequestModel : IValidatableObject
     {
         if (Method is null)
         {
-            // [Required] reports the omission on its own. Falling through would additionally report the manual
-            // shape rules, blaming fields the caller never had the chance to get wrong.
+            // [Required] reports the omission; falling through would also blame fields under the manual rules.
             yield break;
         }
 

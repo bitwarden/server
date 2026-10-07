@@ -6,11 +6,9 @@ namespace Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 public interface IReportRotationFailedCommand
 {
     /// <summary>
-    /// Records a failed rotation attempt. <paramref name="failureReason"/> is truncated to 500 characters, never
-    /// rejected, since raw target-system error output can echo credentials. Retries the job while the retry
-    /// budget remains, otherwise fails it and pushes the config's next rotation out by
-    /// <c>FailureRetryDelay</c>. Throws <see cref="Bit.Core.Exceptions.NotFoundException"/> for an unknown
-    /// attempt id and <see cref="Bit.Core.Exceptions.ConflictException"/> for a stale report.
+    /// Records a failed attempt, retrying or failing its job. <paramref name="failureReason"/> is truncated, never
+    /// rejected. Throws <see cref="Bit.Core.Exceptions.NotFoundException"/> for an unknown attempt and
+    /// <see cref="Bit.Core.Exceptions.ConflictException"/> for a stale report.
     /// </summary>
     Task<PamRotationAttempt> ReportFailedAsync(
         Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState);

@@ -3,9 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The password-generation policy for an automatic <see cref="Entities.PamTargetSystem"/>, persisted as the JSON
-/// document in <see cref="Entities.PamTargetSystem.PasswordPolicy"/>. The access connector generates a candidate
-/// password against these constraints before writing it to the target.
+/// The password-generation policy stored in <see cref="Entities.PamTargetSystem.PasswordPolicy"/>. The access
+/// connector generates candidate passwords against it.
 /// </summary>
 public record PamPasswordPolicy
 {
@@ -16,10 +15,9 @@ public record PamPasswordPolicy
     public bool IncludeDigits { get; init; }
     public bool IncludeSymbols { get; init; }
 
-    /// <summary>Serializes a policy for storage in <see cref="Entities.PamTargetSystem.PasswordPolicy"/>.</summary>
     public static string Serialize(PamPasswordPolicy policy) => JsonSerializer.Serialize(policy);
 
-    /// <summary>Deserializes a target system's stored <c>PasswordPolicy</c> JSON. Null in, null out.</summary>
+    /// <summary>Null or blank in, null out.</summary>
     public static PamPasswordPolicy? Parse(string? json) =>
         string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<PamPasswordPolicy>(json);
 }

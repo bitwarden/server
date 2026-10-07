@@ -49,8 +49,8 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
     }
 
     /// <summary>
-    /// Copies the event into the organization's event log. The PAM store remains the system of record; this is a
-    /// lossy projection, since <c>dbo.Event</c> has no column for the event's phase or PAM-specific subjects.
+    /// Copies the event into the organization's event log. The PAM store remains the system of record, since
+    /// <c>dbo.Event</c> has no column for the event's phase, rule or detail.
     /// </summary>
     private async Task FanOutToOrganizationEventLogAsync(AccessAuditEventData auditEvent)
     {
@@ -88,7 +88,7 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         }
         catch (Exception ex)
         {
-            // Best-effort: the PAM store is already written, so a failure here only loses the org log copy.
+            // Best-effort: the action has already happened, so a failure here must not fail it.
             _logger.LogError(ex,
                 "Failed to write PAM audit event {Kind} to the organization event log. The event is recorded in the PAM audit trail.",
                 auditEvent.Kind);

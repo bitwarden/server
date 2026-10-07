@@ -76,7 +76,7 @@ public class RegisterTargetSystemCommand : IRegisterTargetSystemCommand
             RevisionDate = now,
         };
 
-        // audit (before/after): the target has no id until it is created, so the outcome carries it.
+        // Attempt now, outcome once the target has an id.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemRegistered,

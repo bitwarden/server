@@ -39,8 +39,7 @@ public class DeleteRotationConfigCommand : IDeleteRotationConfigCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): names are captured before the delete, since the durable record of them is this
-        // event, not the row.
+        // Attempt before the delete, outcome after.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.RotationConfigDeleted,
@@ -54,7 +53,7 @@ public class DeleteRotationConfigCommand : IDeleteRotationConfigCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Repository re-checks the active-job guard under lock, so a job claimed since the read above blocks the delete.
+        // The repository re-checks under lock, so a job claimed since the read above blocks the delete.
         if (!await _configRepository.DeleteWithJobsAsync(configId))
         {
             throw new BadRequestException("This rotation config has an active job.");

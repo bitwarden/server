@@ -149,8 +149,8 @@ public class ServerSdkCompatibilityExtensionsTests
         Assert.False(featureService.IsEnabled(FeatureFlagKeys.VFO1Foundation));
         Assert.True(featureService.IsEnabled(FeatureFlagKeys.Pam));
 
-        // The clients fall back to their own default for an omitted flag, so /config has to
-        // state the pinned flag outright rather than leave it out.
+        // The clients fall back to their own default for an omitted flag, so /config must state the
+        // pinned flag.
         var all = featureService.GetAll();
         Assert.True(all.TryGetValue(FeatureFlagKeys.VFO1Foundation, out var pinnedValue));
         Assert.Equal(JsonValueKind.False, pinnedValue!.GetValueKind());
@@ -162,9 +162,8 @@ public class ServerSdkCompatibilityExtensionsTests
     [InlineData(FeatureFlagKeys.PamAccessConnector)]
     public void PamFlags_PinnedOn_EvenWhenConfiguredOff(string flag)
     {
-        // The FlagValues defaults only feed the data source when no SdkKey is set, so they never
-        // reach a LaunchDarkly-connected environment - UAT reported the flags as false with the
-        // defaults in place. Only the pin gets there, so it has to beat a value too.
+        // FlagValues defaults only apply without an SdkKey, so on a LaunchDarkly-connected environment
+        // such as UAT only the pin holds, and it must beat a configured value too.
         using var provider = CreateProvider(new Dictionary<string, string?>
         {
             { $"Features:FlagValues:{flag}", "false" },
@@ -183,10 +182,8 @@ public class ServerSdkCompatibilityExtensionsTests
     [Fact]
     public void PamAccessConnector_NothingConfigured_IsStatedOn()
     {
-        // The connector flag carries no FlagValues default, and LaunchDarkly has no
-        // pm-42354-rotation-daemon flag either - GetAll() reports only the keys LaunchDarkly
-        // holds, so /config omitted it and the clients fell back to their own FALSE default.
-        // The pin has to both resolve on and be stated outright for the surface to open.
+        // The connector flag has no FlagValues default and LaunchDarkly does not hold it, so without
+        // the pin /config omits it and the clients default it off.
         using var provider = CreateProvider([]);
         using var scope = provider.CreateScope();
 

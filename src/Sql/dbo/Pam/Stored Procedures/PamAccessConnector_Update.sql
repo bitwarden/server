@@ -7,7 +7,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Name + Status only; callers use this narrow parameter set (no ApiKeyId/LastHeartbeatAt).
+    -- ApiKeyId and OrganizationId never change, and LastHeartbeatAt has its own conditional bump.
     UPDATE
         [dbo].[PamAccessConnector]
     SET

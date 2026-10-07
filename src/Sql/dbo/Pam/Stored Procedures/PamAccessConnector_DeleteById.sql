@@ -11,7 +11,6 @@ BEGIN
 
     BEGIN TRANSACTION
 
-    -- The stored row decides which credential goes; the caller's ApiKeyId is not trusted.
     SELECT @ApiKeyId = [ApiKeyId]
     FROM [dbo].[PamAccessConnector]
     WHERE [Id] = @Id

@@ -43,7 +43,7 @@ public static class ServiceCollectionExtensions
         // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
 
-        // Rule evaluation engine. Pure and stateless, so a singleton is safe.
+        // Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
@@ -88,7 +88,6 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IRequesterMailNotifier, RequesterMailNotifier>();
         services.TryAddScoped<ILeaseRevokedMailNotifier, LeaseRevokedMailNotifier>();
 
-        // Registered explicitly, unlike a parameterless-constructor filter, since it resolves services of its own.
         services.AddScoped<AccessConnectorHeartbeatEndpointFilter>();
 
         services.AddPamRotationServices(configuration);
@@ -98,16 +97,14 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers PAM credential rotation: the schedule calculator, the admin/dispatch commands, and the read
-    /// queries under <c>Rotation/</c>. Options are bound from <c>globalSettings:pam:rotation</c> (see
-    /// <see cref="PamRotationOptions"/> for defaults); the Quartz sweep jobs and Dapper repositories are registered
-    /// elsewhere (commercial job host / <c>DapperServiceCollectionExtensions</c>).
+    /// Registers credential rotation. The sweep jobs (<c>AddPamJobServices</c>) and repositories are registered
+    /// elsewhere.
     /// </summary>
     private static IServiceCollection AddPamRotationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<PamRotationOptions>(configuration.GetSection("globalSettings:pam:rotation"));
 
-        // Stateless and cheap to construct; shared across the process like IAccessRuleEngine.
+        // Stateless, so a singleton is safe.
         services.AddSingleton<IRotationScheduleCalculator, RotationScheduleCalculator>();
 
         services.AddScoped<IRegisterAccessConnectorCommand, RegisterAccessConnectorCommand>();
@@ -145,10 +142,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers the PAM Minimal API endpoints (see <c>MapPamEndpoints</c>) so the offline OpenAPI generator
-    /// (<c>dotnet swagger tofile</c>) can discover them — it never runs the <c>Configure</c> pipeline where the
-    /// endpoints are normally mapped. The discovery and swagger-only gating live in
-    /// <see cref="EndpointDataSourceServiceCollectionExtensions.AddOpenApiEndpointDataSource"/>.
+    /// Exposes the PAM endpoints to the offline OpenAPI generator (<c>dotnet swagger tofile</c>), which never runs the
+    /// <c>Configure</c> pipeline that maps them.
     /// </summary>
     private static IServiceCollection AddPamOpenApiEndpointDataSource(this IServiceCollection services)
         => services.AddOpenApiEndpointDataSource(endpoints => endpoints.MapPamEndpoints());

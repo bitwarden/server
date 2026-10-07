@@ -5,11 +5,9 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Entities;
 
 /// <summary>
-/// One offer of rotation work for a <see cref="PamRotationConfig"/>. Invariant <c>AtMostOneActiveJobPerConfig</c>:
-/// a config has at most one unresolved job whose timeout the sweep has not yet recorded. Every write that ends a claim
-/// clears <see cref="ClaimedByAccessConnectorId"/> and <see cref="ClaimedAt"/>; a claim that times out keeps them,
-/// since a timeout writes nothing. The executing access connector's history lives on <see cref="PamRotationAttempt"/>
-/// instead.
+/// One offer of rotation work for a <see cref="PamRotationConfig"/>. A config has at most one unresolved job whose
+/// timeout is not yet recorded (<c>AtMostOneActiveJobPerConfig</c>). A timeout writes nothing, so a timed-out claim
+/// keeps its claim fields.
 /// </summary>
 public class PamRotationJob : ITableObject<Guid>
 {
@@ -20,10 +18,8 @@ public class PamRotationJob : ITableObject<Guid>
     public PamRotationSource Source { get; set; }
 
     /// <summary>
-    /// Who holds the job, or how it ended — a record of what happened, not current standing; the wire's
-    /// <see cref="PamRotationJobStatus"/> is derived from it against <see cref="ExpiresAt"/> via
-    /// <see cref="PamRotationStatusDerivation.ComputeJobStatus"/>. Doubles as the concurrency token the transition
-    /// procedures' guarded UPDATEs key off.
+    /// Who holds the job, or how it ended; <see cref="PamRotationStatusDerivation.ComputeJobStatus"/> derives the
+    /// status from it against <see cref="ExpiresAt"/>. Doubles as the concurrency token for the guarded UPDATEs.
     /// </summary>
     public PamRotationJobAction Action { get; set; }
 
@@ -37,7 +33,7 @@ public class PamRotationJob : ITableObject<Guid>
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
-    /// <summary>The earliest time this job can be claimed — pushed out on retry (exponential backoff) or release.</summary>
+    /// <summary>Pushed out by a retry's exponential backoff or by a release.</summary>
     public DateTime NextClaimableAt { get; set; }
 
     /// <summary>

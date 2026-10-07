@@ -17,7 +17,7 @@ namespace Bit.Services.Pam.Test.Services;
 [SutProviderCustomize]
 public class AccessAuditEventEmitterTests
 {
-    /// <summary>An event of a kind with no organization event log equivalent, so only the PAM store is exercised.</summary>
+    /// <summary>A kind with no organization event log equivalent, so only the PAM store is exercised.</summary>
     private static AccessAuditEventData AnEvent(Guid organizationId) =>
         AnEventOfKind(organizationId, AccessAuditEventKind.RotationOffered);
 
@@ -41,7 +41,6 @@ public class AccessAuditEventEmitterTests
         await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
     }
 
-    // The kill switch stops the write.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithSqlAuditLoggingDisabled_WritesNothing(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -81,7 +80,6 @@ public class AccessAuditEventEmitterTests
         await sutProvider.Sut.EmitAsync(auditEvent);
     }
 
-    // The kill switch is scoped to its own store; the organization event log is a separate sink.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithSqlAuditLoggingDisabled_StillWritesToTheOrganizationEventLog(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -152,8 +150,7 @@ public class AccessAuditEventEmitterTests
                 c.SystemUser == null));
     }
 
-    // A rule governs many collections and dbo.Event has no column for the rule itself, so the row records who
-    // changed rules and when, and nothing more. Asserted so the empty subject reads as intended, not as a drop.
+    // dbo.Event has no rule column, and a rule spans many collections, so the row records only who changed it and when.
     [Theory, BitAutoData]
     public async Task EmitAsync_WithARuleKind_CarriesTheActorButNoSubject(
         Guid organizationId, Guid actorId, Guid accessRuleId,
@@ -214,8 +211,8 @@ public class AccessAuditEventEmitterTests
             .LogPamAccessEventAsync(default, default!);
     }
 
-    // The rotation and fleet kinds stay PAM-internal: their subjects (config, job, access connector, target) have no
-    // column in dbo.Event, so a fan-out would file high-volume machinery rows with nothing to identify them.
+    // Rotation and fleet subjects have no dbo.Event column, so a fan-out would file high-volume rows with nothing to
+    // identify them.
     [Theory]
     [BitAutoData(AccessAuditEventKind.RotationOffered)]
     [BitAutoData(AccessAuditEventKind.RotationSucceeded)]

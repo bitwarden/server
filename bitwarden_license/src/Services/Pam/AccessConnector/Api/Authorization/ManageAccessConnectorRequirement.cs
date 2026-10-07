@@ -6,15 +6,9 @@ using Bit.Core.Models.Data;
 namespace Bit.Services.Pam.AccessConnector.Api.Authorization;
 
 /// <summary>
-/// Requires authority over an organization's rotation fleet and configuration: an Owner, an Admin, or a Custom user
-/// holding <see cref="Permissions.ManageRotation"/>.
+/// Requires an Owner, an Admin, or a Custom user holding <see cref="Permissions.ManageRotation"/>. Providers are
+/// excluded, since an access connector holds the organization key and rotation rewrites vault credentials.
 /// </summary>
-/// <remarks>
-/// This implements <see cref="IOrganizationRequirement"/> directly rather than deriving from
-/// <c>BasePermissionRequirement</c>, whose final arm authorizes any provider managing the organization. Registering an
-/// access connector hands it the organization key and rotation rewrites the credentials inside the vault, neither of
-/// which is a provider's to hold or change. A non-member has no organization claims and so is never authorized.
-/// </remarks>
 public class ManageAccessConnectorRequirement : IOrganizationRequirement
 {
     public Task<bool> AuthorizeAsync(CurrentContextOrganization? organizationClaims,

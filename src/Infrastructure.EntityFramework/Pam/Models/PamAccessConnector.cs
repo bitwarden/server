@@ -5,10 +5,6 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
-/// <summary>
-/// The EF persistence model for <see cref="Bit.Pam.Entities.PamAccessConnector"/>, mirroring
-/// [dbo].[PamAccessConnector].
-/// </summary>
 public class PamAccessConnector : Bit.Pam.Entities.PamAccessConnector
 {
     public virtual Organization? Organization { get; set; }

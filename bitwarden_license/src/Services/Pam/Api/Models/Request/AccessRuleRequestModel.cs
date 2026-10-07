@@ -6,47 +6,30 @@ namespace Bit.Services.Pam.Api.Models.Request;
 
 public class AccessRuleRequestModel
 {
-    /// <summary>
-    /// The rule's display name, shown wherever rules are listed and managed.
-    /// </summary>
     [Required]
     [StringLength(256)]
     public string Name { get; set; } = null!;
 
-    /// <summary>
-    /// Free-text describing the rule's intent. Has no effect on evaluation; surfaced to admins only.
-    /// </summary>
+    /// <summary>Free text describing the rule's intent; has no effect on evaluation.</summary>
     public string? Description { get; set; }
 
-    /// <summary>
-    /// When false, the rule is inactive and does not gate access for the collections it governs. Defaults to
-    /// true so a request that omits the field creates an active rule.
-    /// </summary>
+    /// <summary>When false, the rule does not gate access to its collections. Defaults to true when omitted.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// The conditions that decide how access is granted under this rule (human approval, source IP
-    /// restriction, etc). Sent as a JSON array of condition objects and stored verbatim; an empty array
-    /// means requests under it resolve automatically.
+    /// A JSON array of condition objects, such as human approval or a source IP restriction, stored verbatim. An
+    /// empty array means requests under the rule resolve automatically.
     /// </summary>
     [Required]
     public object Conditions { get; set; } = null!;
 
-    /// <summary>
-    /// When true, the rule enforces a per-cipher singleton (at most one active lease per cipher across all users).
-    /// </summary>
+    /// <summary>When true, at most one active lease per cipher across all users.</summary>
     public bool SingleActiveLease { get; set; }
 
-    /// <summary>
-    /// Default lease duration in seconds, used to pre-fill a request opened under this rule. Null means the
-    /// backend default applies.
-    /// </summary>
+    /// <summary>Pre-fills the duration of a request under this rule. Null means the global default.</summary>
     public int? DefaultLeaseDurationSeconds { get; set; }
 
-    /// <summary>
-    /// Hard ceiling on the duration of any single lease granted under this rule, in seconds. Null means no
-    /// per-rule cap.
-    /// </summary>
+    /// <summary>Ceiling on any single lease under this rule. Null means no per-rule cap.</summary>
     public int? MaxLeaseDurationSeconds { get; set; }
 
     /// <summary>
@@ -62,8 +45,7 @@ public class AccessRuleRequestModel
     public int? MaxExtensionDurationSeconds { get; set; }
 
     /// <summary>
-    /// The complete set of collections this rule governs. The rule's associations are replaced to match
-    /// exactly this set; an empty array clears all associations.
+    /// The complete set of collections this rule governs, replacing its current ones. An empty array clears them.
     /// </summary>
     [Required]
     public IEnumerable<Guid> Collections { get; set; } = null!;

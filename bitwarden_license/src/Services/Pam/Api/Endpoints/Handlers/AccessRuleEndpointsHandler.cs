@@ -11,14 +11,10 @@ using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-rules</c> resource. The Minimal API endpoints (see
-/// <c>AccessRuleEndpoints</c>) resolve this handler from DI.
+/// Handler for the <c>organizations/{orgId}/access-rules</c> resource. Authorization runs in the middleware (see
+/// <c>AccessRuleEndpoints</c>), so the handler and commands only check that a rule reached by id belongs to the
+/// route's organization.
 /// </summary>
-/// <remarks>
-/// Access to the organization is already settled by the time a handler runs — <c>AccessRuleEndpoints</c> authorizes
-/// the group and the write endpoints through the standard authorization middleware. What is left here is resource
-/// scoping: confirming a rule reached by ID actually belongs to the organization on the route.
-/// </remarks>
 public class AccessRuleEndpointsHandler(
     IUserService userService,
     IAccessRuleRepository repository,

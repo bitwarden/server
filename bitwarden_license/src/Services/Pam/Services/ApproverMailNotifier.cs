@@ -37,8 +37,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
 
     public async Task NotifyPendingRequestAsync(AccessRequest request)
     {
-        // Duplicates the guard inside IAccessMailNotifier so the organization and requester reads below do not run on
-        // every submission in the flag-off state -- which is every submission on self-host.
+        // Repeats IAccessMailNotifier's flag guard to skip the reads below when the flag is off, as on self-host.
         if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
@@ -46,9 +45,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
 
         try
         {
-            // A requester may well manage the collection they are requesting against -- an org Owner always does when
-            // AllowAdminAccessToAllCollectionItems is on -- but DecideAccessRequestCommand refuses a self-decision, so
-            // mailing them would send the one person who already knows to an action the server rejects.
+            // The requester may manage the collection too, but cannot decide their own request.
             var approverIds = (await _collectionRepository.GetManagingUserIdsAsync(request.CollectionId))
                 .Where(id => id != request.RequesterId)
                 .ToList();
@@ -57,7 +54,6 @@ public class ApproverMailNotifier : IApproverMailNotifier
                 return;
             }
 
-            // Two independent reads, fetched concurrently.
             var organizationTask = _organizationRepository.GetByIdAsync(request.OrganizationId);
             var requesterTask = _userRepository.GetByIdAsync(request.RequesterId);
             await Task.WhenAll(organizationTask, requesterTask);
@@ -86,7 +82,7 @@ public class ApproverMailNotifier : IApproverMailNotifier
         }
         catch (Exception ex)
         {
-            // Ids only: neither the approvers' nor the requester's address, and never the request's reason.
+            // Ids only; no addresses and never the request's reason.
             _logger.LogError(ex,
                 "PAM pending-request mail for access request {AccessRequestId} could not be sent.", request.Id);
         }

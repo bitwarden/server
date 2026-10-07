@@ -20,7 +20,7 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        // Unordered, matching PamTargetSystem_ReadByOrganizationId -- callers sort for display.
+        // Unordered, as in PamTargetSystem_ReadByOrganizationId; callers sort for display.
         var targets = await dbContext.PamTargetSystems
             .Where(t => t.OrganizationId == organizationId)
             .AsNoTracking()
@@ -29,17 +29,16 @@ public class PamTargetSystemRepository : Repository<CoreEntity, EfModel, Guid>, 
     }
 
     /// <remarks>
-    /// Mirrors PamTargetSystem_DeleteWithAssignments. The assignment -> target FK is NO ACTION, so the assignments
-    /// go before the target row; a rotation config naming the target refuses the delete instead of cascading, since
-    /// it is the configuration for a credential rather than an edge between two rows.
+    /// Mirrors PamTargetSystem_DeleteWithAssignments: assignments go first (NO ACTION FK), and a config naming the
+    /// target refuses the delete, since it configures a credential rather than linking two rows.
     /// </remarks>
     public async Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable makes the config re-check and the deletes one indivisible step, so a config created in
-        // between can't end up naming a deleted target.
+        // Serializable makes the config re-check and the deletes one step, so a config created in between cannot
+        // name a deleted target.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             System.Data.IsolationLevel.Serializable);
 

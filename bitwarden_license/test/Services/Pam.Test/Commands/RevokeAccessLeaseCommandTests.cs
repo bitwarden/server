@@ -33,7 +33,6 @@ public class RevokeAccessLeaseCommandTests
     {
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
-        // userId is neither the lease holder (lease.RequesterId is a different AutoFixture Guid) nor a manager.
         sutProvider.GetDependency<IAccessLeaseRepository>().GetByIdAsync(lease.Id).Returns(lease);
         sutProvider.GetDependency<IApproverCollectionAccessQuery>()
             .CanManageCollectionAsync(userId, lease.CollectionId).Returns(false);
@@ -121,7 +120,7 @@ public class RevokeAccessLeaseCommandTests
 
         await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
 
-        // An operator (manager, not the holder) ended it → settles to Revoked.
+        // A manager who is not the holder ends it as Revoked.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1).RevokeAsync(
             lease,
             AccessLeaseAction.Revoked,

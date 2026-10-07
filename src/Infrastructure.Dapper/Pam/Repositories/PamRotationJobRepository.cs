@@ -26,8 +26,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
     public async Task<PamRotationJobCreateOutcome> CreateGuardedAsync(PamRotationJob job)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        // Property names line up 1:1 with the sproc's parameters (including plain, non-OUTPUT @Id, since the
-        // caller already assigned it), passed straight through like the generic base.
+        // Passed straight through: the properties match the procedure's parameters, including a plain input @Id.
         var result = await connection.ExecuteScalarAsync<int>(
             "[dbo].[PamRotationJob_Create]",
             job,
@@ -54,8 +53,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         TimeSpan releaseDelay)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        // The sproc always returns exactly one row (the Outcome column plus a uniform set of nullable snapshot
-        // columns) whose names match PamRotationClaimResult's properties exactly, so it maps directly.
+        // The procedure always returns one row, with columns matching PamRotationClaimResult.
         return await connection.QuerySingleAsync<PamRotationClaimResult>(
             "[dbo].[PamRotationJob_Claim]",
             new
@@ -179,8 +177,7 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         PamRotationSyncState syncState, DateTime now, int maxAttempts, TimeSpan retryBaseDelay)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        // Mapped through a nullable-safe row since the Rejected path returns NULL for ErroredAttemptCount, and
-        // PamRotationFailureResult's is non-nullable; coalesced to 0.
+        // The Rejected row returns NULL for ErroredAttemptCount, which PamRotationFailureResult cannot hold.
         var row = await connection.QuerySingleAsync<MarkErroredRow>(
             "[dbo].[PamRotationAttempt_MarkErrored]",
             new
@@ -231,7 +228,6 @@ public class PamRotationJobRepository : BaseRepository, IPamRotationJobRepositor
         return results.ToList();
     }
 
-    /// <summary>Raw shape of PamRotationAttempt_MarkErrored's result row — see the null-handling note in <see cref="MarkAttemptErroredAsync"/>.</summary>
     private sealed class MarkErroredRow
     {
         public int Outcome { get; set; }

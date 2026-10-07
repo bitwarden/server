@@ -1,9 +1,8 @@
 ﻿namespace Bit.Pam.Models;
 
 /// <summary>
-/// One lease the natural-expiry sweep found newly ended (window closed on its own, no revoke or cancel) — the
-/// row <c>IAccessLeaseRepository.ExpireDueAsync</c> returns for the LeaseExpired audit event and the
-/// rotation access-end trigger.
+/// A lease the natural-expiry sweep found newly ended, for the LeaseExpired audit event and the rotation access-end
+/// trigger.
 /// </summary>
 public record PamExpiredLease
 {

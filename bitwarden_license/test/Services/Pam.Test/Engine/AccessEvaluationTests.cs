@@ -40,7 +40,7 @@ public class AccessEvaluationTests
     [Fact]
     public void Combine_DenyOutranksApproval_Denies()
     {
-        // Deny beats a pending approval regardless of order: there is nothing to approve if access is barred.
+        // Deny beats a pending approval in either order, since there is nothing to approve once access is barred.
         var result = AccessEvaluation.Combine([AccessEvaluation.RequiresApproval, AccessEvaluation.Deny(DenyReason.NotWithinIpRange)]);
 
         Assert.Equal(AccessEvaluationOutcome.Deny, result.Outcome);
@@ -59,7 +59,6 @@ public class AccessEvaluationTests
     [Fact]
     public void Combine_FirstDenyWins_PreservesItsReason()
     {
-        // Combine short-circuits on the first deny, so its reason is the one reported.
         var result = AccessEvaluation.Combine(
         [
             AccessEvaluation.Deny(DenyReason.UnsupportedCondition),

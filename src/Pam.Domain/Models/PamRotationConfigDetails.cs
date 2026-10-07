@@ -3,19 +3,14 @@ using Bit.Pam.Enums;
 
 namespace Bit.Pam.Models;
 
-/// <summary>
-/// A <see cref="PamRotationConfig"/> together with its target system's display fields and whether it currently has
-/// an active job — the list/detail view model for the rotation-configs admin surface.
-/// </summary>
 public class PamRotationConfigDetails : PamRotationConfig
 {
     public string TargetSystemName { get; set; } = null!;
     public PamTargetSystemMethod TargetSystemMethod { get; set; }
 
     /// <summary>
-    /// Whether a job still occupies the config — spec <c>has_active_job</c>: unresolved, and its timeout not yet
-    /// recorded by the sweep. Can trail a job's derived TimedOut by one sweep, so the sweep's reschedule lands before
-    /// the config is offered again.
+    /// Spec <c>has_active_job</c>: a job is unresolved and its timeout not yet recorded by the sweep. Can trail a job's
+    /// derived TimedOut by one sweep, so the sweep's reschedule lands before the config is offered again.
     /// </summary>
     public bool HasActiveJob { get; set; }
 

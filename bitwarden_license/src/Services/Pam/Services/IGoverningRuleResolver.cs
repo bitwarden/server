@@ -6,19 +6,15 @@ namespace Bit.Services.Pam.Services;
 public interface IGoverningRuleResolver
 {
     /// <summary>
-    /// Resolves the access rule that governs <paramref name="cipherId"/> for the caller, or null if not
-    /// leasing-gated: every collection they can reach it through must carry an enabled rule, and one that does
-    /// not is an escape. Oldest rule wins (earliest creation date, ties broken on rule id), structurally, whatever
-    /// a newer path would evaluate to for <paramref name="signals"/>. Conditions are returned unevaluated.
+    /// Resolves the rule that governs <paramref name="cipherId"/> for the caller, or null unless every collection they
+    /// reach it through has an enabled rule. The oldest rule wins regardless of <paramref name="signals"/>; conditions
+    /// are returned unevaluated.
     /// </summary>
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
 
     /// <summary>
-    /// Loads the rule a request pinned at submit (<c>AccessRequest.RuleId</c>) instead of re-resolving, so a rule
-    /// created or re-pointed since cannot take over.
+    /// Loads the rule a request pinned at submit instead of re-resolving, so a rule created or re-pointed since cannot
+    /// take over. Null if the rule is disabled or deleted.
     /// </summary>
-    /// <param name="ruleId">The pinned rule.</param>
-    /// <param name="collectionId">The collection the request was made through, carried on the request.</param>
-    /// <returns>The pinned rule, or null if it no longer gates access (disabled or deleted).</returns>
     Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId);
 }

@@ -42,7 +42,7 @@ public class SetAccessConnectorStatusCommand : ISetAccessConnectorStatusCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): record the attempt, then the outcome around the status write.
+        // Attempt before the write, outcome after.
         var audit = new AccessAuditEventData
         {
             Kind = enable ? AccessAuditEventKind.AccessConnectorEnabled : AccessAuditEventKind.AccessConnectorDisabled,

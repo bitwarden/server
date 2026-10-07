@@ -3,18 +3,16 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// The result of <c>IPamRotationJobRepository.MarkAttemptErroredAsync</c>. On
-/// <see cref="PamRotationAttemptResolveOutcome.Resolved"/>, <see cref="JobStatus"/> reports whether the job was
-/// retried (<see cref="Enums.PamRotationJobStatus.Pending"/>, retry budget remaining) or failed outright
-/// (<see cref="Enums.PamRotationJobStatus.Failed"/>, retry budget exhausted).
+/// The result of recording a failed attempt. On <see cref="PamRotationAttemptResolveOutcome.Resolved"/>,
+/// <see cref="JobStatus"/> is Pending for a retry, or Failed once the retry budget is exhausted.
 /// </summary>
 public class PamRotationFailureResult
 {
     public required PamRotationAttemptResolveOutcome Outcome { get; init; }
 
-    /// <summary>Null for <see cref="PamRotationAttemptResolveOutcome.Rejected"/> (a stale report).</summary>
+    /// <summary>Null for <see cref="PamRotationAttemptResolveOutcome.Rejected"/>.</summary>
     public PamRotationJobStatus? JobStatus { get; init; }
 
-    /// <summary>The number of Errored attempts recorded against the job, including this one — checked against <c>MaxAttempts</c>.</summary>
+    /// <summary>Errored attempts on the job including this one, as checked against <c>MaxAttempts</c>.</summary>
     public int ErroredAttemptCount { get; init; }
 }

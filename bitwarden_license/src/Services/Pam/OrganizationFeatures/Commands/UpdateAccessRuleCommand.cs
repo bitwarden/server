@@ -44,8 +44,7 @@ public class UpdateAccessRuleCommand : IUpdateAccessRuleCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Persist a plain AccessRule: the AccessRuleDetails returned by GetDetailsByIdAsync carries an extra
-        // CollectionIds property that the base ReplaceAsync would otherwise forward to AccessRule_Update.
+        // Not the fetched AccessRuleDetails: ReplaceAsync would pass its extra CollectionIds to AccessRule_Update.
         var toPersist = new AccessRule
         {
             Id = existing.Id,

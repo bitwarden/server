@@ -19,7 +19,7 @@ CREATE TABLE [dbo].[AccessRule] (
 );
 GO
 
--- A rule's name is unique per organization; a hard delete frees the name naturally.
+-- A rule's name is unique per organization; a hard delete frees it.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessRule_OrganizationId_Name]
     ON [dbo].[AccessRule] ([OrganizationId] ASC, [Name] ASC);
 GO

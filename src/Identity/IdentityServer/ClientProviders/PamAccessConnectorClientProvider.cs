@@ -11,22 +11,17 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// Resolves the OAuth client-credentials <see cref="Client"/> for a PAM access connector. The access connector's
-/// machine credential is a generic <c>dbo.ApiKey</c> row (mirrors Secrets Manager's machine-account mechanic in
-/// <see cref="SecretsManagerApiKeyProvider"/>) with a null <c>ServiceAccountId</c>, owner-linked via
-/// <c>PamAccessConnector.ApiKeyId</c>. Authentication is denied unless the access connector is Enabled and its
-/// organization has PAM enabled and licensed. The access token's lifetime is shorter than the platform default, so an
-/// already-issued token outlives a disable, delete, or license lapse by minutes rather than an hour. The server never
-/// holds the access connector's plaintext org key, only the ciphertext handed back on every token response.
+/// Resolves the client-credentials <see cref="Client"/> for a PAM access connector, whose credential is a
+/// <c>dbo.ApiKey</c> row as in <see cref="SecretsManagerApiKeyProvider"/>. The server never holds the plaintext org
+/// key, only the ciphertext each token response carries.
 /// </summary>
 internal class PamAccessConnectorClientProvider : IClientProvider
 {
     public const string AccessConnectorPrefix = "access-connector";
 
     /// <summary>
-    /// How long an access connector's access token stays valid. Shorter than the one-hour platform default: an access
-    /// connector polls continuously, so it re-authenticates cheaply, and the shorter window bounds how long a revoked
-    /// access connector or a lapsed PAM license keeps a usable token.
+    /// Shorter than the one-hour default, bounding how long a disabled or deleted access connector or a lapsed license
+    /// keeps a usable token. A polling access connector re-authenticates cheaply.
     /// </summary>
     private const int AccessConnectorAccessTokenLifetimeInMinutes = 15;
 

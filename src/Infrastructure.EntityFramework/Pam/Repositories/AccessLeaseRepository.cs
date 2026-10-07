@@ -25,9 +25,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     { }
 
     /// <summary>
-    /// The live-lease predicate as a shared, EF-translatable expression: no early end and the window open at
-    /// <paramref name="now"/>. Every EF read for current authorization composes this; the stored procedures carry
-    /// the same predicate and must not drift.
+    /// The live-lease predicate every EF authorization read composes. The stored procedures carry the same predicate
+    /// and must not drift from it.
     /// </summary>
     private static System.Linq.Expressions.Expression<Func<EfModel, bool>> LiveAt(DateTime now)
         => l => l.Action == AccessLeaseAction.None && l.NotBefore <= now && l.NotAfter > now;
@@ -37,8 +36,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique); ordering by
-        // CreationDate DESC + first is belt and braces, mirroring the stored procedure's TOP 1.
+        // A request produces at most one lease ([IX_AccessLease_AccessRequestId] is unique), so the ordering is only a
+        // fallback.
         var lease = await dbContext.AccessLeases
             .Where(l => l.AccessRequestId == accessRequestId)
             .OrderByDescending(l => l.CreationDate)
@@ -78,8 +77,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Latest-ending, across all members, since the singleton guard blocks until the last in-window lease frees the
-        // slot. Cipher-scoped, like that guard.
+        // Latest-ending across all members, since the singleton guard blocks until the last live lease frees the slot.
         var lease = await dbContext.AccessLeases
             .Where(l => l.CipherId == cipherId)
             .Where(LiveAt(now))
@@ -100,8 +98,6 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Governance view: every currently-active lease on the supplied (caller-manageable) collections, across all
-        // members -- not just the caller's own.
         var leases = await dbContext.AccessLeases
             .Where(l => ids.Contains(l.CollectionId))
             .Where(LiveAt(now))
@@ -123,13 +119,11 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // End is RevokedDate for an early end, NotAfter for a natural close; mirrors the matching stored procedure.
+        // An early end (Revoked, Cancelled) ends at RevokedDate, a natural close at NotAfter, as in the procedure.
         var leases = await dbContext.AccessLeases
             .Where(l => ids.Contains(l.CollectionId)
                 && (
-                    // Ended early (Revoked, Cancelled): its end is RevokedDate, whatever its window says.
                     ((l.Action == AccessLeaseAction.Revoked || l.Action == AccessLeaseAction.Cancelled) && l.RevokedDate >= since)
-                    // Window closed on its own: its end is NotAfter.
                     || (l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter >= since)
                 ))
             .OrderByDescending(l => l.RevokedDate ?? l.NotAfter)
@@ -140,8 +134,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     }
 
     /// <remarks>
-    /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
-    /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
+    /// Retried on a fresh transaction after a serialization failure or deadlock, a bounded number of times.
     /// </remarks>
     public async Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
@@ -165,8 +158,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable covers only the per-cipher guard, matching the procedure's range lock; every other write
-        // here is protected by the claim below instead.
+        // Serializable only for the per-cipher guard, matching the procedure's range lock; the claim below protects
+        // every other write.
         var isolation = enforceSingleActiveLease
             ? System.Data.IsolationLevel.Serializable
             : System.Data.IsolationLevel.ReadCommitted;
@@ -174,15 +167,14 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         try
         {
-            // Claims the request row first, closing a write-skew race with retraction (mirrors the procedure's
-            // claim); must stay ahead of the singleton guard, since reversing that lock order would deadlock.
-            // Serializable alone doesn't catch this, as SSI only detects cycles among Serializable transactions.
-            // Preconditions re-check in one CAS, so a concurrent retraction yields a clean zero-row outcome.
+            // Claims the request row first, as the procedure does, closing a write-skew race with retraction that SSI
+            // misses because retraction is not Serializable. Must stay ahead of the singleton guard, since the reverse
+            // lock order deadlocks.
             var claimed = await dbContext.AccessRequests
                 .Where(r => r.Id == lease.AccessRequestId
                     && r.RequesterId == lease.RequesterId
                     && r.Action == AccessRequestAction.Approved
-                    // An extension applies in place at approval and never mints its own lease; it stays Approved with no produced lease.
+                    // An extension applies in place on approval and never mints a lease.
                     && r.ExtensionOfLeaseId == null
                     && r.NotBefore <= now
                     && r.NotAfter > now
@@ -195,8 +187,7 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
                 return AccessLeaseMintOutcome.PreconditionFailed;
             }
 
-            // The claim already holds the row for this transaction, so this read can't miss or go stale; it supplies
-            // the columns the lease is minted from.
+            // The claim holds the row, so this read cannot go stale.
             var request = await dbContext.AccessRequests
                 .AsNoTracking()
                 .FirstAsync(r => r.Id == lease.AccessRequestId);
@@ -221,8 +212,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             leaseEntity.CipherId = request.CipherId;
             leaseEntity.RequesterId = request.RequesterId;
             leaseEntity.Action = AccessLeaseAction.None;
-            // Starts at this activation, never backdated to the request's window start (mirrors the procedure).
-            // End stays the request's, so late activation shortens the lease.
+            // Starts at activation, never backdated, as in the procedure; the end stays the request's, so a late
+            // activation shortens the lease.
             leaseEntity.NotBefore = now;
             leaseEntity.NotAfter = request.NotAfter;
             leaseEntity.RevokedDate = null;
@@ -237,10 +228,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         }
         catch (DbUpdateException e) when (IsDuplicateKeyException(e))
         {
-            // The unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won the race
-            // after our application-level precondition check passed. Same outcome as the guard catching it -- the
-            // caller re-reads the winner. Anything else propagates: on a path that grants access to Vault Data, a
-            // genuine persistence failure must not be reported as a benign outcome.
+            // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won, so the caller
+            // re-reads the winner. Any other failure propagates, since this path grants access to vault data.
             await transaction.RollbackAsync();
             return AccessLeaseMintOutcome.PreconditionFailed;
         }
@@ -253,16 +242,14 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // The reason has no dedicated column, so it is preserved as a human AccessDecision (Deny) against the
-        // lease's originating request, keeping the audit trail without a schema change. The request id is read from
-        // the lease row rather than trusted from the caller's copy, matching the stored procedure's OUTPUT clause.
+        // The reason has no column, so it is kept as a human Deny decision on the originating request. The request id
+        // comes from the lease row, not the caller's copy, as in the procedure's OUTPUT clause.
         var accessRequestId = await dbContext.AccessLeases
             .Where(l => l.Id == lease.Id)
             .Select(l => l.AccessRequestId)
             .FirstOrDefaultAsync();
 
-        // The decision is recorded only when the transition actually happened, so a repeat or losing revoke never
-        // appends a Deny verdict for a lease it did not end.
+        // The decision is recorded only on an actual transition, so a repeat or losing revoke appends no Deny.
         var rowsAffected = await dbContext.AccessLeases
             .Where(l => l.Id == lease.Id && l.Action == AccessLeaseAction.None && l.NotAfter > now)
             .ExecuteUpdateAsync(s => s
@@ -320,9 +307,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     }
 
     /// <summary>
-    /// True when the provider refused the transaction because it could not serialize it against a concurrent one:
-    /// PostgreSQL's SSI aborting it at commit, or a deadlock victim elsewhere. The transaction is already gone in
-    /// every case, so the only recovery is to run the whole attempt again.
+    /// True when the provider aborted the transaction as a serialization failure or deadlock victim. The transaction
+    /// is gone, so the only recovery is to run the whole attempt again.
     /// </summary>
     private static bool IsSerializationFailure(Exception e) => e switch
     {
@@ -337,16 +323,10 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
     };
 
     /// <summary>
-    /// True when the write failed because a duplicate key was inserted -- here, the unique
-    /// [IX_AccessLease_AccessRequestId] backstop tripping because a concurrent activation minted this request's
-    /// lease first. Deliberately narrow so that any other write failure propagates rather than being reported as a
-    /// benign mint outcome. Mirrors the Dapper counterpart's <c>SqlException.Number is 2601 or 2627</c>.
+    /// True when a duplicate key tripped the [IX_AccessLease_AccessRequestId] backstop. Unlike
+    /// <c>EntityFrameworkCache.IsDuplicateKeyException</c> it recognizes unique-index codes too: 2601 on SQL Server,
+    /// 2067 on SQLite.
     /// </summary>
-    /// <remarks>
-    /// Distinct from <c>EntityFrameworkCache.IsDuplicateKeyException</c>, which only recognises primary-key
-    /// violations: the backstop here is a unique <em>index</em>, which reports different codes on SQL Server
-    /// (2601 rather than 2627) and SQLite (2067 rather than 1555).
-    /// </remarks>
     private static bool IsDuplicateKeyException(DbUpdateException e) => e.InnerException switch
     {
         MySqlConnector.MySqlException my => my.ErrorCode == MySqlConnector.MySqlErrorCode.DuplicateKeyEntry,

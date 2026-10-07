@@ -56,7 +56,6 @@ public class PamLeaseExpirySweepServiceTests
         sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(lease1.CipherId)
             .Returns(Task.FromException(new InvalidOperationException("boom")));
 
-        // lease1's failure must be logged and swallowed per-lease, never blocking lease2.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
@@ -77,7 +76,7 @@ public class PamLeaseExpirySweepServiceTests
 
         await sutProvider.Sut.SweepAsync();
 
-        // A losing audit hiccup must not swallow the rotation trigger and leave the credential valid.
+        // An audit failure must not leave the credential unrotated.
         await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(lease.CipherId);
     }
 

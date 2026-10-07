@@ -123,8 +123,8 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         }
         catch (SqlException e) when (e.Number is 2601 or 2627)
         {
-            // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won the race after
-            // our NOT EXISTS guard passed. Same outcome as the guard catching it — the caller re-reads the winner.
+            // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won after the
+            // NOT EXISTS guard passed, so the caller re-reads the winner.
             return AccessLeaseMintOutcome.PreconditionFailed;
         }
     }
@@ -146,11 +146,6 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
             commandType: CommandType.StoredProcedure);
     }
 
-    /// <summary>
-    /// Deviation: <see cref="IAccessLeaseRepository.ExpireDueAsync"/> was added to the interface alongside this
-    /// implementation — see the interface's doc comment for why it lives here rather than on
-    /// <c>IPamRotationJobRepository</c>.
-    /// </summary>
     public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);

@@ -47,9 +47,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
     {
         var lease = await _accessLeaseRepository.GetByIdAsync(leaseId);
 
-        // Who may end a lease early: the holder, or anyone who can Manage its collection. The holder ending their
-        // own access settles to Cancelled; an operator ending it settles to Revoked. 404 covers both missing and
-        // not-authorized so a caller can't probe for leases they can't touch.
+        // The holder, or anyone who can Manage the lease's collection, may end it early. 404 for both missing and
+        // not authorized, so a caller can't probe for leases they can't touch.
         var isHolder = lease is not null && lease.RequesterId == userId;
         if (lease is null ||
             (!isHolder && !await _approverCollectionAccessQuery.CanManageCollectionAsync(userId, lease.CollectionId)))
@@ -59,8 +58,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A lease whose window has closed carries no early end; nothing ever writes expiry, so ending one here
-        // would misrepresent a lease that ran out on its own as an operator action.
+        // Expiry is never written, so ending a lapsed lease would record its natural end as an early one.
         if (!lease.IsLive(now))
         {
             throw new ConflictException("This lease is not active.");
@@ -102,8 +100,7 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // A failure here must never fail the revoke itself, since the lease has already ended, so it is logged
-        // and swallowed.
+        // The lease has already ended, so a failure here is logged rather than failing the revoke.
         try
         {
             await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
@@ -115,14 +112,14 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
                 lease.CipherId, lease.Id);
         }
 
-        // The active lease just drained; tell every approver of this collection to re-fetch.
+        // The lease drops out of the approvers' active leases.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
 
-        // Tell the lease holder their access ended, so an open cipher re-locks and the badges drop the lease.
+        // An open cipher re-locks on the holder's clients.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
-        // The same news out of band: the push above only lands on a client that is already open. Every early end is
-        // handed over, and only a revocation is mailed -- a holder is not mailed about ending their own access.
+        // Also by email, since the push only reaches open clients. Only a revocation is mailed, not a holder ending
+        // their own access.
         await _leaseRevokedMailNotifier.NotifyLeaseEndedAsync(lease, endAction);
     }
 }

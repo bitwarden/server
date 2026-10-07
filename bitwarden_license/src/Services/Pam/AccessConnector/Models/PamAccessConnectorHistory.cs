@@ -3,9 +3,8 @@
 namespace Bit.Services.Pam.AccessConnector.Models;
 
 /// <summary>
-/// An access connector's detail view: its <see cref="PamAccessConnectorListItem"/> projection together with the recent jobs it
-/// has worked (newest first, each carrying the attempts that access connector recorded) — the read model for
-/// <c>GET access connectors/{id}</c>.
+/// An access connector's detail view: its list projection plus its recent jobs, newest first, each with only the
+/// attempts it recorded.
 /// </summary>
 public sealed record PamAccessConnectorHistory(
     PamAccessConnectorListItem AccessConnector,

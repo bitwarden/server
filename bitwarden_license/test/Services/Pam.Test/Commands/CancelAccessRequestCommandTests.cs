@@ -35,7 +35,6 @@ public class CancelAccessRequestCommandTests
         var sutProvider = Setup();
         request.Action = AccessRequestAction.None;
         SetupRequest(sutProvider, request);
-        // userId is neither the requester nor a manager.
 
         // A request the caller can't act on is indistinguishable from a missing one, so ids can't be probed.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CancelAsync(userId, request.Id, null));
@@ -92,7 +91,6 @@ public class CancelAccessRequestCommandTests
         request.Action = action;
         SetOpenWindow(request);
         SetupRequest(sutProvider, request);
-        // No lease produced.
 
         await sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null);
 
@@ -150,7 +148,6 @@ public class CancelAccessRequestCommandTests
 
         var conflict = await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
-        // A live lease is ended through revoke, so the caller is pointed there.
         Assert.Contains("revoke the lease instead", conflict.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
@@ -181,7 +178,7 @@ public class CancelAccessRequestCommandTests
     public async Task CancelAsync_ApprovedWithLapsedLease_ReportsAlreadyResolvedRatherThanPointingAtRevoke(
         AccessRequest request, AccessLease lease)
     {
-        // A lapsed lease has no early end recorded; the request is terminal history, not a candidate for Revoke.
+        // A lapsed lease is terminal history, not a candidate for revoke.
         var sutProvider = Setup();
         request.Action = AccessRequestAction.Approved;
         SetOpenWindow(request);

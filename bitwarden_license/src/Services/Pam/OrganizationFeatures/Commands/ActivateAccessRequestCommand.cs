@@ -99,7 +99,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             CollectionId = request.CollectionId,
             CipherId = request.CipherId,
             RequesterId = request.RequesterId,
-            // NotBefore is now, not backdated to the approved window's start; NotAfter stays the approved end.
+            // Starts now, not backdated to the approved window's start.
             NotBefore = now,
             NotAfter = request.NotAfter,
             CreationDate = now,
@@ -126,7 +126,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Automated conditions (e.g. an IP allowlist) must still hold at activation, not just at submit.
+        // Automated conditions (e.g. an IP allowlist) must still hold at activation.
         var denial = await FindConditionDenialAsync(userId, request, now);
         if (denial is not null)
         {
@@ -166,22 +166,19 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The approver's history row just flipped approved -> activated and gained a revocable lease; tell every
-        // approver of this collection to re-fetch, mirroring decide and revoke.
+        // The approvers' history now shows the request as activated, with a revocable lease.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
 
-        // Tell the requester's other devices so their "My requests" view picks up the live lease without a refresh.
+        // The requester's other devices pick up the live lease.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;
     }
 
     /// <summary>
-    /// Re-evaluates the governing rule's automated conditions against the caller's signals at activation time.
+    /// Re-evaluates the automated conditions of the rule pinned on the request, falling back to the cipher's current
+    /// rule only when none is pinned.
     /// </summary>
-    /// <remarks>
-    /// Uses the rule pinned on the request, not whichever rule governs the cipher today; the approval gate is stripped.
-    /// </remarks>
     private async Task<AccessEvaluation?> FindConditionDenialAsync(Guid userId, AccessRequest request, DateTime now)
     {
         var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
@@ -190,7 +187,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             ? await _resolver.ResolvePinnedAsync(ruleId, request.CollectionId)
             : await _resolver.ResolveAsync(userId, request.CipherId, signals);
 
-        // No rule left to enforce: the cipher is no longer gated, so the approved request activates unconditionally.
+        // No rule left to enforce, so the approved request activates unconditionally.
         if (governingRule is null)
         {
             return null;

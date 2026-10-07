@@ -1,19 +1,16 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The result of resolving a <see cref="Entities.PamRotationAttempt"/> (the <c>_MarkRotated</c> / <c>_MarkErrored</c>
-/// stored procedures), which guard on the attempt still being <see cref="PamRotationAttemptStatus.Executing"/> and
-/// claimed by the reporting access connector.
+/// The result of resolving a <see cref="Entities.PamRotationAttempt"/>; each value is the code the
+/// <c>_MarkRotated</c> and <c>_MarkErrored</c> stored procedures return.
 /// </summary>
 public enum PamRotationAttemptResolveOutcome
 {
-    /// <summary>The guard held and the attempt was resolved (stored proc returned 1).</summary>
     Resolved = 1,
 
     /// <summary>
-    /// The attempt was not <see cref="PamRotationAttemptStatus.Executing"/>, or its
-    /// <see cref="Entities.PamRotationAttempt.ClaimedByAccessConnectorId"/> did not match the reporting access
-    /// connector (stored proc returned 0) — the report is stale. Audited as <c>report_rejected</c>; nothing changed.
+    /// The attempt is no longer <see cref="PamRotationAttemptStatus.Executing"/> under the reporting access
+    /// connector's claim, or a success arrived before the cipher write. Nothing changes.
     /// </summary>
     Rejected = 0,
 }

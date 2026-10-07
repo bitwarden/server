@@ -3,9 +3,8 @@
 public interface IResumeRotationCommand
 {
     /// <summary>
-    /// Resumes a paused rotation config. Guard: the config must be disabled. A manual-target config with a
-    /// due obligation has it pulled due (<c>NextRotationAt = now</c>); otherwise <c>NextRotationAt</c> is
-    /// recomputed from the schedule.
+    /// Resumes a paused rotation config, recomputing <c>NextRotationAt</c> from the schedule unless a manual rotation
+    /// is already due.
     /// </summary>
     Task ResumeAsync(Guid organizationId, Guid actingUserId, Guid configId);
 }

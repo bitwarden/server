@@ -10,14 +10,9 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/configs</c> resource. Organization
-/// authority is already settled by <c>PamEndpointsExtensions</c>'s authorization middleware; the commands
-/// underneath re-verify every id argument belongs to the route organization.
-///
-/// <see cref="ICreateRotationConfigCommand"/> and <see cref="IUpdateRotationSettingsCommand"/>/
-/// <see cref="IUpdateRotationAccountCommand"/> return the bare entity, not the list/detail projection, so this
-/// handler re-reads through <see cref="IGetRotationConfigDetailsQuery"/> after a write to respond with the same
-/// shape <c>GET rotation/configs/{id}</c> uses.
+/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/configs</c> resource, authorized in the
+/// middleware by <c>ManageAccessConnectorRequirement</c>. Writes re-read the detail view, since the commands return
+/// the bare entity.
 /// </summary>
 public class RotationConfigEndpointsHandler(
     ICurrentContext currentContext,
@@ -61,12 +56,7 @@ public class RotationConfigEndpointsHandler(
         return await GetDetailAsync(orgId, created.Id);
     }
 
-    /// <remarks>
-    /// The single update replaces the separate settings and account operations, so it fans out to both commands.
-    /// The account update goes first: it carries the stricter guards (an in-flight job blocks the edit, and session
-    /// termination is checked against the target system's capability), so a rejected account leaves the schedule
-    /// untouched rather than half-applying the update.
-    /// </remarks>
+    /// <remarks>Fans out to the account and settings commands, account first since its guards are stricter.</remarks>
     public async Task<PamRotationConfigDetailResponseModel> Put(
         Guid orgId, Guid id, UpdateRotationConfigRequestModel model)
     {

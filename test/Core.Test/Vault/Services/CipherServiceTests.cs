@@ -2891,7 +2891,7 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider, CipherDetails cipher, string attachmentId, Guid deletingUserId)
     {
         OwnsPersonalCipher(sutProvider, cipher, deletingUserId);
-        // Must really be on the cipher, or the missing-attachment NotFoundException masks the gate check.
+        // Must be on the cipher, or the missing-attachment NotFoundException masks the gate check.
         cipher.Attachments = JsonSerializer.Serialize(
             new Dictionary<string, CipherAttachment.MetaData> { { attachmentId, new CipherAttachment.MetaData() } });
         RefusesMutation(sutProvider);

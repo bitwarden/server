@@ -18,18 +18,11 @@ using Xunit;
 
 namespace Bit.Services.Pam.Test.Services;
 
-/// <summary>
-/// The read, write-return and mutation decisions, asserted through the interface only. The structural "which ciphers are
-/// gated" rule is exercised via <see cref="CipherLeaseGate.AuthorizeReadManyAsync(Guid, IEnumerable{Cipher}, IEnumerable{CollectionDetails}, IDictionary{Guid, IGrouping{Guid, CollectionCipher}})" />
-/// rather than a public helper, so these tests stay pinned to what callers can actually reach.
-/// </summary>
+/// <summary>The gated-cipher rule is tested through the bulk read to stay on the public interface.</summary>
 public class CipherLeaseGateTests
 {
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>
-    /// The organization every cipher fixture below belongs to, and the one licensing is resolved against.
-    /// </summary>
     private static readonly Guid _organizationId = Guid.NewGuid();
 
     [Fact]
@@ -41,7 +34,6 @@ public class CipherLeaseGateTests
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
-        // The flag-off path must cost nothing: no rule resolve, no lease read.
         await sutProvider.GetDependency<IGoverningRuleResolver>()
             .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
         await sutProvider.GetDependency<IAccessLeaseRepository>()
@@ -58,7 +50,7 @@ public class CipherLeaseGateTests
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
-        // Resolving first means the common case — a cipher no rule governs — never pays for a lease query.
+        // Resolving first spares the common case, an ungoverned cipher, a lease query.
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
     }
@@ -94,7 +86,6 @@ public class CipherLeaseGateTests
 
         await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
-        // Lease expiry is evaluated against TimeProvider, not DateTime.UtcNow.
         await sutProvider.GetDependency<IAccessLeaseRepository>().Received(1)
             .GetActiveByRequesterIdCipherIdAsync(userId, cipherId, _now);
     }
@@ -145,7 +136,6 @@ public class CipherLeaseGateTests
             [LeasingCollection(leasingCollectionId)],
             Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
 
-        // A held lease does not widen a bulk read.
         Assert.False(access.Authorizes(gatedCipherId));
     }
 
@@ -164,7 +154,6 @@ public class CipherLeaseGateTests
                 new CollectionCipher { CipherId = cipherId, CollectionId = leasingCollectionId },
                 new CollectionCipher { CipherId = cipherId, CollectionId = plainCollectionId }));
 
-        // Reachable through an ungoverned path, so nothing to withhold.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -186,7 +175,6 @@ public class CipherLeaseGateTests
         var (sutProvider, userId, userOwnedCipherId) = Setup();
         var leasingCollectionId = Guid.NewGuid();
 
-        // The caller has a leasing collection, but this cipher is reachable through no collection at all.
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
             userId,
             [new Cipher { Id = userOwnedCipherId }],
@@ -208,7 +196,7 @@ public class CipherLeaseGateTests
             [DisabledRuleCollection(disabledRuleCollectionId)],
             Group(new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
 
-        // The resolver drops a disabled rule, so it gates nothing here either.
+        // The resolver ignores a disabled rule, so the bulk read does too.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -227,7 +215,6 @@ public class CipherLeaseGateTests
                 new CollectionCipher { CipherId = cipherId, CollectionId = leasingCollectionId },
                 new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }));
 
-        // A disabled rule's collection is as ungoverned as a plain one.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -239,7 +226,6 @@ public class CipherLeaseGateTests
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(cipherId));
-        // The whole point of this overload's contract: flag off stays query-free.
         await sutProvider.GetDependency<ICollectionRepository>()
             .DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
         await sutProvider.GetDependency<ICollectionCipherRepository>()
@@ -306,9 +292,7 @@ public class CipherLeaseGateTests
         Assert.True(access.Authorizes(cipherId));
     }
 
-    /// <remarks>
-    /// A lease widens the single read, not the echo of a mutation.
-    /// </remarks>
+    /// <remarks>A lease widens the single read, not the echo of a mutation.</remarks>
     [Fact]
     public async Task AuthorizeWriteReturnAsync_GatedWithActiveLease_Withholds()
     {
@@ -340,7 +324,7 @@ public class CipherLeaseGateTests
 
         await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
-        // Lease state cannot change the answer, so paying for the query would be waste.
+        // Lease state cannot change the answer, so the query would be waste.
         await sutProvider.GetDependency<IAccessLeaseRepository>()
             .DidNotReceiveWithAnyArgs().GetActiveByRequesterIdCipherIdAsync(default, default, default);
     }
@@ -441,8 +425,7 @@ public class CipherLeaseGateTests
         var (sutProvider, userId, cipherId) = Setup();
         Gated(sutProvider, userId, cipherId);
 
-        // NotFound, not forbidden: a write attempt must not confirm that a credential the caller cannot
-        // reach exists.
+        // NotFound, not Forbidden, so a write attempt does not reveal that the credential exists.
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.EnsureCanMutateAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
     }
@@ -456,7 +439,7 @@ public class CipherLeaseGateTests
 
         var access = await sutProvider.Sut.EnsureCanMutateAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
-        // The lease exists to grant this access; a write emits no secret, so holding one permits the edit.
+        // A write emits no secret, so holding a lease permits the edit.
         Assert.True(access.Authorizes(cipherId));
     }
 
@@ -525,7 +508,7 @@ public class CipherLeaseGateTests
         CallerGates(sutProvider, userId, gatedCipherId);
         HasNoActiveLeases(sutProvider, userId);
 
-        // All-or-nothing: a half-applied bulk delete would leave the caller unable to tell what happened.
+        // A half-applied bulk delete would leave the caller unable to tell what happened.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateManyAsync(
             userId, [new Cipher { Id = plainCipherId }, new Cipher { Id = gatedCipherId }]));
     }
@@ -540,7 +523,7 @@ public class CipherLeaseGateTests
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(
             userId, [new Cipher { Id = gatedCipherId }]);
 
-        // Deliberately unlike the bulk *read*, which withholds a gated cipher whatever the lease state.
+        // Unlike the bulk read, which withholds a gated cipher whatever the lease state.
         Assert.True(access.Authorizes(gatedCipherId));
     }
 
@@ -606,10 +589,6 @@ public class CipherLeaseGateTests
             .GetGatingCollectionIdsAsync(default);
     }
 
-    /// <remarks>
-    /// The decision an administrator's assignments must not reach. The caller is assigned to nothing, which
-    /// is what the member paths read as "not gated" — this must still withhold.
-    /// </remarks>
     [Fact]
     public async Task AuthorizeAdminReadAsync_GatedAndCallerAssignedToNothing_Withholds()
     {
@@ -630,7 +609,7 @@ public class CipherLeaseGateTests
     public async Task AuthorizeAdminReadAsync_GatedWithActiveLease_Authorizes()
     {
         var (sutProvider, userId, cipherId) = Setup();
-        // The route organization, which is what the admin read resolves licensing against.
+        // The admin read resolves licensing against the route organization.
         var organizationId = _organizationId;
         var collectionId = Guid.NewGuid();
         OrganizationLeasingCollection(sutProvider, organizationId, collectionId);
@@ -664,7 +643,7 @@ public class CipherLeaseGateTests
 
         await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
-        // The entitlement is settled from claims, so an unlicensed caller costs one query fewer, not one more.
+        // The entitlement is settled from claims, so an unlicensed caller skips the lease query.
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .GetActiveByRequesterIdCipherIdAsync(default, default, default);
     }
@@ -719,7 +698,6 @@ public class CipherLeaseGateTests
         HasActiveLease(sutProvider, userId, cipherId);
         Unlicensed(sutProvider);
 
-        // Licensing applies to admins too.
         Assert.Null(await sutProvider.Sut.AuthorizeAdminReadAsync(
             userId, _organizationId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
     }
@@ -740,7 +718,8 @@ public class CipherLeaseGateTests
     }
 
     /// <remarks>
-    /// An unassigned cipher sits in no collection, so nothing gates it; the admin endpoints reach it via <c>CanAccessUnassignedCiphersAsync</c>.
+    /// An unassigned cipher is in no collection, so nothing gates it; admin endpoints reach it through
+    /// <c>CanAccessUnassignedCiphersAsync</c>.
     /// </remarks>
     [Fact]
     public async Task AuthorizeAdminReadAsync_UnassignedCipher_Authorizes()
@@ -771,10 +750,7 @@ public class CipherLeaseGateTests
         Assert.True(access.Authorizes(cipherId));
     }
 
-    /// <remarks>
-    /// The bulk decision strips every gated cipher whatever the lease state, matching the member bulk rule:
-    /// secrets are released one cipher at a time.
-    /// </remarks>
+    /// <remarks>Matches the member bulk read, since secrets are released one cipher at a time.</remarks>
     [Fact]
     public async Task AuthorizeAdminReadManyAsync_StripsGatedEvenWithAnActiveLease()
     {
@@ -820,10 +796,6 @@ public class CipherLeaseGateTests
             .GetManyByOrganizationIdAsync(default);
     }
 
-    /// <summary>
-    /// Makes <paramref name="collectionId" /> the organization's only gating collection, or leaves the organization
-    /// with none when its rule is disabled.
-    /// </summary>
     private static void OrganizationLeasingCollection(SutProvider<CipherLeaseGate> sutProvider,
         Guid organizationId, Guid collectionId, bool ruleEnabled = true) =>
         sutProvider.GetDependency<IGatingCollectionResolver>()
@@ -843,7 +815,7 @@ public class CipherLeaseGateTests
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(Core.FeatureFlagKeys.Pam).Returns(enabled);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("198.51.100.7");
-        // Licensed by default: every case below is about gating and leases, not entitlement.
+        // Licensed by default; most cases are about gating and leases, not entitlement.
         sutProvider.GetDependency<ICurrentContext>().AccessPam(_organizationId).Returns(true);
         return (sutProvider, Guid.NewGuid(), Guid.NewGuid());
     }
@@ -862,10 +834,6 @@ public class CipherLeaseGateTests
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
             .Returns((GoverningRule?)null);
 
-    /// <summary>
-    /// Puts <paramref name="gatedCipherIds" /> in a leasing collection the caller can reach; any other cipher is
-    /// reachable through no collection.
-    /// </summary>
     private static void CallerGates(SutProvider<CipherLeaseGate> sutProvider, Guid userId, params Guid[] gatedCipherIds)
     {
         var leasingCollectionId = Guid.NewGuid();
@@ -892,9 +860,6 @@ public class CipherLeaseGateTests
     private static CollectionDetails LeasingCollection(Guid id) =>
         new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = true };
 
-    /// <summary>
-    /// A collection still associated with a rule the admin has switched off.
-    /// </summary>
     private static CollectionDetails DisabledRuleCollection(Guid id) =>
         new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = false };
 

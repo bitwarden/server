@@ -61,7 +61,6 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 "This request extended an existing lease and cannot be revoked; revoke the lease instead.");
         }
 
-        // Only an open request, or an approved one not yet activated, can be cancelled.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
@@ -69,8 +68,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A minted lease governs the request. Checked before the window guard, since an extension can keep the lease
-        // live after the request's window lapses.
+        // Checked before the window guard, since an extension can keep the lease live past the request's window.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
@@ -135,12 +133,10 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The request just left the pending/approved set; tell every approver of this collection to re-fetch so it
-        // drops out of their inbox. Mirrors decide.
+        // Drops the request from the approvers' inboxes.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
 
-        // Tell the requester their request is gone, so a manager's retraction reaches them and their other devices
-        // drop the request from "My requests" without a manual refresh.
+        // Reaches the requester on a manager's retraction, and the requester's other devices on a withdrawal.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
     }
 }

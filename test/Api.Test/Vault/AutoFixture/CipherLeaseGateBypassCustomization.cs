@@ -10,8 +10,12 @@ using NSubstitute;
 namespace Bit.Api.Test.Vault.AutoFixture;
 
 /// <summary>
-/// Injects an <see cref="ICipherLeaseGate"/> substitute authorizing full data and every mutation, the
-/// flag-off/not-gated behavior; leasing-agnostic tests need not stub the gate themselves.
+/// Injects an <see cref="ICipherLeaseGate"/> substitute pre-configured to authorize full data for every
+/// cipher — the flag-off / not-gated behaviour. This lets leasing-agnostic controller tests assert their
+/// existing full-data expectations without each one having to stub the gate. Tests that exercise gating
+/// re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or <c>AuthorizeWriteReturnAsync</c> return
+/// null) after building the SUT.
+/// It also authorizes every mutation.
 /// </summary>
 public class CipherLeaseGateBypassCustomization : ICustomization
 {

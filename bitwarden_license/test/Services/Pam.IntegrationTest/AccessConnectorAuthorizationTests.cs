@@ -11,27 +11,19 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// Authorization for the <c>organizations/{orgId}/access-connectors</c> admin surface, exercised over the real
-/// request pipeline.
+/// Authorization for the <c>organizations/{orgId}/access-connectors</c> admin surface over the real request pipeline.
+/// One route per group is enough, since the requirement is applied to the parent group.
 /// </summary>
-/// <remarks>
-/// Unlike the Pam.Test endpoint-registration tests, these run the real pipeline and assert only allow/deny, never
-/// what the handler returned.
-/// <para>
-/// One route per group is enough: the requirement is applied to the parent group.
-/// </para>
-/// </remarks>
 public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-connector-authz")
 {
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        // Connector groups sit behind their own flag, on top of the base PAM flag.
+        // Connector groups sit behind their own flag instead of the base PAM flag.
         FeatureService.IsEnabled(FeatureFlagKeys.PamAccessConnector).Returns(true);
     }
 
-    // The connector fleet sits at the group root; rotation's target systems and configs hang beneath it.
     private string ConnectorUrl(string resource) =>
         $"organizations/{Organization.Id}/access-connectors{resource}";
 
@@ -71,8 +63,7 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     [InlineData("/rotation/configs")]
     public async Task Read_AsCustomUserWithManageAccessRules_ReturnsForbidden(string resource)
     {
-        // ManageAccessRules is authority over who may lease a credential, not over the access connectors
-        // that rotate it.
+        // ManageAccessRules governs who may lease a credential, not the access connectors that rotate it.
         var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             Organization.Id, OrganizationUserType.Custom, new Permissions { ManageAccessRules = true });
         await LoginHelper.LoginAsync(customEmail);
@@ -129,7 +120,6 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
     [InlineData("/rotation/configs")]
     public async Task Read_AsOwner_IsNotForbidden(string resource)
     {
-        // Guards against the requirement over-denying.
         await LoginHelper.LoginAsync(OwnerEmail);
 
         var response = await Client.GetAsync(ConnectorUrl(resource));
@@ -174,10 +164,7 @@ public class AccessConnectorAuthorizationTests(ApiApplicationFactory factory)
         AssertReachedTheHandler(response);
     }
 
-    /// <summary>
-    /// Asserts a caller got past authorization without pinning what the handler did. NotFound is excluded too, so a
-    /// feature gate silently swallowing the route doesn't pass as authorization.
-    /// </summary>
+    /// <summary>Also rejects NotFound, so a feature gate swallowing the route does not pass as authorized.</summary>
     private static void AssertReachedTheHandler(HttpResponseMessage response)
     {
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);

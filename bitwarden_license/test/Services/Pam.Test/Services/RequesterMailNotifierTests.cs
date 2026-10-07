@@ -52,7 +52,7 @@ public class RequesterMailNotifierTests
         Assert.Equal("1 Sep 2026 at 08:30 UTC", mail.View.WindowStart);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.WindowEnd);
         Assert.Equal($"{_vaultUrl}/pam/requests/{request.Id}", mail.View.Url);
-        // One message per recipient: the requester is never named alongside anyone else.
+        // One message per recipient, so the requester is never named alongside anyone else.
         await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
             .SendToUsersAsync(default!, (Func<string, BaseMail<AccessRequestDecidedView>>)default!);
     }

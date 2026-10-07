@@ -39,9 +39,9 @@ internal class SecretsManagerApiKeyProvider : IClientProvider
 
         switch (apiKey)
         {
-            // A non-service-account machine credential (e.g. a PAM access connector's) arrives here with
-            // ServiceAccountOrganizationId defaulted. Match on the service-account id, not the type, and refuse
-            // anything else; those credentials belong to their own provider.
+            // Every API key loads as ServiceAccountApiKeyDetails, so a PAM access connector's key arrives here too,
+            // with ServiceAccountOrganizationId defaulted. Match on ServiceAccountId and refuse the rest, which have
+            // their own provider.
             case ServiceAccountApiKeyDetails { ServiceAccountId: not null } key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
                 if (org == null || !org.UseSecretsManager || !org.Enabled)

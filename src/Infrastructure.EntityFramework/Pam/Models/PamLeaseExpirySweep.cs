@@ -3,10 +3,8 @@
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
 /// <summary>
-/// The natural-expiry sweep's journal, mirroring [dbo].[PamLeaseExpirySweep]: one row per lease
-/// <c>IAccessLeaseRepository.ExpireDueAsync</c> has already returned.
-/// This journal, not a status flip, keeps the sweep from returning a lease twice; pure bookkeeping with no
-/// <c>Bit.Pam</c> counterpart.
+/// The natural-expiry sweep's journal: one row per lease already returned, so none is returned twice. Pure
+/// bookkeeping, with no <c>Bit.Pam</c> entity.
 /// </summary>
 public class PamLeaseExpirySweep
 {

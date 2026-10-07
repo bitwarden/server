@@ -21,7 +21,6 @@ public class AccessMailNotifierTests
     /// <summary>The per-send delay a delivery service spends retrying before it reports anything.</summary>
     private static readonly TimeSpan _retryDelay = TimeSpan.FromSeconds(2);
 
-    /// <summary>Stands in for a shipped mail; the notifier is indifferent to which mail travels through it.</summary>
     private class TestMailView : BaseMailView;
 
     private class TestMail : BaseMail<TestMailView>
@@ -54,7 +53,7 @@ public class AccessMailNotifierTests
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(recipients);
 
-    /// <summary>Every send fails the way a dead delivery service does: after it has spent its retry delay.</summary>
+    /// <summary>Fails each send after its retry delay, as a dead delivery service does.</summary>
     private static void FailEverySendSlowly(SutProvider<AccessMailNotifier> sutProvider)
     {
         var time = sutProvider.GetDependency<FakeTimeProvider>();
@@ -223,7 +222,7 @@ public class AccessMailNotifierTests
         EnableFlag(sutProvider);
         var recipients = Recipients(4);
         ResolveTo(sutProvider, recipients);
-        // Alternating outcomes: an isolated bad address must not read as the delivery path being down.
+        // An isolated bad address must not read as the delivery path being down.
         foreach (var failing in new[] { recipients[0], recipients[2] })
         {
             sutProvider.GetDependency<IMailer>()
@@ -242,8 +241,7 @@ public class AccessMailNotifierTests
     {
         var sutProvider = Setup();
         EnableFlag(sutProvider);
-        // The managing-user set has no upper bound; a collection well above the typical size must still be
-        // notified in full when delivery is healthy.
+        // The managing-user set has no upper bound, so a large healthy batch must still finish.
         var recipients = Recipients(100);
         ResolveTo(sutProvider, recipients);
         var time = sutProvider.GetDependency<FakeTimeProvider>();

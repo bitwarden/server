@@ -22,9 +22,8 @@ public class PamAccessConnectorRepository : Repository<PamAccessConnector, Guid>
     { }
 
     /// <summary>
-    /// PamAccessConnector_Update is narrow (Name/Status/RevisionDate only — ApiKeyId, OrganizationId, CreationDate
-    /// never change post-registration, and LastHeartbeatAt has its own conditional-bump sproc), so the generic
-    /// whole-entity <see cref="Repository{T, TId}.ReplaceAsync"/> would pass parameters the sproc does not declare.
+    /// PamAccessConnector_Update writes only Name, Status, and RevisionDate, so the generic whole-entity replace would
+    /// pass parameters the procedure does not declare.
     /// </summary>
     public override async Task ReplaceAsync(PamAccessConnector obj)
     {

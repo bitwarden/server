@@ -15,9 +15,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Queries;
 
 /// <summary>
-/// ManageAccessConnectorRequirement only proves the caller administers the organization named in the route, so this
-/// query's own OrganizationId check is the sole thing keeping an Owner of one organization from reading another's
-/// access connector and the rotation activity it has worked.
+/// ManageAccessConnectorRequirement only proves the caller administers the route's organization, so this query
+/// has to refuse another organization's connector.
 /// </summary>
 public class GetAccessConnectorDetailsQueryTests
 {
@@ -91,7 +90,6 @@ public class GetAccessConnectorDetailsQueryTests
         Assert.False(result.AccessConnector.IsConnected);
     }
 
-    /// <summary>The activity section is capped rather than unbounded, so the read must carry a positive limit.</summary>
     [Theory, BitAutoData]
     public async Task GetAsync_ReadsABoundedNumberOfJobs(PamAccessConnector accessConnector)
     {

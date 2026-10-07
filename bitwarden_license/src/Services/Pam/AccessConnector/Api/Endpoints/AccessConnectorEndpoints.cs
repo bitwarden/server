@@ -4,10 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Services.Pam.AccessConnector.Api.Endpoints;
 
-/// <summary>
-/// The <c>organizations/{orgId}/access-connectors</c> resource: fleet registration, enable/disable, deletion, and
-/// target assignment. <c>orgId</c> is bound from the group's route prefix.
-/// </summary>
+/// <summary>The <c>organizations/{orgId}/access-connectors</c> resource.</summary>
 internal static class AccessConnectorEndpoints
 {
     public static RouteGroupBuilder MapAccessConnectorEndpoints(this RouteGroupBuilder group)

@@ -8,8 +8,7 @@ namespace Bit.Services.Pam.Test.Api.Models;
 public class AccessRequestDetailsResponseModelTests
 {
     /// <summary>
-    /// A request whose lease was extended: the request's own window closed an hour ago, the lease it produced runs an
-    /// hour longer. The details stamp both, and the response must carry them separately.
+    /// An extended lease: the request's window closed an hour ago, but the lease it produced ends an hour from now.
     /// </summary>
     private static AccessRequestDetails ExtendedLease(DateTime now)
     {
@@ -29,7 +28,7 @@ public class AccessRequestDetailsResponseModelTests
     [Fact]
     public void Constructor_CarriesTheProducedLeasesOwnEnd_NotTheRequestsWindow()
     {
-        // PAM-151: the client counts down from this, so the two ends must not collapse into one another.
+        // The client counts down from this, so the two ends must not collapse into one another.
         var now = DateTime.UtcNow;
         var details = ExtendedLease(now);
 
@@ -52,7 +51,7 @@ public class AccessRequestDetailsResponseModelTests
         Assert.NotNull(model.ProducedLeaseNotAfter);
         var producedLeaseNotAfter = model.ProducedLeaseNotAfter.Value;
         Assert.Equal(DateTimeKind.Utc, producedLeaseNotAfter.Kind);
-        // Relabelled, not converted: the clock reading must be untouched.
+        // Relabelled, not shifted.
         Assert.Equal(leaseEnd.TimeOfDay, producedLeaseNotAfter.TimeOfDay);
     }
 

@@ -118,10 +118,7 @@ public static class AccessAuditEventKindNames
         Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
 
     /// <summary>
-    /// The seven fleet names this projection emitted before the daemon → access connector rename. Parse-only: a web
-    /// bundle loaded before the rename still posts them in the trail's kind filter, and an unknown name fails the
-    /// whole read with a 400, so they are read back for one release. Nothing emits them — <see cref="From"/> is the
-    /// only writer of the vocabulary. Drop them once no pre-rename bundle can still be open.
+    /// Names that older web bundles still post in the kind filter. Parse-only; drop once no such bundle can be open.
     /// </summary>
     private static readonly Dictionary<string, AccessAuditEventKind> _preRenameFleetNames = new(StringComparer.Ordinal)
     {

@@ -152,7 +152,7 @@ public class DecideAccessRequestCommandTests
         Assert.Equal(AccessDecisionVerdict.Approve, decision.Verdict);
         Assert.Equal("looks good", decision.Comment);
         Assert.Equal(_now, decision.DecidedAt);
-        // Approval records the verdict only; no lease is minted until the requester activates the approved request.
+        // Approval records the verdict only; the requester's activation mints the lease.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).ResolveWithDecisionAsync(
             request,
             Arg.Is<AccessDecision>(d =>
@@ -185,7 +185,6 @@ public class DecideAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny(comment)));
         Assert.Contains("reason is required", ex.Message);
-        // A denial without a reason must leave the request pending, not written or notified.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
@@ -204,7 +203,6 @@ public class DecideAccessRequestCommandTests
         SetOpenWindow(request);
         SetupManageableRequest(sutProvider, userId, request);
 
-        // The required-reason gate is the denial's alone; an approval still needs no explanation.
         var result = await sutProvider.Sut.DecideAsync(userId, request.Id, Approve());
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
