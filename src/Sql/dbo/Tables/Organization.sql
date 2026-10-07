@@ -69,6 +69,7 @@ CREATE TABLE [dbo].[Organization] (
     [UsePam]                        BIT              NOT NULL CONSTRAINT [DF_Organization_UsePam] DEFAULT (0),
     [PamSeats]                      INT              NULL,
     [MaxAutoscalePamSeats]          INT              NULL,
+    [PamSeatMinimum]                INT              NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
