@@ -4,8 +4,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Bit.SharedWeb.Swagger;
@@ -24,8 +23,9 @@ public class SourceFileLineOperationFilter : IOperationFilter
         if (fileName != null && lineNumber > 0)
         {
             // Also add the information as extensions, so other tools can use it in the future
-            operation.Extensions.Add("x-source-file", new OpenApiString(fileName));
-            operation.Extensions.Add("x-source-line", new OpenApiInteger(lineNumber));
+            operation.Extensions ??= new Dictionary<string, IOpenApiExtension>();
+            operation.Extensions.Add("x-source-file", new JsonNodeExtension(fileName));
+            operation.Extensions.Add("x-source-line", new JsonNodeExtension(lineNumber));
         }
     }
 

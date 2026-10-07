@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Attributes;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -11,4 +12,8 @@ public class RegisterSendVerificationEmailRequestModel
     [StringLength(256)]
     public required string Email { get; set; }
     public bool ReceiveMarketingEmails { get; set; }
+    [MarketingInitiativeValidation]
+    public string? FromMarketing { get; set; }
+
+    public RegisterStartOpenOrgInviteRequestModel? OpenOrgInvite { get; set; }
 }

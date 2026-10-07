@@ -52,10 +52,11 @@ public class SsoTokenableTests
     [Fact]
     public void SetsExpirationFromConstructor()
     {
-        var expectedDateTime = DateTime.UtcNow.AddSeconds(500);
+        var before = DateTime.UtcNow;
         var token = new SsoTokenable(null, 500);
+        var after = DateTime.UtcNow;
 
-        Assert.Equal(expectedDateTime, token.ExpirationDate, TimeSpan.FromMilliseconds(10));
+        Assert.InRange(token.ExpirationDate, before.AddSeconds(500), after.AddSeconds(500));
     }
 
     [Theory, AutoData]
@@ -84,5 +85,24 @@ public class SsoTokenableTests
         var result = token.TokenIsValid(organization);
 
         Assert.False(result);
+    }
+
+    [Theory, AutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(Organization organization)
+    {
+        var token = new SsoTokenable(organization, default)
+        {
+            ExpirationDate = DateTime.UtcNow.AddHours(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    [Theory, AutoData]
+    public void Valid_NotExpired_ReturnsTrue(Organization organization)
+    {
+        var token = new SsoTokenable(organization, 500);
+
+        Assert.True(token.Valid);
     }
 }

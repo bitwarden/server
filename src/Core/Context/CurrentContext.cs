@@ -38,10 +38,6 @@ public class CurrentContext(
     public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
-    public virtual bool CloudflareWorkerProxied { get; set; }
-    public virtual bool IsBot { get; set; }
-    public virtual bool MaybeBot { get; set; }
-    public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
     public virtual bool ClientVersionIsPrerelease { get; set; }
@@ -68,27 +64,6 @@ public class CurrentContext(
             Enum.TryParse(deviceType.ToString(), out DeviceType dType))
         {
             DeviceType = dType;
-        }
-
-        if (!BotScore.HasValue && httpContext.Request.Headers.TryGetValue("X-Cf-Bot-Score", out var cfBotScore) &&
-            int.TryParse(cfBotScore, out var parsedBotScore))
-        {
-            BotScore = parsedBotScore;
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Worked-Proxied", out var cfWorkedProxied))
-        {
-            CloudflareWorkerProxied = cfWorkedProxied == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Is-Bot", out var cfIsBot))
-        {
-            IsBot = cfIsBot == "1";
-        }
-
-        if (httpContext.Request.Headers.TryGetValue("X-Cf-Maybe-Bot", out var cfMaybeBot))
-        {
-            MaybeBot = cfMaybeBot == "1";
         }
 
         if (httpContext.Request.Headers.TryGetValue("Bitwarden-Client-Version", out var bitWardenClientVersion) && Version.TryParse(bitWardenClientVersion, out var cVersion))
@@ -200,6 +175,10 @@ public class CurrentContext(
             ? secretsManagerAccessClaim.ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
+        var accessPam = claimsDict.TryGetValue(Claims.PamAccess, out var pamAccessClaim)
+            ? pamAccessClaim.ToDictionary(s => s.Value, _ => true)
+            : new Dictionary<string, bool>();
+
         var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.TryGetValue(Claims.OrganizationOwner, out var organizationOwnerClaim))
         {
@@ -209,6 +188,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -228,6 +208,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -239,6 +220,7 @@ public class CurrentContext(
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -251,6 +233,7 @@ public class CurrentContext(
                     Type = OrganizationUserType.Custom,
                     Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    AccessPam = accessPam.ContainsKey(c.Value),
                 }));
         }
 
@@ -338,12 +321,6 @@ public class CurrentContext(
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
     }
 
-    public async Task<bool> ViewAllCollections(Guid orgId)
-    {
-        var org = GetOrganization(orgId);
-        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
-    }
-
     public async Task<bool> ManageGroups(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -428,16 +405,6 @@ public class CurrentContext(
         return ProviderProviderAdmin(providerId);
     }
 
-    public bool AccessProviderOrganizations(Guid providerId)
-    {
-        return ProviderUser(providerId);
-    }
-
-    public bool ManageProviderOrganizations(Guid providerId)
-    {
-        return ProviderProviderAdmin(providerId);
-    }
-
     public bool ProviderUser(Guid providerId)
     {
         return Providers?.Any(o => o.Id == providerId) ?? false;
@@ -469,6 +436,11 @@ public class CurrentContext(
         }
 
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
+    }
+
+    public bool AccessPam(Guid orgId)
+    {
+        return Organizations?.Any(o => o.Id == orgId && o.AccessPam) ?? false;
     }
 
     public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(

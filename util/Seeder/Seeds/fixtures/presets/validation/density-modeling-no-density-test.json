@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "No Density Baseline Test",
+    "domain": "no-density-baseline.example",
+    "planType": "enterprise-annually"
+  },
+  "users": { "count": 50 },
+  "groups": { "count": 5 },
+  "collections": { "count": 20 },
+  "ciphers": { "count": 200 }
+}

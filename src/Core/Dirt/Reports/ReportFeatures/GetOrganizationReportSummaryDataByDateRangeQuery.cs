@@ -2,7 +2,10 @@
 using Bit.Core.Dirt.Reports.ReportFeatures.Interfaces;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Dirt.Reports.ReportFeatures;
 
@@ -10,12 +13,15 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
 {
     private readonly IOrganizationReportRepository _organizationReportRepo;
     private readonly ILogger<GetOrganizationReportSummaryDataByDateRangeQuery> _logger;
+    private readonly IFusionCache _cache;
 
     public GetOrganizationReportSummaryDataByDateRangeQuery(
         IOrganizationReportRepository organizationReportRepo,
+        [FromKeyedServices(OrganizationReportCacheConstants.CacheName)] IFusionCache cache,
         ILogger<GetOrganizationReportSummaryDataByDateRangeQuery> logger)
     {
         _organizationReportRepo = organizationReportRepo;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -23,7 +29,7 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
     {
         try
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching organization report summary data by date range for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 organizationId, startDate, endDate);
 
             var (isValid, errorMessage) = ValidateRequest(organizationId, startDate, endDate);
@@ -33,30 +39,35 @@ public class GetOrganizationReportSummaryDataByDateRangeQuery : IGetOrganization
                 throw new BadRequestException(errorMessage);
             }
 
-            IEnumerable<OrganizationReportSummaryDataResponse> summaryDataList = (await _organizationReportRepo
-                    .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)) ??
-                Enumerable.Empty<OrganizationReportSummaryDataResponse>();
+            // update start and end date to include the entire day
+            startDate = startDate.Date;
+            endDate = endDate.Date.AddDays(1).AddTicks(-1);
 
-            var resultList = summaryDataList.ToList();
+            // cache key and tag
+            var cacheKey = OrganizationReportCacheConstants.BuildCacheKeyForSummaryDataByDateRange(organizationId, startDate, endDate);
+            var cacheTag = OrganizationReportCacheConstants.BuildCacheTagForOrganizationReports(organizationId);
 
-            if (!resultList.Any())
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "No summary data found for organization {organizationId} in date range {startDate} to {endDate}",
-                    organizationId, startDate, endDate);
-                return Enumerable.Empty<OrganizationReportSummaryDataResponse>();
-            }
-            else
-            {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully retrieved {count} organization report summary data records for organization {organizationId} in date range {startDate} to {endDate}",
-                    resultList.Count, organizationId, startDate, endDate);
+            var summaryDataList = await _cache.GetOrSetAsync(
+                key: cacheKey,
+                factory: async _ =>
+                    {
+                        var data = await _organizationReportRepo.GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+                        return data;
+                    },
+                options: new FusionCacheEntryOptions(duration: OrganizationReportCacheConstants.DurationForSummaryData),
+                tags: [cacheTag]
+            );
 
-            }
+            var resultList = summaryDataList?.ToList() ?? Enumerable.Empty<OrganizationReportSummaryDataResponse>().ToList();
+
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Fetched {Count} organization report summary data entries for organization {OrganizationId}, from {StartDate} to {EndDate}",
+                resultList.Count, organizationId, startDate, endDate);
 
             return resultList;
         }
         catch (Exception ex) when (!(ex is BadRequestException))
         {
-            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {organizationId}, from {startDate} to {endDate}",
+            _logger.LogError(ex, "Error fetching organization report summary data by date range for organization {OrganizationId}, from {StartDate} to {EndDate}",
                 organizationId, startDate, endDate);
             throw;
         }

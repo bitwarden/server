@@ -45,12 +45,14 @@ public class ResendOrganizationInviteCommand : IResendOrganizationInviteCommand
         {
             throw new BadRequestException("Organization invalid.");
         }
-        await SendInviteAsync(organizationUser, organization, initOrganization);
+        await SendInviteAsync(organizationUser, organization, initOrganization, invitingUserId);
     }
 
-    private async Task SendInviteAsync(OrganizationUser organizationUser, Organization organization, bool initOrganization) =>
+    private async Task SendInviteAsync(OrganizationUser organizationUser, Organization organization,
+        bool initOrganization, Guid? invitingUserId) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
             users: [organizationUser],
             organization: organization,
-            initOrganization: initOrganization));
+            initOrganization: initOrganization,
+            invitingUserId: invitingUserId));
 }

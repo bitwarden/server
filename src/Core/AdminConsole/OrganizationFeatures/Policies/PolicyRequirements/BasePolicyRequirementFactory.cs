@@ -9,7 +9,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// It provides sensible defaults to help teams to implement their own Policy Requirements.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactory<T> where T : IPolicyRequirement
+public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactory<T>, IPreAccessPolicyRequirementFactory
+    where T : IPolicyRequirement
 {
     /// <summary>
     /// User roles that are exempt from policy enforcement.
@@ -20,10 +21,10 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
 
     /// <summary>
     /// User statuses that are exempt from policy enforcement.
-    /// Invited and Revoked users are exempt by default, which is appropriate in the majority of cases.
+    /// Invited, Revoked, and Staged users are exempt by default, which is appropriate in the majority of cases.
     /// </summary>
     protected virtual IEnumerable<OrganizationUserStatusType> ExemptStatuses { get; } =
-        [OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked];
+        [OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked, OrganizationUserStatusType.Staged];
 
     /// <summary>
     /// Whether a Provider User for the organization is exempt from policy enforcement.
@@ -38,6 +39,11 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
         => !policyDetails.HasRole(ExemptRoles) &&
             !policyDetails.HasStatus(ExemptStatuses) &&
             (!policyDetails.IsProvider || !ExemptProviders);
+
+    /// <inheritdoc />
+    public bool EnforcePreAccess(OrganizationUserType proposedRole, bool isProvider)
+        => !ExemptRoles.Contains(proposedRole) &&
+            (!isProvider || !ExemptProviders);
 
     /// <inheritdoc />
     public abstract T Create(IEnumerable<PolicyDetails> policyDetails);

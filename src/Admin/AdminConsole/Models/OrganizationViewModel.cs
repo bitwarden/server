@@ -36,19 +36,16 @@ public class OrganizationViewModel
         CollectionCount = collections.Count();
         GroupCount = groups?.Count() ?? 0;
         PolicyCount = policies?.Count() ?? 0;
-        var organizationUserStatus = org.Status == OrganizationStatusType.Pending
-            ? OrganizationUserStatusType.Invited
-            : OrganizationUserStatusType.Confirmed;
         Owners = string.Join(", ",
             orgUsers
-                .Where(u => u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus)
+                .Where(u => u.Type == OrganizationUserType.Owner)
                 .Select(u => u.Email));
         Admins = string.Join(", ",
             orgUsers
-                .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
+                .Where(u => u.Type == OrganizationUserType.Admin)
                 .Select(u => u.Email));
-        OwnersDetails = orgUsers.Where(u => u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus);
-        AdminsDetails = orgUsers.Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus);
+        OwnersDetails = orgUsers.Where(u => u.Type == OrganizationUserType.Owner);
+        AdminsDetails = orgUsers.Where(u => u.Type == OrganizationUserType.Admin);
         SecretsCount = secretsCount;
         ProjectsCount = projectCount;
         ServiceAccountsCount = serviceAccountsCount;
@@ -75,6 +72,8 @@ public class OrganizationViewModel
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
     public bool UseRiskInsights => Organization.UseRiskInsights;
+    public bool UsePhishingBlocker => Organization.UsePhishingBlocker;
+    public bool UseDisableSmAdsForUsers => Organization.UseDisableSmAdsForUsers;
     public IEnumerable<OrganizationUserUserDetails> OwnersDetails { get; set; }
     public IEnumerable<OrganizationUserUserDetails> AdminsDetails { get; set; }
 }

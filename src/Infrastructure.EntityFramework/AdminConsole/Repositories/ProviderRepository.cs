@@ -29,6 +29,30 @@ public class ProviderRepository : Repository<Provider, Models.Provider.Provider,
         await base.DeleteAsync(provider);
     }
 
+    public async Task<Provider> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var provider = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return Mapper.Map<Provider>(provider);
+        }
+    }
+
+    public async Task<Provider> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var provider = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return Mapper.Map<Provider>(provider);
+        }
+    }
+
     public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -67,18 +91,20 @@ public class ProviderRepository : Repository<Provider, Models.Provider.Provider,
         }
     }
 
-    public async Task<ICollection<ProviderAbility>> GetManyAbilitiesAsync()
+#nullable enable
+    public async Task<ProviderAbility?> GetAbilityAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             return await GetDbSet(dbContext)
+                .Where(e => e.Id == id)
                 .Select(e => new ProviderAbility
                 {
-                    Enabled = e.Enabled,
                     Id = e.Id,
                     UseEvents = e.UseEvents,
-                }).ToListAsync();
+                    Enabled = e.Enabled,
+                }).FirstOrDefaultAsync();
         }
     }
 }

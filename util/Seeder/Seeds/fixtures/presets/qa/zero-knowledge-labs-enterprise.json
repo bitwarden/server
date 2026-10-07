@@ -1,0 +1,3071 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "zero-knowledge-labs",
+    "planType": "enterprise-annually",
+    "seats": 500
+  },
+  "roster": {
+    "fixture": "zero-knowledge-labs"
+  },
+  "ciphers": {
+    "fixture": "zero-knowledge-labs"
+  },
+  "collectionAssignments": [
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/X-Force"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Thunderbolts"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Defenders"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Wakanda"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Asgard"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/S.H.I.E.L.D."
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Infinity"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/New Mutants"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Fantastic Four"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Excelsior"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Alpha Flight"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Midnight Sons"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Illuminati"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Power Pack"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Inhumans"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "collection": "Engineering/Ravagers"
+    },
+    {
+      "cipher": "GitLab Self-Hosted",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "GitLab Self-Hosted",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Bitbucket Cloud",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Bitbucket Cloud",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "AWS Console",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "AWS Console",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "AWS Console",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "AWS Console",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Azure Portal",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Azure Portal",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Azure Portal",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Azure DevOps",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "Azure DevOps",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "GitHub Actions - Service Account",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "GitHub Actions - Service Account",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "CircleCI",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "CircleCI",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Docker Hub",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Docker Hub",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Docker Hub",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Cloudflare",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Cloudflare",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Fastly CDN",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Vercel",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "Vercel",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Datadog",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Datadog",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "Datadog",
+      "collection": "QA/Performance"
+    },
+    {
+      "cipher": "Datadog",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "PagerDuty",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "PagerDuty",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "PagerDuty",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "Sentry",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Sentry",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "Sentry",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Sentry",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Sentry",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "Grafana Cloud",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Grafana Cloud",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "New Relic",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "New Relic",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Jira",
+      "collection": "QA/Manual Testing"
+    },
+    {
+      "cipher": "Confluence",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Confluence",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Confluence",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Confluence",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "Confluence",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Linear",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Linear",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Linear",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Linear",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "Linear",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Notion",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Notion",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Notion",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Notion",
+      "collection": "Engineering/Guardians"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Slack",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Zoom",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Microsoft Teams",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Microsoft Teams",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Google Workspace Admin",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Google Workspace Admin",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Okta SSO",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Okta SSO",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Okta SSO",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Duo Security",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Duo Security",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Snyk",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Snyk",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Snyk",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "SonarCloud (Dev)",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "SonarCloud (Dev)",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "HackerOne",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "HackerOne",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "CrowdStrike Falcon",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "OpenAI Platform",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "OpenAI Platform",
+      "collection": "Innovation Lab"
+    },
+    {
+      "cipher": "OpenAI Platform",
+      "collection": "Data Science Notebooks"
+    },
+    {
+      "cipher": "Anthropic Console",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Anthropic Console",
+      "collection": "Innovation Lab"
+    },
+    {
+      "cipher": "Anthropic Console",
+      "collection": "Data Science Notebooks"
+    },
+    {
+      "cipher": "GitHub Copilot Business",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "GitHub Copilot Business",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Salesforce",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Salesforce",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Zendesk",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Zendesk",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Stripe Dashboard",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Stripe Dashboard",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "HubSpot",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "HubSpot",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "BambooHR (Dev)",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "BambooHR (Dev)",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Rippling",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Rippling",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "npm Registry",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "npm Registry",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "npm Registry",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "npm Registry",
+      "collection": "Engineering/Thunderbolts"
+    },
+    {
+      "cipher": "NuGet Gallery",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "NuGet Gallery",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "NuGet Gallery",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Postman",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Postman",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Postman",
+      "collection": "Engineering/Avengers"
+    },
+    {
+      "cipher": "Figma",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Figma",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Dev Environment Setup - macOS",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Dev Environment Setup - macOS",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Dev Environment Setup - Linux",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Dev Environment Setup - Linux",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Local Database Setup",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "Local Database Setup",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "VPN Configuration Notes",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "VPN Configuration Notes",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "AWS Access Setup",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "AWS Access Setup",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "GCP Service Account Setup",
+      "collection": "Environment Setup"
+    },
+    {
+      "cipher": "GCP Service Account Setup",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "On-Call Runbook",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "On-Call Runbook",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Code Review Checklist",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Code Review Checklist",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "New Hire Engineering Onboarding",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Release Process",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "Release Process",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Incident Response Playbook",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "Incident Response Playbook",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Incident Response Playbook",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Architecture Decision Records Template",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Architecture Decision Records Template",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "AWS Billing Credit Card",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "AWS Billing Credit Card",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "SaaS Subscriptions Corporate Card",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "SaaS Subscriptions Corporate Card",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Travel & Expenses Corporate Card",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Travel & Expenses Corporate Card",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Benefits Portal Profile",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Benefits Portal Profile",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Payroll System Profile",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Payroll System Profile",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Jenkins CI (Legacy - DO NOT USE)",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "Internal Wiki",
+      "collection": "Internal Tools"
+    },
+    {
+      "cipher": "Internal Wiki",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Staging Database Credentials",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "Staging Database Credentials",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Old Monitoring Service",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "TODO: Document API Rate Limits",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "AWS Console (old account - migrated)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "https://internal-dashboard.zero-knowledge.example/admin",
+      "collection": "Internal Tools"
+    },
+    {
+      "cipher": "https://internal-dashboard.zero-knowledge.example/admin",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Office Wifi Passwords",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Corporate Amex (Curtis has physical card)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Corporate Amex (Curtis has physical card)",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Heroku (DECOMMISSIONED Q3 2023)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Staging Environments (all)",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "Staging Environments (all)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Staging Environments (all)",
+      "collection": "QA/Performance"
+    },
+    {
+      "cipher": "Conference Room AV System PINs",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "GitHub (old personal account - needs migration)",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Emergency Contact - Office",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Emergency Contact - Office",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Q3 2024 Infrastructure Audit - CONFIDENTIAL",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "Q3 2024 Infrastructure Audit - CONFIDENTIAL",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "MFA Backup Codes - Okta",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Old Procurement Card (EXPIRED)",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Placeholder - API Integration (WIP)",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "see 'AWS Console' for root credentials",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Datadog (Marcus's personal trial)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Load Testing Environment",
+      "collection": "QA/Performance"
+    },
+    {
+      "cipher": "Load Testing Environment",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Board Meeting Zoom Bridge",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Backup Visa (no CVV on file)",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Something Important (ask Elena)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Vendor Contact - CloudMatrix Solutions",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "United Airlines MileagePlus",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Delta SkyMiles",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "American Airlines AAdvantage",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Southwest Airlines Rapid Rewards",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Marriott Bonvoy",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Hilton Honors",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Hyatt World of Hyatt",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "IHG One Rewards",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Expensify",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Expensify",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Brex",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Brex",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Concur Travel & Expense",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Concur Travel & Expense",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Uber for Business",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Uber for Business",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Lyft Business",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Lyft Business",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "OpenTable (team dinners)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Resy",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "DoorDash for Work",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "DoorDash for Work",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Navan (formerly TripActions)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Navan (formerly TripActions)",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Global Entry / TSA PreCheck",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Gartner Research Portal",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Gartner Research Portal",
+      "collection": "Architecture/Technical Standards"
+    },
+    {
+      "cipher": "Harvard Business Review",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Wall Street Journal",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "LinkedIn Recruiter (Executive)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "LinkedIn Recruiter (Executive)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Greenhouse ATS (Executive)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Greenhouse ATS (Executive)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "DocuSign (Executive)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "DocuSign (Executive)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Carta (Cap Table)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Carta (Cap Table)",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "AngelList / Wellfound",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "WeWork Members Portal",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "FedEx Business Account",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "FedEx Business Account",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Calendly (exec scheduling)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Loom (board presentations)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Marriott - can't remember which location",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Some airline thing (Elena created this)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Hotel Booking - RSA Conference 2024",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Hotel Booking - RSA Conference 2024",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Board Meeting Notes - Q4 2024 (DRAFT)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "CEO Travel Card (physical card with Marcus)",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "CFO Corporate Card",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Priority Pass (airport lounges)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Clear Plus (airport security)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "SF Office Door Codes",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "SF Office Door Codes",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Investor Portal - Series C Dashboard",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "Investor Portal - Series C Dashboard",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "AWS re:Invent Registration",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "AWS re:Invent Registration",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Company Registration - Delaware",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Company Registration - Delaware",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "DocuSign (Legal)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Ironclad CLM",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Vanta",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "OneTrust (Privacy & GRC)",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "OneTrust (Privacy & GRC)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Westlaw Legal Research",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "LexisNexis",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Delaware Division of Corporations",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Delaware Division of Corporations",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "USPTO (Trademark Portal)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Diligent Boards (Board Portal)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Diligent Boards (Board Portal)",
+      "collection": "Executive/Reports"
+    },
+    {
+      "cipher": "HelloSign (backup e-sign)",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "California Secretary of State",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "California Secretary of State",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "GDPR Data Subject Request Portal",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "GDPR Data Subject Request Portal",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Avalara (Tax Compliance)",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Avalara (Tax Compliance)",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "Insurance Policy Numbers",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Insurance Policy Numbers",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "SOC 2 Type II Audit Schedule",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "Annual filing calendar (not up to date)",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "old Vanta account (migrated to Drata)",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "SEC EDGAR (if/when needed)",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "Registered Agent - Delaware",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Registered Agent - Delaware",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "Google Ads",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Google Ads",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Meta Business Suite",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Meta Business Suite",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Meta Business Suite",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "LinkedIn Campaign Manager",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "LinkedIn Campaign Manager",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Google Analytics 4",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Google Analytics 4",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "Google Analytics 4",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Mixpanel",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Mixpanel",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "Mixpanel",
+      "collection": "Data Science Notebooks"
+    },
+    {
+      "cipher": "Ahrefs",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Ahrefs",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "SEMrush",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "SEMrush",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Mailchimp",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Mailchimp",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "SendGrid",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "SendGrid",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "SendGrid",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Hootsuite",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Hootsuite",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Buffer",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Buffer",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Adobe Creative Cloud",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Adobe Creative Cloud",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Canva Teams",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Canva Teams",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Figma - Marketing Workspace",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Webflow",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Webflow",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "WordPress (Blog)",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "WordPress (Blog)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Marketo",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Marketo",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Amplitude",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "Amplitude",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Amplitude",
+      "collection": "Data Science Notebooks"
+    },
+    {
+      "cipher": "Hotjar",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "Hotjar",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "YouTube Brand Account",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "YouTube Brand Account",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Twitter/X - @ZKLabs (company handle)",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Twitter/X - @ZKLabs (company handle)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Unsplash (stock photos)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Google Search Console",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Google Search Console",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Old Mailchimp account (migrated)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Brand Guidelines & Asset Links",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Social Media Account List",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Lottie Files",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Clearscope (SEO content)",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Clearscope (SEO content)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Moz Pro",
+      "collection": "Marketing/Content"
+    },
+    {
+      "cipher": "Moz Pro",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Sketch Cloud (legacy files)",
+      "collection": "Marketing Assets"
+    },
+    {
+      "cipher": "Workday HCM",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "BambooHR (People Ops)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Greenhouse ATS (People Ops)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Lever ATS (legacy)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Gusto Payroll",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Gusto Payroll",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Rippling HRIS",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "LinkedIn Recruiter (People Ops)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Checkr Background Checks",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Lattice (Performance & Engagement)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Culture Amp",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Coursera for Business",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Coursera for Business",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Udemy Business",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Udemy Business",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "LinkedIn Learning Admin",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "LinkedIn Learning Admin",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Aetna Benefits Portal",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Fidelity 401(k) Plan Admin",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "HealthEquity FSA/HSA Admin",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Carta Equity Admin",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Carta Equity Admin",
+      "collection": "Executive/Financial"
+    },
+    {
+      "cipher": "Deel (International Contractors)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Deel (International Contractors)",
+      "collection": "Vendor Licenses"
+    },
+    {
+      "cipher": "Donut (Slack onboarding bot)",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Donut (Slack onboarding bot)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "SurveyMonkey (exit surveys)",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Old benefits portal (2023 plan year)",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Annual Open Enrollment Checklist",
+      "collection": "Benefits Portal"
+    },
+    {
+      "cipher": "Onboarding Accounts Checklist",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "Onboarding Accounts Checklist",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "PTO Policy Quick Reference",
+      "collection": "Onboarding"
+    },
+    {
+      "cipher": "PTO Policy Quick Reference",
+      "collection": "HR Systems"
+    },
+    {
+      "cipher": "Company Registration - EIN",
+      "collection": "Legal Documents"
+    },
+    {
+      "cipher": "Company Registration - EIN",
+      "collection": "Regulatory Filings"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "collection": "Sales/Mid-Market"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Salesforce - Sandbox",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Salesforce - Sandbox",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "HubSpot CRM",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "HubSpot CRM",
+      "collection": "Sales/Mid-Market"
+    },
+    {
+      "cipher": "HubSpot CRM",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "ZoomInfo",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "ZoomInfo",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "collection": "Sales/Mid-Market"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Outreach",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Outreach",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "SalesLoft",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Clari",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Clari",
+      "collection": "Sales/Mid-Market"
+    },
+    {
+      "cipher": "PandaDoc",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "PandaDoc",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Gainsight",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Gainsight",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "ChurnZero",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "ChurnZero",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Zendesk - Support",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Zendesk - Support",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Intercom",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "Intercom",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "Chorus.ai (now ZoomInfo)",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Clearbit",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Clearbit",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "DealHub CPQ",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "DealHub CPQ",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Vitally",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Demo Environment - Enterprise",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Demo Environment - Enterprise",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Demo Environment - SMB",
+      "collection": "Sales/Mid-Market"
+    },
+    {
+      "cipher": "Demo Environment - SMB",
+      "collection": "Customer Success/Engineering"
+    },
+    {
+      "cipher": "Calendly (Sales Scheduling)",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Calendly (Sales Scheduling)",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Apollo.io",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Apollo.io",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Salesforce - Old Sandbox (EXPIRED)",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Drift Chatbot",
+      "collection": "Marketing/Growth"
+    },
+    {
+      "cipher": "Drift Chatbot",
+      "collection": "Customer Success/Support"
+    },
+    {
+      "cipher": "G2 Vendor Profile",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "G2 Vendor Profile",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "TrustRadius Vendor Portal",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "TrustRadius Vendor Portal",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Enterprise Pricing Matrix - CONFIDENTIAL",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Competitive Battle Cards",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "SDR Objection Handling Guide",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "SDR Objection Handling Guide",
+      "collection": "Sales/Development"
+    },
+    {
+      "cipher": "Customer Demo (prospect: Acme Corp)",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Highspot",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Highspot",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "something for the Globex deal",
+      "collection": "Sales/Enterprise"
+    },
+    {
+      "cipher": "Q4 2024 Pipeline Review Notes",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Sales Team Dinner Card",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Seismic",
+      "collection": "Sales Playbooks"
+    },
+    {
+      "cipher": "Seismic",
+      "collection": "Marketing/Product"
+    },
+    {
+      "cipher": "CrowdStrike Falcon Console",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "CrowdStrike Falcon Console",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "SentinelOne",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Qualys VMDR",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Tenable.io",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Burp Suite Enterprise",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Burp Suite Enterprise",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Elastic Security (SIEM)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Elastic Security (SIEM)",
+      "collection": "Incident Postmortems"
+    },
+    {
+      "cipher": "HackerOne Bug Bounty Program",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "HackerOne Bug Bounty Program",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "Bugcrowd",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Bugcrowd",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "Cobalt Pen Testing",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "VirusTotal Enterprise",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Snyk - Security Dashboard",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Snyk - Security Dashboard",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "SonarCloud (Security)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "SonarCloud (Security)",
+      "collection": "QA/Automation"
+    },
+    {
+      "cipher": "Checkmarx SAST",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Checkmarx SAST",
+      "collection": "CI/CD Pipelines"
+    },
+    {
+      "cipher": "DigiCert Certificate Manager",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "DigiCert Certificate Manager",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "HashiCorp Vault (Secrets Manager)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "HashiCorp Vault (Secrets Manager)",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "HashiCorp Vault (Secrets Manager)",
+      "collection": "Production Access"
+    },
+    {
+      "cipher": "AWS Security Hub",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "AWS Security Hub",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "Wiz Cloud Security",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Wiz Cloud Security",
+      "collection": "Cloud Infrastructure"
+    },
+    {
+      "cipher": "MITRE ATT&CK Navigator (internal)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Old Nessus instance (replaced by Tenable.io)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Security Tool Stack Overview",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Pen Test Schedule 2025",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "Shodan (recon)",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Shodan (recon)",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "Security Scorecard",
+      "collection": "Security Credentials"
+    },
+    {
+      "cipher": "Security Scorecard",
+      "collection": "Compliance Policies"
+    },
+    {
+      "cipher": "test creds for staging pen test (Q4)",
+      "collection": "Pen Test Reports"
+    },
+    {
+      "cipher": "GitHub Actions - Service Account",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "CircleCI",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "collection": "Shared API Keys"
+    },
+    {
+      "cipher": "Cloudflare",
+      "collection": "Shared API Keys"
+    }
+  ],
+  "folderAssignments": [
+    {
+      "cipher": "Slack",
+      "folder": "Executive",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Zoom",
+      "folder": "Executive",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Board Meeting Zoom Bridge",
+      "folder": "Executive",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Carta (Cap Table)",
+      "folder": "Executive",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Investor Portal - Series C Dashboard",
+      "folder": "Executive",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Navan (formerly TripActions)",
+      "folder": "Travel",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "United Airlines MileagePlus",
+      "folder": "Travel",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Marriott Bonvoy",
+      "folder": "Travel",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "CEO Travel Card (physical card with Marcus)",
+      "folder": "Finance",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Expensify",
+      "folder": "Finance",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Engineering",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "AWS Console",
+      "folder": "Engineering",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "Engineering",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Jira",
+      "folder": "Strategy",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Confluence",
+      "folder": "Strategy",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Linear",
+      "folder": "Strategy",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Notion",
+      "folder": "Strategy",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "OpenAI Platform",
+      "folder": "Vendor Accounts",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Anthropic Console",
+      "folder": "Vendor Accounts",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "GitHub Copilot Business",
+      "folder": "Vendor Accounts",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Dev Tools",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "GitLab Self-Hosted",
+      "folder": "Dev Tools",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Docker Hub",
+      "folder": "Dev Tools",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "folder": "Dev Tools",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "AWS Console",
+      "folder": "Cloud",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "folder": "Cloud",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Azure Portal",
+      "folder": "Cloud",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "Monitoring",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Grafana Cloud",
+      "folder": "Monitoring",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "New Relic",
+      "folder": "Monitoring",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Postman",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "npm Registry",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "NuGet Gallery",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Docker Hub",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Sentry",
+      "folder": "Dev Tools",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Azure DevOps",
+      "folder": "CI/CD",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "GitHub Actions - Service Account",
+      "folder": "CI/CD",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "CircleCI",
+      "folder": "CI/CD",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Jira",
+      "folder": "Team Admin",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Confluence",
+      "folder": "Team Admin",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Linear",
+      "folder": "Team Admin",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Notion",
+      "folder": "Team Admin",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Dev Tools",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "Dev Tools",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Sentry",
+      "folder": "Dev Tools",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "PagerDuty",
+      "folder": "Team Admin",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Slack",
+      "folder": "Project Mgmt",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Zoom",
+      "folder": "Project Mgmt",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Docker Hub",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Postman",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "npm Registry",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Vercel",
+      "folder": "Dev Tools",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "AWS Console",
+      "folder": "Cloud",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "folder": "Cloud",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Cloudflare",
+      "folder": "Cloud",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Jira",
+      "folder": "Team Admin",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Confluence",
+      "folder": "Team Admin",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Linear",
+      "folder": "Team Admin",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Notion",
+      "folder": "Team Admin",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Slack",
+      "folder": "Team Admin",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "folder": "Dev Tools",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "Dev Tools",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "PagerDuty",
+      "folder": "Dev Tools",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Sentry",
+      "folder": "Dev Tools",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "CrowdStrike Falcon Console",
+      "folder": "Security Tools",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "SentinelOne",
+      "folder": "Security Tools",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "folder": "Security Tools",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Elastic Security (SIEM)",
+      "folder": "Security Tools",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Wiz Cloud Security",
+      "folder": "Security Tools",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "folder": "Compliance",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Snyk - Security Dashboard",
+      "folder": "Compliance",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Checkmarx SAST",
+      "folder": "Compliance",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Burp Suite Enterprise",
+      "folder": "Pen Testing",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Cobalt Pen Testing",
+      "folder": "Pen Testing",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "HackerOne Bug Bounty Program",
+      "folder": "Pen Testing",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "AWS Console",
+      "folder": "Infrastructure",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Google Cloud Console",
+      "folder": "Infrastructure",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Azure Portal",
+      "folder": "Infrastructure",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "folder": "Infrastructure",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Cloudflare",
+      "folder": "Infrastructure",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "Monitoring",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Grafana Cloud",
+      "folder": "Monitoring",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "PagerDuty",
+      "folder": "Monitoring",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "New Relic",
+      "folder": "Monitoring",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Sentry",
+      "folder": "Incident Response",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "folder": "Incident Response",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Jira",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Confluence",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Linear",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Sentry",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Datadog",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "SonarCloud (Dev)",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Snyk",
+      "folder": "QA Tools",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "GitHub Actions - Service Account",
+      "folder": "CI/CD",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "CircleCI",
+      "folder": "CI/CD",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Azure DevOps",
+      "folder": "CI/CD",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "folder": "CRM",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Salesforce - Sandbox",
+      "folder": "CRM",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "HubSpot CRM",
+      "folder": "CRM",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "folder": "CRM",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "ZoomInfo",
+      "folder": "Prospecting",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "folder": "Prospecting",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Apollo.io",
+      "folder": "Prospecting",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Clari",
+      "folder": "Deal Tools",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "PandaDoc",
+      "folder": "Deal Tools",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "DealHub CPQ",
+      "folder": "Deal Tools",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "folder": "CRM",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "HubSpot CRM",
+      "folder": "CRM",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "folder": "CRM",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Clari",
+      "folder": "CRM",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "ZoomInfo",
+      "folder": "Prospecting",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "folder": "Prospecting",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Outreach",
+      "folder": "Prospecting",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Calendly (Sales Scheduling)",
+      "folder": "Prospecting",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Google Ads",
+      "folder": "Ad Platforms",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Meta Business Suite",
+      "folder": "Ad Platforms",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "LinkedIn Campaign Manager",
+      "folder": "Ad Platforms",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Google Analytics 4",
+      "folder": "Analytics",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Mixpanel",
+      "folder": "Analytics",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Amplitude",
+      "folder": "Analytics",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Hotjar",
+      "folder": "Analytics",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Mailchimp",
+      "folder": "Content",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "WordPress (Blog)",
+      "folder": "Content",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Hootsuite",
+      "folder": "Content",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Workday HCM",
+      "folder": "HR Systems",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "BambooHR (People Ops)",
+      "folder": "HR Systems",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Rippling HRIS",
+      "folder": "HR Systems",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Lattice (Performance & Engagement)",
+      "folder": "HR Systems",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Greenhouse ATS (People Ops)",
+      "folder": "Recruiting",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "LinkedIn Recruiter (People Ops)",
+      "folder": "Recruiting",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Checkr Background Checks",
+      "folder": "Recruiting",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Aetna Benefits Portal",
+      "folder": "Benefits",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Fidelity 401(k) Plan Admin",
+      "folder": "Benefits",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "HealthEquity FSA/HSA Admin",
+      "folder": "Benefits",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "DocuSign (Legal)",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Ironclad CLM",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Westlaw Legal Research",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "LexisNexis",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Diligent Boards (Board Portal)",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "HelloSign (backup e-sign)",
+      "folder": "Legal Tools",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "folder": "Compliance",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "OneTrust (Privacy & GRC)",
+      "folder": "Compliance",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "GDPR Data Subject Request Portal",
+      "folder": "Compliance",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Stripe Dashboard",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Brex",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Avalara (Tax Compliance)",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Expensify",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Concur Travel & Expense",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "SaaS Subscriptions Corporate Card",
+      "folder": "Finance",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Gusto Payroll",
+      "folder": "Payroll",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Carta Equity Admin",
+      "folder": "Payroll",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Deel (International Contractors)",
+      "folder": "Payroll",
+      "user": "leonard.strauss"
+    }
+  ],
+  "favoriteAssignments": [
+    {
+      "cipher": "Slack",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Zoom",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Investor Portal - Series C Dashboard",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "Expensify",
+      "user": "marcus.chen"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Jira",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "Slack",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "AWS Console",
+      "user": "priya.narayanan"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "AWS Console",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "Datadog",
+      "user": "takeshi.yamamoto"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Postman",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Sentry",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Slack",
+      "user": "derek.osei"
+    },
+    {
+      "cipher": "Jira",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "Slack",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "PagerDuty",
+      "user": "sanjay.patel"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "AWS Console",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Docker Hub",
+      "user": "natasha.filipova"
+    },
+    {
+      "cipher": "Jira",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "GitHub Enterprise",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "Slack",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "PagerDuty",
+      "user": "wei.zhang"
+    },
+    {
+      "cipher": "CrowdStrike Falcon Console",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Splunk Cloud",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Wiz Cloud Security",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "HackerOne Bug Bounty Program",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Drata (SOC 2 Compliance)",
+      "user": "malcolm.sterling"
+    },
+    {
+      "cipher": "Datadog",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "PagerDuty",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "AWS Console",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Terraform Cloud",
+      "user": "curtis.washington"
+    },
+    {
+      "cipher": "Jira",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Sentry",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "SonarCloud (Dev)",
+      "user": "gloria.hammond"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Clari",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Slack",
+      "user": "harrison.blake"
+    },
+    {
+      "cipher": "Salesforce - Production",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Gong Revenue Intelligence",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Outreach",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "LinkedIn Sales Navigator",
+      "user": "simone.beaumont"
+    },
+    {
+      "cipher": "Google Ads",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Google Analytics 4",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Hootsuite",
+      "user": "celeste.dupont"
+    },
+    {
+      "cipher": "Workday HCM",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Greenhouse ATS (People Ops)",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "Lattice (Performance & Engagement)",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "LinkedIn Recruiter (People Ops)",
+      "user": "danielle.moreau"
+    },
+    {
+      "cipher": "DocuSign (Legal)",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Ironclad CLM",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Westlaw Legal Research",
+      "user": "arthur.kensington"
+    },
+    {
+      "cipher": "Stripe Dashboard",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Brex",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Gusto Payroll",
+      "user": "leonard.strauss"
+    },
+    {
+      "cipher": "Expensify",
+      "user": "leonard.strauss"
+    }
+  ]
+}

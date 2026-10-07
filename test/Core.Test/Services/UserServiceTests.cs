@@ -3,24 +3,28 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -42,6 +46,41 @@ public class UserServiceTests
         user.Name = string.Empty;
         await sutProvider.Sut.SaveUserAsync(user);
         Assert.Null(user.Name);
+    }
+
+    [Theory, BitAutoData]
+    public async Task EnablePremiumAsync_UserNotPremium_EnablesPremiumAndBumpsAccountRevisionDate(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        user.Premium = false;
+        user.Gateway = GatewayType.Stripe;
+        var staleAccountRevisionDate = user.AccountRevisionDate = DateTime.UtcNow.AddDays(-1);
+        var expirationDate = DateTime.UtcNow.AddDays(30);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+
+        await sutProvider.Sut.EnablePremiumAsync(user.Id, expirationDate);
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(Arg.Is<User>(u =>
+            u.Premium &&
+            u.PremiumExpirationDate == expirationDate &&
+            u.AccountRevisionDate > staleAccountRevisionDate));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisablePremiumAsync_UserPremium_DisablesPremiumAndBumpsAccountRevisionDate(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        user.Premium = true;
+        var staleAccountRevisionDate = user.AccountRevisionDate = DateTime.UtcNow.AddDays(-1);
+        var expirationDate = DateTime.UtcNow.AddDays(7);
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
+
+        await sutProvider.Sut.DisablePremiumAsync(user.Id, expirationDate);
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(Arg.Is<User>(u =>
+            !u.Premium &&
+            u.PremiumExpirationDate == expirationDate &&
+            u.AccountRevisionDate > staleAccountRevisionDate));
     }
 
     [Theory, BitAutoData]
@@ -103,7 +142,6 @@ public class UserServiceTests
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
 
         Assert.False(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
@@ -113,11 +151,10 @@ public class UserServiceTests
     {
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = true;
-        organization.UsersGetPremium = true;
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
@@ -223,7 +260,6 @@ public class UserServiceTests
         Organization organization1, Guid organizationUserId1,
         Organization organization2, Guid organizationUserId2)
     {
-        // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new() { Enabled = true }
@@ -231,83 +267,6 @@ public class UserServiceTests
         organization1.Enabled = organization2.Enabled = true;
         organization1.UseSso = organization2.UseSso = true;
 
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
-            .Returns(
-            [
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization1.Id,
-                    OrganizationUserId = organizationUserId1,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                },
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization2.Id,
-                    OrganizationUserId = organizationUserId2,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                }
-            ]);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization1.Id)
-            .Returns(organization1);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization2.Id)
-            .Returns(organization2);
-        var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>(), JsonHelpers.LegacyEnumKeyResolver);
-
-        // Act
-        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-
-        // Assert
-        await sutProvider.GetDependency<IUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u.Id == user.Id && u.TwoFactorProviders == expectedSavedProviders));
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
-
-        // Revoke the user from the first organization
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(
-                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization1.Id &&
-                    r.OrganizationUsers.First().Id == organizationUserId1 &&
-                    r.OrganizationUsers.First().OrganizationId == organization1.Id));
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization1.DisplayName(), user.Email);
-
-        // Remove the user from the second organization
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(
-                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization2.Id &&
-                    r.OrganizationUsers.First().Id == organizationUserId2 &&
-                    r.OrganizationUsers.First().OrganizationId == organization2.Id));
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization2.DisplayName(), user.Email);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithPolicyRequirementsEnabled_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
-        SutProvider<UserService> sutProvider, User user,
-        Organization organization1, Guid organizationUserId1,
-        Organization organization2, Guid organizationUserId2)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new() { Enabled = true }
-        });
-        organization1.Enabled = organization2.Enabled = true;
-        organization1.UseSso = organization2.UseSso = true;
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
             .Returns(new RequireTwoFactorPolicyRequirement(
@@ -368,61 +327,11 @@ public class UserServiceTests
     public async Task DisableTwoFactorProviderAsync_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
         SutProvider<UserService> sutProvider, User user, Organization organization)
     {
-        // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new() { Enabled = true },
             [TwoFactorProviderType.Remember] = new() { Enabled = true }
         });
-        sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
-            .Returns(
-            [
-                new OrganizationUserPolicyDetails
-                {
-                    OrganizationId = organization.Id,
-                    PolicyType = PolicyType.TwoFactorAuthentication,
-                    PolicyEnabled = true
-                }
-            ]);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
-            .TwoFactorIsEnabledAsync(user)
-            .Returns(true);
-        var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Remember] = new() { Enabled = true }
-        }, JsonHelpers.LegacyEnumKeyResolver);
-
-        // Act
-        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
-
-        // Assert
-        await sutProvider.GetDependency<IUserRepository>()
-            .Received(1)
-            .ReplaceAsync(Arg.Is<User>(u => u.Id == user.Id && u.TwoFactorProviders == expectedSavedProviders));
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .RevokeNonCompliantOrganizationUsersAsync(default);
-        await sutProvider.GetDependency<IMailService>()
-            .DidNotReceiveWithAnyArgs()
-            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithPolicyRequirementsEnabled_UserHasOneProviderEnabled_DoesNotRevokeUserFromOrganization(
-        SutProvider<UserService> sutProvider, User user, Organization organization)
-    {
-        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-        {
-            [TwoFactorProviderType.Email] = new() { Enabled = true },
-            [TwoFactorProviderType.Remember] = new() { Enabled = true }
-        });
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            .Returns(true);
         sutProvider.GetDependency<IPolicyRequirementQuery>()
             .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
             .Returns(new RequireTwoFactorPolicyRequirement(
@@ -550,6 +459,10 @@ public class UserServiceTests
         var recoveryCode = "1234";
         user.TwoFactorRecoveryCode = recoveryCode;
 
+        sutProvider.GetDependency<IPolicyRequirementQuery>()
+            .GetAsync<RequireTwoFactorPolicyRequirement>(user.Id)
+            .Returns(new RequireTwoFactorPolicyRequirement([]));
+
         // Act
         var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
 
@@ -594,6 +507,211 @@ public class UserServiceTests
             user.MasterPassword = null;
         }
     }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData(" ")]
+    [BitAutoData("\t")]
+    public async Task AdminResetPasswordAsync_EmptyOrWhitespaceResetPasswordKey_ThrowsBadRequest(
+        string resetPasswordKey,
+        SutProvider<UserService> sutProvider,
+        Organization organization,
+        OrganizationUser orgUser,
+        [Policy(PolicyType.ResetPassword, true)] PolicyStatus policy)
+    {
+        // Arrange
+        organization.UseResetPassword = true;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
+        orgUser.OrganizationId = organization.Id;
+        orgUser.ResetPasswordKey = resetPasswordKey;
+        orgUser.UserId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(organization.Id, PolicyType.ResetPassword)
+            .Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdminResetPasswordAsync(
+                OrganizationUserType.Owner, organization.Id, orgUser.Id, "newPassword", "key"));
+        Assert.Equal("Organization User not valid", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithClaimedAccount_ThrowsBadRequestException(
+        User user,
+        Organization organization,
+        SutProvider<UserService> sutProvider)
+    {
+        organization.Enabled = true;
+        organization.UseOrganizationDomains = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([organization]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(user));
+
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive().GetCountByOnlyOwnerAsync(user.Id);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithGatewaySubscription_CallsSubscriberService(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        user.GatewaySubscriptionId = "sub_test";
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        var result = await sutProvider.Sut.DeleteAsync(user);
+
+        Assert.True(result.Succeeded);
+
+        await sutProvider.GetDependency<ISubscriberService>()
+            .Received(1)
+            .CancelSubscription(
+                user,
+                cancelImmediately: false,
+                Arg.Is<OffboardingSurveyResponse>(r => r.UserId == user.Id));
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithFileSends_DeletesFilesBeforeDbRecords(
+        User user,
+        SutProvider<UserService> sutProvider)
+    {
+        // Ensuring that the file is deleted first avoids the following situation:
+        // 1. DB row is deleted successfully
+        // 2. File blob fails to delete
+        // 3. File blob still exists but with no parent Send
+        user.GatewaySubscriptionId = null;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        var callOrder = new List<string>();
+        sutProvider.GetDependency<ISendFileStorageService>()
+            .DeleteFilesForUserAsync(user.Id)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("file"));
+        sutProvider.GetDependency<IUserRepository>()
+            .DeleteAsync(user)
+            .Returns(Task.CompletedTask)
+            .AndDoes(_ => callOrder.Add("db"));
+
+        var result = await sutProvider.Sut.DeleteAsync(user);
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<ISendFileStorageService>()
+            .Received(1).DeleteFilesForUserAsync(user.Id);
+        Assert.Equal(new[] { "file", "db" }, callOrder);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndInvalidToken_ReturnsFailedResult(User user)
+    {
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        var result = await sutProvider.Sut.DeleteAsync(user, "not_the_right_token");
+
+        Assert.False(result.Succeeded);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .DidNotReceive().GetByVerifiedUserEmailDomainAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndClaimedAccount_ThrowsBadRequestException(
+        User user, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseOrganizationDomains = true;
+
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([organization]);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DeleteAsync(user, "otp_token"));
+
+        Assert.Equal(new CannotDeleteClaimedAccountError().Message, exception.Message);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().DeleteAsync(user);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DeleteAsync_WithTokenAndUnclaimedAccount_DeletesUser(User user)
+    {
+        user.GatewaySubscriptionId = null;
+
+        var sutProvider = new SutProvider<UserService>()
+            .CreateWithUserServiceCustomizations(user);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(user.Id)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(user.Id)
+            .Returns(0);
+
+        var result = await sutProvider.Sut.DeleteAsync(user, "otp_token");
+
+        Assert.True(result.Succeeded);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).DeleteAsync(user);
+    }
+
+    // PM-37165: locks in the legacy path's non-write of LastApiKeyRotationDate. Once the
+    // PM37165_RotateUserApiKeyCommand flag is cleaned up and this method is deleted, this
+    // test goes with it.
+    [Theory, BitAutoData]
+    public async Task RotateApiKeyAsync_LegacyPath_DoesNotSetLastApiKeyRotationDate(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        user.LastApiKeyRotationDate = null;
+
+#pragma warning disable CS0618 // intentionally exercising the obsolete legacy path
+        await sutProvider.Sut.RotateApiKeyAsync(user);
+#pragma warning restore CS0618
+
+        Assert.Null(user.LastApiKeyRotationDate);
+    }
 }
 
 public static class UserServiceSutProviderExtensions
@@ -631,6 +749,11 @@ public static class UserServiceSutProviderExtensions
                         ["Email"] = new TokenProviderDescriptor(typeof(IUserTwoFactorTokenProvider<User>))
                         {
                             ProviderInstance = fakeUserTwoFactorProvider,
+                        },
+                        // The delete-recover-token endpoint's DeleteAsync(User, string) looks up by "Default", not "Email".
+                        [TokenOptions.DefaultProvider] = new TokenProviderDescriptor(typeof(IUserTwoFactorTokenProvider<User>))
+                        {
+                            ProviderInstance = fakeUserTwoFactorProvider,
                         }
                     }
                 }
@@ -646,8 +769,6 @@ public static class UserServiceSutProviderExtensions
     /// <summary>
     /// Properly registers IUserPasswordStore as IUserStore so it's injected when the sut is initialized.
     /// </summary>
-    /// <param name="sutProvider"></param>
-    /// <returns></returns>
     private static SutProvider<UserService> SetUserPasswordStore(this SutProvider<UserService> sutProvider)
     {
         var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();

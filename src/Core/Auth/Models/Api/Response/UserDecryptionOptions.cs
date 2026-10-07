@@ -45,13 +45,19 @@ public class WebAuthnPrfDecryptionOption
 {
     public string EncryptedPrivateKey { get; }
     public string EncryptedUserKey { get; }
+    public string CredentialId { get; }
+    public string[] Transports { get; }
 
     public WebAuthnPrfDecryptionOption(
         string encryptedPrivateKey,
-        string encryptedUserKey)
+        string encryptedUserKey,
+        string credentialId,
+        string[]? transports = null)
     {
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
+        CredentialId = credentialId;
+        Transports = transports ?? [];
     }
 }
 

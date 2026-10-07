@@ -7,8 +7,9 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
+using Bit.Sso.Utilities.Saml2;
 using Duende.IdentityServer.Services;
-using Microsoft.IdentityModel.Logging;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
 namespace Bit.Sso;
@@ -41,9 +42,13 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
+
+        // Metrics
+        services.TryAddSingleton<Saml2AssertionMetrics>();
 
         // Caching
         services.AddMemoryCache();
@@ -90,22 +95,15 @@ public class Startup
 
     public void Configure(
         IApplicationBuilder app,
-        IWebHostEnvironment env,
+        IWebHostEnvironment environment,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
         ILogger<Startup> logger)
     {
-        if (env.IsDevelopment() || globalSettings.SelfHosted)
-        {
-            IdentityModelEventSource.ShowPII = true;
-        }
-
-        app.UseSerilog(env, appLifetime, globalSettings);
-
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
-        if (!env.IsDevelopment())
+        if (!environment.IsDevelopment())
         {
             var uri = new Uri(globalSettings.BaseServiceUri.Sso);
             app.Use(async (ctx, next) =>
@@ -121,7 +119,7 @@ public class Startup
             app.UseForwardedHeaders(globalSettings);
         }
 
-        if (env.IsDevelopment())
+        if (environment.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
             app.UseCookiePolicy();
@@ -154,7 +152,14 @@ public class Startup
 
         // Add Mvc stuff
         app.UseAuthorization();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        // Gates endpoints carrying IFeatureMetadata; required in any app that
+        // routes requests through endpoints tagged with [RequireFeature].
+        app.UseFeatureFlagChecks();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapVersionEndpoint();
+        });
 
         // Log startup
         logger.LogInformation(Constants.BypassFiltersEventId, "{Project} started.", globalSettings.ProjectName);

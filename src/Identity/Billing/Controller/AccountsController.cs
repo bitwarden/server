@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Api.Requests.Accounts;
+﻿using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -15,7 +16,12 @@ public class AccountsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync([FromBody] TrialSendVerificationEmailRequestModel model)
     {
-        var trialLength = model.TrialLength ?? 7;
+        var trialLength = model.TrialLength ?? TrialInitiationConstants.DefaultTrialLengthDays;
+
+        if (model.PaymentOptional && trialLength == 0)
+        {
+            return BadRequest(new { message = "Payment cannot be optional when trial length is zero." });
+        }
 
         var token = await sendTrialInitiationEmailForRegistrationCommand.Handle(
             model.Email,
@@ -23,7 +29,8 @@ public class AccountsController(
             model.ReceiveMarketingEmails,
             model.ProductTier,
             model.Products,
-            trialLength);
+            trialLength,
+            model.PaymentOptional);
 
         if (token != null)
         {

@@ -1,0 +1,78 @@
+﻿using System.Security.Claims;
+using Bit.Core.Exceptions;
+using Bit.Core.Services;
+using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.Api.Models.Request;
+using Bit.Services.Pam.Api.Models.Response;
+using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
+using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
+
+namespace Bit.Services.Pam.Api.Endpoints.Handlers;
+
+/// <summary>
+/// Handler for the <c>organizations/{orgId}/access-rules</c> resource. The Minimal API endpoints (see
+/// <c>AccessRuleEndpoints</c>) resolve this handler from DI.
+/// </summary>
+/// <remarks>
+/// Access to the organization is already settled by the time a handler runs — <c>AccessRuleEndpoints</c> authorizes
+/// the group and the write endpoints through the standard authorization middleware. What is left here is resource
+/// scoping: confirming a rule reached by ID actually belongs to the organization on the route.
+/// </remarks>
+public class AccessRuleEndpointsHandler(
+    IUserService userService,
+    IAccessRuleRepository repository,
+    ICreateAccessRuleCommand createCommand,
+    IUpdateAccessRuleCommand updateCommand,
+    IDeleteAccessRuleCommand deleteCommand,
+    IListRuleBypassableCiphersQuery bypassableCiphersQuery)
+{
+    public async Task<ListResponseModel<AccessRuleResponseModel>> GetAll(Guid orgId)
+    {
+        var rules = await repository.GetManyDetailsByOrganizationIdAsync(orgId);
+        return new ListResponseModel<AccessRuleResponseModel>(
+            rules.Select(rule => new AccessRuleResponseModel(rule)));
+    }
+
+    public async Task<AccessRuleResponseModel> Get(Guid orgId, Guid id)
+    {
+        var rule = await repository.GetDetailsByIdAsync(id);
+        if (rule is null || rule.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        return new AccessRuleResponseModel(rule);
+    }
+
+    public async Task<AccessRuleResponseModel> Post(ClaimsPrincipal user, Guid orgId, AccessRuleRequestModel model)
+    {
+        var toCreate = model.ToAccessRule(orgId);
+        toCreate.LastEditedBy = userService.GetProperUserId(user)!.Value;
+        var rule = await createCommand.CreateAsync(toCreate, model.Collections);
+        return new AccessRuleResponseModel(rule);
+    }
+
+    public async Task<AccessRuleResponseModel> Put(ClaimsPrincipal user, Guid orgId, Guid id, AccessRuleRequestModel model)
+    {
+        var toUpdate = model.ToAccessRule(orgId);
+        toUpdate.LastEditedBy = userService.GetProperUserId(user)!.Value;
+        var rule = await updateCommand.UpdateAsync(orgId, id, toUpdate, model.Collections);
+        return new AccessRuleResponseModel(rule);
+    }
+
+    public async Task Delete(ClaimsPrincipal user, Guid orgId, Guid id)
+    {
+        await deleteCommand.DeleteAsync(orgId, id, userService.GetProperUserId(user)!.Value);
+    }
+
+    /// <summary>Where this rule fails to gate: the collections letting its ciphers through without a lease.</summary>
+    /// <remarks>
+    /// Unlike <see cref="Get"/>, a rule belonging to another organization returns an empty list, not 404.
+    /// </remarks>
+    public async Task<RuleBypassableCiphersResponseModel> GetBypassableCiphers(Guid orgId, Guid id)
+    {
+        var ungatedCollectionIds = await bypassableCiphersQuery.GetUngatedCollectionIdsAsync(orgId, id);
+        return new RuleBypassableCiphersResponseModel(id, ungatedCollectionIds);
+    }
+}

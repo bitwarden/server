@@ -17,6 +17,6 @@ public class PaymentsSubscription
     public PaymentsSubscription(SubscriptionInfo subscriptionInfo, InviteOrganization inviteOrganization)
     {
         SubscriptionStatus = subscriptionInfo?.Subscription?.Status ?? string.Empty;
-        ProductTierType = inviteOrganization.Plan.ProductTier;
+        ProductTierType = inviteOrganization.Plan?.ProductTier ?? default;
     }
 }

@@ -2,10 +2,12 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
+using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -25,26 +27,33 @@ public class RestoreOrganizationUserCommand(
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IPolicyService policyService,
     IUserRepository userRepository,
     IOrganizationService organizationService,
-    IFeatureService featureService,
-    IPolicyRequirementQuery policyRequirementQuery) : IRestoreOrganizationUserCommand
+    IPolicyRequirementQuery policyRequirementQuery,
+    ICollectionRepository collectionRepository,
+    IAutomaticUserConfirmationPolicyEnforcementHandler automaticUserConfirmationPolicyEnforcementHandler,
+    IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand) : IRestoreOrganizationUserCommand
 {
-    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
+    public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId, string defaultCollectionName)
     {
         if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId.Value)
         {
-            throw new BadRequestException("You cannot restore yourself.");
+            throw new BadRequestException(new CannotRestoreYourself().Message);
         }
 
         if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
             !await currentContext.OrganizationOwner(organizationUser.OrganizationId))
         {
-            throw new BadRequestException("Only owners can restore other owners.");
+            throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
         }
 
-        await RepositoryRestoreUserAsync(organizationUser);
+        if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
+            !await currentContext.OrganizationAdmin(organizationUser.OrganizationId))
+        {
+            throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
+        }
+
+        await RepositoryRestoreUserAsync(organizationUser, defaultCollectionName);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
         if (organizationUser.UserId.HasValue)
@@ -55,7 +64,7 @@ public class RestoreOrganizationUserCommand(
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
-        await RepositoryRestoreUserAsync(organizationUser);
+        await RepositoryRestoreUserAsync(organizationUser, null); // users stored by a system user will not get a default collection at this point.
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
             systemUser);
 
@@ -65,11 +74,11 @@ public class RestoreOrganizationUserCommand(
         }
     }
 
-    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser)
+    private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName)
     {
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
-            throw new BadRequestException("Already active.");
+            throw new BadRequestException(new AlreadyActive().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
@@ -91,18 +100,27 @@ public class RestoreOrganizationUserCommand(
                 .twoFactorIsEnabled;
         }
 
-        if (organization.PlanType == PlanType.Free)
+        if (organization.PlanType == PlanType.Free && organizationUser.UserId.HasValue)
         {
             await CheckUserForOtherFreeOrganizationOwnershipAsync(organizationUser);
         }
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
-        var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
+        var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
 
-        organizationUser.Status = status;
+        if (organizationUser.UserId.HasValue
+           && organization.UseMyItems
+           && (await policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(organizationUser.UserId.Value)).State == OrganizationDataOwnershipState.Enabled
+           && status == OrganizationUserStatusType.Confirmed
+           && !string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organizationUser.OrganizationId,
+                [organizationUser.Id],
+                defaultCollectionName);
+        }
     }
 
     private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
@@ -149,12 +167,13 @@ public class RestoreOrganizationUserCommand(
                 x.Value.PlanType == PlanType.Free))
         {
             throw new BadRequestException(
-                "User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.");
+                new UserCannotBeRestoredFreeOrgAdminLimit().Message);
         }
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService)
+        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService,
+        string defaultCollectionName)
     {
         var orgUsers = await organizationUserRepository.GetManyAsync(organizationUserIds);
         var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
@@ -162,7 +181,7 @@ public class RestoreOrganizationUserCommand(
 
         if (filteredUsers.Count == 0)
         {
-            throw new BadRequestException("Users invalid.");
+            throw new BadRequestException(new UsersInvalid().Message);
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -171,10 +190,12 @@ public class RestoreOrganizationUserCommand(
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await organizationService.AutoAddSeatsAsync(organization, newSeatsRequired);
 
-        var deletingUserIsOwner = false;
+        var restoringUserIsOwner = false;
+        var restoringUserIsAdminOrHigher = false;
         if (restoringUserId.HasValue)
         {
-            deletingUserIsOwner = await currentContext.OrganizationOwner(organizationId);
+            restoringUserIsOwner = await currentContext.OrganizationOwner(organizationId);
+            restoringUserIsAdminOrHigher = await currentContext.OrganizationAdmin(organizationId);
         }
 
         // Query Two Factor Authentication status for all users in the organization
@@ -192,18 +213,24 @@ public class RestoreOrganizationUserCommand(
             {
                 if (organizationUser.Status != OrganizationUserStatusType.Revoked)
                 {
-                    throw new BadRequestException("Already active.");
+                    throw new BadRequestException(new AlreadyActive().Message);
                 }
 
                 if (restoringUserId.HasValue && organizationUser.UserId == restoringUserId)
                 {
-                    throw new BadRequestException("You cannot restore yourself.");
+                    throw new BadRequestException(new CannotRestoreYourself().Message);
                 }
 
                 if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
-                    !deletingUserIsOwner)
+                    !restoringUserIsOwner)
                 {
-                    throw new BadRequestException("Only owners can restore other owners.");
+                    throw new BadRequestException(new OnlyOwnersCanRestoreOwners().Message);
+                }
+
+                if (organizationUser.Type == OrganizationUserType.Admin && restoringUserId.HasValue &&
+                    !restoringUserIsAdminOrHigher)
+                {
+                    throw new BadRequestException(new CustomUsersCannotRestoreAdmins().Message);
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
@@ -218,15 +245,17 @@ public class RestoreOrganizationUserCommand(
                     CheckForOtherFreeOrganizationOwnership(organizationUser, orgUsersAndOrgs);
                 }
 
-                var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
+                var status = organizationUser.GetPriorActiveOrganizationUserStatusType();
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
-                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+
                 if (organizationUser.UserId.HasValue)
                 {
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
+
+                await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }
@@ -236,82 +265,131 @@ public class RestoreOrganizationUserCommand(
             }
         }
 
+        await CreateDefaultCollectionsForConfirmedUsersAsync(organization, defaultCollectionName,
+            result.Where(r => r.Item2 == "").Select(x => x.Item1).ToList());
+
+
         return result;
+    }
+
+    private async Task CreateDefaultCollectionsForConfirmedUsersAsync(Organization organization, string defaultCollectionName,
+        ICollection<OrganizationUser> restoredUsers)
+    {
+        if (string.IsNullOrWhiteSpace(defaultCollectionName))
+        {
+            return;
+        }
+
+        if (!organization.UseMyItems)
+        {
+            return;
+        }
+
+        var restoredConfirmedUsers = restoredUsers
+            .Where(w => w.Status == OrganizationUserStatusType.Confirmed)
+            .Where(w => w.UserId != null)
+            .Select(s => s.UserId.Value)
+            .ToList();
+
+        if (restoredConfirmedUsers.Count == 0)
+        {
+            return;
+        }
+
+        var restoredUserPolicyRequirements = await
+            policyRequirementQuery.GetAsync<OrganizationDataOwnershipPolicyRequirement>(restoredConfirmedUsers);
+
+        var orgUserIdsToCreateDefaultCollectionsFor = restoredUserPolicyRequirements
+            .Select(s => s.Requirement.GetDefaultCollectionRequestOnConfirm(organization.Id))
+            .Where(w => w.ShouldCreateDefaultCollection)
+            .Select(s => s.OrganizationUserId)
+            .ToList();
+
+        if (orgUserIdsToCreateDefaultCollectionsFor.Count != 0)
+        {
+            await collectionRepository.CreateDefaultCollectionsAsync(organization.Id,
+                orgUserIdsToCreateDefaultCollectionsFor,
+                defaultCollectionName);
+        }
     }
 
     private async Task CheckPoliciesBeforeRestoreAsync(OrganizationUser orgUser, bool userHasTwoFactorEnabled)
     {
-        // An invited OrganizationUser isn't linked with a user account yet, so these checks are irrelevant
-        // The user will be subject to the same checks when they try to accept the invite
-        if (OrganizationService.GetPriorActiveOrganizationUserStatusType(orgUser) == OrganizationUserStatusType.Invited)
+        // An Invited or Staged OrganizationUser isn't linked with a user account yet, so these checks
+        // are irrelevant (and there is no UserId to check against). The user will be subject to the
+        // same checks when they accept the invite.
+        var priorStatus = orgUser.GetPriorActiveOrganizationUserStatusType();
+        if (priorStatus is OrganizationUserStatusType.Invited or OrganizationUserStatusType.Staged)
         {
             return;
         }
 
         var userId = orgUser.UserId.Value;
 
-        // Enforce Single Organization Policy of organization user is being restored to
         var allOrgUsers = await organizationUserRepository.GetManyByUserAsync(userId);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies =
-            singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
-
-        var singleOrgCompliant = true;
-        var belongsToOtherOrgCompliant = true;
-        var twoFactorCompliant = true;
-
-        if (hasOtherOrgs && singleOrgPolicyApplies)
-        {
-            singleOrgCompliant = false;
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            belongsToOtherOrgCompliant = false;
-        }
-
-        // Enforce 2FA Policy of organization user is trying to join
-        if (!userHasTwoFactorEnabled)
-        {
-            twoFactorCompliant = !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
-        }
-
         var user = await userRepository.GetByIdAsync(userId);
 
-        if (!singleOrgCompliant && !twoFactorCompliant)
+        var singleOrgRequirement = await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(userId);
+        var singleOrgError = singleOrgRequirement.CanJoinOrganization(orgUser.OrganizationId, allOrgUsers);
+
+        var twoFactorCompliant = userHasTwoFactorEnabled || !await IsTwoFactorRequiredForOrganizationAsync(userId, orgUser.OrganizationId);
+
+        if (singleOrgError is not null && !twoFactorCompliant)
         {
-            throw new BadRequestException(user.Email +
-                                          " is not compliant with the single organization and two-step login policy");
+            throw new BadRequestException(new UserCannotBeRestoredNotCompliantWithPolicies(user.Email).Message);
         }
-        else if (!singleOrgCompliant)
+
+        if (singleOrgError is not null)
         {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+            var singleOrgErrorMessage = singleOrgError switch
+            {
+                UserIsAMemberOfAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
+                UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
+                _ => singleOrgError.Message
+            };
+
+            throw new BadRequestException(singleOrgErrorMessage);
         }
-        else if (!belongsToOtherOrgCompliant)
+
+        if (!twoFactorCompliant)
         {
-            throw new BadRequestException(user.Email +
-                                          " belongs to an organization that doesn't allow them to join multiple organizations");
+            throw new BadRequestException(new UserNotCompliantWithTwoFactorPolicy(user.Email).Message);
         }
-        else if (!twoFactorCompliant)
+
+        var policyRequirement = await policyRequirementQuery.GetAsync<AutomaticUserConfirmationPolicyRequirement>(
+            user.Id);
+
+        var validationResult = await automaticUserConfirmationPolicyEnforcementHandler.IsCompliantAsync(
+            new AutomaticUserConfirmationPolicyEnforcementRequest(orgUser.OrganizationId, allOrgUsers, user!),
+            policyRequirement);
+
+        var badRequestException = validationResult.Match(
+            error =>
+            {
+                var message = error switch
+                {
+                    UserCannotBelongToAnotherOrganization => new UserCannotBeRestoredMemberOfAnotherOrg(user.Email).Message,
+                    OtherOrganizationDoesNotAllowOtherMembership => new UserCannotBeRestoredForbiddenByOtherOrg(user.Email).Message,
+                    _ => error.Message
+                };
+                return new BadRequestException(message);
+            },
+            _ => null);
+
+        if (badRequestException is not null)
         {
-            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
+            throw badRequestException;
+        }
+
+        if (policyRequirement.IsEnabled(orgUser.OrganizationId))
+        {
+            await deleteEmergencyAccessCommand.DeleteAllByUserIdAsync(user.Id);
         }
     }
 
     private async Task<bool> IsTwoFactorRequiredForOrganizationAsync(Guid userId, Guid organizationId)
     {
-        if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
-            return requirement.IsTwoFactorRequiredForOrganization(organizationId);
-        }
-
-        var invitedTwoFactorPolicies = await policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
-        return invitedTwoFactorPolicies.Any(p => p.OrganizationId == organizationId);
+        var requirement = await policyRequirementQuery.GetAsync<RequireTwoFactorPolicyRequirement>(userId);
+        return requirement.IsTwoFactorRequiredForOrganization(organizationId);
     }
 }

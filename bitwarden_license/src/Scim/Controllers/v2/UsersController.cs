@@ -1,8 +1,10 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -11,6 +13,7 @@ using Bit.Scim.Users.Interfaces;
 using Bit.Scim.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using IRevokeOrganizationUserCommandV2 = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2.IRevokeOrganizationUserCommand;
 
 namespace Bit.Scim.Controllers.v2;
 
@@ -26,7 +29,7 @@ public class UsersController : Controller
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
     private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
-    private readonly IRevokeOrganizationUserCommand _revokeOrganizationUserCommand;
+    private readonly IRevokeOrganizationUserCommandV2 _revokeOrganizationUserCommandV2;
 
     public UsersController(IOrganizationUserRepository organizationUserRepository,
         IGetUsersListQuery getUsersListQuery,
@@ -34,7 +37,7 @@ public class UsersController : Controller
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
         IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
-        IRevokeOrganizationUserCommand revokeOrganizationUserCommand)
+        IRevokeOrganizationUserCommandV2 revokeOrganizationUserCommandV2)
     {
         _organizationUserRepository = organizationUserRepository;
         _getUsersListQuery = getUsersListQuery;
@@ -42,11 +45,11 @@ public class UsersController : Controller
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
         _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
-        _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
+        _revokeOrganizationUserCommandV2 = revokeOrganizationUserCommandV2;
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid organizationId, Guid id)
+    public async Task<IActionResult> Get([FromRoute] Guid organizationId, Guid id)
     {
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -58,7 +61,7 @@ public class UsersController : Controller
 
     [HttpGet("")]
     public async Task<IActionResult> Get(
-        Guid organizationId,
+        [FromRoute] Guid organizationId,
         [FromQuery] GetUsersQueryParamModel model)
     {
         var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
@@ -73,7 +76,7 @@ public class UsersController : Controller
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Post([FromRoute] Guid organizationId, [FromBody] ScimUserRequestModel model)
     {
         var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
         var scimUserResponseModel = new ScimUserResponseModel(orgUser);
@@ -81,7 +84,7 @@ public class UsersController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Put([FromRoute] Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -99,7 +102,27 @@ public class UsersController : Controller
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _revokeOrganizationUserCommand.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
+            var results = await _revokeOrganizationUserCommandV2.RevokeUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    organizationId,
+                    [id],
+                    new SystemUser(EventSystemUser.SCIM),
+                    RevocationReason.Manual));
+
+            var errors = results.Select(x => x.Result.Match(
+                y => $"{y.Message} for user {x.Id}",
+                _ => null))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            if (errors.Count != 0)
+            {
+                return new BadRequestObjectResult(new ScimErrorResponseModel
+                {
+                    Status = 400,
+                    Detail = string.Join(", ", errors)
+                });
+            }
         }
 
         // Have to get full details object for response model
@@ -108,14 +131,14 @@ public class UsersController : Controller
     }
 
     [HttpPatch("{id}")]
-    public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
+    public async Task<IActionResult> Patch([FromRoute] Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
         await _patchUserCommand.PatchUserAsync(organizationId, id, model);
         return new NoContentResult();
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(Guid organizationId, Guid id)
+    public async Task<IActionResult> Delete([FromRoute] Guid organizationId, Guid id)
     {
         await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();

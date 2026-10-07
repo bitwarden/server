@@ -1,9 +1,9 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 
@@ -27,30 +27,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     }
 
     /// <summary>
-    /// Gets the organization user user details for the provided request
-    /// </summary>
-    /// <param name="request">Request details for the query</param>
-    /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request)
-    {
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
-
-        return organizationUsers
-            .Select(o =>
-            {
-                // Only set permissions for Custom user types for performance optimization
-                if (o.Type == OrganizationUserType.Custom)
-                {
-                    var userPermissions = o.GetPermissions();
-                    o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
-                }
-
-                return o;
-            });
-    }
-
-    /// <summary>
     /// Get the organization user user details, two factor enabled status, and
     /// claimed status for the provided request.
     /// </summary>
@@ -70,13 +46,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
-            // Only set permissions for Custom user types for performance optimization
-            if (organizationUserDetails.Type == OrganizationUserType.Custom)
-            {
-                var organizationUserPermissions = organizationUserDetails.GetPermissions();
-                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
-            }
-
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
 
@@ -96,7 +65,8 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     {
         var organizationUsers = (await _organizationUserRepository
             .GetManyDetailsByOrganizationAsync_vNext(request.OrganizationId, request.IncludeGroups, request.IncludeCollections))
-            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false && !String.IsNullOrEmpty(o.ResetPasswordKey))
+            .Where(o => o.Status.Equals(OrganizationUserStatusType.Confirmed) && o.UsesKeyConnector == false &&
+                OrganizationUser.IsValidResetPasswordKey(o.ResetPasswordKey))
             .ToArray();
 
         var twoFactorTask = _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
@@ -108,13 +78,6 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
         var organizationUsersClaimedStatus = claimedStatusTask.Result;
         var responses = organizationUsers.Select(organizationUserDetails =>
         {
-            // Only set permissions for Custom user types for performance optimization
-            if (organizationUserDetails.Type == OrganizationUserType.Custom)
-            {
-                var organizationUserPermissions = organizationUserDetails.GetPermissions();
-                organizationUserDetails.Permissions = CoreHelpers.ClassToJsonData(organizationUserPermissions);
-            }
-
             var userHasTwoFactorEnabled = organizationUsersTwoFactorEnabled[organizationUserDetails.Id];
             var userIsClaimedByOrganization = organizationUsersClaimedStatus[organizationUserDetails.Id];
 

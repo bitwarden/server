@@ -1,11 +1,9 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Fido2NetLib;
+using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
@@ -22,27 +20,40 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<bool> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    public async Task<WebAuthnCredential?> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string? encryptedUserKey = null, string? encryptedPublicKey = null, string? encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= MaxCredentialsPerUser)
         {
-            return false;
+            return null;
         }
 
         var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+        RegisteredPublicKeyCredential success;
+        try
+        {
+            success = await _fido2.MakeNewCredentialAsync(new MakeNewCredentialParams
+            {
+                AttestationResponse = attestationResponse,
+                OriginalOptions = options,
+                IsCredentialIdUniqueToUserCallback = callback
+            });
+        }
+        catch (Fido2VerificationException)
+        {
+            return null;
+        }
 
         var credential = new WebAuthnCredential
         {
             Name = name,
-            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
-            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
-            Type = success.Result.CredType,
-            AaGuid = success.Result.Aaguid,
-            Counter = (int)success.Result.Counter,
+            CredentialId = CoreHelpers.Base64UrlEncode(success.Id),
+            PublicKey = CoreHelpers.Base64UrlEncode(success.PublicKey),
+            Type = success.AttestationFormat,
+            AaGuid = success.AaGuid,
+            Counter = (int)success.SignCount,
             UserId = user.Id,
             SupportsPrf = supportsPrf,
             EncryptedUserKey = encryptedUserKey,
@@ -51,6 +62,6 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);
-        return true;
+        return credential;
     }
 }

@@ -2,6 +2,7 @@
 #nullable disable
 
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,11 +23,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IGetOrganizationUsersClaimedStatusQuery _getOrganizationUsersClaimedStatusQuery;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
 
     public const string UserNotFoundErrorMessage = "User not found.";
-    public const string UsersInvalidErrorMessage = "Users invalid.";
+    public static readonly string UsersInvalidErrorMessage = new UsersInvalid().Message;
     public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
     public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can remove other owners.";
     public const string RemoveAdminByCustomUserErrorMessage = "Custom users can not remove admins.";
@@ -42,7 +43,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersClaimedStatusQuery getOrganizationUsersClaimedStatusQuery,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         TimeProvider timeProvider)
     {
         _deviceRepository = deviceRepository;
@@ -203,7 +204,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (!filteredUsers.Any())
         {
-            throw new BadRequestException(UsersInvalidErrorMessage);
+            throw new BadRequestException(new UsersInvalid().Message);
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
@@ -212,9 +213,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         }
 
         var deletingUserIsOwner = false;
+        var deletingUserIsCustom = false;
         if (deletingUserId.HasValue)
         {
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
+            deletingUserIsCustom = await _currentContext.OrganizationCustom(organizationId);
         }
 
         var claimedStatus = deletingUserId.HasValue && eventSystemUser == null
@@ -233,6 +236,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                 if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
                 {
                     throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
+                }
+
+                if (orgUser.Type == OrganizationUserType.Admin && deletingUserIsCustom)
+                {
+                    throw new BadRequestException(RemoveAdminByCustomUserErrorMessage);
                 }
 
                 if (claimedStatus.TryGetValue(orgUser.Id, out var isClaimed) && isClaimed)

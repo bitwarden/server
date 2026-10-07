@@ -11,7 +11,7 @@ BEGIN
     FROM
         [dbo].[OrganizationIntegrationConfigurationDetailsView] oic
     WHERE
-        oic.[EventType] = @EventType
+        (oic.[EventType] = @EventType OR oic.[EventType] IS NULL)
         AND
         oic.[OrganizationId] = @OrganizationId
         AND

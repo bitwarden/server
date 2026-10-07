@@ -3,7 +3,9 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v1;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -26,7 +28,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
@@ -38,7 +40,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IOrganizationRepository organizationRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
-        IFeatureService featureService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
@@ -66,7 +68,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization == null ||
             providerOrganization.ProviderId != provider.Id)
         {
-            throw new BadRequestException("Failed to remove organization. Please contact support.");
+            throw new BadRequestException(new FailedToRemoveOrganizationFromProviderError().Message);
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
@@ -74,7 +76,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 [],
                 includeProvider: false))
         {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
+            throw new BadRequestException(new OrgMustHaveConfirmedOwner().Message);
         }
 
         var organizationOwnerEmails =
@@ -113,7 +115,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 await _providerBillingService.CreateCustomerForClientOrganization(provider, organization);
             }
 
-            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            var customer = await _stripeAdapter.UpdateCustomerAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
                 Email = organization.BillingEmail,
@@ -124,6 +126,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
+                BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
@@ -138,7 +141,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
             subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
-            var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await _stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
             organization.Status = OrganizationStatusType.Created;
@@ -148,27 +151,30 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         }
         else if (organization.IsStripeEnabled())
         {
-            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
+            var subscription = await _stripeAdapter.GetSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionGetOptions
             {
-                Expand = ["customer"]
+                // `customer.discount.source.coupon` (4 levels — Stripe's cap) is required to read the
+                // customer's coupon below; the 2025-09-30.clover refactor wrapped Coupon under
+                // Discount.Source, so expanding only `customer` leaves Coupon a null stub and the
+                // discount deletion silently no-ops.
+                Expand = ["customer.discount.source.coupon"]
             });
-
             if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
                 return;
             }
 
-            await _stripeAdapter.CustomerUpdateAsync(subscription.CustomerId, new CustomerUpdateOptions
+            await _stripeAdapter.UpdateCustomerAsync(subscription.CustomerId, new CustomerUpdateOptions
             {
                 Email = organization.BillingEmail
             });
 
-            if (subscription.Customer.Discount?.Coupon != null)
+            if (subscription.Customer.Discount?.Source?.Coupon != null)
             {
-                await _stripeAdapter.CustomerDeleteDiscountAsync(subscription.CustomerId);
+                await _stripeAdapter.DeleteCustomerDiscountAsync(subscription.CustomerId);
             }
 
-            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
+            await _stripeAdapter.UpdateSubscriptionAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
             {
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,

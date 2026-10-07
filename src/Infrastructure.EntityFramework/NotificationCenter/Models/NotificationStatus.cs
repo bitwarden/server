@@ -18,6 +18,7 @@ public class NotificationStatusMapperProfile : Profile
     {
         CreateMap<Core.NotificationCenter.Entities.NotificationStatus, NotificationStatus>()
             .PreserveReferences()
+            .MaxDepth(5)
             .ReverseMap();
     }
 }

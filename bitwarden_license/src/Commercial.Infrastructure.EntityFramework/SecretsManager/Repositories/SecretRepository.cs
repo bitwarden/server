@@ -25,6 +25,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secret = await dbContext.Secret
+                                    .AsNoTracking()
                                     .Include("Projects")
                                     .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
@@ -38,6 +39,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
+                .AsNoTracking()
                 .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                 .Include(c => c.Projects)
                 .ToListAsync();
@@ -51,6 +53,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
+                .AsNoTracking()
                 .Where(c => ids.Contains(c.Id) && c.DeletedDate != null)
                 .Include(c => c.Projects)
                 .ToListAsync();
@@ -64,6 +67,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret
+            .AsNoTracking()
             .Include(c => c.Projects)
             .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
 
@@ -88,12 +92,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var dbContext = GetDatabaseContext(scope);
 
         var query = dbContext.Secret
+            .AsNoTracking()
             .Include(c => c.Projects)
             .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
             .OrderBy(s => s.RevisionDate);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
-
         return await secrets.ToListAsync();
     }
 
@@ -113,11 +117,11 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
+                                    .AsNoTracking()
                                     .Where(s => ids.Contains(s.Id) && s.OrganizationId == organizationId && s.DeletedDate != null)
                                     .Include("Projects")
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
-
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
@@ -128,6 +132,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
+                                    .AsNoTracking()
                                     .Where(c => c.OrganizationId == organizationId && c.DeletedDate != null)
                                     .Include("Projects")
                                     .OrderBy(c => c.RevisionDate)
@@ -147,16 +152,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Include(s => s.Projects)
+        var query = dbContext.Secret.AsNoTracking().Include(s => s.Projects)
             .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
 
         var secrets = SecretToPermissionDetails(query, userId, accessType);
-
         return await secrets.ToListAsync();
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> CreateAsync(
-        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        Core.SecretsManager.Entities.Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates,
+        Core.SecretsManager.Entities.SecretVersion? initialVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -179,12 +184,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.AddAsync(entity);
         await UpdateSecretAccessPoliciesAsync(dbContext, entity, accessPoliciesUpdates);
         await dbContext.SaveChangesAsync();
+
+        if (initialVersion != null)
+        {
+            initialVersion.SecretId = entity.Id;
+
+            await SecretVersionWriter.AddAsync(dbContext, Mapper, initialVersion);
+            await dbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
         return secret;
     }
 
     public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret,
-        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null)
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates = null,
+        Core.SecretsManager.Entities.SecretVersion? newVersion = null)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -197,6 +212,10 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             .Include(s => s.GroupAccessPolicies)
             .Include(s => s.ServiceAccountAccessPolicies)
             .FirstAsync(s => s.Id == secret.Id);
+
+        // Captured before SetValues overwrites the tracked entity with the incoming values.
+        var previousValue = entity.Value;
+        var previousRevisionDate = entity.RevisionDate;
 
         dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
@@ -212,6 +231,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         await UpdateServiceAccountRevisionsBySecretIdsAsync(dbContext, [entity.Id]);
         await dbContext.SaveChangesAsync();
+
+        if (newVersion != null)
+        {
+            newVersion.SecretId = entity.Id;
+
+            // Saved before pruning so AddWithPruningAsync counts it against the retention limit.
+            if (await SecretVersionWriter.TryBackfillPreviousVersionAsync(
+                    dbContext, Mapper, entity.Id, previousValue, previousRevisionDate))
+            {
+                await dbContext.SaveChangesAsync();
+            }
+
+            await SecretVersionWriter.AddWithPruningAsync(dbContext, Mapper, newVersion);
+            await dbContext.SaveChangesAsync();
+        }
+
         await transaction.CommitAsync();
         return Mapper.Map<Core.SecretsManager.Entities.Secret>(entity);
     }
@@ -307,12 +342,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var dbContext = GetDatabaseContext(scope);
 
         var secret = dbContext.Secret
+            .AsNoTracking()
             .Where(s => s.Id == id);
 
         var query = BuildSecretAccessQuery(secret, userId, accessType);
 
         var policy = await query.FirstOrDefaultAsync();
-
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
@@ -325,6 +360,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var dbContext = GetDatabaseContext(scope);
 
         var secrets = dbContext.Secret
+            .AsNoTracking()
             .Where(s => ids.Contains(s.Id));
 
         var accessQuery = BuildSecretAccessQuery(secrets, userId, accessType);
@@ -347,7 +383,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Where(s => s.OrganizationId == organizationId && s.DeletedDate == null);
+        var query = dbContext.Secret.AsNoTracking().Where(s => s.OrganizationId == organizationId && s.DeletedDate == null);
 
         query = accessType switch
         {

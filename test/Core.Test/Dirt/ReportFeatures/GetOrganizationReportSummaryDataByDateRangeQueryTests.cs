@@ -8,6 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Bit.Core.Test.Dirt.ReportFeatures;
 
@@ -26,11 +27,28 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var startDate = DateTime.UtcNow.AddDays(-30);
         var endDate = DateTime.UtcNow;
         var summaryDataList = fixture.Build<OrganizationReportSummaryDataResponse>()
-            .CreateMany(3);
+            .CreateMany(3).ToList();
+        summaryDataList[0].RevisionDate = DateTime.UtcNow; // most recent
+        summaryDataList[1].RevisionDate = DateTime.UtcNow.AddDays(-1);
+        summaryDataList[2].RevisionDate = DateTime.UtcNow.AddDays(-2);
 
         sutProvider.GetDependency<IOrganizationReportRepository>()
-            .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
+            .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>())
             .Returns(summaryDataList);
+
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
+            {
+                var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
+                return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
+            });
+
 
         // Act
         var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
@@ -39,8 +57,64 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         Assert.NotNull(result);
         Assert.Equal(3, result.Count());
         await sutProvider.GetDependency<IOrganizationReportRepository>()
-            .Received(1).GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+            .Received(1).GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetOrganizationReportSummaryDataByDateRangeAsync_ShouldReturnAllResults(
+        SutProvider<GetOrganizationReportSummaryDataByDateRangeQuery> sutProvider)
+    {
+        // Arrange
+        var fixture = new Fixture();
+        var organizationId = fixture.Create<Guid>();
+        var reportId = fixture.Create<Guid>();
+        var startDate = DateTime.UtcNow.AddDays(-30);
+        var endDate = DateTime.UtcNow;
+        var summaryDataList = fixture.Build<OrganizationReportSummaryDataResponse>()
+            .CreateMany(12)
+            .ToList();
+        summaryDataList[0].RevisionDate = DateTime.UtcNow; // most recent
+        summaryDataList[1].RevisionDate = DateTime.UtcNow.AddDays(-1);
+        summaryDataList[2].RevisionDate = DateTime.UtcNow.AddDays(-2);
+        summaryDataList[3].RevisionDate = DateTime.UtcNow.AddDays(-3);
+        summaryDataList[4].RevisionDate = DateTime.UtcNow.AddDays(-4);
+        summaryDataList[5].RevisionDate = DateTime.UtcNow.AddDays(-5);
+        summaryDataList[6].RevisionDate = DateTime.UtcNow.AddDays(-6);
+        summaryDataList[7].RevisionDate = DateTime.UtcNow.AddDays(-7);
+        summaryDataList[8].RevisionDate = DateTime.UtcNow.AddDays(-8);
+        summaryDataList[9].RevisionDate = DateTime.UtcNow.AddDays(-9);
+        summaryDataList[10].RevisionDate = DateTime.UtcNow.AddDays(-10);
+        summaryDataList[11].RevisionDate = DateTime.UtcNow.AddDays(-11);
+
+        sutProvider.GetDependency<IOrganizationReportRepository>()
+            .GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>())
+            .Returns(summaryDataList);
+
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
+            {
+                var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
+                return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
+            });
+
+
+        // Act
+        var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(12, result.Count());
+        await sutProvider.GetDependency<IOrganizationReportRepository>()
+            .Received(1).GetSummaryDataByDateRangeAsync(Arg.Any<Guid>(), Arg.Any<DateTime>(), Arg.Any<DateTime>());
+    }
+
 
     [Theory]
     [BitAutoData]
@@ -100,6 +174,20 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
             .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Returns(new List<OrganizationReportSummaryDataResponse>());
 
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
+            {
+                var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
+                return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
+            });
+
+
         // Act
         var result = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
 
@@ -120,14 +208,36 @@ public class GetOrganizationReportSummaryDataByDateRangeQueryTests
         var endDate = DateTime.UtcNow;
         var expectedMessage = "Database connection failed";
 
-        sutProvider.GetDependency<IOrganizationReportRepository>()
+        var repo = sutProvider.GetDependency<IOrganizationReportRepository>();
+
+        repo
             .GetSummaryDataByDateRangeAsync(organizationId, startDate, endDate)
             .Throws(new InvalidOperationException(expectedMessage));
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate));
+        sutProvider
+            .GetDependency<IFusionCache>()
+            .GetOrSetAsync(
+                key: Arg.Any<string?>(),
+                factory: Arg.Any<Func<object, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(),
+                options: Arg.Any<FusionCacheEntryOptions>(),
+                tags: Arg.Any<IEnumerable<string>>())
+            .Returns(callInfo =>
+            {
+                var factory = callInfo.ArgAt<Func<FusionCacheFactoryExecutionContext<IEnumerable<OrganizationReportSummaryDataResponse>>, CancellationToken, Task<IEnumerable<OrganizationReportSummaryDataResponse>>>>(1);
+                return new ValueTask<IEnumerable<OrganizationReportSummaryDataResponse>>(factory.Invoke(null, CancellationToken.None));
+            });
 
-        Assert.Equal(expectedMessage, exception.Message);
+
+        // Act & Assert
+        // var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        //     await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate));
+
+        var results = await sutProvider.Sut.GetOrganizationReportSummaryDataByDateRangeAsync(organizationId, startDate, endDate);
+
+        // Assert
+        // since the IFusionCache has a failsafe, 
+        // the exception from the repository should be caught and logged, and an empty list should be returned
+        Assert.NotNull(results);
+        Assert.Empty(results);
     }
 }

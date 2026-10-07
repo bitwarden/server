@@ -65,7 +65,6 @@ public class SecretsController : Controller
         _userService = userService;
         _eventService = eventService;
         _authorizationService = authorizationService;
-
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -112,6 +111,7 @@ public class SecretsController : Controller
         }
 
         var result = await _createSecretCommand.CreateAsync(secret, accessPoliciesUpdates);
+
         await LogSecretEventAsync(secret, EventType.Secret_Created);
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -190,7 +190,9 @@ public class SecretsController : Controller
             }
         }
 
-        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates);
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret, accessPoliciesUpdates,
+            updateRequest.ValueChanged);
+
         await LogSecretEventAsync(secret, EventType.Secret_Edited);
 
         // Updating a secret means you have read & write permission.

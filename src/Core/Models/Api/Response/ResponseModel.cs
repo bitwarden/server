@@ -2,6 +2,15 @@
 
 namespace Bit.Core.Models.Api;
 
+/// <summary>
+/// Base class for API response models.
+/// </summary>
+/// <remarks>
+/// Deprecated in favor of <c>Bit.HttpExtensions.ResponseModel</c>.
+/// </remarks>
+[Obsolete(
+    "Use Bit.HttpExtensions.ResponseModel instead.",
+    DiagnosticId = "BWA0001")]
 public abstract class ResponseModel
 {
     public ResponseModel(string obj)

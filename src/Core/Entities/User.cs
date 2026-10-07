@@ -1,13 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Kdf;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.Utilities;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
-
-#nullable enable
 
 namespace Bit.Core.Entities;
 
@@ -51,7 +50,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public string? Key { get; set; }
     /// <summary>
     /// The raw public key, without a signature from the user's signature key.
-    /// </summary> 
+    /// </summary>
     public string? PublicKey { get; set; }
     /// <summary>
     /// User key wrapped private key.
@@ -69,6 +68,11 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     /// The security state is a signed object attesting to the version of the user's account.
     /// </summary>
     public string? SecurityState { get; set; }
+    /// <summary>
+    /// Indicates whether the user has a personal premium subscription.
+    /// Does not include premium access from organizations -
+    /// do not use this to check whether the user can access premium features.
+    /// </summary>
     public bool Premium { get; set; }
     public DateTime? PremiumExpirationDate { get; set; }
     public DateTime? RenewalReminderDate { get; set; }
@@ -86,7 +90,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     [MaxLength(30)]
     public string ApiKey { get; set; } = null!;
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
-    public int KdfIterations { get; set; } = AuthConstants.PBKDF2_ITERATIONS.Default;
+    public int KdfIterations { get; set; } = KdfConstants.PBKDF2_ITERATIONS.Default;
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
@@ -102,10 +106,38 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public DateTime? LastKeyRotationDate { get; set; }
     public DateTime? LastEmailChangeDate { get; set; }
     public bool VerifyDevices { get; set; } = true;
+    /// <summary>
+    /// V2 upgrade token stored as JSON containing two wrapped user keys.
+    /// Allows clients to unlock vault after V1 to V2 key rotation without logout.
+    /// </summary>
+    public string? V2UpgradeToken { get; set; }
+    [MaxLength(256)]
+    public string? MasterPasswordSalt { get; set; }
+    public DateTime? LastApiKeyRotationDate { get; set; }
+    /// <summary>
+    /// A hex-endcoded key-id of the user's current user-key.
+    /// 
+    /// Each user-key has a unique key-id, and this value will change after a rotation.
+    /// It is not set by default for old users, but is set in a migration process during
+    /// a sync.
+    /// 
+    /// A key rotation will set a new key id. Account registrations will carry a key id.
+    /// </summary>
+    [MaxLength(32)]
+    [KeyId]
+    public string? UserKeyId { get; set; }
+
+    public void SetUserKeyId(KeyId? userKeyId)
+    {
+        UserKeyId = userKeyId?.ToString();
+    }
+
+    public KeyId? GetUserKeyId() =>
+        KeyId.FromHexEncodedString(string.IsNullOrEmpty(UserKeyId) ? null : UserKeyId);
 
     public string GetMasterPasswordSalt()
     {
-        return Email.ToLowerInvariant().Trim();
+        return MasterPasswordSalt ?? Email.ToLowerInvariant().Trim();
     }
 
     public void SetNewId()
@@ -189,7 +221,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
             return _twoFactorProviders;
         }
-        catch (JsonException)
+        catch (Newtonsoft.Json.JsonException)
         {
             return null;
         }
@@ -200,15 +232,49 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Id;
     }
 
-    public bool GetPremium()
-    {
-        return Premium;
-    }
-
     public int GetSecurityVersion()
     {
         // If no security version is set, it is version 1. The minimum initialized version is 2.
         return SecurityVersion ?? 1;
+    }
+
+    /// <summary>
+    /// Evaluates user state to determine if they are currently in a v2 encryption state.
+    /// </summary>
+    /// <returns>If the shape of their private key is v2 as well as has the proper security version then true, otherwise false</returns>
+    public bool HasV2Encryption()
+    {
+        return HasV2KeyShape() && IsSecurityVersionTwo();
+    }
+
+    /// <summary>
+    /// Whether the private key is wrapped with V2 encryption.
+    /// </summary>
+    public bool HasV2KeyShape()
+    {
+        if (string.IsNullOrEmpty(PrivateKey))
+        {
+            return false;
+        }
+
+        try
+        {
+            return EncryptionParsing.GetEncryptionType(PrivateKey) == EncryptionType.CoseEncrypt0B64;
+        }
+        catch (ArgumentException)
+        {
+            // Invalid encryption string format - treat as not v2
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// This technically is correct but all versions after 1 are considered v2 encryption. Leaving for now with
+    /// KM's blessing that when a new version comes along they will handle migration.
+    /// </summary>
+    private bool IsSecurityVersionTwo()
+    {
+        return SecurityVersion == 2;
     }
 
     /// <summary>

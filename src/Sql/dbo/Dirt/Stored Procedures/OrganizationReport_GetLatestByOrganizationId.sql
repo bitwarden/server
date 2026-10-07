@@ -5,15 +5,12 @@ BEGIN
     SET NOCOUNT ON
 
     SELECT TOP 1
-        [Id],
-        [OrganizationId],
-        [ReportData],
-        [CreationDate],
-        [ContentEncryptionKey],
-        [SummaryData],
-        [ApplicationData],
-        [RevisionDate]
-    FROM [dbo].[OrganizationReportView]
-    WHERE [OrganizationId] = @OrganizationId
-    ORDER BY [RevisionDate] DESC
+        *
+    FROM
+        [dbo].[OrganizationReportView]
+    WHERE
+        [OrganizationId] = @OrganizationId
+        AND [ReportData] <> ''
+    ORDER BY
+        [RevisionDate] DESC
 END

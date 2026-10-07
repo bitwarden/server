@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Globalization;
+using System.Text.RegularExpressions;
 using Stripe;
 
 namespace Bit.Core.Billing.Extensions;
@@ -51,7 +52,7 @@ public static class InvoiceExtensions
                 if (string.IsNullOrEmpty(priceInfo) && line.Quantity > 0)
                 {
                     var pricePerItem = (line.Amount / 100m) / line.Quantity;
-                    priceInfo = $"(at ${pricePerItem:F2} / month)";
+                    priceInfo = string.Format(CultureInfo.InvariantCulture, "(at ${0:F2} / month)", pricePerItem);
                 }
 
                 var taxDescription = $"{line.Quantity} × Tax {priceInfo}";
@@ -70,7 +71,7 @@ public static class InvoiceExtensions
         if (tax > 0)
         {
             var taxAmount = tax / 100m;
-            items.Add($"1 × Tax (at ${taxAmount:F2} / month)");
+            items.Add(string.Format(CultureInfo.InvariantCulture, "1 × Tax (at ${0:F2} / month)", taxAmount));
         }
 
         return items;

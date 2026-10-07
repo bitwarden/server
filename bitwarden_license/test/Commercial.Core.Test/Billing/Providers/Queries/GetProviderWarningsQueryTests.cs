@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -58,12 +57,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -90,12 +90,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -124,12 +125,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -158,12 +160,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -191,7 +194,8 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
@@ -219,12 +223,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "GB" }]
@@ -252,12 +257,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -291,12 +297,13 @@ public class GetProviderWarningsQueryTests
                     {
                         Data = [new TaxId { Verification = null }]
                     },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -333,12 +340,13 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -378,12 +386,13 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -423,12 +432,13 @@ public class GetProviderWarningsQueryTests
                             }
                         }]
                     },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -456,12 +466,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "DE" }
+                    Address = new Address { Country = "DE" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Active))
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Active))
             .Returns(new StripeList<Registration>
             {
                 Data = [
@@ -470,7 +481,7 @@ public class GetProviderWarningsQueryTests
                     new Registration { Country = "FR" }
                 ]
             });
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Scheduled))
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Is<RegistrationListOptions>(opt => opt.Status == TaxRegistrationStatus.Scheduled))
             .Returns(new StripeList<Registration> { Data = [] });
 
         var response = await sutProvider.Sut.Run(provider);
@@ -500,12 +511,13 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "CA" }
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
                 Data = [new Registration { Country = "CA" }]
@@ -522,7 +534,7 @@ public class GetProviderWarningsQueryTests
     }
 
     [Theory, BitAutoData]
-    public async Task Run_USCustomer_NoTaxIdWarning(
+    public async Task Run_FlagEnabled_USCustomer_NoTaxIdWarning(
         Provider provider,
         SutProvider<GetProviderWarningsQuery> sutProvider)
     {
@@ -538,15 +550,273 @@ public class GetProviderWarningsQueryTests
                 Customer = new Customer
                 {
                     TaxIds = new StripeList<TaxId> { Data = [] },
-                    Address = new Address { Country = "US" }
+                    Address = new Address { Country = "US" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "DE" },
+                    TaxExempt = TaxExempt.None
                 }
             });
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
-        sutProvider.GetDependency<IStripeAdapter>().TaxRegistrationsListAsync(Arg.Any<RegistrationListOptions>())
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
             .Returns(new StripeList<Registration>
             {
-                Data = [new Registration { Country = "US" }]
+                Data = [new Registration { Country = "DE" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_missing"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_ExemptCustomer_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.Exempt
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_ReverseCustomer_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.Reverse
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_NoRegistrationInCountry_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId> { Data = [] },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "GB" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.Null(response!.TaxId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdPendingVerificationWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Pending
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_pending_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_Has_TaxIdFailedVerificationWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Unverified
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
+            });
+
+        var response = await sutProvider.Sut.Run(provider);
+
+        Assert.True(response is
+        {
+            TaxId.Type: "tax_id_failed_verification"
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_FlagEnabled_TaxableCustomer_VerifiedTaxId_NoTaxIdWarning(
+        Provider provider,
+        SutProvider<GetProviderWarningsQuery> sutProvider)
+    {
+        provider.Enabled = true;
+
+        sutProvider.GetDependency<ISubscriberService>()
+            .GetSubscription(provider, Arg.Is<SubscriptionGetOptions>(options =>
+                options.Expand.SequenceEqual(_requiredExpansions)
+            ))
+            .Returns(new Subscription
+            {
+                Status = SubscriptionStatus.Active,
+                Customer = new Customer
+                {
+                    TaxIds = new StripeList<TaxId>
+                    {
+                        Data = [new TaxId
+                        {
+                            Verification = new TaxIdVerification
+                            {
+                                Status = TaxIdVerificationStatus.Verified
+                            }
+                        }]
+                    },
+                    Address = new Address { Country = "CA" },
+                    TaxExempt = TaxExempt.None
+                }
+            });
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(true);
+        sutProvider.GetDependency<IStripeAdapter>().ListTaxRegistrationsAsync(Arg.Any<RegistrationListOptions>())
+            .Returns(new StripeList<Registration>
+            {
+                Data = [new Registration { Country = "CA" }]
             });
 
         var response = await sutProvider.Sut.Run(provider);

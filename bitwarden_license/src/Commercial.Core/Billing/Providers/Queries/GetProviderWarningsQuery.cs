@@ -4,14 +4,13 @@ using Bit.Core.Billing.Providers.Models;
 using Bit.Core.Billing.Providers.Queries;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Stripe;
 using Stripe.Tax;
 
 namespace Bit.Commercial.Core.Billing.Providers.Queries;
 
-using static Bit.Core.Constants;
 using static StripeConstants;
+using CountryAbbreviations = Bit.Core.Constants.CountryAbbreviations;
 using SuspensionWarning = ProviderWarnings.SuspensionWarning;
 using TaxIdWarning = ProviderWarnings.TaxIdWarning;
 
@@ -62,6 +61,11 @@ public class GetProviderWarningsQuery(
         Provider provider,
         Customer customer)
     {
+        if (customer.TaxExempt != TaxExempt.None)
+        {
+            return null;
+        }
+
         if (customer.Address?.Country == CountryAbbreviations.UnitedStates)
         {
             return null;
@@ -76,8 +80,8 @@ public class GetProviderWarningsQuery(
 
         // Get active and scheduled registrations
         var registrations = (await Task.WhenAll(
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
-                stripeAdapter.TaxRegistrationsListAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Active }),
+                stripeAdapter.ListTaxRegistrationsAsync(new RegistrationListOptions { Status = TaxRegistrationStatus.Scheduled })))
             .SelectMany(registrations => registrations.Data);
 
         // Find the matching registration for the customer

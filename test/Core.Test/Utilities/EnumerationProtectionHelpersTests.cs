@@ -98,7 +98,7 @@ public class EnumerationProtectionHelpersTests
         var hmacKey = RandomNumberGenerator.GetBytes(32);
         var salt1 = "user1@example.com";
         var salt2 = "user2@example.com";
-        var range = 100;
+        var range = 10_000;
 
         // Act
         var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey, salt1, range);
@@ -117,7 +117,7 @@ public class EnumerationProtectionHelpersTests
         var hmacKey1 = RandomNumberGenerator.GetBytes(32);
         var hmacKey2 = RandomNumberGenerator.GetBytes(32);
         var salt = "test@example.com";
-        var range = 100;
+        var range = 10_000;
 
         // Act
         var result1 = EnumerationProtectionHelpers.GetIndexForInputHash(hmacKey1, salt, range);

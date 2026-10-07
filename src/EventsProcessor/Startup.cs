@@ -1,8 +1,6 @@
 ﻿using System.Globalization;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Microsoft.IdentityModel.Logging;
 
 namespace Bit.EventsProcessor;
 
@@ -31,20 +29,21 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        services.AddTestPlayIdTracking(globalSettings);
 
-        // Hosted Services
+        // Add event integration services
+        services.AddDistributedCache(globalSettings);
         services.AddAzureServiceBusListeners(globalSettings);
         services.AddHostedService<AzureQueueHostedService>();
+
+        if (EventIntegrationsServiceCollectionExtensions.IsAzureServiceBusEnabled(globalSettings))
+        {
+            services.AddHostedService<DeadLetterCleanupHostedService>();
+        }
     }
 
-    public void Configure(
-        IApplicationBuilder app,
-        IWebHostEnvironment env,
-        IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+    public void Configure(IApplicationBuilder app)
     {
-        IdentityModelEventSource.ShowPII = true;
-        app.UseSerilog(env, appLifetime, globalSettings);
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseRouting();
@@ -54,9 +53,7 @@ public class Startup
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
             endpoints.MapGet("/now",
                 async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
-            endpoints.MapGet("/version",
-                async context => await context.Response.WriteAsJsonAsync(AssemblyHelpers.GetVersion()));
-
+            endpoints.MapVersionEndpoint();
         });
     }
 }

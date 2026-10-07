@@ -30,7 +30,7 @@ public class EmergencyAccessRotationValidatorTests
             KeyEncrypted = e.KeyEncrypted,
             Type = e.Type
         }).ToList();
-        userEmergencyAccess.Add(new EmergencyAccessDetails { Id = Guid.NewGuid(), KeyEncrypted = "TestKey" });
+        userEmergencyAccess.Add(new EmergencyAccessDetails { Id = Guid.NewGuid(), GrantorEmail = "grantor@example.com", KeyEncrypted = "TestKey" });
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetManyDetailsByGrantorIdAsync(user.Id)
             .Returns(userEmergencyAccess);
 

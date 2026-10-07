@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿using System.Globalization;
+using Bit.Core.Billing.Extensions;
 using Stripe;
 using Xunit;
 
@@ -356,9 +357,18 @@ public class InvoiceExtensionsTests
     [Fact]
     public void FormatForProvider_ComplexScenario_HandlesAllLineTypes()
     {
-        // Arrange
-        var lineItems = new StripeList<InvoiceLineItem>();
-        lineItems.Data = new List<InvoiceLineItem>
+        // Set culture to en-US to ensure consistent decimal formatting in tests
+        // This ensures tests pass on all machines regardless of system locale
+        var originalCulture = Thread.CurrentThread.CurrentCulture;
+        var originalUICulture = Thread.CurrentThread.CurrentUICulture;
+        try
+        {
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+            Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
+
+            // Arrange
+            var lineItems = new StripeList<InvoiceLineItem>();
+            lineItems.Data = new List<InvoiceLineItem>
         {
             new InvoiceLineItem
             {
@@ -372,23 +382,29 @@ public class InvoiceExtensionsTests
             new InvoiceLineItem { Description = "Custom Service", Quantity = 2, Amount = 2000 }
         };
 
-        var invoice = new Invoice
+            var invoice = new Invoice
+            {
+                Lines = lineItems,
+                TotalTaxes = [new InvoiceTotalTax { Amount = 200 }] // Additional $2.00 tax
+            };
+            var subscription = new Subscription();
+
+            // Act
+            var result = invoice.FormatForProvider(subscription);
+
+            // Assert
+            Assert.Equal(5, result.Count);
+            Assert.Equal("5 × Manage service provider (at $6.00 / month)", result[0]);
+            Assert.Equal("10 × Manage service provider (at $4.00 / month)", result[1]);
+            Assert.Equal("1 × Tax (at $8.00 / month)", result[2]);
+            Assert.Equal("Custom Service", result[3]);
+            Assert.Equal("1 × Tax (at $2.00 / month)", result[4]);
+        }
+        finally
         {
-            Lines = lineItems,
-            TotalTaxes = [new InvoiceTotalTax { Amount = 200 }] // Additional $2.00 tax
-        };
-        var subscription = new Subscription();
-
-        // Act
-        var result = invoice.FormatForProvider(subscription);
-
-        // Assert
-        Assert.Equal(5, result.Count);
-        Assert.Equal("5 × Manage service provider (at $6.00 / month)", result[0]);
-        Assert.Equal("10 × Manage service provider (at $4.00 / month)", result[1]);
-        Assert.Equal("1 × Tax (at $8.00 / month)", result[2]);
-        Assert.Equal("Custom Service", result[3]);
-        Assert.Equal("1 × Tax (at $2.00 / month)", result[4]);
+            Thread.CurrentThread.CurrentCulture = originalCulture;
+            Thread.CurrentThread.CurrentUICulture = originalUICulture;
+        }
     }
 
     #endregion

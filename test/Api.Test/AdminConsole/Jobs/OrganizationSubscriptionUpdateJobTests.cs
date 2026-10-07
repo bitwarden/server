@@ -2,9 +2,9 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Models.Data.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using Quartz;
 using Xunit;
@@ -31,9 +31,9 @@ public class OrganizationSubscriptionUpdateJobTests
             .DidNotReceive()
             .GetOrganizationSubscriptionsToUpdateAsync();
 
-        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+        await sutProvider.GetDependency<IBulkUpdateOrganizationSubscriptionsCommand>()
             .DidNotReceive()
-            .UpdateOrganizationSubscriptionAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
+            .BulkUpdateOrganizationSubscriptionsAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
     }
 
     [Theory]
@@ -53,8 +53,8 @@ public class OrganizationSubscriptionUpdateJobTests
             .Received(1)
             .GetOrganizationSubscriptionsToUpdateAsync();
 
-        await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>()
+        await sutProvider.GetDependency<IBulkUpdateOrganizationSubscriptionsCommand>()
             .Received(1)
-            .UpdateOrganizationSubscriptionAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
+            .BulkUpdateOrganizationSubscriptionsAsync(Arg.Any<IEnumerable<OrganizationSubscriptionUpdate>>());
     }
 }

@@ -3,17 +3,29 @@
 
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
 public class KeysRequestModel
 {
+    [Obsolete("Use AccountKeys.AccountPublicKey instead")]
     [Required]
     public string PublicKey { get; set; }
+    [Obsolete("Use AccountKeys.UserKeyEncryptedAccountPrivateKey instead")]
     [Required]
     public string EncryptedPrivateKey { get; set; }
+    public AccountKeysRequestModel AccountKeys { get; set; }
 
+    /// <summary>
+    /// Key id of the user key these account keys belong to, when the client supplied it. Absent for
+    /// clients that predate the field. Only honored on the V2 path.
+    /// </summary>
+    [KeyId]
+    public string UserKeyId { get; set; }
+
+    [Obsolete("Use SetAccountKeysForUserCommand instead")]
     public User ToUser(User existingUser)
     {
         if (string.IsNullOrWhiteSpace(PublicKey) || string.IsNullOrWhiteSpace(EncryptedPrivateKey))

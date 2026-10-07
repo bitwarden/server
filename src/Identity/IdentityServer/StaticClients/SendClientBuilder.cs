@@ -5,6 +5,7 @@ using Bit.Identity.IdentityServer.Enums;
 using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer.StaticClients;
+
 public static class SendClientBuilder
 {
     public static Client Build(GlobalSettings globalSettings)

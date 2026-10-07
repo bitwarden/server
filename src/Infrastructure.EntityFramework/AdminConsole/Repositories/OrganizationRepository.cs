@@ -1,16 +1,18 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Data.Common;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Dirt.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,7 +22,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
-    private readonly ILogger<OrganizationRepository> _logger;
+    protected readonly ILogger<OrganizationRepository> _logger;
 
     public OrganizationRepository(
         IServiceScopeFactory serviceScopeFactory,
@@ -29,6 +31,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         : base(serviceScopeFactory, mapper, context => context.Organizations)
     {
         _logger = logger;
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewayCustomerIdAsync(string gatewayCustomerId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewayCustomerId == gatewayCustomerId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
+    }
+
+    public async Task<Core.AdminConsole.Entities.Organization> GetByGatewaySubscriptionIdAsync(string gatewaySubscriptionId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .Where(e => e.GatewaySubscriptionId == gatewaySubscriptionId)
+                .FirstOrDefaultAsync();
+            return organization;
+        }
     }
 
     public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
@@ -40,6 +66,22 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .FirstOrDefaultAsync();
             return organization;
         }
+    }
+
+    public async Task<ICollection<OrganizationPlanType>> GetPlanTypesByOrganizationIdsAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var query = from organization in dbContext.Organizations
+                    where ids.Contains(organization.Id)
+                    select new OrganizationPlanType
+                    {
+                        OrganizationId = organization.Id,
+                        PlanType = organization.PlanType,
+                    };
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
@@ -86,37 +128,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         }
     }
 
-    public async Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync()
+#nullable enable
+    public async Task<OrganizationAbility?> GetAbilityAsync(Guid organizationId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await GetDbSet(dbContext)
-            .Select(e => new OrganizationAbility
-            {
-                Enabled = e.Enabled,
-                Id = e.Id,
-                Use2fa = e.Use2fa,
-                UseEvents = e.UseEvents,
-                UsersGetPremium = e.UsersGetPremium,
-                Using2fa = e.Use2fa && e.TwoFactorProviders != null,
-                UseSso = e.UseSso,
-                UseKeyConnector = e.UseKeyConnector,
-                UseResetPassword = e.UseResetPassword,
-                UseScim = e.UseScim,
-                UseCustomPermissions = e.UseCustomPermissions,
-                UsePolicies = e.UsePolicies,
-                LimitCollectionCreation = e.LimitCollectionCreation,
-                LimitCollectionDeletion = e.LimitCollectionDeletion,
-                LimitItemDeletion = e.LimitItemDeletion,
-                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                UseRiskInsights = e.UseRiskInsights,
-                UseOrganizationDomains = e.UseOrganizationDomains,
-                UseAdminSponsoredFamilies = e.UseAdminSponsoredFamilies,
-                UseAutomaticUserConfirmation = e.UseAutomaticUserConfirmation
-            }).ToListAsync();
-        }
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        return await GetDbSet(dbContext)
+            .Where(e => e.Id == organizationId)
+            .Select(e => new OrganizationAbility(e))
+            .SingleOrDefaultAsync();
     }
+#nullable disable
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
@@ -129,12 +153,13 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             PlanType.Free,
             PlanType.Custom,
             PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually2025,
             PlanType.FamiliesAnnually
         };
 
         var query =
             from o in dbContext.Organizations
-            where o.PlanType.NotIn(disallowedPlanTypes) &&
+            where !disallowedPlanTypes.Contains(o.PlanType) &&
                   !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
                   (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
@@ -176,7 +201,15 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         await OrganizationUpdateStorage(id);
     }
 
-    public override async Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+    public override Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
+        => DeleteInternalAsync(organization, []);
+
+    public Task DeleteAndCreateDeleteTasksAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> taskTypes)
+        => DeleteInternalAsync(organization, taskTypes);
+
+    private async Task DeleteInternalAsync(Core.AdminConsole.Entities.Organization organization,
+        IEnumerable<OrganizationDeleteTaskType> deleteTaskTypes)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -209,6 +242,30 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.OrganizationIntegrations.Where(oi => oi.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
+            // The PAM leasing tables need the same treatment, and additionally reference each other:
+            // AccessRequest.ExtensionOfLeaseId -> AccessLease and AccessLease.AccessRequestId -> AccessRequest are
+            // both Restrict, while Organization cascades to both. Whichever cascade the provider fired first would
+            // be blocked by the other, so an organization holding an extended lease could not be deleted at all.
+            // Detaching the extension links breaks that cycle; AccessDecision then cascades from AccessRequest, and
+            // clearing the requests first releases their AccessRequest.RuleId hold on the rules removed below.
+            await dbContext.AccessRequests
+                .Where(r => r.OrganizationId == organization.Id && r.ExtensionOfLeaseId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.ExtensionOfLeaseId, (Guid?)null));
+            await dbContext.AccessLeases.Where(l => l.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.AccessRequests.Where(r => r.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            // Detach the collections before removing the rules they point at. Organization cascades to both
+            // Collection and AccessRule while Collection -> AccessRule does not, so leaving this to the database
+            // would make the delete depend on which of those two cascade paths the provider happens to apply
+            // first. Clearing the association explicitly keeps the outcome the same on all four databases.
+            await dbContext.Collections
+                .Where(c => c.OrganizationId == organization.Id && c.AccessRuleId != null)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.AccessRuleId, (Guid?)null));
+            await dbContext.AccessRules.Where(ar => ar.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
             await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Project.Where(p => p.OrganizationId == organization.Id)
@@ -223,6 +280,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.Sends.Where(s => s.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
@@ -242,8 +302,28 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             var orgEntity = await dbContext.FindAsync<Organization>(organization.Id);
             dbContext.Remove(orgEntity);
 
-            await organizationDeleteTransaction.CommitAsync();
+            // Atomically enqueue the cleanup tasks within the same transaction as the
+            // deletion, so durable downstream cleanup is never lost if the delete commits.
+            // One row is created per supplied task type.
+            var creationDate = DateTime.UtcNow;
+            var deleteTasks = deleteTaskTypes
+                .Select(taskType =>
+                {
+                    var deleteTask = new Dirt.Models.OrganizationDeleteTask
+                    {
+                        OrganizationId = organization.Id,
+                        TaskType = taskType,
+                        CreationDate = creationDate,
+                        RevisionDate = creationDate,
+                    };
+                    deleteTask.SetNewId();
+                    return deleteTask;
+                })
+                .ToList();
+            await dbContext.OrganizationDeleteTasks.AddRangeAsync(deleteTasks);
+
             await dbContext.SaveChangesAsync();
+            await organizationDeleteTransaction.CommitAsync();
         }
     }
 
@@ -322,7 +402,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     where ou.UserId == userWithDomain.UserId &&
                           od.DomainName == userWithDomain.EmailDomain &&
                           od.VerifiedDate != null &&
-                          o.Enabled == true
+                          o.Enabled == true &&
+                          (ou.Status == OrganizationUserStatusType.Accepted ||
+                           ou.Status == OrganizationUserStatusType.Confirmed ||
+                           ou.Status == OrganizationUserStatusType.Revoked)
                     select o;
 
         return await query.ToArrayAsync();
@@ -356,7 +439,8 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     organization.Seats > 0 &&
                     organization.Status == OrganizationStatusType.Created &&
                     !organization.UseSecretsManager &&
-                    organization.PlanType.In(planTypes)
+                    planTypes.Contains(organization.PlanType) &&
+                    !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == organization.Id)
                 select organization;
 
             return await query.ToArrayAsync();
@@ -382,7 +466,10 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await dbContext.OrganizationUsers
-                .Where(ou => ou.OrganizationId == organizationId && ou.Status >= 0)
+                .Where(ou => ou.OrganizationId == organizationId &&
+                    (ou.Status == OrganizationUserStatusType.Invited ||
+                     ou.Status == OrganizationUserStatusType.Accepted ||
+                     ou.Status == OrganizationUserStatusType.Confirmed))
                 .CountAsync();
 
             var sponsored = await dbContext.OrganizationSponsorships
@@ -435,5 +522,44 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .SetProperty(o => o.Seats, o => o.Seats + increaseAmount)
                 .SetProperty(o => o.SyncSeats, true)
                 .SetProperty(o => o.RevisionDate, requestDate));
+    }
+
+    public async Task InitializeOrganizationAsync(Core.AdminConsole.Entities.Organization organization, Func<DbConnection, DbTransaction, Task> confirmOwnerAction)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var connection = dbContext.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await dbContext.Database.UseTransactionAsync(transaction);
+
+        try
+        {
+            var efOrganization = await dbContext.Organizations.FindAsync(organization.Id);
+            if (efOrganization is null)
+            {
+                throw new InvalidOperationException($"Organization {organization.Id} was not found during initialization.");
+            }
+
+            efOrganization.Enabled = organization.Enabled;
+            efOrganization.Status = organization.Status;
+            efOrganization.PublicKey = organization.PublicKey;
+            efOrganization.PrivateKey = organization.PrivateKey;
+            efOrganization.RevisionDate = organization.RevisionDate;
+
+            await dbContext.SaveChangesAsync();
+
+            await confirmOwnerAction(connection, transaction);
+
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Failed to initialize organization. Rolling back transaction.");
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

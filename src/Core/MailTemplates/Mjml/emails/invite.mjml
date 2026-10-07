@@ -22,7 +22,7 @@
           </mj-text>
         </mj-column>
       </mj-section>
-      <mj-include path="../components/learn-more-footer.mjml" />
+      <mj-bw-learn-more-footer />
     </mj-wrapper>
 
     <mj-include path="../components/footer.mjml" />

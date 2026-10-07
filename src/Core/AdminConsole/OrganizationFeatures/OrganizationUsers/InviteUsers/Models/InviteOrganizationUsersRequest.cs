@@ -1,22 +1,15 @@
-﻿using Bit.Core.AdminConsole.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class InviteOrganizationUsersRequest
+public class InviteOrganizationUsersRequest(
+    OrganizationUserInviteCommandModel[] invites,
+    Organization organization,
+    Guid performedBy,
+    DateTimeOffset performedAt)
 {
-    public OrganizationUserInviteCommandModel[] Invites { get; } = [];
-    public InviteOrganization InviteOrganization { get; }
-    public Guid PerformedBy { get; }
-    public DateTimeOffset PerformedAt { get; }
-
-    public InviteOrganizationUsersRequest(OrganizationUserInviteCommandModel[] invites,
-        InviteOrganization inviteOrganization,
-        Guid performedBy,
-        DateTimeOffset performedAt)
-    {
-        Invites = invites;
-        InviteOrganization = inviteOrganization;
-        PerformedBy = performedBy;
-        PerformedAt = performedAt;
-    }
+    public OrganizationUserInviteCommandModel[] Invites { get; } = invites;
+    public Organization Organization { get; } = organization;
+    public Guid PerformedBy { get; } = performedBy;
+    public DateTimeOffset PerformedAt { get; } = performedAt;
 }

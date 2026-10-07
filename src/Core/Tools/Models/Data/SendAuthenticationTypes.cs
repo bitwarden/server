@@ -20,15 +20,6 @@ namespace Bit.Core.Tools.Models.Data;
 public abstract record SendAuthenticationMethod;
 
 /// <summary>
-/// Never issue a send claim.
-/// </summary>
-/// <remarks>
-/// This claim is issued when a send does not exist or when a send
-/// has exceeded its max access attempts.
-/// </remarks>
-public record NeverAuthenticate : SendAuthenticationMethod;
-
-/// <summary>
 /// Create a send claim automatically.
 /// </summary>
 public record NotAuthenticated : SendAuthenticationMethod;
@@ -44,7 +35,13 @@ public record ResourcePassword(string Hash) : SendAuthenticationMethod;
 /// <summary>
 /// Create a send claim by requesting a one time password (OTP) confirmation code.
 /// </summary>
-/// <param name="Emails">
+/// <param name="emails">
 /// The list of email addresses permitted access to the send.
 /// </param>
-public record EmailOtp(string[] Emails) : SendAuthenticationMethod;
+public record EmailOtp(string[] emails) : SendAuthenticationMethod;
+
+/// <summary>
+/// The send cannot be accessed: it exists but is inaccessible (expired, disabled, max access exceeded,
+/// or past deletion date), or no send matches the given id.
+/// </summary>
+public record SendInaccessible : SendAuthenticationMethod;

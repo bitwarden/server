@@ -34,10 +34,13 @@ public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherO
                         Data = c.Data,
                         Favorites = c.Favorites,
                         Folders = c.Folders,
+                        Archives = c.Archives,
                         Attachments = c.Attachments,
                         CreationDate = c.CreationDate,
                         RevisionDate = c.RevisionDate,
                         DeletedDate = c.DeletedDate,
+                        Key = c.Key,
+                        Reprompt = c.Reprompt,
                         OrganizationUseTotp = o.UseTotp,
                     };
 

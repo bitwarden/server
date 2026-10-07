@@ -1,22 +1,32 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-
-#nullable disable
-
+﻿using System.Globalization;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Organizations.PlanMigration.Enums;
+using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
+using Bit.Core.Entities;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2019Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Families2020Renewal;
+using Bit.Core.Models.Mail.Billing.Renewal.Premium;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Stripe;
 using Event = Stripe.Event;
+using Plan = Bit.Core.Models.StaticStore.Plan;
+using PremiumPlan = Bit.Core.Billing.Pricing.Premium.Plan;
 
 namespace Bit.Billing.Services.Implementations;
+
+using static StripeConstants;
 
 public class UpcomingInvoiceHandler(
     IGetPaymentMethodQuery getPaymentMethodQuery,
@@ -25,11 +35,15 @@ public class UpcomingInvoiceHandler(
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
     IProviderRepository providerRepository,
-    IStripeFacade stripeFacade,
+    IStripeAdapter stripeAdapter,
+    IPriceIncreaseScheduler priceIncreaseScheduler,
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
-    IValidateSponsorshipCommand validateSponsorshipCommand)
+    IValidateSponsorshipCommand validateSponsorshipCommand,
+    IMailer mailer,
+    IFeatureService featureService,
+    IBusinessPlanMigrationCoordinator businessPlanMigrationCoordinator)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -37,129 +51,440 @@ public class UpcomingInvoiceHandler(
         var invoice = await stripeEventService.GetInvoice(parsedEvent);
 
         var customer =
-            await stripeFacade.GetCustomer(invoice.CustomerId, new CustomerGetOptions { Expand = ["subscriptions", "tax", "tax_ids"] });
+            await stripeAdapter.GetCustomerAsync(invoice.CustomerId,
+                new CustomerGetOptions
+                {
+                    Expand =
+                    [
+                        "subscriptions",
+                        "tax",
+                        "tax_ids"
+                    ]
+                });
 
-        var subscription = customer.Subscriptions.FirstOrDefault();
+        var subscriptionId = customer.Subscriptions?.FirstOrDefault()?.Id;
 
-        if (subscription == null)
+        if (subscriptionId == null)
         {
             return;
         }
+
+        var subscription =
+            await stripeAdapter.GetSubscriptionAsync(subscriptionId,
+                new SubscriptionGetOptions
+                {
+                    Expand = ["customer.discount.source.coupon", "discounts.source.coupon", "test_clock"]
+                });
 
         var (organizationId, userId, providerId) = stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
         if (organizationId.HasValue)
         {
-            var organization = await organizationRepository.GetByIdAsync(organizationId.Value);
-
-            if (organization == null)
-            {
-                return;
-            }
-
-            await AlignOrganizationTaxConcernsAsync(organization, subscription, customer, parsedEvent.Id);
-
-            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
-
-            if (!plan.IsAnnual)
-            {
-                return;
-            }
-
-            if (stripeEventUtilityService.IsSponsoredSubscription(subscription))
-            {
-                var sponsorshipIsValid = await validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
-
-                if (!sponsorshipIsValid)
-                {
-                    /*
-                     * If the sponsorship is invalid, then the subscription was updated to use the regular families plan
-                     * price. Given that this is the case, we need the new invoice amount
-                     */
-                    invoice = await stripeFacade.GetInvoice(subscription.LatestInvoiceId);
-                }
-            }
-
-            await SendUpcomingInvoiceEmailsAsync(new List<string> { organization.BillingEmail }, invoice);
-
-            /*
-             * TODO: https://bitwarden.atlassian.net/browse/PM-4862
-             * Disabling this as part of a hot fix. It needs to check whether the organization
-             * belongs to a Reseller provider and only send an email to the organization owners if it does.
-             * It also requires a new email template as the current one contains too much billing information.
-             */
-
-            // var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
-
-            // await SendEmails(ownerEmails);
+            await HandleOrganizationUpcomingInvoiceAsync(
+                organizationId.Value,
+                parsedEvent,
+                invoice,
+                customer,
+                subscription);
         }
         else if (userId.HasValue)
         {
-            var user = await userRepository.GetByIdAsync(userId.Value);
-
-            if (user == null)
-            {
-                return;
-            }
-
-            if (!subscription.AutomaticTax.Enabled && subscription.Customer.HasRecognizedTaxLocation())
-            {
-                try
-                {
-                    await stripeFacade.UpdateSubscription(subscription.Id,
-                        new SubscriptionUpdateOptions
-                        {
-                            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                        });
-                }
-                catch (Exception exception)
-                {
-                    logger.LogError(
-                        exception,
-                        "Failed to set user's ({UserID}) subscription to automatic tax while processing event with ID {EventID}",
-                        user.Id,
-                        parsedEvent.Id);
-                }
-            }
-
-            if (user.Premium)
-            {
-                await SendUpcomingInvoiceEmailsAsync(new List<string> { user.Email }, invoice);
-            }
+            await HandlePremiumUsersUpcomingInvoiceAsync(
+                userId.Value,
+                parsedEvent,
+                invoice,
+                customer,
+                subscription);
         }
         else if (providerId.HasValue)
         {
-            var provider = await providerRepository.GetByIdAsync(providerId.Value);
+            await HandleProviderUpcomingInvoiceAsync(
+                providerId.Value,
+                parsedEvent,
+                invoice,
+                customer,
+                subscription);
+        }
+    }
 
-            if (provider == null)
+    #region Organizations
+
+    private async Task HandleOrganizationUpcomingInvoiceAsync(
+        Guid organizationId,
+        Event @event,
+        Invoice invoice,
+        Customer customer,
+        Subscription subscription)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            logger.LogWarning("Could not find Organization ({OrganizationID}) for '{EventType}' event ({EventID})",
+                organizationId, @event.Type, @event.Id);
+            return;
+        }
+
+        await AlignOrganizationTaxConcernsAsync(organization, subscription, customer, @event.Id);
+
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        var subscriptionAligned = await AlignOrganizationSubscriptionConcernsAsync(
+            organization,
+            @event,
+            subscription,
+            plan);
+
+        /*
+         * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+         * with processing.
+         */
+        if (subscriptionAligned)
+        {
+            return;
+        }
+
+        // Don't send the upcoming invoice email unless the organization's on an annual plan.
+        if (!plan.IsAnnual)
+        {
+            return;
+        }
+
+        if (stripeEventUtilityService.IsSponsoredSubscription(subscription))
+        {
+            var sponsorshipIsValid =
+                await validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId);
+
+            if (!sponsorshipIsValid)
             {
-                return;
+                /*
+                 * If the sponsorship is invalid, then the subscription was updated to use the regular families plan
+                 * price. Given that this is the case, we need the new invoice amount
+                 */
+                invoice = await stripeAdapter.GetInvoiceAsync(subscription.LatestInvoiceId);
+            }
+        }
+
+        await SendUpcomingInvoiceEmailsAsync([organization.BillingEmail], invoice);
+    }
+
+    private async Task AlignOrganizationTaxConcernsAsync(
+        Organization organization,
+        Subscription subscription,
+        Customer customer,
+        string eventId)
+    {
+        if (!subscription.AutomaticTax.Enabled)
+        {
+            try
+            {
+                await EnableAutomaticTaxAsync(subscription);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to set organization's ({OrganizationID}) subscription to automatic tax while processing event with ID {EventID}",
+                    organization.Id,
+                    eventId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Dispatches subscription-alignment work based on the organization's product tier.
+    /// </summary>
+    /// <returns>
+    /// True if a tier-specific alignment took ownership of this organization's renewal communication,
+    /// so the caller must skip the standard upcoming-invoice email. The tier-specific path may still
+    /// decide not to send (or fail to send) its own cohort-specific email — for example when the cohort
+    /// or migration path is missing, the renewal date is indeterminate, or the email send fails after the
+    /// migration was already scheduled — so True does not guarantee an email was sent. False if no
+    /// alignment ran, in which case the caller falls through to the standard upcoming-invoice email path.
+    /// </returns>
+    private Task<bool> AlignOrganizationSubscriptionConcernsAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription,
+        Plan plan) =>
+        organization.PlanType.GetProductTier() switch
+        {
+            ProductTierType.Families =>
+                ScheduleFamiliesPriceMigrationAsync(organization, @event, subscription, plan),
+            ProductTierType.Teams or ProductTierType.Enterprise or ProductTierType.TeamsStarter =>
+                ScheduleBusinessPlanPriceMigrationAsync(organization, @event, subscription),
+            _ => Task.FromResult(false)
+        };
+
+    private async Task<bool> ScheduleFamiliesPriceMigrationAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription,
+        Plan plan)
+    {
+        if (plan.Type is not (PlanType.FamiliesAnnually2019 or PlanType.FamiliesAnnually2025))
+        {
+            return false;
+        }
+
+        var passwordManagerItem =
+            subscription.Items.FirstOrDefault(item => item.Price.Id == plan.PasswordManager.StripePlanId);
+
+        if (passwordManagerItem == null)
+        {
+            logger.LogWarning("Could not find Organization's ({OrganizationId}) password manager item while processing '{EventType}' event ({EventID})",
+                organization.Id, @event.Type, @event.Id);
+            return false;
+        }
+
+        var familiesPlan = await pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually);
+
+        try
+        {
+            var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
+            if (!scheduled)
+            {
+                return true;
             }
 
-            await AlignProviderTaxConcernsAsync(provider, subscription, customer, parsedEvent.Id);
-
-            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription, providerId.Value);
+            await SendFamiliesRenewalEmailAsync(organization, familiesPlan, plan);
+            return true;
         }
-    }
-
-    private async Task SendUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice)
-    {
-        var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
-
-        var items = invoice.Lines.Select(i => i.Description).ToList();
-
-        if (invoice.NextPaymentAttempt.HasValue && invoice.AmountDue > 0)
+        catch (Exception exception)
         {
-            await mailService.SendInvoiceUpcoming(
-                validEmails,
-                invoice.AmountDue / 100M,
-                invoice.NextPaymentAttempt.Value,
-                items,
-                true);
+            logger.LogError(
+                exception,
+                "Failed to align subscription concerns for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                organization.Id,
+                @event.Type,
+                @event.Id);
+            return false;
         }
     }
 
-    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice, Subscription subscription, Guid providerId)
+    private async Task<bool> ScheduleBusinessPlanPriceMigrationAsync(
+        Organization organization,
+        Event @event,
+        Subscription subscription)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration))
+        {
+            return false;
+        }
+
+        try
+        {
+            await stripeAdapter.WaitForTestClockToAdvanceAsync(subscription.TestClock);
+
+            var result = await businessPlanMigrationCoordinator.ExecuteAsync(organization, subscription);
+            switch (result)
+            {
+                case BusinessPlanMigrationResult.Completed:
+                    return true;
+                case BusinessPlanMigrationResult.CompletedWithoutNotification:
+                    // The migration is committed, but the renewal email did not go out. Suppress the standard
+                    // email anyway (a migrating subscription must not receive the pre-migration quote), and log
+                    // at error: the organization will be migrated without notice and may need manual follow-up.
+                    logger.LogError(
+                        "Business plan migration was scheduled for Organization ({OrganizationID}) but no renewal notification was sent while processing '{EventType}' event ({EventID}); manual notification may be required",
+                        organization.Id, @event.Type, @event.Id);
+                    return true;
+                case BusinessPlanMigrationResult.NotAssigned:
+                case BusinessPlanMigrationResult.AlreadyMigrated:
+                case BusinessPlanMigrationResult.NotScheduled:
+                default:
+                    return false;
+            }
+        }
+        catch (Exception exception)
+        {
+            // Unexpected failure before the migration was committed. Preserve the prior behavior: log and
+            // let the standard upcoming-invoice email send.
+            logger.LogError(
+                exception,
+                "Failed to run business plan price migration for Organization ({OrganizationID}) while processing '{EventType}' event ({EventID})",
+                organization.Id,
+                @event.Type,
+                @event.Id);
+            return false;
+        }
+    }
+
+
+    #endregion
+
+    #region Premium Users
+
+    private async Task HandlePremiumUsersUpcomingInvoiceAsync(
+        Guid userId,
+        Event @event,
+        Invoice invoice,
+        Customer customer,
+        Subscription subscription)
+    {
+        var user = await userRepository.GetByIdAsync(userId);
+
+        if (user == null)
+        {
+            logger.LogWarning("Could not find User ({UserID}) for '{EventType}' event ({EventID})",
+                userId, @event.Type, @event.Id);
+            return;
+        }
+
+        await AlignPremiumUsersTaxConcernsAsync(user, @event, customer, subscription);
+
+        var subscriptionAligned = await AlignPremiumUsersSubscriptionConcernsAsync(user, @event, subscription);
+
+        /*
+         * Subscription alignment sends out a different version of our Upcoming Invoice email, so we don't need to continue
+         * with processing.
+         */
+        if (subscriptionAligned)
+        {
+            return;
+        }
+
+        if (user.Premium)
+        {
+            await SendUpcomingInvoiceEmailsAsync(new List<string> { user.Email }, invoice);
+        }
+    }
+
+    private async Task AlignPremiumUsersTaxConcernsAsync(
+        User user,
+        Event @event,
+        Customer customer,
+        Subscription subscription)
+    {
+        if (!subscription.AutomaticTax.Enabled && customer.HasRecognizedTaxLocation())
+        {
+            try
+            {
+                await EnableAutomaticTaxAsync(subscription);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to set user's ({UserID}) subscription to automatic tax while processing event with ID {EventID}",
+                    user.Id,
+                    @event.Id);
+            }
+        }
+    }
+
+    private async Task<bool> AlignPremiumUsersSubscriptionConcernsAsync(
+        User user,
+        Event @event,
+        Subscription subscription)
+    {
+        var premiumPlans = await pricingClient.ListPremiumPlans();
+        var oldPlan = premiumPlans.FirstOrDefault(p => !p.Available);
+        var newPlan = premiumPlans.FirstOrDefault(p => p.Available);
+
+        if (oldPlan == null || newPlan == null)
+        {
+            logger.LogWarning("Could not resolve old and new premium plans while processing '{EventType}' event ({EventID})",
+                @event.Type, @event.Id);
+            return false;
+        }
+
+        var premiumItem = subscription.Items.FirstOrDefault(i => i.Price.Id == oldPlan.Seat.StripePriceId);
+
+        if (premiumItem == null)
+        {
+            logger.LogWarning("Could not find User's ({UserID}) premium subscription item while processing '{EventType}' event ({EventID})",
+                user.Id, @event.Type, @event.Id);
+            return false;
+        }
+
+        try
+        {
+            var scheduled = await priceIncreaseScheduler.SchedulePersonalPriceIncrease(subscription);
+
+            // A false result means no new schedule was created — typically because an earlier upcoming-invoice
+            // event for this renewal already deferred the migration and sent its renewal email. Return true so
+            // the caller skips the generic upcoming-invoice email instead of sending a duplicate.
+            if (!scheduled)
+            {
+                return true;
+            }
+
+            await SendPremiumRenewalEmailAsync(user, newPlan);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to update user's ({UserID}) subscription price id while processing event with ID {EventID}",
+                user.Id,
+                @event.Id);
+            return false;
+        }
+    }
+
+    #endregion
+
+    #region Providers
+
+    private async Task HandleProviderUpcomingInvoiceAsync(
+        Guid providerId,
+        Event @event,
+        Invoice invoice,
+        Customer customer,
+        Subscription subscription)
+    {
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            logger.LogWarning("Could not find Provider ({ProviderID}) for '{EventType}' event ({EventID})",
+                providerId, @event.Type, @event.Id);
+            return;
+        }
+
+        await AlignProviderTaxConcernsAsync(provider, subscription, customer, @event.Id);
+
+        if (!string.IsNullOrEmpty(provider.BillingEmail))
+        {
+            await SendProviderUpcomingInvoiceEmailsAsync(new List<string> { provider.BillingEmail }, invoice, subscription, providerId);
+        }
+    }
+
+    private async Task AlignProviderTaxConcernsAsync(
+        Provider provider,
+        Subscription subscription,
+        Customer customer,
+        string eventId)
+    {
+        if (!subscription.AutomaticTax.Enabled)
+        {
+            try
+            {
+                await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(
+                    exception,
+                    "Failed to set provider's ({ProviderID}) subscription to automatic tax while processing event with ID {EventID}",
+                    provider.Id,
+                    eventId);
+            }
+        }
+    }
+
+    private async Task SendProviderUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice,
+        Subscription subscription, Guid providerId)
     {
         var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
 
@@ -195,96 +520,187 @@ public class UpcomingInvoiceHandler(
         }
     }
 
-    private async Task AlignOrganizationTaxConcernsAsync(
+    #endregion
+
+    #region Shared
+
+    private async Task EnableAutomaticTaxAsync(Subscription subscription)
+    {
+        var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+            new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+        var activeSchedule = schedules.Data.FirstOrDefault(s =>
+            s.SubscriptionId == subscription.Id && s.Status == SubscriptionScheduleStatus.Active);
+
+        if (activeSchedule != null)
+        {
+            var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+            DiscountExtensions.RequireScheduleDiscountExpansions(subscription, logger);
+
+            var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+            foreach (var phase in activeSchedule.Phases)
+            {
+                // Skip phases that have already completed
+                if (phase.EndDate <= now)
+                {
+                    continue;
+                }
+
+                var isFuture = phase.StartDate > now;
+
+                phases.Add(new SubscriptionSchedulePhaseOptions
+                {
+                    StartDate = phase.StartDate,
+                    EndDate = phase.EndDate,
+                    TrialEnd = phase.TrialEnd,
+                    Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                    {
+                        Price = item.PriceId,
+                        Quantity = item.Quantity,
+                        Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                            item.Discounts?.Select(d => d.CouponId) ?? [])
+                    }).ToList(),
+                    Discounts = isFuture
+                        ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                            subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                        : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
+                    Metadata = phase.Metadata,
+                    ProrationBehavior = phase.ProrationBehavior,
+                    AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                    {
+                        Enabled = true
+                    }
+                });
+            }
+
+            await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                new SubscriptionScheduleUpdateOptions
+                {
+                    DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                    {
+                        AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                        {
+                            Enabled = true
+                        }
+                    },
+                    Phases = phases
+                });
+            return;
+        }
+
+        await stripeAdapter.UpdateSubscriptionAsync(subscription.Id,
+            new SubscriptionUpdateOptions
+            {
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+            });
+    }
+
+    private async Task SendUpcomingInvoiceEmailsAsync(IEnumerable<string> emails, Invoice invoice)
+    {
+        var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
+
+        var items = invoice.Lines.Select(i => i.Description).ToList();
+
+        if (invoice is { NextPaymentAttempt: not null, AmountDue: > 0 })
+        {
+            await mailService.SendInvoiceUpcoming(
+                validEmails,
+                invoice.AmountDue / 100M,
+                invoice.NextPaymentAttempt.Value,
+                items,
+                true);
+        }
+    }
+
+    private async Task SendFamiliesRenewalEmailAsync(
         Organization organization,
-        Subscription subscription,
-        Customer customer,
-        string eventId)
+        Plan familiesPlan,
+        Plan planBeforeAlignment)
     {
-        var nonUSBusinessUse =
-            organization.PlanType.GetProductTier() != ProductTierType.Families &&
-            customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates;
-
-        if (nonUSBusinessUse && customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+        await (planBeforeAlignment switch
         {
-            try
-            {
-                await stripeFacade.UpdateCustomer(subscription.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set organization's ({OrganizationID}) to reverse tax exemption while processing event with ID {EventID}",
-                    organization.Id,
-                    eventId);
-            }
-        }
-
-        if (!subscription.AutomaticTax.Enabled)
-        {
-            try
-            {
-                await stripeFacade.UpdateSubscription(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set organization's ({OrganizationID}) subscription to automatic tax while processing event with ID {EventID}",
-                    organization.Id,
-                    eventId);
-            }
-        }
+            { Type: PlanType.FamiliesAnnually2025 } => SendFamilies2020RenewalEmailAsync(organization, familiesPlan),
+            { Type: PlanType.FamiliesAnnually2019 } => SendFamilies2019RenewalEmailAsync(organization, familiesPlan),
+            _ => throw new InvalidOperationException("Unsupported families plan in SendFamiliesRenewalEmailAsync().")
+        });
     }
 
-    private async Task AlignProviderTaxConcernsAsync(
-        Provider provider,
-        Subscription subscription,
-        Customer customer,
-        string eventId)
+    private async Task SendFamilies2020RenewalEmailAsync(Organization organization, Plan familiesPlan)
     {
-        if (customer.Address.Country != Core.Constants.CountryAbbreviations.UnitedStates &&
-            customer.TaxExempt != StripeConstants.TaxExempt.Reverse)
+        var email = new Families2020RenewalMail
         {
-            try
+            ToEmails = [organization.BillingEmail],
+            View = new Families2020RenewalMailView
             {
-                await stripeFacade.UpdateCustomer(subscription.CustomerId,
-                    new CustomerUpdateOptions { TaxExempt = StripeConstants.TaxExempt.Reverse });
+                MonthlyRenewalPrice = (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US"))
             }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set provider's ({ProviderID}) to reverse tax exemption while processing event with ID {EventID}",
-                    provider.Id,
-                    eventId);
-            }
+        };
+
+        await mailer.SendEmail(email);
+    }
+
+    private async Task SendFamilies2019RenewalEmailAsync(Organization organization, Plan familiesPlan)
+    {
+        var coupon = await stripeAdapter.GetCouponAsync(CouponIDs.Milestone3SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} not found");
         }
 
-        if (!subscription.AutomaticTax.Enabled)
+        if (coupon.PercentOff == null)
         {
-            try
-            {
-                await stripeFacade.UpdateSubscription(subscription.Id,
-                    new SubscriptionUpdateOptions
-                    {
-                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                    });
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(
-                    exception,
-                    "Failed to set provider's ({ProviderID}) subscription to automatic tax while processing event with ID {EventID}",
-                    provider.Id,
-                    eventId);
-            }
+            throw new InvalidOperationException($"coupon.PercentOff for sending families 2019 email id:{CouponIDs.Milestone3SubscriptionDiscount} is null");
         }
+
+        var discountedAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new Families2019RenewalMail
+        {
+            ToEmails = [organization.BillingEmail],
+            View = new Families2019RenewalMailView
+            {
+                BaseMonthlyRenewalPrice = (familiesPlan.PasswordManager.BasePrice / 12).ToString("C", new CultureInfo("en-US")),
+                BaseAnnualRenewalPrice = familiesPlan.PasswordManager.BasePrice.ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedAnnualRenewalPrice = discountedAnnualRenewalPrice.ToString("C", new CultureInfo("en-US"))
+            }
+        };
+
+        await mailer.SendEmail(email);
     }
+
+    private async Task SendPremiumRenewalEmailAsync(
+        User user,
+        PremiumPlan premiumPlan)
+    {
+        var coupon = await stripeAdapter.GetCouponAsync(CouponIDs.Milestone2SubscriptionDiscount);
+        if (coupon == null)
+        {
+            throw new InvalidOperationException($"Coupon for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} not found");
+        }
+
+        if (coupon.PercentOff == null)
+        {
+            throw new InvalidOperationException($"coupon.PercentOff for sending premium renewal email id:{CouponIDs.Milestone2SubscriptionDiscount} is null");
+        }
+
+        var discountedAnnualRenewalPrice = premiumPlan.Seat.Price * (100 - coupon.PercentOff.Value) / 100;
+
+        var email = new PremiumRenewalMail
+        {
+            ToEmails = [user.Email],
+            View = new PremiumRenewalMailView
+            {
+                BaseMonthlyRenewalPrice = (premiumPlan.Seat.Price / 12).ToString("C", new CultureInfo("en-US")),
+                DiscountAmount = $"{coupon.PercentOff}%",
+                DiscountedAnnualRenewalPrice = discountedAnnualRenewalPrice.ToString("C", new CultureInfo("en-US"))
+            }
+        };
+
+        await mailer.SendEmail(email);
+    }
+
+    #endregion
 }

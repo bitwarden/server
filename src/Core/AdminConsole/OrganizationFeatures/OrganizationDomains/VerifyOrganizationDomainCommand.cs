@@ -95,7 +95,7 @@ public class VerifyOrganizationDomainCommand(
         if (domain.VerifiedDate is not null)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("Domain has already been verified.");
+            throw new ConflictException(new DomainAlreadyVerifiedError().Message);
         }
 
         var claimedDomain =
@@ -104,7 +104,7 @@ public class VerifyOrganizationDomainCommand(
         if (claimedDomain.Count > 0)
         {
             await organizationDomainRepository.ReplaceAsync(domain);
-            throw new ConflictException("The domain is not available to be claimed.");
+            throw new ConflictException(new DomainNotAvailableError().Message);
         }
 
         try
@@ -131,15 +131,19 @@ public class VerifyOrganizationDomainCommand(
         await SendVerifiedDomainUserEmailAsync(domain);
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
-        await savePolicyCommand.SaveAsync(
-            new PolicyUpdate
-            {
-                OrganizationId = organizationId,
-                Type = PolicyType.SingleOrg,
-                Enabled = true,
-                PerformedBy = actingUser
-            });
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    {
+        var policyUpdate = new PolicyUpdate
+        {
+            OrganizationId = organizationId,
+            Type = PolicyType.SingleOrg,
+            Enabled = true,
+            PerformedBy = actingUser
+        };
+
+        var savePolicyModel = new SavePolicyModel(policyUpdate, actingUser);
+        await savePolicyCommand.SaveAsync(savePolicyModel);
+    }
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
@@ -147,12 +151,11 @@ public class VerifyOrganizationDomainCommand(
 
         var domainUserEmails = orgUserUsers
             .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
-                         ou.Status != OrganizationUserStatusType.Invited)
+                         ou.Status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed)
             .Select(ou => ou.Email);
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(new ClaimedUserDomainClaimedEmails(domainUserEmails, organization, domain.DomainName));
     }
 }

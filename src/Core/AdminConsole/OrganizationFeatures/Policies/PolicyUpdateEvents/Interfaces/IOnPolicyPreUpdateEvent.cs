@@ -3,6 +3,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
+/// <summary>
+/// Represents all side effects that should be executed before a policy is upserted.
+/// </summary>
+/// <remarks>
+/// This should be added to policy handlers that need to perform side effects before policy upserts.
+/// </remarks>
 public interface IOnPolicyPreUpdateEvent : IPolicyUpdateEvent
 {
     /// <summary>

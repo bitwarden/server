@@ -1,26 +1,22 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
-
 namespace Bit.Core.Vault.Services;
 
 public interface ICipherService
 {
-    Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate, IEnumerable<Guid> collectionIds = null,
+    Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate, IEnumerable<Guid>? collectionIds = null,
         bool skipPermissionCheck = false, bool limitCollectionScope = true);
     Task SaveDetailsAsync(CipherDetails cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
-        IEnumerable<Guid> collectionIds = null, bool skipPermissionCheck = false);
+        IEnumerable<Guid>? collectionIds = null, bool skipPermissionCheck = false);
     Task<(string attachmentId, string uploadUrl)> CreateAttachmentForDelayedUploadAsync(Cipher cipher,
         string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId, DateTime? lastKnownRevisionDate = null);
     Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
         long requestLength, Guid savingUserId, bool orgAdmin = false, DateTime? lastKnownRevisionDate = null);
     Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key, long requestLength,
-        string attachmentId, Guid organizationShareId, DateTime? lastKnownRevisionDate = null);
+        string attachmentId, Guid organizationShareId);
     Task DeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false);
     Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
-    Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
+    Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(CipherDetails cipherDetails, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
     Task PurgeAsync(Guid organizationId);
     Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId);
     Task SaveFolderAsync(Folder folder);
@@ -34,8 +30,10 @@ public interface ICipherService
     Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task RestoreAsync(CipherDetails cipherDetails, Guid restoringUserId, bool orgAdmin = false);
     Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false);
-    Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId, DateTime? lastKnownRevisionDate = null);
-    Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
+    Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId, Guid savingUserId, bool orgAdmin = false);
+    Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher? cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
-    Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId);
+    Task ValidateBulkCollectionAssignmentAsync(IEnumerable<Guid> collectionIds, IEnumerable<Guid> cipherIds, Guid userId, bool removeCollections = false);
+    Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin, long requestLength);
+    Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false);
 }

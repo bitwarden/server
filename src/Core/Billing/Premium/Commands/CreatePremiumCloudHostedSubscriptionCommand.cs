@@ -1,10 +1,15 @@
-﻿using Bit.Core.Billing.Caches;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Payment.Commands;
 using Bit.Core.Billing.Payment.Models;
+using Bit.Core.Billing.Payment.Queries;
+using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Platform.Push;
@@ -21,6 +26,7 @@ using Subscription = Stripe.Subscription;
 
 namespace Bit.Core.Billing.Premium.Commands;
 
+using static StripeConstants;
 using static Utilities;
 
 /// <summary>
@@ -32,28 +38,27 @@ public interface ICreatePremiumCloudHostedSubscriptionCommand
     /// <summary>
     /// Creates a premium cloud-hosted subscription for the specified user.
     /// </summary>
-    /// <param name="user">The user to create the premium subscription for. Must not already be a premium user.</param>
-    /// <param name="paymentMethod">The tokenized payment method containing the payment type and token for billing.</param>
-    /// <param name="billingAddress">The billing address information required for tax calculation and customer creation.</param>
-    /// <param name="additionalStorageGb">Additional storage in GB beyond the base 1GB included with premium (must be >= 0).</param>
+    /// <param name="user">The user to create the premium subscription for. Must not yet be a premium user.</param>
+    /// <param name="subscriptionPurchase">The subscription purchase details including payment method, billing address, storage, and optional coupon.</param>
     /// <returns>A billing command result indicating success or failure with appropriate error details.</returns>
     Task<BillingCommandResult<None>> Run(
         User user,
-        PaymentMethod paymentMethod,
-        BillingAddress billingAddress,
-        short additionalStorageGb);
+        PremiumSubscriptionPurchase subscriptionPurchase);
 }
 
 public class CreatePremiumCloudHostedSubscriptionCommand(
     IBraintreeGateway braintreeGateway,
+    IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserService userService,
     IPushNotificationService pushNotificationService,
     ILogger<CreatePremiumCloudHostedSubscriptionCommand> logger,
-    IPricingClient pricingClient)
+    IPricingClient pricingClient,
+    IHasPaymentMethodQuery hasPaymentMethodQuery,
+    IUpdatePaymentMethodCommand updatePaymentMethodCommand,
+    ISubscriptionDiscountService subscriptionDiscountService)
     : BaseBillingCommand<CreatePremiumCloudHostedSubscriptionCommand>(logger), ICreatePremiumCloudHostedSubscriptionCommand
 {
     private static readonly List<string> _expand = ["tax"];
@@ -61,39 +66,85 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
 
     public Task<BillingCommandResult<None>> Run(
         User user,
-        PaymentMethod paymentMethod,
-        BillingAddress billingAddress,
-        short additionalStorageGb) => HandleAsync<None>(async () =>
+        PremiumSubscriptionPurchase subscriptionPurchase) => HandleAsync<None>(async () =>
     {
-        if (user.Premium)
+        // A "terminal" subscription is one that has ended and cannot be renewed/reactivated.
+        // These are: 'canceled' (user canceled) and 'incomplete_expired' (payment failed and time expired).
+        // We allow users with terminal subscriptions to create a new subscription even if user.Premium is still true,
+        // enabling the resubscribe workflow without requiring Premium status to be cleared first.
+        var hasTerminalSubscription = await HasTerminalSubscriptionAsync(user);
+
+        if (user.Premium && !hasTerminalSubscription)
         {
             return new BadRequest("Already a premium user.");
         }
 
-        if (additionalStorageGb < 0)
+        if (subscriptionPurchase.AdditionalStorageGb is < 0)
         {
             return new BadRequest("Additional storage must be greater than 0.");
         }
 
-        // Note: A customer will already exist if the customer has purchased account credits.
-        var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
-            ? await CreateCustomerAsync(user, paymentMethod, billingAddress)
-            : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
+        // Validate all provided coupons. Fail fast if any coupon is invalid to prevent charging more than expected.
+        var validatedCoupons = (subscriptionPurchase.Coupons ?? [])
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList();
 
-        customer = await ReconcileBillingLocationAsync(customer, billingAddress);
+        if (validatedCoupons.Count > 0)
+        {
+            var allValid = await subscriptionDiscountService.ValidateDiscountEligibilityForUserAsync(
+                user, validatedCoupons, DiscountTierType.Premium);
 
-        var subscription = await CreateSubscriptionAsync(user.Id, customer, additionalStorageGb > 0 ? additionalStorageGb : null);
+            if (!allValid)
+            {
+                return new BadRequest("Discount expired. Please review your cart total and try again");
+            }
+        }
 
-        paymentMethod.Switch(
+        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
+
+        Customer? customer;
+
+        /*
+         * For a new customer purchasing a new subscription, we attach the payment method while creating the customer.
+         */
+        if (string.IsNullOrEmpty(user.GatewayCustomerId))
+        {
+            customer = await CreateCustomerAsync(user, subscriptionPurchase.PaymentMethod, subscriptionPurchase.BillingAddress);
+        }
+        /*
+         * An existing customer without a payment method starting a new subscription indicates a user who previously
+         * purchased account credit but chose to use a tokenizable payment method to pay for the subscription. In this case,
+         * we need to add the payment method to their customer first. If the incoming payment method is account credit,
+         * we can just go straight to fetching the customer since there's no payment method to apply.
+         *
+         * Additionally, if this is a resubscribe scenario with a tokenized payment method, we should update the payment method
+         * to ensure the new payment method is used instead of the old one.
+         */
+        else if (subscriptionPurchase.PaymentMethod.IsTokenized && (!await hasPaymentMethodQuery.Run(user) || hasTerminalSubscription))
+        {
+            await updatePaymentMethodCommand.Run(user, subscriptionPurchase.PaymentMethod.AsTokenized, subscriptionPurchase.BillingAddress);
+            customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
+        }
+        else
+        {
+            customer = await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = _expand });
+        }
+
+        customer = await ReconcileBillingLocationAsync(customer, subscriptionPurchase.BillingAddress);
+
+        var subscription = await CreateSubscriptionAsync(user.Id, customer, premiumPlan, subscriptionPurchase.AdditionalStorageGb > 0 ? subscriptionPurchase.AdditionalStorageGb : null, validatedCoupons, subscriptionPurchase.FromMarketing);
+
+        subscriptionPurchase.PaymentMethod.Switch(
             tokenized =>
             {
                 // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
                 switch (tokenized)
                 {
                     case { Type: TokenizablePaymentMethodType.PayPal }
-                        when subscription.Status == StripeConstants.SubscriptionStatus.Incomplete:
+                        when subscription.Status == SubscriptionStatus.Incomplete:
                     case { Type: not TokenizablePaymentMethodType.PayPal }
-                        when subscription.Status == StripeConstants.SubscriptionStatus.Active:
+                        when subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Incomplete:
                         {
                             user.Premium = true;
                             user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
@@ -101,19 +152,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
                         }
                 }
             },
-            nonTokenized =>
+            _ =>
             {
-                if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
+                if (subscription.Status != SubscriptionStatus.Active)
                 {
-                    user.Premium = true;
-                    user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
+                    return;
                 }
+
+                user.Premium = true;
+                user.PremiumExpirationDate = subscription.GetCurrentPeriodEnd();
             });
 
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
-        user.MaxStorageGb = (short)(1 + additionalStorageGb);
+        user.MaxStorageGb = (short)(premiumPlan.Storage.Provided + subscriptionPurchase.AdditionalStorageGb.GetValueOrDefault(0));
         user.LicenseKey = CoreHelpers.SecureRandomString(20);
         user.RevisionDate = DateTime.UtcNow;
 
@@ -163,58 +216,43 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             },
             Metadata = new Dictionary<string, string>
             {
-                [StripeConstants.MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
-                [StripeConstants.MetadataKeys.UserId] = user.Id.ToString()
+                [MetadataKeys.Region] = globalSettings.BaseServiceUri.CloudRegion,
+                [MetadataKeys.UserId] = user.Id.ToString()
             },
             Tax = new CustomerTaxOptions
             {
-                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+                ValidateLocation = ValidateTaxLocationTiming.Immediately
             }
         };
 
         var braintreeCustomerId = "";
 
         // We have checked that the payment method is tokenized, so we can safely cast it.
-        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch (paymentMethod.AsT0.Type)
+        var tokenizedPaymentMethod = paymentMethod.AsTokenized;
+        switch (tokenizedPaymentMethod.Type)
         {
-            case TokenizablePaymentMethodType.BankAccount:
-                {
-                    var setupIntent =
-                        (await stripeAdapter.SetupIntentList(new SetupIntentListOptions { PaymentMethod = paymentMethod.AsT0.Token }))
-                        .FirstOrDefault();
-
-                    if (setupIntent == null)
-                    {
-                        _logger.LogError("Cannot create customer for user ({UserID}) without a setup intent for their bank account", user.Id);
-                        throw new BillingException();
-                    }
-
-                    await setupIntentCache.Set(user.Id, setupIntent.Id);
-                    break;
-                }
             case TokenizablePaymentMethodType.Card:
                 {
-                    customerCreateOptions.PaymentMethod = paymentMethod.AsT0.Token;
-                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethod.AsT0.Token;
+                    customerCreateOptions.PaymentMethod = tokenizedPaymentMethod.Token;
+                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = tokenizedPaymentMethod.Token;
                     break;
                 }
             case TokenizablePaymentMethodType.PayPal:
                 {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, paymentMethod.AsT0.Token);
+                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(user, tokenizedPaymentMethod.Token);
                     customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
                     break;
                 }
             default:
                 {
-                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, paymentMethod.AsT0.Type.ToString());
+                    _logger.LogError("Cannot create customer for user ({UserID}) using payment method type ({PaymentMethodType}) as it is not supported", user.Id, tokenizedPaymentMethod.Type.ToString());
                     throw new BillingException();
                 }
         }
 
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CreateCustomerAsync(customerCreateOptions);
         }
         catch
         {
@@ -225,21 +263,13 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
         async Task Revert()
         {
             // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
-            if (paymentMethod.IsTokenized)
+            switch (tokenizedPaymentMethod.Type)
             {
-                switch (paymentMethod.AsT0.Type)
-                {
-                    case TokenizablePaymentMethodType.BankAccount:
-                        {
-                            await setupIntentCache.RemoveSetupIntentForSubscriber(user.Id);
-                            break;
-                        }
-                    case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                        {
-                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                            break;
-                        }
-                }
+                case TokenizablePaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
+                    {
+                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                        break;
+                    }
             }
         }
     }
@@ -271,18 +301,21 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             Expand = _expand,
             Tax = new CustomerTaxOptions
             {
-                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+                ValidateLocation = ValidateTaxLocationTiming.Immediately
             }
         };
-        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+
+        return await stripeAdapter.UpdateCustomerAsync(customer.Id, options);
     }
 
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid userId,
         Customer customer,
-        int? storage)
+        Pricing.Premium.Plan premiumPlan,
+        int? storage,
+        IReadOnlyList<string> validatedCoupons,
+        string? fromMarketing)
     {
-        var premiumPlan = await pricingClient.GetAvailablePremiumPlan();
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>
         {
@@ -310,29 +343,69 @@ public class CreatePremiumCloudHostedSubscriptionCommand(
             {
                 Enabled = true
             },
-            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            BillingMode = new SubscriptionBillingModeOptions { Type = StripeConstants.BillingMode.Classic },
+            CollectionMethod = CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
             Metadata = new Dictionary<string, string>
             {
-                [StripeConstants.MetadataKeys.UserId] = userId.ToString()
+                [MetadataKeys.UserId] = userId.ToString(),
+                [MetadataKeys.TrialInitiationPath] = fromMarketing == MarketingInitiativeConstants.Premium
+                    ? "marketing-initiated"
+                    : "product-initiated"
             },
             PaymentBehavior = usingPayPal
-                ? StripeConstants.PaymentBehavior.DefaultIncomplete
+                ? PaymentBehavior.DefaultIncomplete
                 : null,
             OffSession = true
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
-
-        if (usingPayPal)
+        if (validatedCoupons.Count > 0)
         {
-            await stripeAdapter.InvoiceUpdateAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
-            {
-                AutoAdvance = false
-            });
+            subscriptionCreateOptions.Discounts = validatedCoupons
+                .Select(c => new SubscriptionDiscountOptions { Coupon = c })
+                .ToList();
         }
 
+        var subscription = await stripeAdapter.CreateSubscriptionAsync(subscriptionCreateOptions);
+
+        if (!usingPayPal)
+        {
+            return subscription;
+        }
+
+        var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId, new InvoiceUpdateOptions
+        {
+            AutoAdvance = false,
+            Expand = ["customer"]
+        });
+
+        await braintreeService.PayInvoice(new UserId(userId), invoice);
+
         return subscription;
+    }
+
+    private async Task<bool> HasTerminalSubscriptionAsync(User user)
+    {
+        if (string.IsNullOrEmpty(user.GatewaySubscriptionId))
+        {
+            return false;
+        }
+
+        try
+        {
+            var existingSubscription = await stripeAdapter.GetSubscriptionAsync(user.GatewaySubscriptionId);
+            return existingSubscription.Status is
+                SubscriptionStatus.Canceled or
+                SubscriptionStatus.IncompleteExpired;
+        }
+        catch (Exception ex)
+        {
+            // Subscription doesn't exist in Stripe or can't be fetched (e.g., network issues, invalid ID)
+            // Log the issue but proceed with subscription creation to avoid blocking legitimate resubscribe attempts
+            _logger.LogWarning(ex, "Unable to fetch existing subscription {SubscriptionId} for user {UserId}. Proceeding with subscription creation",
+                user.GatewaySubscriptionId, user.Id);
+            return false;
+        }
     }
 }

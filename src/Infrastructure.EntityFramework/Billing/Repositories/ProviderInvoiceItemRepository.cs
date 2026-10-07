@@ -2,7 +2,7 @@
 using Bit.Core.Billing.Providers.Entities;
 using Bit.Core.Billing.Providers.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
-using LinqToDB;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using EFProviderInvoiceItem = Bit.Infrastructure.EntityFramework.Billing.Models.ProviderInvoiceItem;
 
@@ -39,6 +39,21 @@ public class ProviderInvoiceItemRepository(
         var query =
             from providerInvoiceItem in databaseContext.ProviderInvoiceItems
             where providerInvoiceItem.ProviderId == providerId
+            select providerInvoiceItem;
+
+        return await query.ToArrayAsync();
+    }
+
+    public async Task<ICollection<ProviderInvoiceItem>> GetByProviderIdAndInvoiceId(Guid providerId, string invoiceId)
+    {
+        using var serviceScope = ServiceScopeFactory.CreateScope();
+
+        var databaseContext = GetDatabaseContext(serviceScope);
+
+        var query =
+            from providerInvoiceItem in databaseContext.ProviderInvoiceItems
+            where providerInvoiceItem.ProviderId == providerId &&
+                  providerInvoiceItem.InvoiceId == invoiceId
             select providerInvoiceItem;
 
         return await query.ToArrayAsync();

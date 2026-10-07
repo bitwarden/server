@@ -59,7 +59,15 @@ CREATE PROCEDURE [dbo].[Organization_Update]
     @UseOrganizationDomains BIT = 0,
     @UseAdminSponsoredFamilies BIT = 0,
     @SyncSeats BIT = 0,
-    @UseAutomaticUserConfirmation BIT = 0
+    @UseAutomaticUserConfirmation BIT = 0,
+    @UsePhishingBlocker BIT = 0,
+    @UseDisableSmAdsForUsers BIT = 0,
+    @UseMyItems BIT = 0,
+    @ExemptFromBillingAutomation BIT = 0,
+    @UseInviteLinks BIT = 0,
+    @UsePam BIT = 0,
+    @PamSeats INT = null,
+    @MaxAutoscalePamSeats INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -126,7 +134,16 @@ BEGIN
         [UseOrganizationDomains] = @UseOrganizationDomains,
         [UseAdminSponsoredFamilies] = @UseAdminSponsoredFamilies,
         [SyncSeats] = @SyncSeats,
-        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation
+        [UseAutomaticUserConfirmation] = @UseAutomaticUserConfirmation,
+        [UsePhishingBlocker] = @UsePhishingBlocker,
+        [MaxStorageGbIncreased] = @MaxStorageGb,
+        [UseDisableSmAdsForUsers] = @UseDisableSmAdsForUsers,
+        [UseMyItems] = @UseMyItems,
+        [ExemptFromBillingAutomation] = @ExemptFromBillingAutomation,
+        [UseInviteLinks] = @UseInviteLinks,
+        [UsePam] = @UsePam,
+        [PamSeats] = @PamSeats,
+        [MaxAutoscalePamSeats] = @MaxAutoscalePamSeats
     WHERE
         [Id] = @Id;
 END

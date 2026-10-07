@@ -17,23 +17,29 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGroupCollectionAccessValidator _groupCollectionAccessValidator;
+    private readonly TimeProvider _timeProvider;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
-        IOrganizationUserRepository organizationUserRepository
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupCollectionAccessValidator groupCollectionAccessValidator,
+        TimeProvider timeProvider
         )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
+        _groupCollectionAccessValidator = groupCollectionAccessValidator;
+        _timeProvider = timeProvider;
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group, collections);
+        await ValidateAsync(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -48,7 +54,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         ICollection<CollectionAccessSelection> collections = null,
         IEnumerable<Guid> users = null)
     {
-        Validate(organization, group, collections);
+        await ValidateAsync(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
 
         if (users != null)
@@ -61,7 +67,8 @@ public class CreateGroupCommand : ICreateGroupCommand
 
     private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<CollectionAccessSelection> collections = null)
     {
-        group.CreationDate = group.RevisionDate = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        group.CreationDate = group.RevisionDate = now;
 
         if (collections == null)
         {
@@ -78,10 +85,10 @@ public class CreateGroupCommand : ICreateGroupCommand
     {
         var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
 
-        await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup);
+        await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup, group.RevisionDate);
 
         var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
-        var eventDate = DateTime.UtcNow;
+        var eventDate = group.RevisionDate;
 
         if (systemUser.HasValue)
         {
@@ -95,7 +102,7 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
     }
 
-    private static void Validate(Organization organization, Group group, IEnumerable<CollectionAccessSelection> collections)
+    private async Task ValidateAsync(Organization organization, Group group, ICollection<CollectionAccessSelection> collections)
     {
         if (organization == null)
         {
@@ -105,6 +112,15 @@ public class CreateGroupCommand : ICreateGroupCommand
         if (!organization.UseGroups)
         {
             throw new BadRequestException("This organization cannot use groups.");
+        }
+
+        if (collections?.Any() == true)
+        {
+            var error = await _groupCollectionAccessValidator.ValidateAsync(group.OrganizationId, collections);
+            if (error is not null)
+            {
+                throw error.ToException();
+            }
         }
 
         var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));

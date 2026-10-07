@@ -38,13 +38,13 @@ public class ServiceAccountSecretsDetailsQueryTests
         if (includeAccessToSecrets)
         {
             await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdWithSecretsDetailsAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockSaDetails.ServiceAccount.OrganizationId)),
+                .GetManyByOrganizationIdWithSecretsDetailsAsync(Arg.Is(AssertHelper.AssertPropertyEqual(organizationId)),
                     Arg.Any<Guid>(), Arg.Any<AccessClientType>());
         }
         else
         {
             await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockSa.OrganizationId)),
+                .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(organizationId)),
                     Arg.Any<Guid>(), Arg.Any<AccessClientType>());
             Assert.Equal(0, result.First().AccessToSecrets);
         }

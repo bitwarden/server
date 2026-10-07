@@ -1,0 +1,21 @@
+﻿using Bit.Core.Utilities;
+
+namespace Bit.SeederApi;
+
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        Host
+            .CreateDefaultBuilder(args)
+            .UseBitwardenSdk()
+            .ConfigureCustomAppConfiguration(args)
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseStartup<Startup>();
+            })
+            .AddSerilogFileLogging()
+            .Build()
+            .Run();
+    }
+}

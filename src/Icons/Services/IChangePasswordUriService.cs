@@ -2,5 +2,5 @@
 
 public interface IChangePasswordUriService
 {
-    Task<string?> GetChangePasswordUri(string domain);
+    Task<ChangePasswordUriResult> GetChangePasswordUri(string domain);
 }

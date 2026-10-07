@@ -77,5 +77,27 @@ public class WebAuthnCredentialCreateOptionsTokenableTests
 
         Assert.True(isValid);
     }
+
+    [Theory, BitAutoData]
+    public void Valid_ExpiredToken_ReturnsFalse(User user, CredentialCreateOptions createOptions)
+    {
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.Valid);
+    }
+
+    [Theory, BitAutoData]
+    public void TokenIsValid_ExpiredToken_ReturnsFalse(User user, CredentialCreateOptions createOptions)
+    {
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions)
+        {
+            ExpirationDate = DateTime.UtcNow.AddMinutes(-1)
+        };
+
+        Assert.False(token.TokenIsValid(user));
+    }
 }
 

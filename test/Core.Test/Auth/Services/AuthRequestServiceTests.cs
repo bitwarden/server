@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
@@ -227,7 +228,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received()
-            .PushAuthRequestAsync(createdAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequest && n.Payload.Id == createdAuthRequest.Id));
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received()
@@ -375,7 +376,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -457,7 +459,8 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval,
+                includeAcceptedStatusOrgs: true);
 
         await sutProvider.GetDependency<IMailService>()
             .Received(0)
@@ -470,6 +473,50 @@ public class AuthRequestServiceTests
         sutProvider.GetDependency<ILogger<AuthRequestService>>()
             .Received(1)
             .LogWarning("There are no admin emails to send to.");
+    }
+
+    [Theory]
+    [BitAutoData(AuthRequestType.AdminApproval)]
+    [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
+    [BitAutoData(AuthRequestType.Unlock)]
+    public async Task CreateAuthRequestAsync_AuthenticatedCallerUserIdMismatch_ThrowsBadRequest(
+        AuthRequestType type,
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        Guid authenticatedUserId)
+    {
+        createModel.Type = type;
+        createModel.Email = user.Email;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(authenticatedUserId);
+
+        // Mock this as false so we pin the test failure to the userId mismatch guard rather than to the first
+        // identically-worded "User or known device not found." exception that could fire earlier.
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+
+        // For the AuthRequestType.AdminApproval test case, this assertion pins the test failure to the userId mismatch guard
+        // rather than to the "User does not belong to any organizations." exception, which is also of type BadRequestException.
+        Assert.Equal("User or known device not found.", exception.Message);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default!);
     }
 
     /// <summary>
@@ -540,7 +587,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == udpatedAuthRequest.Id));
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
         await sutProvider.GetDependency<IEventService>()
@@ -619,8 +666,8 @@ public class AuthRequestServiceTests
             .ReplaceAsync(udpatedAuthRequest);
 
         await sutProvider.GetDependency<IPushNotificationService>()
-            .DidNotReceiveWithAnyArgs()
-            .PushAuthRequestResponseAsync(udpatedAuthRequest);
+            .DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<AuthRequestPushNotification>>());
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
 
@@ -640,6 +687,7 @@ public class AuthRequestServiceTests
     [Theory]
     [BitAutoData(AuthRequestType.AuthenticateAndUnlock)]
     [BitAutoData(AuthRequestType.Unlock)]
+    [BitAutoData(AuthRequestType.AdminApproval)]
     public async Task UpdateAuthRequestAsync_InvalidUser_ThrowsNotFound(
         AuthRequestType authRequestType,
         SutProvider<AuthRequestService> sutProvider,
@@ -650,7 +698,7 @@ public class AuthRequestServiceTests
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         // The request hasn't been Approved/Disapproved already
         authRequest.Approved = null;
-        // Has an type that needs the UserId property validated
+        // Set a type whose update path validates the UserId property
         authRequest.Type = authRequestType;
 
         // Auth request should not be null
@@ -830,7 +878,7 @@ public class AuthRequestServiceTests
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushAuthRequestResponseAsync(authRequest);
+            .PushAsync(Arg.Is<PushNotification<AuthRequestPushNotification>>(n => n.Type == PushType.AuthRequestResponse && n.Payload.Id == authRequest.Id));
     }
 
     [Theory, BitAutoData]

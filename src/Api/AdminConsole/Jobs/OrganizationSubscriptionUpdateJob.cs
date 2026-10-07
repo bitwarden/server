@@ -2,14 +2,14 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Quartz;
 
 namespace Bit.Api.AdminConsole.Jobs;
 
 public class OrganizationSubscriptionUpdateJob(ILogger<OrganizationSubscriptionUpdateJob> logger,
     IGetOrganizationSubscriptionsToUpdateQuery query,
-    IUpdateOrganizationSubscriptionCommand command,
+    IBulkUpdateOrganizationSubscriptionsCommand command,
     IFeatureService featureService) : BaseJob(logger)
 {
     protected override async Task ExecuteJobAsync(IJobExecutionContext _)
@@ -28,7 +28,7 @@ public class OrganizationSubscriptionUpdateJob(ILogger<OrganizationSubscriptionU
         logger.LogInformation("OrganizationSubscriptionUpdateJob - {numberOfOrganizations} organization(s) to update",
             organizationSubscriptionsToUpdate.Count);
 
-        await command.UpdateOrganizationSubscriptionAsync(organizationSubscriptionsToUpdate);
+        await command.BulkUpdateOrganizationSubscriptionsAsync(organizationSubscriptionsToUpdate);
 
         logger.LogInformation("OrganizationSubscriptionUpdateJob - COMPLETED");
     }

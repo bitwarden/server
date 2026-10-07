@@ -1,0 +1,25 @@
+@model CreateSubscriptionDiscountModel
+
+<form method="post" asp-action="ImportCoupon">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5>Step 1: Import Stripe Coupon</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label asp-for="StripeCouponId" class="form-label"></label>
+                <input asp-for="StripeCouponId" class="form-control" autofocus />
+                <small class="form-text text-muted">
+                    Enter the Stripe coupon ID and click Import to fetch the coupon details from Stripe.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="fa fa-download"></i> Import from Stripe
+        </button>
+        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>

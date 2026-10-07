@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -19,8 +21,8 @@ public record ResellerClientOrganizationSignUpResponse(
 public interface IResellerClientOrganizationSignUpCommand
 {
     /// <summary>
-    /// Sign up a reseller client organization. The organization will be created in a pending state 
-    /// (disabled and with Pending status) and the owner will be invited via email. The organization 
+    /// Sign up a reseller client organization. The organization will be created in a pending state
+    /// (disabled and with Pending status) and the owner will be invited via email. The organization
     /// will become active once the owner accepts the invitation.
     /// </summary>
     /// <param name="organization">The organization to create.</param>
@@ -35,24 +37,24 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripePaymentService _paymentService;
 
     public ResellerClientOrganizationSignUpCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IApplicationCacheService applicationCacheService,
+        IOrganizationAbilityCacheService organizationAbilityCacheService,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService,
         ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
-        IPaymentService paymentService)
+        IStripePaymentService paymentService)
     {
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _applicationCacheService = applicationCacheService;
+        _organizationAbilityCacheService = organizationAbilityCacheService;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
@@ -76,11 +78,11 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
         {
             await _paymentService.CancelAndRecoverChargesAsync(organization);
 
-            if (organization.Id != default)
+            if (organization.Id != Guid.Empty)
             {
                 // Deletes the organization and all related data, including its owner user
                 await _organizationRepository.DeleteAsync(organization);
-                await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
+                await _organizationAbilityCacheService.DeleteOrganizationAbilityAsync(organization.Id);
             }
 
             throw;
@@ -101,7 +103,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
             Type = OrganizationApiKeyType.Default,
             RevisionDate = DateTime.UtcNow,
         });
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(organization);
 
         return organization;
     }

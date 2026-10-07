@@ -9,6 +9,7 @@ public abstract class BaseRepository
     static BaseRepository()
     {
         SqlMapper.AddTypeHandler(new DateTimeHandler());
+        SqlMapper.AddTypeHandler(new JsonCollectionTypeHandler());
     }
 
     public BaseRepository(string connectionString, string readOnlyConnectionString)

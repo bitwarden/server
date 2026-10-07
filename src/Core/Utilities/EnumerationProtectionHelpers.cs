@@ -12,7 +12,7 @@ public static class EnumerationProtectionHelpers
     /// <param name="inputString">The string to derive an index result</param>
     /// <param name="range">The range of possible index values</param>
     /// <returns>An int between 0 and range - 1</returns>
-    public static int GetIndexForInputHash(byte[] hmacKey, string inputString, int range)
+    public static int GetIndexForInputHash(byte[]? hmacKey, string inputString, int range)
     {
         if (hmacKey == null || range <= 0 || hmacKey.Length == 0)
         {
@@ -20,14 +20,14 @@ public static class EnumerationProtectionHelpers
         }
         else
         {
-            // Compute the HMAC hash of the salt
+            // Compute the HMAC hash of the input string
             var hmacMessage = Encoding.UTF8.GetBytes(inputString.Trim().ToLowerInvariant());
             using var hmac = new System.Security.Cryptography.HMACSHA256(hmacKey);
             var hmacHash = hmac.ComputeHash(hmacMessage);
             // Convert the hash to a number
             var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
             var hashFirst8Bytes = hashHex[..16];
-            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
             // Find the default KDF value for this hash number
             var hashIndex = (int)(Math.Abs(hashNumber) % range);
             return hashIndex;

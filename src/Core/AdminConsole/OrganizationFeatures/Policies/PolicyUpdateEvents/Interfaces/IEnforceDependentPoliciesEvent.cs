@@ -2,6 +2,13 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 
+/// <summary>
+/// Represents all policies required to be enabled before the given policy can be enabled.
+/// </summary>
+/// <remarks>
+/// This interface is intended for policy event handlers that mandate the activation of other policies
+/// as prerequisites for enabling the associated policy.
+/// </remarks>
 public interface IEnforceDependentPoliciesEvent : IPolicyUpdateEvent
 {
     /// <summary>

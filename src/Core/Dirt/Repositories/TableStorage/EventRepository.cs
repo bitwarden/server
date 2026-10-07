@@ -1,0 +1,327 @@
+﻿using Azure;
+using Azure.Data.Tables;
+using Bit.Core.Models.Data;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
+
+#nullable enable
+
+namespace Bit.Core.Repositories.TableStorage;
+
+public class EventRepository : IEventRepository
+{
+    private readonly TableClient _tableClient;
+
+    public EventRepository(GlobalSettings globalSettings)
+        : this(globalSettings.Events.ConnectionString)
+    { }
+
+    public EventRepository(string storageConnectionString)
+    {
+        var tableClient = new TableServiceClient(storageConnectionString);
+        _tableClient = tableClient.GetTableClient("event");
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions)
+    {
+        return await GetManyAsync($"UserId={userId}", "Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"OrganizationId={organizationId}", "Date={0}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"OrganizationId={secret.OrganizationId}",
+            $"SecretId={secret.Id}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"OrganizationId={project.OrganizationId}",
+            $"ProjectId={project.Id}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"OrganizationId={organizationId}",
+            $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"ProviderId={providerId}", "Date={0}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"ProviderId={providerId}",
+            $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions)
+    {
+        var partitionKey = cipher.OrganizationId.HasValue ?
+            $"OrganizationId={cipher.OrganizationId}" : $"UserId={cipher.UserId}";
+        return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyBySendAsync(Guid organizationId, Guid sendId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        return await GetManyAsync($"OrganizationId={organizationId}",
+            $"SendId={sendId}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
+    {
+        return await GetManyServiceAccountAsync(
+               $"OrganizationId={organizationId}",
+               serviceAccountId.ToString(),
+               startDate, endDate, pageOptions);
+
+    }
+
+    public async Task CreateAsync(IEvent e)
+    {
+        if (!(e is EventTableEntity entity))
+        {
+            throw new ArgumentException(nameof(e));
+        }
+
+        await CreateEventAsync(entity);
+    }
+
+    public async Task<int> DeleteManyByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        // Azure Table Storage caps a single transaction at 100 ops; the outer cap
+        // bounds work per call so the background job can interleave other orgs.
+        const int batchSize = 100;
+        // 50,000 entities per call, matching Event_DeleteManyByOrganizationId's @MaxRows.
+        // The job only refreshes the claim lease between handler calls, so a single call
+        // has to finish well inside OrganizationDeleteTask.LeaseDurationMinutes: if it
+        // overruns, the task looks stale, another run reclaims it, and both purge the same
+        // partition until the resulting transaction failures exhaust MaxFailureCount. The
+        // job loops until a call returns zero, so a lower bound only means more calls.
+        const int maxBatchesPerCall = 500;
+        // Bound concurrent transaction submissions so a large organization doesn't
+        // fan out thousands of simultaneous requests and get throttled.
+        const int maxConcurrentBatches = 8;
+
+        var partitionKey = $"OrganizationId={organizationId}";
+        var filter = $"PartitionKey eq '{partitionKey}'";
+        var select = new[] { "PartitionKey", "RowKey" };
+
+        using var throttle = new SemaphoreSlim(maxConcurrentBatches);
+        var batchTasks = new List<Task>();
+        // Counted only after each transaction succeeds, so a partial failure does not
+        // inflate the reported progress.
+        var totalDeleted = 0;
+        var batchCount = 0;
+
+        async Task SubmitBatchAsync(List<TableTransactionAction> batch)
+        {
+            try
+            {
+                await _tableClient.SubmitTransactionAsync(batch, cancellationToken);
+                Interlocked.Add(ref totalDeleted, batch.Count);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }
+
+        var pending = new List<TableTransactionAction>(batchSize);
+        try
+        {
+            await foreach (var entity in _tableClient.QueryAsync<TableEntity>(filter, select: select,
+                cancellationToken: cancellationToken))
+            {
+                pending.Add(new TableTransactionAction(TableTransactionActionType.Delete, entity, ETag.All));
+
+                if (pending.Count == batchSize)
+                {
+                    await throttle.WaitAsync(cancellationToken);
+                    batchTasks.Add(SubmitBatchAsync(pending));
+                    pending = new List<TableTransactionAction>(batchSize);
+
+                    if (++batchCount >= maxBatchesPerCall)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (pending.Count > 0)
+            {
+                await throttle.WaitAsync(cancellationToken);
+                batchTasks.Add(SubmitBatchAsync(pending));
+            }
+
+            await Task.WhenAll(batchTasks);
+        }
+        catch
+        {
+            // If enumeration (or a batch) fails, observe any in-flight submissions before
+            // the throttle is disposed so they don't release a disposed semaphore; the
+            // original exception is the one worth surfacing.
+            await Task.WhenAll(batchTasks).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            throw;
+        }
+
+        return totalDeleted;
+    }
+
+    public async Task CreateManyAsync(IEnumerable<IEvent>? e)
+    {
+        if (e is null || !e.Any())
+        {
+            return;
+        }
+
+        if (!e.Skip(1).Any())
+        {
+            await CreateAsync(e.First());
+            return;
+        }
+
+        var entities = e.OfType<EventTableEntity>();
+        var entityGroups = entities.GroupBy(ent => ent.PartitionKey);
+        foreach (var group in entityGroups)
+        {
+            var groupEntities = group.ToList();
+            if (groupEntities.Count == 1)
+            {
+                await CreateEventAsync(groupEntities.First());
+                continue;
+            }
+
+            // A batch insert can only contain 100 entities at a time
+            var iterations = groupEntities.Count / 100;
+            for (var i = 0; i <= iterations; i++)
+            {
+                var batch = new List<TableTransactionAction>();
+                var batchEntities = groupEntities.Skip(i * 100).Take(100);
+                if (!batchEntities.Any())
+                {
+                    break;
+                }
+
+                foreach (var entity in batchEntities)
+                {
+                    batch.Add(new TableTransactionAction(TableTransactionActionType.Add,
+                        entity.ToAzureEvent()));
+                }
+
+                await _tableClient.SubmitTransactionAsync(batch);
+            }
+        }
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyServiceAccountAsync(
+        string partitionKey,
+        string serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+        var filter = MakeFilterForServiceAccount(partitionKey, serviceAccountId, startDate, endDate);
+
+        var result = new PagedResult<IEvent>();
+        var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
+
+        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
+            pageOptions.PageSize).GetAsyncEnumerator())
+        {
+            if (await enumerator.MoveNextAsync())
+            {
+                result.ContinuationToken = enumerator.Current.ContinuationToken;
+
+                var events = enumerator.Current.Values
+                    .Select(e => e.ToEventTableEntity())
+                    .ToList();
+
+                events = events.OrderByDescending(e => e.Date).ToList();
+
+                result.Data.AddRange(events);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+        var filter = MakeFilter(partitionKey, string.Format(rowKey, start), string.Format(rowKey, end));
+
+        var result = new PagedResult<IEvent>();
+        var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
+
+        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
+            pageOptions.PageSize).GetAsyncEnumerator())
+        {
+            await enumerator.MoveNextAsync();
+
+            result.ContinuationToken = enumerator.Current.ContinuationToken;
+            result.Data.AddRange(enumerator.Current.Values.Select(e => e.ToEventTableEntity()));
+        }
+
+        return result;
+    }
+
+    private async Task CreateEventAsync(EventTableEntity entity)
+    {
+        await _tableClient.UpsertEntityAsync(entity.ToAzureEvent());
+    }
+
+    private string MakeFilter(string partitionKey, string rowStart, string rowEnd)
+    {
+        return $"PartitionKey eq '{partitionKey}' and RowKey le '{rowStart}' and RowKey ge '{rowEnd}'";
+    }
+
+    private string MakeFilterForServiceAccount(
+        string partitionKey,
+        string machineAccountId,
+        DateTime startDate,
+        DateTime endDate)
+    {
+        var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
+        var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
+
+        var rowKey1Start = $"ServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey1End = $"ServiceAccountId={machineAccountId}__Date={end}";
+
+        var rowKey2Start = $"GrantedServiceAccountId={machineAccountId}__Date={start}";
+        var rowKey2End = $"GrantedServiceAccountId={machineAccountId}__Date={end}";
+
+        var left = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey1Start}' and RowKey ge '{rowKey1End}'";
+        var right = $"PartitionKey eq '{partitionKey}' and RowKey le '{rowKey2Start}' and RowKey ge '{rowKey2End}'";
+
+        return $"({left}) or ({right})";
+    }
+
+
+}

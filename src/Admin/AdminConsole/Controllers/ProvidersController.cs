@@ -7,6 +7,7 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
@@ -25,7 +26,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -48,7 +48,7 @@ public class ProvidersController : Controller
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderService _providerService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly ICreateProviderCommand _createProviderCommand;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
@@ -56,6 +56,7 @@ public class ProvidersController : Controller
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IAccessControlService _accessControlService;
     private readonly ISubscriberService _subscriberService;
+    private readonly ILogger<ProvidersController> _logger;
 
     public ProvidersController(IOrganizationRepository organizationRepository,
         IResellerClientOrganizationSignUpCommand resellerClientOrganizationSignUpCommand,
@@ -64,7 +65,7 @@ public class ProvidersController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
-        IApplicationCacheService applicationCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
         ICreateProviderCommand createProviderCommand,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
@@ -72,7 +73,8 @@ public class ProvidersController : Controller
         IPricingClient pricingClient,
         IStripeAdapter stripeAdapter,
         IAccessControlService accessControlService,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        ILogger<ProvidersController> logger)
     {
         _organizationRepository = organizationRepository;
         _resellerClientOrganizationSignUpCommand = resellerClientOrganizationSignUpCommand;
@@ -81,7 +83,7 @@ public class ProvidersController : Controller
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
-        _applicationCacheService = applicationCacheService;
+        _providerAbilityCacheService = providerAbilityCacheService;
         _createProviderCommand = createProviderCommand;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
@@ -92,6 +94,7 @@ public class ProvidersController : Controller
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
         _subscriberService = subscriberService;
+        _logger = logger;
     }
 
     [RequirePermission(Permission.Provider_List_View)]
@@ -296,6 +299,9 @@ public class ProvidersController : Controller
 
         var originalProviderStatus = provider.Enabled;
 
+        // Capture original billing email before modifications for Stripe sync
+        var originalBillingEmail = provider.BillingEmail;
+
         model.ToProvider(provider);
 
         // validate the stripe ids to prevent saving a bad one
@@ -319,7 +325,56 @@ public class ProvidersController : Controller
             ? model.Enabled : originalProviderStatus;
 
         await _providerService.UpdateAsync(provider);
-        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+        await _providerAbilityCacheService.UpsertProviderAbilityAsync(provider);
+
+        // Sync billing email changes to Stripe
+        if (!string.IsNullOrEmpty(provider.GatewayCustomerId) && originalBillingEmail != provider.BillingEmail)
+        {
+            try
+            {
+                await _providerBillingService.UpdateProviderNameAndEmail(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update Stripe customer for provider {ProviderId}. Database was updated successfully.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but Stripe customer email synchronization failed.";
+            }
+        }
+
+        // Clear any pending unpaid-lifecycle cancellation when re-enabling a billing-disabled provider
+        if (!originalProviderStatus && provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ResumeFromUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to clear pending unpaid cancellation for provider {ProviderId} on re-enable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but clearing the pending Stripe cancellation failed.";
+            }
+        }
+
+        // Schedule the unpaid-lifecycle cancellation when disabling a provider whose Stripe subscription
+        // is unpaid but was never scheduled by the webhook handler.
+        if (originalProviderStatus && !provider.Enabled)
+        {
+            try
+            {
+                await _subscriberService.ScheduleUnpaidCancellationAsync(provider);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to schedule unpaid cancellation for provider {ProviderId} on disable.",
+                    provider.Id);
+                TempData["Warning"] = "Provider updated successfully, but scheduling the Stripe cancellation failed.";
+            }
+        }
 
         if (!provider.IsBillable())
         {
@@ -339,11 +394,11 @@ public class ProvidersController : Controller
                     ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
 
-                var customer = await _stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId);
+                var customer = await _stripeAdapter.GetCustomerAsync(provider.GatewayCustomerId);
                 if (model.PayByInvoice != customer.ApprovedToPayByInvoice())
                 {
                     var approvedToPayByInvoice = model.PayByInvoice ? "1" : "0";
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+                    await _stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions
                     {
                         Metadata = new Dictionary<string, string>
                         {
@@ -394,7 +449,14 @@ public class ProvidersController : Controller
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
-        var payByInvoice = ((await _subscriberService.GetCustomer(provider))?.ApprovedToPayByInvoice() ?? false);
+        var customer = await _subscriberService.GetCustomer(provider);
+        if (customer is { Deleted: true })
+        {
+            TempData["Warning"] =
+                "Billing information could not be fully loaded. The Stripe customer may have been deleted. " +
+                "You can still edit the provider and set a valid Gateway Customer ID.";
+        }
+        var payByInvoice = customer?.ApprovedToPayByInvoice() ?? false;
 
         return new ProviderEditModel(
             provider, users, providerOrganizations,

@@ -1,15 +1,13 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Auth.Helpers;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
-
-#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
@@ -62,6 +60,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
         }
     }
 
+    public async Task<ICollection<EmergencyAccessDetails>> GetManyDetailsByUserIdsAsync(ICollection<Guid> userIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                "[dbo].[EmergencyAccessDetails_ReadManyByUserIds]",
+                new { UserIds = userIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -69,6 +80,19 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
             var results = await connection.QueryAsync<EmergencyAccessDetails>(
                 "[dbo].[EmergencyAccessDetails_ReadByIdGrantorId]",
                 new { Id = id, GrantorId = grantorId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdAsync(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<EmergencyAccessDetails>(
+                "[dbo].[EmergencyAccessDetails_ReadById]",
+                new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
             return results.FirstOrDefault();
@@ -100,11 +124,14 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+    public DatabaseTransactionAction UpdateForKeyRotation(
         Guid grantorId, IEnumerable<EmergencyAccess> emergencyAccessKeys)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (dbConnection, dbTransaction) =>
         {
+            var connection = (SqlConnection)dbConnection;
+            var transaction = (SqlTransaction)dbTransaction;
+
             // Create temp table
             var sqlCreateTemp = @"
                             SELECT TOP 0 *
@@ -151,5 +178,35 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
                 cmd.ExecuteNonQuery();
             }
         };
+    }
+
+    /// <inheritdoc />
+    public DatabaseTransactionAction UpdateStatusAndKeyEncryptedById(Guid id,
+        EmergencyAccessStatusType status, string? keyEncrypted, DateTime revisionDate)
+    {
+        return async (connection, transaction) =>
+        {
+            await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_UpdateStatusKeyEncryptedById]",
+                new
+                {
+                    Id = id,
+                    Status = (byte)status,
+                    KeyEncrypted = keyEncrypted,
+                    RevisionDate = revisionDate
+                },
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task DeleteManyAsync(ICollection<Guid> emergencyAccessIds)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
+                "[dbo].[EmergencyAccess_DeleteManyById]",
+                new { EmergencyAccessIds = emergencyAccessIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
     }
 }

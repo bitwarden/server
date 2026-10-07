@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Billing.Controllers;
 
 [Route("plans")]
-[Authorize("Web")]
+[Authorize("Application")]
 public class PlansController(
     IPricingClient pricingClient) : Controller
 {

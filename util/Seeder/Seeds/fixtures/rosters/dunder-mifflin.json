@@ -1,0 +1,310 @@
+{
+  "$schema": "../../schemas/roster.schema.json",
+  "users": [
+    { "firstName": "David", "lastName": "Wallace", "title": "CFO", "role": "owner", "branch": "Corporate", "department": "Executive" },
+    { "firstName": "Jan", "lastName": "Levinson", "title": "VP Northeast Sales", "role": "owner", "branch": "Corporate", "department": "Sales" },
+    { "firstName": "Robert", "lastName": "California", "title": "CEO", "role": "owner", "branch": "Corporate", "department": "Executive" },
+    { "firstName": "Jo", "lastName": "Bennett", "title": "CEO Sabre", "role": "owner", "branch": "Corporate", "department": "Executive" },
+    { "firstName": "Charles", "lastName": "Miner", "title": "VP Northeast", "role": "owner", "branch": "Corporate", "department": "Executive" },
+
+    { "firstName": "Michael", "lastName": "Scott", "title": "Regional Manager", "role": "admin", "branch": "Scranton", "department": "Management" },
+    { "firstName": "Dwight", "lastName": "Schrute", "title": "Assistant to the Regional Manager", "role": "admin", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Jim", "lastName": "Halpert", "title": "Co-Regional Manager", "role": "admin", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Andy", "lastName": "Bernard", "title": "Regional Manager", "role": "admin", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Josh", "lastName": "Porter", "title": "Regional Manager", "role": "admin", "branch": "Stamford", "department": "Management" },
+    { "firstName": "Darryl", "lastName": "Philbin", "title": "Warehouse Foreman", "role": "admin", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Karen", "lastName": "Filippelli", "title": "Regional Manager", "role": "admin", "branch": "Utica", "department": "Sales" },
+    { "firstName": "Deangelo", "lastName": "Vickers", "title": "Regional Manager", "role": "admin", "branch": "Scranton", "department": "Management" },
+    { "firstName": "Gabe", "lastName": "Lewis", "title": "Corporate Coordinator", "role": "admin", "branch": "Scranton", "department": "Management" },
+    { "firstName": "Nellie", "lastName": "Bertram", "title": "Special Projects Manager", "role": "admin", "branch": "Scranton", "department": "Management" },
+    { "firstName": "Ed", "lastName": "Truck", "title": "Regional Manager (Former)", "role": "admin", "branch": "Scranton", "department": "Management" },
+
+    { "firstName": "Stanley", "lastName": "Hudson", "title": "Sales Representative", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Phyllis", "lastName": "Vance", "title": "Sales Representative", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Ryan", "lastName": "Howard", "title": "Temp / VP", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Todd", "lastName": "Packer", "title": "Traveling Salesman", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Devon", "lastName": "White", "title": "Sales Representative", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Danny", "lastName": "Cordray", "title": "Traveling Salesman", "branch": "Scranton", "department": "Sales" },
+    { "firstName": "Clark", "lastName": "Green", "title": "Sales Intern", "branch": "Scranton", "department": "Sales" },
+
+    { "firstName": "Angela", "lastName": "Martin", "title": "Senior Accountant", "branch": "Scranton", "department": "Accounting" },
+    { "firstName": "Kevin", "lastName": "Malone", "title": "Accountant", "branch": "Scranton", "department": "Accounting" },
+    { "firstName": "Oscar", "lastName": "Martinez", "title": "Accountant", "branch": "Scranton", "department": "Accounting" },
+
+    { "firstName": "Pam", "lastName": "Beesly", "title": "Receptionist / Office Administrator", "branch": "Scranton", "department": "Administration" },
+    { "firstName": "Erin", "lastName": "Hannon", "title": "Receptionist", "branch": "Scranton", "department": "Administration" },
+    { "firstName": "Cathy", "lastName": "Simms", "title": "Temporary Receptionist", "branch": "Scranton", "department": "Administration" },
+    { "firstName": "Jordan", "lastName": "Garfield", "title": "Executive Assistant", "branch": "Scranton", "department": "Administration" },
+
+    { "firstName": "Toby", "lastName": "Flenderson", "title": "HR Representative", "branch": "Scranton", "department": "Human Resources" },
+    { "firstName": "Holly", "lastName": "Flax", "title": "HR Representative", "branch": "Nashua", "department": "Human Resources" },
+    { "firstName": "Kendall", "lastName": "No-Name", "title": "HR Representative", "branch": "Corporate", "department": "Human Resources" },
+
+    { "firstName": "Kelly", "lastName": "Kapoor", "title": "Customer Service Representative", "branch": "Scranton", "department": "Customer Service" },
+    { "firstName": "Pete", "lastName": "Miller", "title": "Customer Service Representative", "branch": "Scranton", "department": "Customer Service" },
+    { "firstName": "Martin", "lastName": "Nash", "title": "Customer Service Representative", "branch": "Stamford", "department": "Customer Service" },
+
+    { "firstName": "Creed", "lastName": "Bratton", "title": "Quality Assurance Director", "branch": "Scranton", "department": "Quality Assurance" },
+    { "firstName": "Meredith", "lastName": "Palmer", "title": "Supplier Relations", "branch": "Scranton", "department": "Supplier Relations" },
+
+    { "firstName": "Nick", "lastName": "No-Name", "title": "IT Technician", "branch": "Scranton", "department": "IT" },
+
+    { "firstName": "Roy", "lastName": "Anderson", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Lonny", "lastName": "Collins", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Madge", "lastName": "Madsen", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Hidetoshi", "lastName": "Hasagawa", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Nate", "lastName": "Nickerson", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Val", "lastName": "Johnson", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Glenn", "lastName": "No-Name", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Jerry", "lastName": "DiCanio", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Mose", "lastName": "Schrute", "title": "Beet Farmer / Temp", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Zeke", "lastName": "Schrute", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+    { "firstName": "Kenny", "lastName": "Anderson", "title": "Warehouse Worker", "branch": "Scranton", "department": "Warehouse" },
+
+    { "firstName": "Hank", "lastName": "Tate", "title": "Security Guard", "branch": "Scranton", "department": "Security" },
+    { "firstName": "Bob", "lastName": "Vance", "title": "Owner, Vance Refrigeration", "branch": "Scranton", "department": "External" },
+
+    { "firstName": "Hannah", "lastName": "Smoterich-Barr", "title": "Sales Representative", "branch": "Stamford", "department": "Sales" },
+    { "firstName": "Tony", "lastName": "Gardner", "title": "Sales Representative", "branch": "Stamford", "department": "Sales" },
+    { "firstName": "Troy", "lastName": "Underbridge", "title": "Sales Representative", "branch": "Stamford", "department": "Sales" },
+
+    { "firstName": "Luke", "lastName": "Cooper", "title": "Intern", "branch": "Scranton", "department": "Administration" },
+    { "firstName": "Billy", "lastName": "Merchant", "title": "Building Manager", "branch": "Scranton", "department": "Facilities" },
+    { "firstName": "Brian", "lastName": "Wittle", "title": "Boom Operator", "branch": "Scranton", "department": "Documentary" }
+  ],
+  "groups": [
+    {
+      "name": "Scranton",
+      "members": [
+        "michael.scott", "dwight.schrute", "jim.halpert", "andy.bernard", "darryl.philbin",
+        "deangelo.vickers", "gabe.lewis", "nellie.bertram",
+        "stanley.hudson", "phyllis.vance", "ryan.howard", "todd.packer", "devon.white",
+        "danny.cordray", "clark.green",
+        "angela.martin", "kevin.malone", "oscar.martinez",
+        "pam.beesly", "erin.hannon", "cathy.simms", "jordan.garfield",
+        "toby.flenderson",
+        "kelly.kapoor", "pete.miller",
+        "creed.bratton", "meredith.palmer", "nick.no-name",
+        "roy.anderson", "lonny.collins", "madge.madsen", "hidetoshi.hasagawa",
+        "nate.nickerson", "val.johnson", "glenn.no-name", "jerry.dicanio",
+        "mose.schrute", "zeke.schrute", "kenny.anderson",
+        "hank.tate", "bob.vance", "luke.cooper", "billy.merchant"
+      ]
+    },
+    {
+      "name": "Corporate",
+      "members": [
+        "david.wallace", "jan.levinson", "robert.california", "jo.bennett",
+        "charles.miner", "ryan.howard", "kendall.no-name"
+      ]
+    },
+    {
+      "name": "Stamford",
+      "members": [
+        "josh.porter", "karen.filippelli", "andy.bernard", "jim.halpert",
+        "hannah.smoterich-barr", "tony.gardner", "martin.nash", "troy.underbridge"
+      ]
+    },
+    {
+      "name": "Utica",
+      "members": [
+        "karen.filippelli"
+      ]
+    },
+    {
+      "name": "Nashua",
+      "members": [
+        "holly.flax"
+      ]
+    },
+    {
+      "name": "Party Planning Committee",
+      "members": [
+        "angela.martin", "phyllis.vance", "pam.beesly", "meredith.palmer",
+        "karen.filippelli", "kelly.kapoor", "erin.hannon"
+      ]
+    },
+    {
+      "name": "Finer Things Club",
+      "members": [
+        "pam.beesly", "oscar.martinez", "toby.flenderson", "jim.halpert"
+      ]
+    },
+    {
+      "name": "Safety Committee",
+      "members": [
+        "dwight.schrute", "andy.bernard", "darryl.philbin", "toby.flenderson", "hank.tate"
+      ]
+    },
+    {
+      "name": "Call of Duty Crew",
+      "members": [
+        "jim.halpert", "karen.filippelli", "andy.bernard"
+      ]
+    },
+    {
+      "name": "Michael Scott Paper Company",
+      "members": [
+        "michael.scott", "pam.beesly", "ryan.howard"
+      ]
+    },
+    {
+      "name": "Office Basketball",
+      "members": [
+        "michael.scott", "jim.halpert", "ryan.howard", "stanley.hudson",
+        "oscar.martinez", "kevin.malone"
+      ]
+    },
+    {
+      "name": "Warehouse Crew",
+      "members": [
+        "darryl.philbin", "roy.anderson", "lonny.collins", "madge.madsen",
+        "hidetoshi.hasagawa", "val.johnson", "nate.nickerson", "glenn.no-name",
+        "jerry.dicanio", "kenny.anderson", "mose.schrute", "zeke.schrute"
+      ]
+    },
+    {
+      "name": "Office Olympics",
+      "members": [
+        "jim.halpert", "pam.beesly", "kevin.malone", "phyllis.vance",
+        "stanley.hudson", "oscar.martinez", "creed.bratton", "meredith.palmer"
+      ]
+    },
+    {
+      "name": "Search Committee",
+      "members": [
+        "jim.halpert", "toby.flenderson", "gabe.lewis"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "name": "Departments/Sales",
+      "groups": [
+        { "group": "Scranton" },
+        { "group": "Stamford" }
+      ],
+      "users": [
+        { "user": "jan.levinson", "manage": true },
+        { "user": "michael.scott", "manage": true }
+      ]
+    },
+    {
+      "name": "Departments/Accounting",
+      "groups": [
+        { "group": "Scranton", "readOnly": true }
+      ],
+      "users": [
+        { "user": "angela.martin", "manage": true },
+        { "user": "kevin.malone" },
+        { "user": "oscar.martinez" }
+      ]
+    },
+    {
+      "name": "Departments/Human Resources",
+      "users": [
+        { "user": "toby.flenderson", "manage": true },
+        { "user": "holly.flax", "manage": true },
+        { "user": "kendall.no-name", "manage": true },
+        { "user": "michael.scott", "readOnly": true }
+      ]
+    },
+    {
+      "name": "Departments/Warehouse",
+      "groups": [
+        { "group": "Warehouse Crew" }
+      ],
+      "users": [
+        { "user": "darryl.philbin", "manage": true }
+      ]
+    },
+    {
+      "name": "Departments/Customer Service",
+      "users": [
+        { "user": "kelly.kapoor", "manage": true },
+        { "user": "pete.miller" },
+        { "user": "martin.nash" }
+      ]
+    },
+    {
+      "name": "Departments/Quality Assurance",
+      "users": [
+        { "user": "creed.bratton", "manage": true }
+      ]
+    },
+    {
+      "name": "Departments/Supplier Relations",
+      "users": [
+        { "user": "meredith.palmer", "manage": true }
+      ]
+    },
+    {
+      "name": "Branches/Scranton",
+      "groups": [
+        { "group": "Scranton" }
+      ],
+      "users": [
+        { "user": "michael.scott", "manage": true }
+      ]
+    },
+    {
+      "name": "Branches/Corporate",
+      "groups": [
+        { "group": "Corporate" }
+      ],
+      "users": [
+        { "user": "david.wallace", "manage": true }
+      ]
+    },
+    {
+      "name": "Committees/Party Planning",
+      "groups": [
+        { "group": "Party Planning Committee" }
+      ],
+      "users": [
+        { "user": "angela.martin", "manage": true }
+      ]
+    },
+    {
+      "name": "Committees/Safety",
+      "groups": [
+        { "group": "Safety Committee" }
+      ],
+      "users": [
+        { "user": "dwight.schrute", "manage": true }
+      ]
+    },
+    {
+      "name": "Executive/Reports",
+      "groups": [
+        { "group": "Corporate", "readOnly": true, "hidePasswords": true }
+      ],
+      "users": [
+        { "user": "david.wallace", "manage": true },
+        { "user": "robert.california", "manage": true }
+      ]
+    },
+    {
+      "name": "Executive/Financial",
+      "groups": [
+        { "group": "Corporate", "readOnly": true }
+      ],
+      "users": [
+        { "user": "angela.martin", "manage": true },
+        { "user": "david.wallace", "manage": true }
+      ]
+    },
+    {
+      "name": "Clubs/Finer Things",
+      "groups": [
+        { "group": "Finer Things Club" }
+      ]
+    },
+    {
+      "name": "Clubs/Call of Duty",
+      "groups": [
+        { "group": "Call of Duty Crew" }
+      ]
+    }
+  ]
+}

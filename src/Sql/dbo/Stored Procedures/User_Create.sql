@@ -44,7 +44,11 @@
     @VerifyDevices BIT = 1,
     @SecurityState VARCHAR(MAX) = NULL,
     @SecurityVersion INT = NULL,
-    @SignedPublicKey VARCHAR(MAX) = NULL
+    @SignedPublicKey VARCHAR(MAX) = NULL,
+    @V2UpgradeToken VARCHAR(MAX) = NULL,
+    @MasterPasswordSalt NVARCHAR(256) = NULL,
+    @LastApiKeyRotationDate DATETIME2(7) = NULL,
+    @UserKeyId VARCHAR(32) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -96,7 +100,12 @@ BEGIN
         [VerifyDevices],
         [SecurityState],
         [SecurityVersion],
-        [SignedPublicKey]
+        [SignedPublicKey],
+        [MaxStorageGbIncreased],
+        [V2UpgradeToken],
+        [MasterPasswordSalt],
+        [LastApiKeyRotationDate],
+        [UserKeyId]
     )
     VALUES
     (
@@ -145,6 +154,11 @@ BEGIN
         @VerifyDevices,
         @SecurityState,
         @SecurityVersion,
-        @SignedPublicKey
+        @SignedPublicKey,
+        @MaxStorageGb,
+        @V2UpgradeToken,
+        @MasterPasswordSalt,
+        @LastApiKeyRotationDate,
+        @UserKeyId
     )
 END

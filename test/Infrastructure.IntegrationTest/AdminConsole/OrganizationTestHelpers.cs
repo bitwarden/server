@@ -4,7 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-
+using Bit.Core.Utilities;
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole;
 
 /// <summary>
@@ -16,7 +16,7 @@ public static class OrganizationTestHelpers
 {
     public static Task<User> CreateTestUserAsync(this IUserRepository userRepository, string identifier = "test")
     {
-        var id = Guid.NewGuid();
+        var id = CoreHelpers.GenerateComb();
         return userRepository.CreateAsync(new User
         {
             Id = id,
@@ -24,6 +24,7 @@ public static class OrganizationTestHelpers
             Email = $"{id}@example.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
+            AccountRevisionDate = DateTime.UtcNow.AddMinutes(-10),
         });
     }
 
@@ -33,14 +34,74 @@ public static class OrganizationTestHelpers
     public static Task<Organization> CreateTestOrganizationAsync(this IOrganizationRepository organizationRepository,
         int? seatCount = null,
         string identifier = "test")
-        => organizationRepository.CreateAsync(new Organization
+    {
+        var id = CoreHelpers.GenerateComb();
+        return organizationRepository.CreateAsync(new Organization
         {
-            Name = $"{identifier}-{Guid.NewGuid()}",
-            BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
-            Plan = "Enterprise (Annually)", // TODO: EF does not enforce this being NOT NULl
+            Name = $"{identifier}-{id}",
+            BillingEmail = $"billing-{id}@example.com",
+            Plan = "Enterprise (Annually)",
             PlanType = PlanType.EnterpriseAnnually,
-            Seats = seatCount
+            Identifier = $"{identifier}-{id}",
+            BusinessName = $"Test Business {id}",
+            BusinessAddress1 = "123 Test Street",
+            BusinessAddress2 = "Suite 100",
+            BusinessAddress3 = "Building A",
+            BusinessCountry = "US",
+            BusinessTaxNumber = "123456789",
+            Seats = seatCount,
+            MaxCollections = 50,
+            UsePolicies = true,
+            UseSso = true,
+            UseKeyConnector = true,
+            UseScim = true,
+            UseGroups = true,
+            UseDirectory = true,
+            UseEvents = true,
+            UseTotp = true,
+            Use2fa = true,
+            UseApi = true,
+            UseResetPassword = true,
+            UseSecretsManager = true,
+            UsePasswordManager = true,
+            SelfHost = false,
+            UsersGetPremium = true,
+            UseCustomPermissions = true,
+            Storage = 1073741824, // 1 GB in bytes
+            MaxStorageGb = 10,
+            Gateway = GatewayType.Stripe,
+            GatewayCustomerId = $"cus_{id}",
+            GatewaySubscriptionId = $"sub_{id}",
+            ReferenceData = "{\"test\":\"data\"}",
+            Enabled = true,
+            LicenseKey = $"license-{id}",
+            PublicKey = "test-public-key",
+            PrivateKey = "test-private-key",
+            TwoFactorProviders = null,
+            ExpirationDate = DateTime.UtcNow.AddYears(1),
+            MaxAutoscaleSeats = 200,
+            OwnersNotifiedOfAutoscaling = null,
+            Status = OrganizationStatusType.Managed,
+            SmSeats = 50,
+            SmServiceAccounts = 25,
+            MaxAutoscaleSmSeats = 100,
+            MaxAutoscaleSmServiceAccounts = 50,
+            LimitCollectionCreation = true,
+            LimitCollectionDeletion = true,
+            LimitItemDeletion = true,
+            AllowAdminAccessToAllCollectionItems = true,
+            UseRiskInsights = true,
+            UseOrganizationDomains = true,
+            UseAdminSponsoredFamilies = true,
+            SyncSeats = false,
+            UseAutomaticUserConfirmation = true,
+            UsePhishingBlocker = true,
+            UseDisableSmAdsForUsers = true,
+            UseMyItems = true,
+            UseInviteLinks = true,
+            UsePam = true,
         });
+    }
 
     /// <summary>
     /// Creates a confirmed Owner for the specified organization and user.
@@ -105,6 +166,22 @@ public static class OrganizationTestHelpers
             Type = OrganizationUserType.Owner
         });
 
+    /// <summary>
+    /// Creates a Staged member (provisioned but not invited) for the specified organization and user.
+    /// Staged members do not consume a seat and are not subject to organization policies.
+    /// </summary>
+    public static Task<OrganizationUser> CreateStagedTestOrganizationUserAsync(
+        this IOrganizationUserRepository organizationUserRepository,
+        Organization organization,
+        User user)
+        => organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Staged,
+            Type = OrganizationUserType.User
+        });
+
     public static Task<Group> CreateTestGroupAsync(
         this IGroupRepository groupRepository,
         Organization organization,
@@ -121,5 +198,20 @@ public static class OrganizationTestHelpers
         {
             OrganizationId = organization.Id,
             Name = $"{identifier} {Guid.NewGuid()}"
+        });
+
+    public static Task<OrganizationInviteLink> CreateTestOrganizationInviteLinkAsync(
+        this IOrganizationInviteLinkRepository repository,
+        Organization organization,
+        string identifier = "test")
+        => repository.CreateAsync(new OrganizationInviteLink
+        {
+            Code = Guid.NewGuid().ToString(),
+            OrganizationId = organization.Id,
+            AllowedDomains = "[\"example.com\"]",
+            Invite = $"invite-blob-{identifier}",
+            SupportsConfirmation = true,
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
         });
 }

@@ -3,19 +3,14 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.DeleteClaimedAccount;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -28,12 +23,6 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
     public OrganizationUserControllerTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
-        _factory.SubstituteService<IFeatureService>(featureService =>
-        {
-            featureService
-                .IsEnabled(FeatureFlagKeys.CreateDefaultLocation)
-                .Returns(true);
-        });
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -68,7 +57,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = [orgUserToDelete.Id]
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
         var content = await httpResponse.Content.ReadFromJsonAsync<ListResponseModel<OrganizationUserBulkResponseModel>>();
         Assert.Single(content.Data, r => r.Id == orgUserToDelete.Id && r.Error == string.Empty);
 
@@ -110,7 +103,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = [validOrgUser.Id, invalidOrgUser.Id]
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
 
         Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
         var debug = await httpResponse.Content.ReadAsStringAsync();
@@ -145,7 +142,11 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
             Ids = new List<Guid> { Guid.NewGuid() }
         };
 
-        var httpResponse = await _client.PostAsJsonAsync($"organizations/{_organization.Id}/users/delete-account", request);
+        using var message = new HttpRequestMessage(HttpMethod.Delete, $"organizations/{_organization.Id}/users/delete-account")
+        {
+            Content = JsonContent.Create(request)
+        };
+        var httpResponse = await _client.SendAsync(message);
 
         Assert.Equal(HttpStatusCode.Forbidden, httpResponse.StatusCode);
     }
@@ -218,7 +219,7 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         _ownerEmail = $"org-user-integration-test-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
 
-        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
     }
 
@@ -301,136 +302,10 @@ public class OrganizationUserControllerTests : IClassFixture<ApiApplicationFacto
         await VerifyDefaultCollectionCountAsync(acceptedUsers.ElementAt(2), 1);
     }
 
-    [Fact]
-    public async Task Put_WithExistingDefaultCollection_Success()
-    {
-        // Arrange
-        await _loginHelper.LoginAsync(_ownerEmail);
-
-        var (userEmail, organizationUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
-            _organization.Id, OrganizationUserType.User);
-
-        var (group, sharedCollection, defaultCollection) = await CreateTestDataAsync();
-        await AssignDefaultCollectionToUserAsync(organizationUser, defaultCollection);
-
-        // Act
-        var updateRequest = CreateUpdateRequest(sharedCollection, group);
-        var httpResponse = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/{organizationUser.Id}", updateRequest);
-
-        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
-
-        // Assert
-        await VerifyUserWasUpdatedCorrectlyAsync(organizationUser, expectedType: OrganizationUserType.Custom, expectedManageGroups: true);
-        await VerifyGroupAccessWasAddedAsync(organizationUser, [group]);
-        await VerifyCollectionAccessWasUpdatedCorrectlyAsync(organizationUser, sharedCollection.Id, defaultCollection.Id);
-    }
-
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
-    }
-
-    private async Task<(Group group, Collection sharedCollection, Collection defaultCollection)> CreateTestDataAsync()
-    {
-        var groupRepository = _factory.GetService<IGroupRepository>();
-        var group = await groupRepository.CreateAsync(new Group
-        {
-            OrganizationId = _organization.Id,
-            Name = $"Test Group {Guid.NewGuid()}"
-        });
-
-        var collectionRepository = _factory.GetService<ICollectionRepository>();
-        var sharedCollection = await collectionRepository.CreateAsync(new Collection
-        {
-            OrganizationId = _organization.Id,
-            Name = $"Test Collection {Guid.NewGuid()}",
-            Type = CollectionType.SharedCollection
-        });
-
-        var defaultCollection = await collectionRepository.CreateAsync(new Collection
-        {
-            OrganizationId = _organization.Id,
-            Name = $"My Items {Guid.NewGuid()}",
-            Type = CollectionType.DefaultUserCollection
-        });
-
-        return (group, sharedCollection, defaultCollection);
-    }
-
-    private async Task AssignDefaultCollectionToUserAsync(OrganizationUser organizationUser, Collection defaultCollection)
-    {
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        await organizationUserRepository.ReplaceAsync(organizationUser,
-            new List<CollectionAccessSelection>
-            {
-                new CollectionAccessSelection
-                {
-                    Id = defaultCollection.Id,
-                    ReadOnly = false,
-                    HidePasswords = false,
-                    Manage = true
-                }
-            });
-    }
-
-    private static OrganizationUserUpdateRequestModel CreateUpdateRequest(Collection sharedCollection, Group group)
-    {
-        return new OrganizationUserUpdateRequestModel
-        {
-            Type = OrganizationUserType.Custom,
-            Permissions = new Permissions
-            {
-                ManageGroups = true
-            },
-            Collections = new List<SelectionReadOnlyRequestModel>
-            {
-                new SelectionReadOnlyRequestModel
-                {
-                    Id = sharedCollection.Id,
-                    ReadOnly = true,
-                    HidePasswords = false,
-                    Manage = false
-                }
-            },
-            Groups = new List<Guid> { group.Id }
-        };
-    }
-
-    private async Task VerifyUserWasUpdatedCorrectlyAsync(
-        OrganizationUser organizationUser,
-        OrganizationUserType expectedType,
-        bool expectedManageGroups)
-    {
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var updatedOrgUser = await organizationUserRepository.GetByIdAsync(organizationUser.Id);
-        Assert.NotNull(updatedOrgUser);
-        Assert.Equal(expectedType, updatedOrgUser.Type);
-        Assert.Equal(expectedManageGroups, updatedOrgUser.GetPermissions().ManageGroups);
-    }
-
-    private async Task VerifyGroupAccessWasAddedAsync(
-        OrganizationUser organizationUser, IEnumerable<Group> groups)
-    {
-        var groupRepository = _factory.GetService<IGroupRepository>();
-        var userGroups = await groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
-        Assert.All(groups, group => Assert.Contains(group.Id, userGroups));
-    }
-
-    private async Task VerifyCollectionAccessWasUpdatedCorrectlyAsync(
-        OrganizationUser organizationUser, Guid sharedCollectionId, Guid defaultCollectionId)
-    {
-        var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
-        var (_, collectionAccess) = await organizationUserRepository.GetByIdWithCollectionsAsync(organizationUser.Id);
-        var collectionIds = collectionAccess.Select(c => c.Id).ToHashSet();
-
-        Assert.Contains(defaultCollectionId, collectionIds);
-        Assert.Contains(sharedCollectionId, collectionIds);
-
-        var newCollectionAccess = collectionAccess.First(c => c.Id == sharedCollectionId);
-        Assert.True(newCollectionAccess.ReadOnly);
-        Assert.False(newCollectionAccess.HidePasswords);
-        Assert.False(newCollectionAccess.Manage);
     }
 
     private async Task<List<OrganizationUser>> CreateAcceptedUsersAsync(

@@ -120,7 +120,7 @@ public class NotificationHubPoolTests
         var sut = new NotificationHubPool(logger, globalSettings);
 
         // Act
-        var client = sut.ClientFor(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow));
+        var client = sut.ClientFor(CombGuid.Generate());
 
         // Assert
         Assert.NotNull(client);

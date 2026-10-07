@@ -1,7 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -52,7 +54,7 @@ public class ResellerClientOrganizationSignUpCommandTests
                     !string.IsNullOrEmpty(k.ApiKey)
                 )
             );
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == result.Organization.Id));
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -172,13 +174,13 @@ public class ResellerClientOrganizationSignUpCommandTests
 
     private static async Task AssertCleanupIsPerformed(SutProvider<ResellerClientOrganizationSignUpCommand> sutProvider)
     {
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider.GetDependency<IStripePaymentService>()
             .Received(1)
             .CancelAndRecoverChargesAsync(Arg.Any<Organization>());
         await sutProvider.GetDependency<IOrganizationRepository>()
             .Received(1)
             .DeleteAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(Arg.Any<Guid>());
     }

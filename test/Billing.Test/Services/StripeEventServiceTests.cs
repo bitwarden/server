@@ -1,21 +1,18 @@
 ﻿using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
-using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Caches;
-using Bit.Core.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Settings;
 using NSubstitute;
 using Stripe;
+using Stripe.Checkout;
 using Xunit;
 
 namespace Bit.Billing.Test.Services;
 
 public class StripeEventServiceTests
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IProviderRepository _providerRepository;
-    private readonly ISetupIntentCache _setupIntentCache;
     private readonly IStripeFacade _stripeFacade;
+    private readonly IStripeAdapter _stripeAdapter;
     private readonly StripeEventService _stripeEventService;
 
     public StripeEventServiceTests()
@@ -24,11 +21,12 @@ public class StripeEventServiceTests
         var baseServiceUriSettings = new GlobalSettings.BaseServiceUriSettings(globalSettings) { CloudRegion = "US" };
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
-        _organizationRepository = Substitute.For<IOrganizationRepository>();
-        _providerRepository = Substitute.For<IProviderRepository>();
-        _setupIntentCache = Substitute.For<ISetupIntentCache>();
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, _organizationRepository, _providerRepository, _setupIntentCache, _stripeFacade);
+        _stripeAdapter = Substitute.For<IStripeAdapter>();
+        _stripeEventService = new StripeEventService(
+            globalSettings,
+            _stripeFacade,
+            _stripeAdapter);
     }
 
     #region GetCharge
@@ -415,6 +413,66 @@ public class StripeEventServiceTests
     }
     #endregion
 
+    #region GetCheckoutSession
+    [Fact]
+    public async Task GetCheckoutSession_EventNotCheckoutSessionRelated_ThrowsException()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "customer.updated", new Customer { Id = "cus_test" });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(async () => await _stripeEventService.GetCheckoutSession(stripeEvent));
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Session)}'", exception.Message);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_NotFresh_ReturnsEventSession()
+    {
+        // Arrange
+        var mockSession = new Session { Id = "cs_test", SubscriptionId = "sub_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent);
+
+        // Assert
+        Assert.Equal(mockSession.Id, session.Id);
+        Assert.Equal(mockSession.SubscriptionId, session.SubscriptionId);
+
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().GetCheckoutSessionAsync(null!);
+    }
+
+    [Fact]
+    public async Task GetCheckoutSession_Fresh_Expand_ReturnsAPISession()
+    {
+        // Arrange
+        var eventSession = new Session { Id = "cs_test", SubscriptionId = "sub_old" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", eventSession);
+
+        var apiSession = new Session { Id = "cs_test", SubscriptionId = "sub_new" };
+
+        var expand = new List<string> { "customer" };
+
+        _stripeAdapter.GetCheckoutSessionAsync(
+                apiSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand == expand))
+            .Returns(apiSession);
+
+        // Act
+        var session = await _stripeEventService.GetCheckoutSession(stripeEvent, true, expand);
+
+        // Assert
+        Assert.Equal(apiSession, session);
+        Assert.NotSame(eventSession, session);
+
+        await _stripeAdapter.Received().GetCheckoutSessionAsync(
+            apiSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand == expand));
+    }
+    #endregion
+
     #region ValidateCloudRegion
     [Fact]
     public async Task ValidateCloudRegion_SubscriptionUpdated_Success()
@@ -651,29 +709,17 @@ public class StripeEventServiceTests
     }
 
     [Fact]
-    public async Task ValidateCloudRegion_SetupIntentSucceeded_OrganizationCustomer_Success()
+    public async Task ValidateCloudRegion_SetupIntentSucceeded_WithCustomer_Success()
     {
         // Arrange
-        var mockSetupIntent = new SetupIntent { Id = "seti_test" };
-        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
-        var organizationId = Guid.NewGuid();
-        var organizationCustomerId = "cus_org_test";
-
-        var mockOrganization = new Core.AdminConsole.Entities.Organization
-        {
-            Id = organizationId,
-            GatewayCustomerId = organizationCustomerId
-        };
         var customer = CreateMockCustomer();
+        var mockSetupIntent = new SetupIntent { Id = "seti_test", Customer = customer };
+        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
-            .Returns(organizationId);
-
-        _organizationRepository.GetByIdAsync(organizationId)
-            .Returns(mockOrganization);
-
-        _stripeFacade.GetCustomer(organizationCustomerId)
-            .Returns(customer);
+        _stripeFacade.GetSetupIntent(
+                mockSetupIntent.Id,
+                Arg.Any<SetupIntentGetOptions>())
+            .Returns(mockSetupIntent);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -681,60 +727,22 @@ public class StripeEventServiceTests
         // Assert
         Assert.True(cloudRegionValid);
 
-        await _setupIntentCache.Received(1).GetSubscriberIdForSetupIntent(mockSetupIntent.Id);
-        await _organizationRepository.Received(1).GetByIdAsync(organizationId);
-        await _stripeFacade.Received(1).GetCustomer(organizationCustomerId);
+        await _stripeFacade.Received(1).GetSetupIntent(
+            mockSetupIntent.Id,
+            Arg.Any<SetupIntentGetOptions>());
     }
 
     [Fact]
-    public async Task ValidateCloudRegion_SetupIntentSucceeded_ProviderCustomer_Success()
+    public async Task ValidateCloudRegion_SetupIntentSucceeded_NoCustomer_ReturnsFalse()
     {
         // Arrange
-        var mockSetupIntent = new SetupIntent { Id = "seti_test" };
-        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
-        var providerId = Guid.NewGuid();
-        var providerCustomerId = "cus_provider_test";
-
-        var mockProvider = new Core.AdminConsole.Entities.Provider.Provider
-        {
-            Id = providerId,
-            GatewayCustomerId = providerCustomerId
-        };
-        var customer = CreateMockCustomer();
-
-        _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
-            .Returns(providerId);
-
-        _organizationRepository.GetByIdAsync(providerId)
-            .Returns((Core.AdminConsole.Entities.Organization?)null);
-
-        _providerRepository.GetByIdAsync(providerId)
-            .Returns(mockProvider);
-
-        _stripeFacade.GetCustomer(providerCustomerId)
-            .Returns(customer);
-
-        // Act
-        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
-
-        // Assert
-        Assert.True(cloudRegionValid);
-
-        await _setupIntentCache.Received(1).GetSubscriberIdForSetupIntent(mockSetupIntent.Id);
-        await _organizationRepository.Received(1).GetByIdAsync(providerId);
-        await _providerRepository.Received(1).GetByIdAsync(providerId);
-        await _stripeFacade.Received(1).GetCustomer(providerCustomerId);
-    }
-
-    [Fact]
-    public async Task ValidateCloudRegion_SetupIntentSucceeded_NoSubscriberIdInCache_ReturnsFalse()
-    {
-        // Arrange
-        var mockSetupIntent = new SetupIntent { Id = "seti_test" };
+        var mockSetupIntent = new SetupIntent { Id = "seti_test", Customer = null };
         var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
-            .Returns((Guid?)null);
+        _stripeFacade.GetSetupIntent(
+                mockSetupIntent.Id,
+                Arg.Any<SetupIntentGetOptions>())
+            .Returns(mockSetupIntent);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -742,45 +750,24 @@ public class StripeEventServiceTests
         // Assert
         Assert.False(cloudRegionValid);
 
-        await _setupIntentCache.Received(1).GetSubscriberIdForSetupIntent(mockSetupIntent.Id);
-        await _organizationRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await _providerRepository.DidNotReceiveWithAnyArgs().GetByIdAsync(Arg.Any<Guid>());
-        await _stripeFacade.DidNotReceive().GetCustomer(Arg.Any<string>());
+        await _stripeFacade.Received(1).GetSetupIntent(
+            mockSetupIntent.Id,
+            Arg.Any<SetupIntentGetOptions>());
     }
 
     [Fact]
-    public async Task ValidateCloudRegion_SetupIntentSucceeded_OrganizationWithoutGatewayCustomerId_ChecksProvider()
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_WithCustomer_ReturnsTrue()
     {
         // Arrange
-        var mockSetupIntent = new SetupIntent { Id = "seti_test" };
-        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
-        var subscriberId = Guid.NewGuid();
-        var providerCustomerId = "cus_provider_test";
-
-        var mockOrganizationWithoutCustomerId = new Core.AdminConsole.Entities.Organization
-        {
-            Id = subscriberId,
-            GatewayCustomerId = null
-        };
-
-        var mockProvider = new Core.AdminConsole.Entities.Provider.Provider
-        {
-            Id = subscriberId,
-            GatewayCustomerId = providerCustomerId
-        };
         var customer = CreateMockCustomer();
+        var mockSession = new Session { Id = "cs_test", CustomerId = customer.Id };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
 
-        _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
-            .Returns(subscriberId);
-
-        _organizationRepository.GetByIdAsync(subscriberId)
-            .Returns(mockOrganizationWithoutCustomerId);
-
-        _providerRepository.GetByIdAsync(subscriberId)
-            .Returns(mockProvider);
-
-        _stripeFacade.GetCustomer(providerCustomerId)
-            .Returns(customer);
+        var freshSession = new Session { Id = "cs_test", Customer = customer };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -788,34 +775,23 @@ public class StripeEventServiceTests
         // Assert
         Assert.True(cloudRegionValid);
 
-        await _setupIntentCache.Received(1).GetSubscriberIdForSetupIntent(mockSetupIntent.Id);
-        await _organizationRepository.Received(1).GetByIdAsync(subscriberId);
-        await _providerRepository.Received(1).GetByIdAsync(subscriberId);
-        await _stripeFacade.Received(1).GetCustomer(providerCustomerId);
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
     }
 
     [Fact]
-    public async Task ValidateCloudRegion_SetupIntentSucceeded_ProviderWithoutGatewayCustomerId_ReturnsFalse()
+    public async Task ValidateCloudRegion_CheckoutSessionCompleted_NoCustomer_ReturnsFalse()
     {
         // Arrange
-        var mockSetupIntent = new SetupIntent { Id = "seti_test" };
-        var stripeEvent = CreateMockEvent("evt_test", "setup_intent.succeeded", mockSetupIntent);
-        var subscriberId = Guid.NewGuid();
+        var mockSession = new Session { Id = "cs_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "checkout.session.completed", mockSession);
 
-        var mockProviderWithoutCustomerId = new Core.AdminConsole.Entities.Provider.Provider
-        {
-            Id = subscriberId,
-            GatewayCustomerId = null
-        };
-
-        _setupIntentCache.GetSubscriberIdForSetupIntent(mockSetupIntent.Id)
-            .Returns(subscriberId);
-
-        _organizationRepository.GetByIdAsync(subscriberId)
-            .Returns((Core.AdminConsole.Entities.Organization?)null);
-
-        _providerRepository.GetByIdAsync(subscriberId)
-            .Returns(mockProviderWithoutCustomerId);
+        var freshSession = new Session { Id = "cs_test", Customer = null };
+        _stripeAdapter.GetCheckoutSessionAsync(
+                mockSession.Id,
+                Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")))
+            .Returns(freshSession);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -823,10 +799,29 @@ public class StripeEventServiceTests
         // Assert
         Assert.False(cloudRegionValid);
 
-        await _setupIntentCache.Received(1).GetSubscriberIdForSetupIntent(mockSetupIntent.Id);
-        await _organizationRepository.Received(1).GetByIdAsync(subscriberId);
-        await _providerRepository.Received(1).GetByIdAsync(subscriberId);
-        await _stripeFacade.DidNotReceive().GetCustomer(Arg.Any<string>());
+        await _stripeAdapter.Received(1).GetCheckoutSessionAsync(
+            mockSession.Id,
+            Arg.Is<SessionGetOptions>(options => options.Expand!.Contains("customer")));
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_CouponDeleted_ReturnsTrue()
+    {
+        // Arrange
+        var stripeEvent = CreateMockEvent("evt_test", "coupon.deleted", new Coupon { Id = "cou_test" });
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(null);
+        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSetupIntent(null);
     }
     #endregion
 

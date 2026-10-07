@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Billing.Models;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -17,7 +18,7 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
     {
         _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
         _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId
-                                 ?? Core.Utilities.StaticStore.SponsoredPlans.FirstOrDefault()?.StripePlanId;
+                                 ?? SponsoredPlans.All.FirstOrDefault()?.StripePlanId;
         _applySponsorship = applySponsorship;
     }
 

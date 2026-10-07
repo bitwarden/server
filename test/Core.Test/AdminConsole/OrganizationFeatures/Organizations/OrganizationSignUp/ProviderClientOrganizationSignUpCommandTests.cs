@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.AbilitiesCache;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
@@ -9,8 +10,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -36,7 +36,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         signup.AdditionalSeats = 15;
         signup.CollectionName = collectionName;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.Get(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
@@ -58,6 +58,7 @@ public class ProviderClientOrganizationSignUpCommandTests
                     o.MaxCollections == plan.PasswordManager.MaxCollections &&
                     o.UsePasswordManager == true &&
                     o.UseSecretsManager == false &&
+                    o.UseRiskInsights == plan.HasRiskInsights &&
                     o.Status == OrganizationStatusType.Created
                 )
             );
@@ -82,7 +83,7 @@ public class ProviderClientOrganizationSignUpCommandTests
                 )
             );
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .UpsertOrganizationAbilityAsync(Arg.Is<Organization>(o => o.Id == result.Organization.Id));
     }
@@ -112,7 +113,7 @@ public class ProviderClientOrganizationSignUpCommandTests
         signup.Plan = PlanType.TeamsMonthly;
         signup.AdditionalSeats = -5;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.Get(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
@@ -132,7 +133,7 @@ public class ProviderClientOrganizationSignUpCommandTests
     {
         signup.Plan = planType;
 
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = MockPlans.Get(signup.Plan);
         sutProvider.GetDependency<IPricingClient>()
             .GetPlanOrThrow(signup.Plan)
             .Returns(plan);
@@ -148,7 +149,7 @@ public class ProviderClientOrganizationSignUpCommandTests
             .Received(1)
             .DeleteAsync(Arg.Is<Organization>(o => o.Name == signup.Name));
 
-        await sutProvider.GetDependency<IApplicationCacheService>()
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
             .Received(1)
             .DeleteOrganizationAbilityAsync(Arg.Any<Guid>());
     }

@@ -4,6 +4,7 @@
 using System.Data;
 using Bit.Core.Dirt.Entities;
 using Bit.Core.Dirt.Models.Data;
+using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -30,6 +31,19 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
         {
             var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
                 $"[{Schema}].[OrganizationReport_GetLatestByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<OrganizationReport> ReadLatestByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
+                $"[{Schema}].[OrganizationReport_ReadLatestByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
@@ -85,54 +99,16 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
             var parameters = new
             {
                 OrganizationId = organizationId,
-                StartDate = startDate,
-                EndDate = endDate
+                StartDate = startDate.ToUniversalTime(),
+                EndDate = endDate.ToUniversalTime()
             };
 
             var results = await connection.QueryAsync<OrganizationReportSummaryDataResponse>(
-                $"[{Schema}].[OrganizationReport_GetSummariesByDateRange]",
+                $"[{Schema}].[OrganizationReport_ReadByOrganizationIdAndRevisionDate]",
                 parameters,
                 commandType: CommandType.StoredProcedure);
 
             return results;
-        }
-    }
-
-    public async Task<OrganizationReportDataResponse> GetReportDataAsync(Guid reportId)
-    {
-        using (var connection = new SqlConnection(ReadOnlyConnectionString))
-        {
-            var result = await connection.QuerySingleOrDefaultAsync<OrganizationReportDataResponse>(
-                $"[{Schema}].[OrganizationReport_GetReportDataById]",
-                new { Id = reportId },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-    }
-
-    public async Task<OrganizationReport> UpdateReportDataAsync(Guid organizationId, Guid reportId, string reportData)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var parameters = new
-            {
-                OrganizationId = organizationId,
-                Id = reportId,
-                ReportData = reportData,
-                RevisionDate = DateTime.UtcNow
-            };
-
-            await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationReport_UpdateReportData]",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            // Return the updated report
-            return await connection.QuerySingleOrDefaultAsync<OrganizationReport>(
-                $"[{Schema}].[OrganizationReport_ReadById]",
-                new { Id = reportId },
-                commandType: CommandType.StoredProcedure);
         }
     }
 
@@ -172,5 +148,32 @@ public class OrganizationReportRepository : Repository<OrganizationReport, Guid>
                 new { Id = reportId },
                 commandType: CommandType.StoredProcedure);
         }
+    }
+
+    public async Task UpdateMetricsAsync(Guid reportId, OrganizationReportMetricsData metrics)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var parameters = new
+        {
+            Id = reportId,
+            ApplicationCount = metrics.ApplicationCount,
+            ApplicationAtRiskCount = metrics.ApplicationAtRiskCount,
+            CriticalApplicationCount = metrics.CriticalApplicationCount,
+            CriticalApplicationAtRiskCount = metrics.CriticalApplicationAtRiskCount,
+            MemberCount = metrics.MemberCount,
+            MemberAtRiskCount = metrics.MemberAtRiskCount,
+            CriticalMemberCount = metrics.CriticalMemberCount,
+            CriticalMemberAtRiskCount = metrics.CriticalMemberAtRiskCount,
+            PasswordCount = metrics.PasswordCount,
+            PasswordAtRiskCount = metrics.PasswordAtRiskCount,
+            CriticalPasswordCount = metrics.CriticalPasswordCount,
+            CriticalPasswordAtRiskCount = metrics.CriticalPasswordAtRiskCount,
+            RevisionDate = DateTime.UtcNow
+        };
+
+        await connection.ExecuteAsync(
+            $"[{Schema}].[OrganizationReport_UpdateMetrics]",
+            parameters,
+            commandType: CommandType.StoredProcedure);
     }
 }

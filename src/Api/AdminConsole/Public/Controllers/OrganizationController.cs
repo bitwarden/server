@@ -22,14 +22,14 @@ public class OrganizationController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IImportOrganizationUsersAndGroupsCommand _importOrganizationUsersAndGroupsCommand;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IImportOrganizationUsersAndGroupsCommand importOrganizationUsersAndGroupsCommand,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
@@ -61,7 +61,8 @@ public class OrganizationController : Controller
                 model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),
                 model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
                 model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
-                model.OverwriteExisting.GetValueOrDefault()
+                model.OverwriteExisting.GetValueOrDefault(),
+                model.InviteUsersAfterProvisioning
                 );
 
         return new OkResult();

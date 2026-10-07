@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -209,12 +210,12 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id).ReturnsForAnyArgs(currentSecret);
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>())
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>());
     }
 
     [Theory]
@@ -229,12 +230,12 @@ public class SecretsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>())
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>());
     }
 
     [Theory]
@@ -244,18 +245,19 @@ public class SecretsControllerTests
     {
         data = SetupSecretUpdateRequest(data);
         SetControllerUser(sutProvider, new Guid());
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id).ReturnsForAnyArgs(currentSecret);
 
         sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>())
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
-            .UpdateAsync(Arg.Any<Secret>(), null);
+            .UpdateAsync(Arg.Any<Secret>(), null, Arg.Any<bool>());
     }
 
     [Theory]
@@ -270,7 +272,7 @@ public class SecretsControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data));
         await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>());
     }
 
     [Theory]
@@ -286,7 +288,39 @@ public class SecretsControllerTests
 
         await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>());
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>());
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task UpdateSecret_ForwardsValueChangedToUpdateCommand(bool valueChanged,
+        SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Secret currentSecret,
+        Secret updatedSecret, Guid userId)
+    {
+        data = SetupSecretUpdateRequest(data);
+        data.ValueChanged = valueChanged;
+        data.Value = "new-value";
+
+        currentSecret.Value = "previous-value";
+
+        // Event logging resolves the acting user, so the edit needs an identified caller.
+        SetControllerUser(sutProvider, userId);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(currentSecret.Id)
+            .ReturnsForAnyArgs(currentSecret);
+        sutProvider.GetDependency<IUpdateSecretCommand>()
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>())
+            .ReturnsForAnyArgs(updatedSecret);
+
+        await sutProvider.Sut.UpdateSecretAsync(currentSecret.Id, data);
+
+        // Whether a version gets recorded is the command's decision; the controller only reports
+        // what the request claimed, against the secret already carrying the incoming value.
+        await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
+            .UpdateAsync(Arg.Is<Secret>(s => s.Value == "new-value"), null, valueChanged);
     }
 
     [Theory]
@@ -602,6 +636,7 @@ public class SecretsControllerTests
     {
         data = SetupSecretUpdateRequest(data, true);
 
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<Secret>(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Success());
@@ -611,7 +646,7 @@ public class SecretsControllerTests
             .GetAsync(Arg.Any<SecretAccessPolicies>(), Arg.Any<Guid>())
             .ReturnsForAnyArgs(accessPoliciesUpdates);
         sutProvider.GetDependency<IUpdateSecretCommand>()
-            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>())
+            .UpdateAsync(Arg.Any<Secret>(), Arg.Any<SecretAccessPoliciesUpdates>(), Arg.Any<bool>())
             .ReturnsForAnyArgs(data.ToSecret(currentSecret));
         return data;
     }

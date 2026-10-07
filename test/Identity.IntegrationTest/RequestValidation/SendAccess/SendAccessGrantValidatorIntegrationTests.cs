@@ -1,7 +1,8 @@
-﻿using Bit.Core;
-using Bit.Core.Enums;
-using Bit.Core.Services;
+﻿using Bit.Core.Enums;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
@@ -20,32 +21,6 @@ internal record AnUnknownAuthenticationMethod : SendAuthenticationMethod { }
 public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory _factory) : IClassFixture<IdentityApplicationFactory>
 {
     [Fact]
-    public async Task SendAccessGrant_FeatureFlagDisabled_ReturnsUnsupportedGrantType()
-    {
-        // Arrange
-        var sendId = Guid.NewGuid();
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                // Mock feature service to return false
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(false);
-                services.AddSingleton(featureService);
-            });
-        }).CreateClient();
-
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
-
-        // Act
-        var response = await client.PostAsync("/connect/token", requestBody);
-
-        // Assert
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("unsupported_grant_type", content);
-    }
-
-    [Fact]
     public async Task SendAccessGrant_ValidNotAuthenticatedSend_ReturnsAccessToken()
     {
         // Arrange
@@ -54,11 +29,6 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         {
             builder.ConfigureServices(services =>
             {
-                // Mock feature service to return true
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-
                 // Mock send authentication query
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new NotAuthenticated());
@@ -79,18 +49,79 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
     }
 
     [Fact]
-    public async Task SendAccessGrant_MissingSendId_ReturnsInvalidRequest()
+    public async Task SendAccessGrant_ExistingAccessibleSend_ReturnsAccessToken()
     {
         // Arrange
+        var sendId = Guid.NewGuid();
+        var send = new Send
+        {
+            Id = sendId,
+            AuthType = AuthType.None,
+            Disabled = false,
+            AccessCount = 0,
+            MaxAccessCount = null,
+            ExpirationDate = null,
+            DeletionDate = DateTime.UtcNow.AddDays(1),
+        };
+
         var client = _factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
+                // Real SendAuthenticationQuery and SendAccessGrantValidator run unmocked;
+                // only the repository lookup is substituted.
+                var sendRepository = Substitute.For<ISendRepository>();
+                sendRepository.GetByIdAsync(sendId).Returns(send);
+                services.AddSingleton(sendRepository);
             });
         }).CreateClient();
+
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        Assert.True(response.IsSuccessStatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenResponse.AccessToken, content);
+    }
+
+    [Fact]
+    public async Task SendAccessGrant_DeletedSend_ReturnsInvalidGrant()
+    {
+        // Arrange
+        var sendId = Guid.NewGuid();
+
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                // A deleted (or never-existing) send: the repository returns null, so the real
+                // SendAuthenticationQuery maps it to SendInaccessible and the real
+                // SendAccessGrantValidator produces invalid_grant / send_id_invalid.
+                var sendRepository = Substitute.For<ISendRepository>();
+                sendRepository.GetByIdAsync(sendId).Returns((Send?)null);
+                services.AddSingleton(sendRepository);
+            });
+        }).CreateClient();
+
+        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
+
+        // Act
+        var response = await client.PostAsync("/connect/token", requestBody);
+
+        // Assert
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(OidcConstants.TokenErrors.InvalidGrant, content);
+        Assert.Contains(SendAccessConstants.SendIdGuidValidatorResults.InvalidSendId, content);
+    }
+
+    [Fact]
+    public async Task SendAccessGrant_MissingSendId_ReturnsInvalidRequest()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
 
         var requestBody = new FormUrlEncodedContent([
             new KeyValuePair<string, string>(OidcConstants.TokenRequest.GrantType, CustomGrantTypes.SendAccess),
@@ -111,44 +142,7 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
     {
         // Arrange
         var sendId = Guid.Empty;
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-            });
-        }).CreateClient();
-
-        var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
-
-        // Act
-        var response = await client.PostAsync("/connect/token", requestBody);
-
-        // Assert
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("invalid_grant", content);
-    }
-
-    [Fact]
-    public async Task SendAccessGrant_NeverAuthenticateSend_ReturnsInvalidGrant()
-    {
-        // Arrange
-        var sendId = Guid.NewGuid();
-        var client = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-
-                var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
-                sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new NeverAuthenticate());
-                services.AddSingleton(sendAuthQuery);
-            });
-        }).CreateClient();
+        var client = _factory.CreateClient();
 
         var requestBody = SendAccessTestUtilities.CreateTokenRequestBody(sendId);
 
@@ -169,10 +163,6 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId).Returns(new AnUnknownAuthenticationMethod());
                 services.AddSingleton(sendAuthQuery);
@@ -200,10 +190,6 @@ public class SendAccessGrantValidatorIntegrationTests(IdentityApplicationFactory
         {
             builder.ConfigureServices(services =>
             {
-                var featureService = Substitute.For<IFeatureService>();
-                featureService.IsEnabled(FeatureFlagKeys.SendAccess).Returns(true);
-                services.AddSingleton(featureService);
-
                 var sendAuthQuery = Substitute.For<ISendAuthenticationQuery>();
                 sendAuthQuery.GetAuthenticationMethod(sendId).Returns(resourcePassword);
                 services.AddSingleton(sendAuthQuery);

@@ -2,29 +2,27 @@
 #nullable disable
 
 using Bit.Core.Billing.Models;
-using Bit.Core.Billing.Tax.Models;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Stripe;
-using PaymentMethod = Bit.Core.Billing.Models.PaymentMethod;
 
 namespace Bit.Core.Billing.Services;
 
 public interface ISubscriberService
 {
     /// <summary>
-    /// Cancels a subscriber's subscription while including user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
+    /// Cancels a subscriber's subscription.
     /// If the <paramref name="cancelImmediately"/> flag is <see langword="false"/>,
     /// this command sets the subscription's <b>"cancel_at_end_of_period"</b> property to <see langword="true"/>.
     /// Otherwise, this command cancels the subscription immediately.
+    /// Optionally includes user-provided feedback via the <paramref name="offboardingSurveyResponse"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber with the subscription to cancel.</param>
-    /// <param name="offboardingSurveyResponse">An <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
     /// <param name="cancelImmediately">A flag indicating whether to cancel the subscription immediately or at the end of the subscription period.</param>
+    /// <param name="offboardingSurveyResponse">An optional <see cref="OffboardingSurveyResponse"/> DTO containing user-provided feedback on why they are cancelling the subscription.</param>
     Task CancelSubscription(
         ISubscriber subscriber,
-        OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately);
+        bool cancelImmediately,
+        OffboardingSurveyResponse offboardingSurveyResponse = null);
 
     /// <summary>
     /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.
@@ -65,16 +63,6 @@ public interface ISubscriberService
         CustomerGetOptions customerGetOptions = null);
 
     /// <summary>
-    /// Retrieves the account credit, a masked representation of the default payment source and the tax information for the
-    /// provided <paramref name="subscriber"/>. This is essentially a consolidated invocation of the <see cref="GetPaymentSource"/>
-    /// and <see cref="GetTaxInformation"/> methods with a response that includes the customer's <see cref="Stripe.Customer.Balance"/> as account credit in order to cut down on Stripe API calls.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve payment method for.</param>
-    /// <returns>A <see cref="Models.PaymentMethod"/> containing the subscriber's account credit, payment source and tax information.</returns>
-    Task<PaymentMethod> GetPaymentMethod(
-        ISubscriber subscriber);
-
-    /// <summary>
     /// Retrieves a masked representation of the subscriber's payment source for presentation to a client.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the payment source for.</param>
@@ -108,16 +96,6 @@ public interface ISubscriberService
         SubscriptionGetOptions subscriptionGetOptions = null);
 
     /// <summary>
-    /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to retrieve the tax information for.</param>
-    /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
-    /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber);
-
-    /// <summary>
     /// Attempts to remove a subscriber's saved payment source. If the Stripe <see cref="Stripe.Customer"/> representing the
     /// <paramref name="subscriber"/> contains a valid <b>"btCustomerId"</b> key in its <see cref="Stripe.Customer.Metadata"/> property,
     /// this command will attempt to remove the Braintree <see cref="Braintree.PaymentMethod"/>. Otherwise, it will attempt to remove the
@@ -127,36 +105,31 @@ public interface ISubscriberService
     Task RemovePaymentSource(ISubscriber subscriber);
 
     /// <summary>
-    /// Updates the payment source for the provided <paramref name="subscriber"/> using the <paramref name="tokenizedPaymentSource"/>.
-    /// The following types are supported: [<see cref="PaymentMethodType.Card"/>, <see cref="PaymentMethodType.BankAccount"/>, <see cref="PaymentMethodType.PayPal"/>].
-    /// For each type, updating the payment source will attempt to establish a new payment source using the token in the <see cref="TokenizedPaymentSource"/>. Then, it will
-    /// remove the exising payment source(s) linked to the subscriber's customer.
+    /// Clears a pending platform-managed unpaid-lifecycle cancellation on the subscriber's Stripe subscription.
     /// </summary>
-    /// <param name="subscriber">The subscriber to update the payment method for.</param>
-    /// <param name="tokenizedPaymentSource">A DTO representing a tokenized payment method.</param>
-    Task UpdatePaymentSource(
-        ISubscriber subscriber,
-        TokenizedPaymentSource tokenizedPaymentSource);
+    /// <remarks>
+    /// Called by Admin Portal flows that re-enable a billing-disabled subscriber. If the subscriber's Stripe
+    /// subscription is currently <c>unpaid</c> and carries <c>Metadata[cancellation_origin] = unpaid_subscription</c>,
+    /// the pending cancellation is removed and the origin marker is unset so Stripe does not fire the scheduled
+    /// <c>customer.subscription.deleted</c> event and <c>SubscriptionDeletedHandler</c> does not void open invoices.
+    /// No-op on any other subscription state.
+    /// </remarks>
+    /// <param name="subscriber">The subscriber whose pending cancellation should be cleared.</param>
+    Task ResumeFromUnpaidCancellationAsync(ISubscriber subscriber);
 
     /// <summary>
-    /// Updates the tax information for the provided <paramref name="subscriber"/>.
+    /// Schedules a platform-managed unpaid-lifecycle cancellation on the subscriber's Stripe subscription.
     /// </summary>
-    /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
-    /// <param name="taxInformation">A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
-    Task UpdateTaxInformation(
-        ISubscriber subscriber,
-        TaxInformation taxInformation);
-
-    /// <summary>
-    /// Verifies the subscriber's pending bank account using the provided <paramref name="descriptorCode"/>.
-    /// </summary>
-    /// <param name="subscriber">The subscriber to verify the bank account for.</param>
-    /// <param name="descriptorCode">The code attached to a deposit made to the subscriber's bank account in order to ensure they have access to it.
-    /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
-    /// <returns></returns>
-    Task VerifyBankAccount(
-        ISubscriber subscriber,
-        string descriptorCode);
+    /// <remarks>
+    /// Called by Admin Portal flows that disable a subscriber whose subscription is unpaid but was never
+    /// scheduled by the webhook handler. If the subscriber's Stripe subscription is currently <c>unpaid</c>
+    /// without a <c>cancel_at</c> timestamp and without the <c>Metadata[cancellation_origin] = unpaid_subscription</c>
+    /// marker, the method sets <c>cancel_at = now + 7d</c> and stamps the origin so
+    /// <c>SubscriptionDeletedHandler</c> voids open invoices when Stripe ultimately deletes the subscription.
+    /// No-op on any other subscription state.
+    /// </remarks>
+    /// <param name="subscriber">The subscriber whose unpaid-lifecycle cancellation should be scheduled.</param>
+    Task ScheduleUnpaidCancellationAsync(ISubscriber subscriber);
 
     /// <summary>
     /// Validates whether the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> exists in the gateway.

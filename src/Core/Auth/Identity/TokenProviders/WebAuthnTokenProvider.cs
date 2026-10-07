@@ -59,7 +59,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
         };
 
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
+        var options = _fido2.GetAssertionOptions(new GetAssertionOptionsParams
+        {
+            AllowedCredentials = existingCredentials,
+            UserVerification = UserVerificationRequirement.Discouraged,
+            Extensions = exts
+        });
 
         // TODO: Remove this when newtonsoft legacy converters are gone
         provider.MetaData["login"] = JsonSerializer.Serialize(options);
@@ -94,7 +99,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         var jsonOptions = login.ToString();
         var options = AssertionOptions.FromJson(jsonOptions);
 
-        var webAuthCred = keys.Find(k => k.Item2.Descriptor.Id.SequenceEqual(clientResponse.Id));
+        var webAuthCred = keys.Find(k => k.Item2.Descriptor.Id.SequenceEqual(clientResponse.RawId));
 
         if (webAuthCred == null)
         {
@@ -107,19 +112,26 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 
         try
         {
-            var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
+            var res = await _fido2.MakeAssertionAsync(new MakeAssertionParams
+            {
+                AssertionResponse = clientResponse,
+                OriginalOptions = options,
+                StoredPublicKey = webAuthCred.Item2.PublicKey,
+                StoredSignatureCounter = webAuthCred.Item2.SignatureCounter,
+                IsUserHandleOwnerOfCredentialIdCallback = callback
+            });
 
             provider.MetaData.Remove("login");
 
             // Update SignatureCounter
-            webAuthCred.Item2.SignatureCounter = res.Counter;
+            webAuthCred.Item2.SignatureCounter = res.SignCount;
 
             var providers = user.GetTwoFactorProviders();
             providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
             user.SetTwoFactorProviders(providers);
             await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
 
-            return res.Status == "ok";
+            return true;
         }
         catch (Fido2VerificationException)
         {
@@ -147,16 +159,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return keys;
         }
 
-        // Support up to 5 keys
-        for (var i = 1; i <= 5; i++)
+        // Load all WebAuthn credentials stored in metadata. The number of allowed credentials
+        // is controlled by credential registration.
+        foreach (var kvp in provider.MetaData.Where(k => k.Key.StartsWith("Key")))
         {
-            var keyName = $"Key{i}";
-            if (provider.MetaData.TryGetValue(keyName, out var value))
-            {
-                var key = new TwoFactorProvider.WebAuthnData((dynamic)value);
-
-                keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(keyName, key));
-            }
+            var key = new TwoFactorProvider.WebAuthnData((dynamic)kvp.Value);
+            keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(kvp.Key, key));
         }
 
         return keys;

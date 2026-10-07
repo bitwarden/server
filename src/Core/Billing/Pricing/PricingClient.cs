@@ -1,22 +1,17 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Organizations;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Billing.Pricing;
 
 using OrganizationPlan = Bit.Core.Models.StaticStore.Plan;
 using PremiumPlan = Premium.Plan;
-using Purchasable = Premium.Purchasable;
 
 public class PricingClient(
-    IFeatureService featureService,
     GlobalSettings globalSettings,
     HttpClient httpClient,
     ILogger<PricingClient> logger) : IPricingClient
@@ -26,13 +21,6 @@ public class PricingClient(
         if (globalSettings.SelfHosted)
         {
             return null;
-        }
-
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.GetPlan(planType);
         }
 
         var lookupKey = GetLookupKey(planType);
@@ -77,13 +65,6 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-
-        if (!usePricingService)
-        {
-            return StaticStore.Plans.ToList();
-        }
-
         var response = await httpClient.GetAsync("plans/organization");
 
         if (response.IsSuccessStatusCode)
@@ -114,15 +95,6 @@ public class PricingClient(
             return [];
         }
 
-        var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
-        var fetchPremiumPriceFromPricingService =
-            featureService.IsEnabled(FeatureFlagKeys.PM26793_FetchPremiumPriceFromPricingService);
-
-        if (!usePricingService || !fetchPremiumPriceFromPricingService)
-        {
-            return [CurrentPremiumPlan];
-        }
-
         var response = await httpClient.GetAsync("plans/premium");
 
         if (response.IsSuccessStatusCode)
@@ -135,7 +107,7 @@ public class PricingClient(
             message: $"Request to the Pricing Service failed with status {response.StatusCode}");
     }
 
-    private static string? GetLookupKey(PlanType planType)
+    private string? GetLookupKey(PlanType planType)
         => planType switch
         {
             PlanType.EnterpriseAnnually => "enterprise-annually",
@@ -147,6 +119,7 @@ public class PricingClient(
             PlanType.EnterpriseMonthly2020 => "enterprise-monthly-2020",
             PlanType.EnterpriseMonthly2023 => "enterprise-monthly-2023",
             PlanType.FamiliesAnnually => "families",
+            PlanType.FamiliesAnnually2025 => "families-2025",
             PlanType.FamiliesAnnually2019 => "families-2019",
             PlanType.Free => "free",
             PlanType.TeamsAnnually => "teams-annually",
@@ -161,13 +134,4 @@ public class PricingClient(
             PlanType.TeamsStarter2023 => "teams-starter-2023",
             _ => null
         };
-
-    private static PremiumPlan CurrentPremiumPlan => new()
-    {
-        Name = "Premium",
-        Available = true,
-        LegacyYear = null,
-        Seat = new Purchasable { Price = 10M, StripePriceId = StripeConstants.Prices.PremiumAnnually },
-        Storage = new Purchasable { Price = 4M, StripePriceId = StripeConstants.Prices.StoragePlanPersonal }
-    };
 }

@@ -14,6 +14,7 @@ CREATE TABLE [dbo].[Cipher] (
     [Reprompt]       TINYINT          NULL,
     [Key]            VARCHAR(MAX)     NULL,
     [ArchivedDate]   DATETIME2 (7)    NULL,
+    [Archives]       NVARCHAR(MAX)    NULL,
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Cipher_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Cipher_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

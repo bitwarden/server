@@ -18,7 +18,8 @@
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ArchivedDate DATETIME2(7) = NULL
+    @ArchivedDate DATETIME2(7) = NULL,
+    @Archives NVARCHAR(MAX) = NULL -- not used
 AS
 BEGIN
     SET NOCOUNT ON
@@ -51,13 +52,21 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
+        [Archives] =
+            CASE
+            WHEN @ArchivedDate IS NOT NULL AND [Archives] IS NULL THEN
+                CONCAT('{', @UserIdKey, ':"', CONVERT(NVARCHAR(30), @ArchivedDate, 127), '"}')
+            WHEN @ArchivedDate IS NOT NULL THEN
+                JSON_MODIFY([Archives], @UserIdPath, CONVERT(NVARCHAR(30), @ArchivedDate, 127))
+            ELSE
+                JSON_MODIFY([Archives], @UserIdPath, NULL)
+            END,
         [Attachments] = @Attachments,
         [Reprompt] = @Reprompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
-        [Key] = @Key,
-        [ArchivedDate] = @ArchivedDate
+        [Key] = @Key
     WHERE
         [Id] = @Id
 

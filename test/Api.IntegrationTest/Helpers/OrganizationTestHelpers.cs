@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -152,6 +153,30 @@ public static class OrganizationTestHelpers
     }
 
     /// <summary>
+    /// Creates a collection with optional user and group associations.
+    /// </summary>
+    public static async Task<Collection> CreateCollectionAsync(
+        ApiApplicationFactory factory,
+        Guid organizationId,
+        string name,
+        IEnumerable<CollectionAccessSelection>? users = null,
+        IEnumerable<CollectionAccessSelection>? groups = null,
+        string? externalId = null)
+    {
+        var collectionRepository = factory.GetService<ICollectionRepository>();
+        var collection = new Collection
+        {
+            OrganizationId = organizationId,
+            Name = name,
+            Type = CollectionType.SharedCollection,
+            ExternalId = externalId
+        };
+
+        await collectionRepository.CreateAsync(collection, groups, users);
+        return collection;
+    }
+
+    /// <summary>
     /// Enables the Organization Data Ownership policy for the specified organization.
     /// </summary>
     public static async Task EnableOrganizationDataOwnershipPolicyAsync<T>(
@@ -168,6 +193,15 @@ public static class OrganizationTestHelpers
         };
 
         await policyRepository.CreateAsync(policy);
+    }
+
+    /// <summary>
+    /// Generates a unique random domain name for testing purposes.
+    /// </summary>
+    /// <returns>A domain string like "a1b2c3d4.com"</returns>
+    public static string GenerateRandomDomain()
+    {
+        return $"{Guid.NewGuid().ToString("N").Substring(0, 8)}.com";
     }
 
     /// <summary>
@@ -191,5 +225,38 @@ public static class OrganizationTestHelpers
             OrganizationUserType.User, externalId: email);
 
         return (user, organizationUser);
+    }
+
+    public static async Task<OrganizationUser> CreateStagedUserAsync(
+        ApiApplicationFactory factory,
+        Organization organization,
+        string email,
+        string? externalId = null)
+    {
+        var command = factory.GetService<ICreateStagedOrganizationUsersCommand>();
+
+        var result = await command.RunAsync(new CreateStagedOrganizationUsersRequest
+        {
+            Organization = organization,
+            Users = [new StagedOrganizationUserRequest { Email = email, ExternalId = externalId ?? $"external-{email}" }],
+            EventSystemUser = EventSystemUser.SCIM
+        });
+
+        return result.AsSuccess.Single();
+    }
+
+    /// <summary>
+    /// Puts the organization on a seat limit with gateway identifiers, so seat autoscaling runs its real
+    /// billing path instead of short-circuiting on a missing subscription.
+    /// </summary>
+    public static async Task SetSeatsAsync(
+        ApiApplicationFactory factory, Organization organization, int seats, int? maxAutoscaleSeats)
+    {
+        organization.Seats = seats;
+        organization.MaxAutoscaleSeats = maxAutoscaleSeats;
+        organization.Gateway = GatewayType.Stripe;
+        organization.GatewayCustomerId = "cus_integration_test";
+        organization.GatewaySubscriptionId = "sub_integration_test";
+        await factory.GetService<IOrganizationRepository>().ReplaceAsync(organization);
     }
 }

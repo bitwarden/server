@@ -108,7 +108,7 @@ Press <Enter> to continue."
     fi
 
     run_mssql_migrations="$(get_option "RUN_MSSQL_MIGRATIONS" "Would you like us to run MSSQL Migrations for you? [y/N] " "n")"
-    if [[ "$do_azurite_setup" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+    if [[ "$run_mssql_migrations" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
         echo "Running migrations..."
         sleep 5 # wait for DB container to start
         dotnet run --project "$REPO_ROOT/util/MsSqlMigratorUtility" "$SQL_CONNECTION_STRING"

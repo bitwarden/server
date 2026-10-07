@@ -33,7 +33,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Email = user.Email;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
-        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(user.ResetPasswordKey);
     }
 
     [SetsRequiredMembers]
@@ -52,7 +52,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
-        ResetPasswordEnrolled = !string.IsNullOrWhiteSpace(user.ResetPasswordKey);
+        ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(user.ResetPasswordKey);
         SsoExternalId = user.SsoExternalId;
     }
 

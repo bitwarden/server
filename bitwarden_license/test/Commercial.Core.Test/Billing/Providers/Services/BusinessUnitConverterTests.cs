@@ -18,6 +18,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
@@ -71,8 +72,9 @@ public class BusinessUnitConverterTests
         string organizationKey)
     {
         organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.UseSecretsManager = false;
 
-        var enterpriseAnnually2020 = StaticStore.GetPlan(PlanType.EnterpriseAnnually2020);
+        var enterpriseAnnually2020 = MockPlans.Get(PlanType.EnterpriseAnnually2020);
 
         var subscription = new Subscription
         {
@@ -134,7 +136,7 @@ public class BusinessUnitConverterTests
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020)
             .Returns(enterpriseAnnually2020);
 
-        var enterpriseAnnually = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var enterpriseAnnually = MockPlans.Get(PlanType.EnterpriseAnnually);
 
         _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually)
             .Returns(enterpriseAnnually);
@@ -143,11 +145,11 @@ public class BusinessUnitConverterTests
 
         await businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey);
 
-        await _stripeAdapter.Received(2).CustomerUpdateAsync(subscription.CustomerId, Arg.Any<CustomerUpdateOptions>());
+        await _stripeAdapter.Received(2).UpdateCustomerAsync(subscription.CustomerId, Arg.Any<CustomerUpdateOptions>());
 
         var updatedPriceId = ProviderPriceAdapter.GetActivePriceId(provider, enterpriseAnnually.Type);
 
-        await _stripeAdapter.Received(1).SubscriptionUpdateAsync(subscription.Id, Arg.Is<SubscriptionUpdateOptions>(
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(subscription.Id, Arg.Is<SubscriptionUpdateOptions>(
             arguments =>
                 arguments.Items.Count == 2 &&
                 arguments.Items[0].Id == "subscription_item_id" &&
@@ -158,6 +160,7 @@ public class BusinessUnitConverterTests
         await _organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
+            arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&
             arguments.GatewayCustomerId == null &&
             arguments.GatewaySubscriptionId == null));
 
@@ -205,6 +208,25 @@ public class BusinessUnitConverterTests
             .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
+    [Theory, BitAutoData]
+    public async Task FinalizeConversion_OrganizationUsesSecretsManager_ThrowsBillingException(
+        Organization organization,
+        Guid userId,
+        string token,
+        string providerKey,
+        string organizationKey)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually2020;
+        organization.UseSecretsManager = true;
+
+        var businessUnitConverter = BuildConverter();
+
+        await Assert.ThrowsAsync<BillingException>(() =>
+            businessUnitConverter.FinalizeConversion(organization, userId, token, providerKey, organizationKey));
+
+        await _subscriberService.DidNotReceiveWithAnyArgs().GetSubscription(Arg.Any<Organization>());
+    }
+
     #endregion
 
     #region InitiateConversion
@@ -215,6 +237,7 @@ public class BusinessUnitConverterTests
         string providerAdminEmail)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = false;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -242,7 +265,7 @@ public class BusinessUnitConverterTests
             argument.Status == ProviderStatusType.Pending &&
             argument.Type == ProviderType.BusinessUnit)).Returns(provider);
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = MockPlans.Get(organization.PlanType);
 
         _pricingClient.GetPlanOrThrow(organization.PlanType).Returns(plan);
 
@@ -291,6 +314,7 @@ public class BusinessUnitConverterTests
         string providerAdminEmail)
     {
         organization.PlanType = PlanType.TeamsMonthly;
+        organization.UseSecretsManager = true;
 
         _subscriberService.GetSubscription(organization).Returns(new Subscription
         {
@@ -323,11 +347,52 @@ public class BusinessUnitConverterTests
 
         Assert.Contains("Organization must be on an enterprise plan.", problems);
 
+        Assert.Contains("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.", problems);
+
         Assert.Contains("Organization must have a valid subscription.", problems);
 
         Assert.Contains("Organization is already linked to a provider.", problems);
 
         Assert.Contains("Provider admin must be a confirmed member of the organization being converted.", problems);
+    }
+
+    [Theory, BitAutoData]
+    public async Task InitiateConversion_OrganizationUsesSecretsManager_ReturnsError(
+        Organization organization,
+        string providerAdminEmail)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = true;
+
+        _subscriberService.GetSubscription(organization).Returns(new Subscription
+        {
+            Status = StripeConstants.SubscriptionStatus.Active
+        });
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = providerAdminEmail
+        };
+
+        _userRepository.GetByEmailAsync(providerAdminEmail).Returns(user);
+
+        var organizationUser = new OrganizationUser { Status = OrganizationUserStatusType.Confirmed };
+
+        _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id)
+            .Returns(organizationUser);
+
+        var businessUnitConverter = BuildConverter();
+
+        var result = await businessUnitConverter.InitiateConversion(organization, providerAdminEmail);
+
+        Assert.True(result.IsT1);
+
+        var problems = result.AsT1;
+
+        Assert.Contains("Organization is subscribed to Secrets Manager. Please contact Customer Support to convert this organization to a business unit.", problems);
+
+        await _providerRepository.DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<Provider>());
     }
 
     #endregion

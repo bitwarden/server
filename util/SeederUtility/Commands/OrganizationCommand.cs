@@ -1,0 +1,53 @@
+﻿using Bit.Seeder.Recipes;
+using Bit.SeederUtility.Configuration;
+using Bit.SeederUtility.Helpers;
+using CommandDotNet;
+
+namespace Bit.SeederUtility.Commands;
+
+[Command("organization", Description = "Seed an organization with users and optional vault data (ciphers, collections, groups)")]
+public class OrganizationCommand
+{
+    [DefaultCommand]
+    public async Task ExecuteAsync(OrganizationArgs args)
+    {
+        try
+        {
+            args.Validate();
+
+            using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+
+            var result = await ConsoleProgressReporter.RunWithProgressAsync(
+                deps.ToDependencies(),
+                d => new OrganizationRecipe(d).SeedAsync(args.ToOptions()));
+
+            ConsoleOutput.PrintRow("Organization", result.OrganizationId);
+            if (result.OwnerEmail is not null)
+            {
+                ConsoleOutput.PrintRow("Owner", result.OwnerEmail);
+            }
+            ConsoleOutput.PrintRow("Password", result.Password);
+            if (result.ApiKey is not null)
+            {
+                ConsoleOutput.PrintRow("ApiKey", result.ApiKey);
+            }
+            ConsoleOutput.PrintCountRow("Users", result.UsersCount);
+            ConsoleOutput.PrintCountRow("Groups", result.GroupsCount);
+            ConsoleOutput.PrintCountRow("Collections", result.CollectionsCount);
+            ConsoleOutput.PrintCountRow("Ciphers", result.CiphersCount);
+
+            if (args.StripeBilling)
+            {
+                ConsoleOutput.PrintRow("StripeCustomer", result.GatewayCustomerId);
+                ConsoleOutput.PrintRow("StripeSubscription", result.GatewaySubscriptionId);
+            }
+
+            ConsoleOutput.PrintMangleMap(deps);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            await Console.Error.WriteLineAsync($"Error: {ex}");
+            Environment.Exit(1);
+        }
+    }
+}

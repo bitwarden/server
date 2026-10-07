@@ -10,7 +10,7 @@ BEGIN
         [dbo].[OrganizationUserView]
     WHERE
         OrganizationId = @OrganizationId
-        AND Status >= 0 --Invited
+        AND Status IN (0, 1, 2) -- Invited, Accepted, Confirmed
         AND AccessSecretsManager = 1
 END
 GO

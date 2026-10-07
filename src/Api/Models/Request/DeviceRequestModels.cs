@@ -26,7 +26,9 @@ public class DeviceRequestModel
     {
         return ToDevice(new Device
         {
-            UserId = userId == null ? default(Guid) : userId.Value
+            UserId = userId == null ? default(Guid) : userId.Value,
+            // Device creation counts as first activity.
+            LastActivityDate = DateTime.UtcNow,
         });
     }
 

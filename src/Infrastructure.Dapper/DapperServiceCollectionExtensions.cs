@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.Repositories;
 using Bit.Core.Billing.Providers.Repositories;
+using Bit.Core.Billing.Subscriptions.Repositories;
 using Bit.Core.Dirt.Reports.Repositories;
 using Bit.Core.Dirt.Repositories;
 using Bit.Core.KeyManagement.Repositories;
@@ -15,6 +17,7 @@ using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.Dapper.Billing.Repositories;
 using Bit.Infrastructure.Dapper.Dirt;
+using Bit.Infrastructure.Dapper.Dirt.Repositories;
 using Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 using Bit.Infrastructure.Dapper.NotificationCenter.Repositories;
 using Bit.Infrastructure.Dapper.Platform;
@@ -22,6 +25,7 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
+using Bit.Pam.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.Dapper;
@@ -50,6 +54,12 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
+        services.AddSingleton<IOrganizationInviteLinkRepository, OrganizationInviteLinkRepository>();
+        services.AddSingleton<IAccessRuleRepository, Pam.Repositories.AccessRuleRepository>();
+        services.AddSingleton<IAccessRequestRepository, Pam.Repositories.AccessRequestRepository>();
+        services.AddSingleton<IAccessLeaseRepository, Pam.Repositories.AccessLeaseRepository>();
+        services.AddSingleton<IAccessAuditEventRepository, Pam.Repositories.AccessAuditEventRepository>();
+        services.AddSingleton<IPlayItemRepository, PlayItemRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();
@@ -63,6 +73,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IWebAuthnCredentialRepository, WebAuthnCredentialRepository>();
         services.AddSingleton<IProviderPlanRepository, ProviderPlanRepository>();
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
+        services.AddSingleton<ISubscriptionDiscountRepository, SubscriptionDiscountRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
         services
@@ -71,9 +82,12 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
         services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortRepository, OrganizationPlanMigrationCohortRepository>();
+        services.AddSingleton<IOrganizationPlanMigrationCohortAssignmentRepository, OrganizationPlanMigrationCohortAssignmentRepository>();
         services.AddSingleton<IUserSignatureKeyPairRepository, UserSignatureKeyPairRepository>();
         services.AddSingleton<IOrganizationReportRepository, OrganizationReportRepository>();
         services.AddSingleton<IOrganizationApplicationRepository, OrganizationApplicationRepository>();
+        services.AddSingleton<IOrganizationDeleteTaskRepository, OrganizationDeleteTaskRepository>();
         services.AddSingleton<IOrganizationMemberBaseDetailRepository, OrganizationMemberBaseDetailRepository>();
 
         if (selfHosted)

@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
-using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Core.Enums;
 using Xunit;
 

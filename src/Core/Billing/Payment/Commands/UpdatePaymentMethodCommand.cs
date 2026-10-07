@@ -1,8 +1,8 @@
-﻿using Bit.Core.Billing.Caches;
-using Bit.Core.Billing.Commands;
+﻿using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -24,9 +24,9 @@ public interface IUpdatePaymentMethodCommand
 
 public class UpdatePaymentMethodCommand(
     IBraintreeGateway braintreeGateway,
+    IBraintreeService braintreeService,
     IGlobalSettings globalSettings,
     ILogger<UpdatePaymentMethodCommand> logger,
-    ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : BaseBillingCommand<UpdatePaymentMethodCommand>(logger), IUpdatePaymentMethodCommand
 {
@@ -56,7 +56,7 @@ public class UpdatePaymentMethodCommand(
 
         if (billingAddress != null && customer.Address is not { Country: not null, PostalCode: not null })
         {
-            await stripeAdapter.CustomerUpdateAsync(customer.Id,
+            await stripeAdapter.UpdateCustomerAsync(customer.Id,
                 new CustomerUpdateOptions
                 {
                     Address = new AddressOptions
@@ -75,7 +75,7 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        var setupIntents = await stripeAdapter.SetupIntentList(new SetupIntentListOptions
+        var setupIntents = await stripeAdapter.ListSetupIntentsAsync(new SetupIntentListOptions
         {
             Expand = ["data.payment_method"],
             PaymentMethod = token
@@ -93,7 +93,10 @@ public class UpdatePaymentMethodCommand(
 
         var setupIntent = setupIntents.First();
 
-        await setupIntentCache.Set(subscriber.Id, setupIntent.Id);
+        await stripeAdapter.UpdateSetupIntentAsync(setupIntent.Id,
+            new SetupIntentUpdateOptions { Customer = customer.Id });
+
+        _logger.LogInformation("{Command}: Successfully linked Setup Intent ({SetupIntentId}) to customer ({CustomerId}) for subscriber ({SubscriberID})", CommandName, setupIntent.Id, customer.Id, subscriber.Id);
 
         await UnlinkBraintreeCustomerAsync(customer);
 
@@ -104,9 +107,9 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        var paymentMethod = await stripeAdapter.PaymentMethodAttachAsync(token, new PaymentMethodAttachOptions { Customer = customer.Id });
+        var paymentMethod = await stripeAdapter.AttachPaymentMethodAsync(token, new PaymentMethodAttachOptions { Customer = customer.Id });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id,
+        await stripeAdapter.UpdateCustomerAsync(customer.Id,
             new CustomerUpdateOptions
             {
                 InvoiceSettings = new CustomerInvoiceSettingsOptions { DefaultPaymentMethod = token }
@@ -122,12 +125,10 @@ public class UpdatePaymentMethodCommand(
         Customer customer,
         string token)
     {
-        Braintree.Customer braintreeCustomer;
+        var braintreeCustomer = await braintreeService.GetCustomer(customer);
 
-        if (customer.Metadata.TryGetValue(StripeConstants.MetadataKeys.BraintreeCustomerId, out var braintreeCustomerId))
+        if (braintreeCustomer != null)
         {
-            braintreeCustomer = await braintreeGateway.Customer.FindAsync(braintreeCustomerId);
-
             await ReplaceBraintreePaymentMethodAsync(braintreeCustomer, token);
         }
         else
@@ -139,7 +140,25 @@ public class UpdatePaymentMethodCommand(
                 [StripeConstants.MetadataKeys.BraintreeCustomerId] = braintreeCustomer.Id
             };
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+        }
+
+        // If the subscriber has an incomplete subscription, pay the invoice with the new PayPal payment method
+        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        {
+            var subscription = await stripeAdapter.GetSubscriptionAsync(subscriber.GatewaySubscriptionId);
+
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+            {
+                var invoice = await stripeAdapter.UpdateInvoiceAsync(subscription.LatestInvoiceId,
+                    new InvoiceUpdateOptions
+                    {
+                        AutoAdvance = false,
+                        Expand = ["customer"]
+                    });
+
+                await braintreeService.PayInvoice(new UserId(subscriber.Id), invoice);
+            }
         }
 
         var payPalAccount = braintreeCustomer.DefaultPaymentMethod as PayPalAccount;
@@ -204,7 +223,7 @@ public class UpdatePaymentMethodCommand(
                 [StripeConstants.MetadataKeys.BraintreeCustomerId] = string.Empty
             };
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
+            await stripeAdapter.UpdateCustomerAsync(customer.Id, new CustomerUpdateOptions { Metadata = metadata });
         }
     }
 }

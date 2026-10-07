@@ -3,8 +3,8 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Payment.Models;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -20,8 +20,11 @@ public interface IUpdateBillingAddressCommand
 public class UpdateBillingAddressCommand(
     ILogger<UpdateBillingAddressCommand> logger,
     ISubscriberService subscriberService,
-    IStripeAdapter stripeAdapter) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : BaseBillingCommand<UpdateBillingAddressCommand>(logger), IUpdateBillingAddressCommand
 {
+    private readonly ILogger<UpdateBillingAddressCommand> _logger = logger;
+
     protected override Conflict DefaultConflict =>
         new("We had a problem updating your billing address. Please contact support for assistance.");
 
@@ -46,7 +49,7 @@ public class UpdateBillingAddressCommand(
         BillingAddress billingAddress)
     {
         var customer =
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+            await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId,
                 new CustomerUpdateOptions
                 {
                     Address = new AddressOptions
@@ -58,7 +61,7 @@ public class UpdateBillingAddressCommand(
                         City = billingAddress.City,
                         State = billingAddress.State
                     },
-                    Expand = ["subscriptions"]
+                    Expand = ["subscriptions", "subscriptions.data.test_clock", "subscriptions.data.discounts.source", "discount.source.coupon"]
                 });
 
         await EnableAutomaticTaxAsync(subscriber, customer);
@@ -70,29 +73,26 @@ public class UpdateBillingAddressCommand(
         ISubscriber subscriber,
         BillingAddress billingAddress)
     {
-        var customer =
-            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
-                new CustomerUpdateOptions
-                {
-                    Address = new AddressOptions
-                    {
-                        Country = billingAddress.Country,
-                        PostalCode = billingAddress.PostalCode,
-                        Line1 = billingAddress.Line1,
-                        Line2 = billingAddress.Line2,
-                        City = billingAddress.City,
-                        State = billingAddress.State
-                    },
-                    Expand = ["subscriptions", "tax_ids"],
-                    TaxExempt = billingAddress.Country != Core.Constants.CountryAbbreviations.UnitedStates
-                        ? StripeConstants.TaxExempt.Reverse
-                        : StripeConstants.TaxExempt.None
-                });
+        var updateOptions = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = billingAddress.Country,
+                PostalCode = billingAddress.PostalCode,
+                Line1 = billingAddress.Line1,
+                Line2 = billingAddress.Line2,
+                City = billingAddress.City,
+                State = billingAddress.State
+            },
+            Expand = ["subscriptions", "subscriptions.data.test_clock", "subscriptions.data.discounts.source", "tax_ids", "discount.source.coupon"]
+        };
+
+        var customer = await stripeAdapter.UpdateCustomerAsync(subscriber.GatewayCustomerId, updateOptions);
 
         await EnableAutomaticTaxAsync(subscriber, customer);
 
         var deleteExistingTaxIds = customer.TaxIds?.Any() ?? false
-            ? customer.TaxIds.Select(taxId => stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id)).ToList()
+            ? customer.TaxIds.Select(taxId => stripeAdapter.DeleteTaxIdAsync(customer.Id, taxId.Id)).ToList()
             : [];
 
         if (billingAddress.TaxId == null)
@@ -101,12 +101,23 @@ public class UpdateBillingAddressCommand(
             return BillingAddress.From(customer.Address);
         }
 
-        var updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
-            new TaxIdCreateOptions { Type = billingAddress.TaxId.Code, Value = billingAddress.TaxId.Value });
+        var derivedTaxIdCode = taxService.GetStripeTaxCode(billingAddress.Country, billingAddress.TaxId.Value);
 
-        if (billingAddress.TaxId.Code == StripeConstants.TaxIdType.SpanishNIF)
+        if (derivedTaxIdCode == null)
         {
-            updatedTaxId = await stripeAdapter.TaxIdCreateAsync(customer.Id,
+            _logger.LogWarning(
+                "Could not derive Stripe tax ID type for country {Country}; falling back to client-supplied type {TaxIdType}",
+                billingAddress.Country, billingAddress.TaxId.Code);
+        }
+
+        var taxIdCode = derivedTaxIdCode ?? billingAddress.TaxId.Code;
+
+        var updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
+            new TaxIdCreateOptions { Type = taxIdCode, Value = billingAddress.TaxId.Value });
+
+        if (taxIdCode == StripeConstants.TaxIdType.SpanishNIF)
+        {
+            updatedTaxId = await stripeAdapter.CreateTaxIdAsync(customer.Id,
                 new TaxIdCreateOptions
                 {
                     Type = StripeConstants.TaxIdType.EUVAT,
@@ -130,7 +141,76 @@ public class UpdateBillingAddressCommand(
 
             if (subscription is { AutomaticTax.Enabled: false })
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                var schedules = await stripeAdapter.ListSubscriptionSchedulesAsync(
+                    new SubscriptionScheduleListOptions { Customer = subscription.CustomerId });
+
+                var activeSchedule = schedules.Data.FirstOrDefault(s =>
+                    s.SubscriptionId == subscription.Id
+                    && s.Status == StripeConstants.SubscriptionScheduleStatus.Active);
+
+                if (activeSchedule != null)
+                {
+                    var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+                    // subscription.Customer may be a bare id here (it comes from the customer's
+                    // expanded subscriptions list); assign the already-fetched customer so the
+                    // shared builder can read the customer-level coupon.
+                    subscription.Customer = customer;
+
+                    DiscountExtensions.RequireScheduleDiscountExpansions(subscription, _logger);
+
+                    var phases = new List<SubscriptionSchedulePhaseOptions>();
+
+                    foreach (var phase in activeSchedule.Phases)
+                    {
+                        if (phase.EndDate <= now)
+                        {
+                            continue;
+                        }
+
+                        var isFuture = phase.StartDate > now;
+
+                        phases.Add(new SubscriptionSchedulePhaseOptions
+                        {
+                            StartDate = phase.StartDate,
+                            EndDate = phase.EndDate,
+                            TrialEnd = phase.TrialEnd,
+                            Items = phase.Items.Select(item => new SubscriptionSchedulePhaseItemOptions
+                            {
+                                Price = item.PriceId,
+                                Quantity = item.Quantity,
+                                Discounts = DiscountExtensions.BuildPhaseItemLevelDiscounts(
+                                    item.Discounts?.Select(d => d.CouponId) ?? [])
+                            }).ToList(),
+                            Discounts = isFuture
+                                ? DiscountExtensions.BuildPhaseLevelDiscounts(
+                                    subscription, [], preservedCouponIds: phase.Discounts?.Select(d => d.CouponId))
+                                : DiscountExtensions.BuildCurrentPhaseDiscounts(subscription),
+                            Metadata = phase.Metadata,
+                            ProrationBehavior = phase.ProrationBehavior,
+                            AutomaticTax = new SubscriptionSchedulePhaseAutomaticTaxOptions
+                            {
+                                Enabled = true
+                            }
+                        });
+                    }
+
+                    await stripeAdapter.UpdateSubscriptionScheduleAsync(activeSchedule.Id,
+                        new SubscriptionScheduleUpdateOptions
+                        {
+                            DefaultSettings = new SubscriptionScheduleDefaultSettingsOptions
+                            {
+                                AutomaticTax = new SubscriptionScheduleDefaultSettingsAutomaticTaxOptions
+                                {
+                                    Enabled = true
+                                }
+                            },
+                            Phases = phases
+                        });
+                    return;
+                }
+
+                await stripeAdapter.UpdateSubscriptionAsync(subscriber.GatewaySubscriptionId,
                     new SubscriptionUpdateOptions
                     {
                         AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
