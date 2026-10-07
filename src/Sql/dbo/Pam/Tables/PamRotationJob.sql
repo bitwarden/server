@@ -1,6 +1,6 @@
 -- One rotation offer per config (AtMostOneActiveJobPerConfig).
--- Claim fields clear on every write that ends a claim; a timeout writes nothing, so a timed-out claim keeps them.
--- ExpiresAt is persisted at creation so the timeout sweep is a plain range scan.
+-- Claim fields clear on every write that ends a claim; a timeout writes nothing, so they stay set.
+-- ExpiresAt is persisted so the timeout sweep is a plain range scan.
 CREATE TABLE [dbo].[PamRotationJob] (
     [Id]                            UNIQUEIDENTIFIER    NOT NULL,
     [RotationConfigId]              UNIQUEIDENTIFIER    NOT NULL,

@@ -33,7 +33,6 @@ public class PamRotationJobRepositoryTests
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
 
-        // A second offer for the same config must be refused as ActiveJobExists.
         var second = BuildPendingJob(fixture.Config.Id, fixture.Now);
         Assert.Equal(PamRotationJobCreateOutcome.ActiveJobExists,
             await pamRotationJobRepository.CreateGuardedAsync(second));
@@ -119,7 +118,6 @@ public class PamRotationJobRepositoryTests
         Assert.Null(await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id));
     }
 
-    // First-claim-wins under real contention: two access connectors race the same Pending job.
     [DatabaseTheory, DatabaseData]
     public async Task ClaimAsync_ConcurrentDoubleClaim_ExactlyOneWinner(
         IOrganizationRepository organizationRepository,
@@ -147,7 +145,6 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationClaimOutcome.NotClaimable, loser.Outcome);
         Assert.Null(loser.AttemptId);
 
-        // The winner's snapshot is fully populated, including the claim lease's deadline.
         Assert.NotNull(winner.AttemptId);
         Assert.Equal(fixture.Job.Id, winner.JobId);
         Assert.Equal(PamRotationSource.Scheduled, winner.Source);
@@ -160,7 +157,6 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Config.TerminateSessions, winner.TerminateSessions);
         Assert.Equal(claimNow.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
-        // The job records the winning claim, and ExecuteBy is the claimed-at instant plus the release delay.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Claimed, job!.Action);
         Assert.NotNull(job.ClaimedByAccessConnectorId);
@@ -168,7 +164,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(
             job.ClaimedAt!.Value.Add(_releaseDelay), winner.ExecuteBy!.Value, LaxDateTimeComparer.Default);
 
-        // AtMostOneInFlightAttemptPerJob: only the winner's attempt row was inserted.
+        // AtMostOneInFlightAttemptPerJob
         var details = Assert.Single(
             await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, fixture.Now));
         var attempt = Assert.Single(details.Attempts);
@@ -177,7 +173,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptAction.None, attempt.Action);
     }
 
-    // Defense in depth: a forged cross-org assignment must not let the foreign access connector claim.
+    // Backs up the assign command, which already refuses a cross-org assignment.
     [DatabaseTheory, DatabaseData]
     public async Task ClaimAsync_CrossOrganizationAccessConnectorWithForgedAssignment_NotEligibleAndZeroEffect(
         IOrganizationRepository organizationRepository,
@@ -193,7 +189,6 @@ public class PamRotationJobRepositoryTests
         var foreignOrganization = await organizationRepository.CreateTestOrganizationAsync();
         var foreignAccessConnector = await CreateEnrolledAccessConnectorAsync(
             apiKeyRepository, pamAccessConnectorRepository, foreignOrganization.Id);
-        // Forge the cross-org assignment directly at the repository layer.
         await AssignAsync(
             pamAccessConnectorRepository, foreignAccessConnector.Id, fixture.Target.Id, foreignOrganization.Id,
             fixture.Now);
@@ -204,7 +199,6 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationClaimOutcome.NotEligible, result.Outcome);
         Assert.Null(result.AttemptId);
 
-        // Zero effect: the job is untouched and no attempt row exists.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
@@ -213,7 +207,7 @@ public class PamRotationJobRepositoryTests
             await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, fixture.Now));
         Assert.Empty(details.Attempts);
 
-        // The poll re-derives the same org join, so the foreign access connector never even sees the job.
+        // The poll applies the same org join, so the foreign connector never sees the job.
         Assert.Empty(await pamRotationJobRepository.GetManyClaimableByAccessConnectorIdAsync(
             foreignAccessConnector.Id, fixture.Now));
     }
@@ -230,7 +224,6 @@ public class PamRotationJobRepositoryTests
     {
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
-        // Same org, enrolled, but never assigned to the target.
         var unassigned = await CreateEnrolledAccessConnectorAsync(
             apiKeyRepository, pamAccessConnectorRepository, fixture.Organization.Id);
 
@@ -260,7 +253,7 @@ public class PamRotationJobRepositoryTests
         var result = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
 
-        // The access connector is fully eligible; the job itself is just not claimable yet (still in backoff).
+        // The connector is eligible and the job is in backoff, so NotClaimable rather than NotEligible.
         Assert.Equal(PamRotationClaimOutcome.NotClaimable, result.Outcome);
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
@@ -288,7 +281,6 @@ public class PamRotationJobRepositoryTests
                 fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay))
             .Outcome);
 
-        // Re-enable the config but disable the target: still held, for the same reason.
         fixture.Config.Enabled = true;
         await pamRotationConfigRepository.ReplaceAsync(fixture.Config);
         fixture.Target.Status = PamTargetSystemStatus.Disabled;
@@ -298,7 +290,6 @@ public class PamRotationJobRepositoryTests
                 fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay))
             .Outcome);
 
-        // Neither refusal touched the job or created an attempt.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.None, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
@@ -358,13 +349,12 @@ public class PamRotationJobRepositoryTests
 
         Assert.Equal(PamRotationCipherWriteOutcome.Accepted, outcome);
 
-        // The cipher's Data was replaced and its RevisionDate bumped to the write time.
         var cipher = await cipherRepository.GetByIdAsync(fixture.Cipher.Id);
         Assert.NotNull(cipher);
         Assert.Equal(rotatedData, cipher!.Data);
         Assert.Equal(writeNow, cipher.RevisionDate, LaxDateTimeComparer.Default);
 
-        // The attempt records the accepted write; it stays unreported until the success report.
+        // The attempt stays unreported until the success report.
         var attempt = await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId.Value);
         Assert.True(attempt!.CipherUpdated);
         Assert.Equal(PamRotationAttemptAction.None, attempt.Action);
@@ -424,7 +414,7 @@ public class PamRotationJobRepositoryTests
         Assert.False(attempt!.CipherUpdated);
     }
 
-    // A drift wider than int.MaxValue overflows MSSQL's DATEDIFF, diverging from EF providers.
+    // 60 days exceeds int.MaxValue milliseconds, which overflows a plain DATEDIFF on MSSQL.
     [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_DriftBeyondDateDiffIntRange_RevisionMismatch(
         IOrganizationRepository organizationRepository,
@@ -451,7 +441,6 @@ public class PamRotationJobRepositoryTests
         Assert.False(attempt!.CipherUpdated);
     }
 
-    // After the release sweep reclaims the job, the access connector's late write must be refused.
     [DatabaseTheory, DatabaseData]
     public async Task AcceptCipherWriteAsync_AfterJobReleased_Rejected(
         IOrganizationRepository organizationRepository,
@@ -471,7 +460,7 @@ public class PamRotationJobRepositoryTests
             fixture.Job.Id, fixture.AccessConnector.Id, claimTime, _releaseDelay);
         Assert.Equal(PamRotationClaimOutcome.Claimed, claim.Outcome);
 
-        // The access connector never heartbeats, so by `now` it is stale and its expired lease is released.
+        // The connector never heartbeats, so by `now` it is stale and its expired lease is released.
         var released = await pamRotationJobRepository.ReleaseExpiredLeasesAsync(now, _offlineAfter, _releaseDelay);
         Assert.Contains(released, r => r.JobId == fixture.Job.Id);
 
@@ -498,7 +487,7 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
 
-        // VerifiedBeforeSuccess: a success report with no accepted cipher write cannot resolve the attempt.
+        // VerifiedBeforeSuccess
         var outcome = await pamRotationJobRepository.MarkAttemptRotatedAsync(
             claim.AttemptId!.Value, fixture.AccessConnector.Id, PamSessionTerminationOutcome.NotRequested, fixture.Now);
 
@@ -536,10 +525,9 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptAction.Rotated, attempt!.Action);
         Assert.Equal(PamSessionTerminationOutcome.Terminated, attempt.SessionTermination);
         Assert.Equal(resolveNow, attempt.ResolvedDate.Value, LaxDateTimeComparer.Default);
-        // The attempt keeps the executing access connector's identity permanently...
+        // The attempt keeps the claimant permanently, while the job clears its claim fields.
         Assert.Equal(fixture.AccessConnector.Id, attempt.ClaimedByAccessConnectorId);
 
-        // ...while the job leaves Claimed with its claim fields nulled.
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Succeeded, job!.Action);
         Assert.Null(job.ClaimedByAccessConnectorId);
@@ -632,7 +620,6 @@ public class PamRotationJobRepositoryTests
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
 
-        // maxAttempts = 1: this first errored attempt already exhausts the budget.
         var result = await pamRotationJobRepository.MarkAttemptErroredAsync(
             claim.AttemptId!.Value, fixture.AccessConnector.Id, "still unreachable", PamRotationSyncState.Indeterminate,
             fixture.Now, maxAttempts: 1, TimeSpan.FromSeconds(60));
@@ -647,7 +634,6 @@ public class PamRotationJobRepositoryTests
         Assert.Null(job.ClaimedAt);
     }
 
-    // Abandoned attempts are never charged against the retry budget.
     [DatabaseTheory, DatabaseData]
     public async Task MarkAttemptErroredAsync_AbandonedAttemptsNotCounted(
         IOrganizationRepository organizationRepository,
@@ -664,7 +650,6 @@ public class PamRotationJobRepositoryTests
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
             now: firstClaimTime);
 
-        // First claim goes stale and is released -> its attempt derives as Abandoned.
         var firstClaim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, firstClaimTime, _releaseDelay);
         var released = await pamRotationJobRepository.ReleaseExpiredLeasesAsync(now, _offlineAfter, _releaseDelay);
@@ -758,7 +743,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationJobStatus.TimedOut, details.Status);
     }
 
-    // The journal, not a status flip, is what keeps the audit event and reschedule to a single firing.
+    // The journal, not a status flip, keeps the audit event and reschedule to a single firing.
     [DatabaseTheory, DatabaseData]
     public async Task TimeoutDueAsync_SecondRun_DoesNotReturnAlreadyRecordedJob(
         IOrganizationRepository organizationRepository,
@@ -806,12 +791,10 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.AccessConnector.Id, row.ClaimedByAccessConnectorId);
         Assert.Equal(1, row.AttemptCount);
 
-        // The stored claim is left as it was...
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
         Assert.Equal(PamRotationJobAction.Claimed, job!.Action);
         Assert.Equal(fixture.AccessConnector.Id, job.ClaimedByAccessConnectorId);
 
-        // ...while the read derives TimedOut, hides the claim, and ends the attempt at the deadline.
         var details = Assert.Single(await pamRotationJobRepository.GetManyByConfigIdAsync(fixture.Config.Id, now));
         Assert.Equal(PamRotationJobStatus.TimedOut, details.Status);
         Assert.Null(details.ClaimedByAccessConnectorId);
@@ -822,7 +805,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Job.ExpiresAt, attempt.ResolvedDate!.Value, LaxDateTimeComparer.Default);
     }
 
-    // Success wins: a Rotated attempt's job is never timed out, no matter its ExpiresAt.
+    // Success wins over an elapsed ExpiresAt.
     [DatabaseTheory, DatabaseData]
     public async Task TimeoutDueAsync_JobWithRotatedAttempt_NotTimedOut(
         IOrganizationRepository organizationRepository,
@@ -881,7 +864,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(fixture.Config.Id, row.RotationConfigId);
         Assert.Equal(fixture.Organization.Id, row.OrganizationId);
         Assert.Equal(fixture.Cipher.Id, row.CipherId);
-        // The pre-clear claimant survives on the audit row despite the job's own field clearing.
+        // The released row keeps the claimant that the job itself clears.
         Assert.Equal(fixture.AccessConnector.Id, row.ClaimedByAccessConnectorId);
 
         var job = await pamRotationJobRepository.GetByIdAsync(fixture.Job.Id);
@@ -910,7 +893,7 @@ public class PamRotationJobRepositoryTests
         IPamRotationJobRepository pamRotationJobRepository)
     {
         var now = DateTime.UtcNow;
-        var claimTime = now.Add(-_releaseDelay).AddMinutes(-5); // Lease expired...
+        var claimTime = now.Add(-_releaseDelay).AddMinutes(-5); // Lease expired.
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
             now: claimTime);
@@ -944,7 +927,7 @@ public class PamRotationJobRepositoryTests
         var fixture = await SeedClaimableJobAsync(organizationRepository, pamTargetSystemRepository, apiKeyRepository,
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository,
             now: now);
-        // Release fires at lease expiry, never merely at stale-heartbeat detection.
+        // Release fires at lease expiry, never at stale-heartbeat detection alone.
         var claim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, now, _releaseDelay);
 
@@ -957,7 +940,7 @@ public class PamRotationJobRepositoryTests
         Assert.Equal(PamRotationAttemptAction.None, attempt!.Action);
     }
 
-    // Success wins on the release path too: a Rotated attempt's job is never released.
+    // Success wins on the release path too.
     [DatabaseTheory, DatabaseData]
     public async Task ReleaseExpiredLeasesAsync_JobWithRotatedAttempt_NotReleased(
         IOrganizationRepository organizationRepository,
@@ -1033,7 +1016,7 @@ public class PamRotationJobRepositoryTests
             pamAccessConnectorRepository, cipherRepository, pamRotationConfigRepository, pamRotationJobRepository);
         var firstClaim = await pamRotationJobRepository.ClaimAsync(
             fixture.Job.Id, fixture.AccessConnector.Id, fixture.Now, _releaseDelay);
-        // Errored with budget left: the job goes back to Pending and its claim fields are cleared.
+        // Errored with budget left, so the job returns to Pending for the second connector.
         var errored = await pamRotationJobRepository.MarkAttemptErroredAsync(
             firstClaim.AttemptId!.Value, fixture.AccessConnector.Id, "target unreachable",
             PamRotationSyncState.TargetUnchanged, fixture.Now, maxAttempts: 5, TimeSpan.Zero);
@@ -1124,8 +1107,7 @@ public class PamRotationJobRepositoryTests
             now: older);
         await pamRotationJobRepository.ClaimAsync(fixture.Job.Id, fixture.AccessConnector.Id, older, _releaseDelay);
 
-        // AtMostOneActiveJobPerConfig is per-config; the access connector can still work a second config on the same
-        // target.
+        // AtMostOneActiveJobPerConfig, so the second job needs a second config on the same target.
         var newerCipher = await CreateCipherAsync(cipherRepository, fixture.Organization.Id);
         var newerConfig = await pamRotationConfigRepository.CreateAsync(
             BuildConfig(fixture.Organization.Id, newerCipher.Id, fixture.Target.Id, now));
@@ -1153,8 +1135,8 @@ public class PamRotationJobRepositoryTests
         DateTime Now);
 
     /// <summary>
-    /// Seeds the full eligibility graph for a claimable job: org, target, access connector, cipher, config, and job.
-    /// <paramref name="now"/> lets sweep tests place the graph in the past; defaults keep the job claimable now.
+    /// Seeds the full eligibility graph for a claimable job. <paramref name="now"/> lets sweep tests place it in the
+    /// past.
     /// </summary>
     private static async Task<ClaimableJobFixture> SeedClaimableJobAsync(
         IOrganizationRepository organizationRepository,

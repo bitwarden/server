@@ -4,11 +4,8 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// A <see cref="PamRotationJob"/> together with the <see cref="PamRotationAttempt"/> rows in scope for the read, oldest
-/// first — the read model behind the attempt-history displays, so the caller avoids an N+1 fetching each job's attempts
-/// individually. The config detail read (<c>GET configs/{id}</c>) puts every attempt in scope; the access connector
-/// detail read (<c>GET access connectors/{id}</c>) narrows <see cref="Attempts"/> to the ones that access connector
-/// recorded.
+/// A <see cref="PamRotationJob"/> with its attempts in scope for the read, oldest first. A config read includes every
+/// attempt; an access connector read includes only the ones that access connector recorded.
 /// </summary>
 public class PamRotationJobDetails : PamRotationJob
 {

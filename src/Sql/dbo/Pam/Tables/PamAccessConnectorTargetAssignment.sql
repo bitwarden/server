@@ -1,6 +1,6 @@
 -- Which access connector rotates which target (OneAssignmentPerConnectorTarget).
--- AccessConnectorId/TargetSystemId are NO ACTION; multiple cascade paths to Organization aren't allowed.
--- OrganizationId carries the only cascade; detach an assignment before deleting its access connector/target.
+-- Only OrganizationId cascades, as SQL Server rejects multiple cascade paths; delete an assignment before its
+-- access connector or target.
 CREATE TABLE [dbo].[PamAccessConnectorTargetAssignment] (
     [Id]                UNIQUEIDENTIFIER    NOT NULL,
     [AccessConnectorId] UNIQUEIDENTIFIER    NOT NULL,

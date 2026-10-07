@@ -3,9 +3,7 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// A <see cref="PamAccessConnector"/> together with its owning organization's licensing state, loaded by
-/// <c>PamAccessConnectorClientProvider</c> on every token request to decide whether the access connector may
-/// authenticate.
+/// A <see cref="PamAccessConnector"/> with its organization's licensing state, checked on every token request.
 /// </summary>
 public class PamAccessConnectorDetails : PamAccessConnector
 {

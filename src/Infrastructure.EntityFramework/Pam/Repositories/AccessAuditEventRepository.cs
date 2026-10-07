@@ -12,8 +12,8 @@ using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessAuditEvent;
 namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 /// <summary>
-/// Neither the write payload nor the read model is an <c>ITableObject</c>, so this derives from
-/// <see cref="BaseEntityFrameworkRepository"/> rather than <c>Repository&lt;,,&gt;</c> and maps both directions itself.
+/// Derives from <see cref="BaseEntityFrameworkRepository"/> rather than <c>Repository&lt;,,&gt;</c>, since neither the
+/// write payload nor the read model is an <c>ITableObject</c>.
 /// </summary>
 public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccessAuditEventRepository
 {
@@ -26,7 +26,7 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Frozen here as AccessAuditEvent_Create does with its LEFT JOINs.
+        // Snapshotted at write time, as AccessAuditEvent_Create does with its LEFT JOINs.
         var actor = await ReadUserAsync(dbContext, auditEvent.ActorId);
         var requester = await ReadUserAsync(dbContext, auditEvent.RequesterId);
 
@@ -89,8 +89,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 || (e.OccurredDate == beforeOccurredDate && e.Id.CompareTo(beforeId) < 0));
         }
 
-        // Expressed as "no further-along half exists" rather than as a GroupBy, because that is what translates to
-        // SQL on all three providers.
+        // Collapses each action's pair to its further-along half, as NOT EXISTS because a GroupBy does not translate
+        // on all three providers.
         query = query.Where(e => !dbContext.AccessAuditEvents.Any(p =>
             p.CorrelationId == e.CorrelationId
             && p.OrganizationId == organizationId

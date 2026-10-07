@@ -6,9 +6,8 @@ using Quartz;
 namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
-/// Quartz entry point for <see cref="IPamLeaseExpirySweepService"/> (the lease natural-expiry sweep). Gated on
-/// <see cref="FeatureFlagKeys.Pam"/>, not <see cref="FeatureFlagKeys.PamAccessConnector"/>: the rotation trigger it
-/// also fires self-gates on that flag further down. Registered from <c>JobsHostedService</c> inside <c>#if !OSS</c>.
+/// Quartz entry point for <see cref="IPamLeaseExpirySweepService"/>. Gated on <see cref="FeatureFlagKeys.Pam"/>, not
+/// <see cref="FeatureFlagKeys.PamAccessConnector"/>, since the rotation trigger it fires gates itself on the latter.
 /// </summary>
 public class PamLeaseExpirySweepJob : BaseJob
 {

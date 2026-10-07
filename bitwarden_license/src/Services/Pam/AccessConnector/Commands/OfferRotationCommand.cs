@@ -40,8 +40,7 @@ public class OfferRotationCommand : IOfferRotationCommand
         var config = await _configRepository.GetByIdAsync(configId);
         if (config is null)
         {
-            // A concurrent delete raced this offer. Callers (the sweep, TriggerRotationCommand, the access-end
-            // handler) all treat this the same as any other not-offerable outcome and move on silently.
+            // A concurrent delete won; callers treat this like any other config that cannot be offered.
             return PamRotationJobCreateOutcome.ConfigNotOfferable;
         }
 
@@ -63,8 +62,7 @@ public class OfferRotationCommand : IOfferRotationCommand
             NextClaimableAt = now,
             ExpiresAt = now + _options.Value.JobTtl,
         };
-        // CreateGuardedAsync is a guarded custom insert, not the generic single-object CreateAsync -- it expects the
-        // id to already be assigned.
+        // CreateGuardedAsync, unlike the generic CreateAsync, does not assign the id.
         job.SetNewId();
 
         var outcome = await _jobRepository.CreateGuardedAsync(job);

@@ -8,8 +8,8 @@ public interface IPamTargetSystemRepository : IRepository<PamTargetSystem, Guid>
     Task<ICollection<PamTargetSystem>> GetManyByOrganizationIdAsync(Guid organizationId);
 
     /// <summary>
-    /// Deletes the target's access connector assignments, then the target itself, in one transaction. Re-checks
-    /// under lock that no rotation config still names the target, so the delete can never orphan a credential.
+    /// Deletes the target's assignments and then the target in one transaction. Re-checks under lock that no rotation
+    /// config names it, so the delete cannot orphan a credential.
     /// </summary>
     Task<bool> DeleteWithAssignmentsAsync(Guid targetSystemId);
 }

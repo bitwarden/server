@@ -9,8 +9,7 @@ using Xunit;
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
 
 /// <summary>
-/// The lease natural-expiry sweep (<see cref="IAccessLeaseRepository.ExpireDueAsync"/>); a returned lease is
-/// journaled so a later run can't return it again. Set-based, so assertions scope to this test's lease ids.
+/// <see cref="IAccessLeaseRepository.ExpireDueAsync"/> is set-based, so assertions scope to this test's lease ids.
 /// </summary>
 public class AccessLeaseExpiryTests
 {
@@ -23,13 +22,12 @@ public class AccessLeaseExpiryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
 
-        // Minted while the window was open, but the window has since elapsed on its own.
         var lease = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
 
         var expired = await accessLeaseRepository.ExpireDueAsync(now);
 
-        // The returned row is self-contained: everything the caller audits/triggers on comes straight off the lease.
+        // The caller audits and triggers from the returned row alone.
         var row = Assert.Single(expired, r => r.Id == lease.Id);
         Assert.Equal(lease.OrganizationId, row.OrganizationId);
         Assert.Equal(lease.CollectionId, row.CollectionId);
@@ -56,11 +54,10 @@ public class AccessLeaseExpiryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var now = DateTime.UtcNow;
 
-        // Still inside its window: not due.
         var active = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddMinutes(-5), now.AddHours(1));
 
-        // Past its window but already Revoked; the revoke path already fired its access-end trigger.
+        // Past its window but revoked, and the revoke path already fired its access-end trigger.
         var revoked = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
         await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseAction.Revoked, new AccessDecision
@@ -101,7 +98,6 @@ public class AccessLeaseExpiryTests
         Assert.DoesNotContain(secondRun, r => r.Id == lease.Id);
     }
 
-    // Seeds an active lease as production does: record the request, then mint by activating within its window.
     private static async Task<AccessLease> SeedActiveLeaseAsync(
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,

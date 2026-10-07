@@ -40,8 +40,7 @@ public class DeleteAccessConnectorCommandTests
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
 
-        // accessConnector.OrganizationId is an unrelated AutoFixture Guid -- a cross-org lookup must 404, never leak
-        // existence.
+        // A cross-org id is NotFound, so it does not reveal that the connector exists.
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.DeleteAsync(Guid.NewGuid(), actingUserId, accessConnector.Id));
 

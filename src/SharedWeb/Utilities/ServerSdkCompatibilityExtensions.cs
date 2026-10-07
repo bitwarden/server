@@ -77,13 +77,9 @@ public static class ServerSdkCompatibilityExtensions
                     options.FlagValues.TryAdd(key, value);
                 }
 
-                // pam/uat only - do not carry this to main. The branch ships the PAM feature as a
-                // whole, so default its flags on instead of making every dev, test run and
-                // self-hosted branch build carry a flagValues entry of its own. TryAdd leaves this
-                // last in line: Features:FlagValues, GlobalSettings:LaunchDarkly:FlagValues and a
-                // LaunchDarkly-connected instance all still win, so the flags can be turned back
-                // off for A/B checks. Flag values only feed the data source when no LaunchDarkly
-                // SdkKey is set, so this changes local dev and self-host, not a cloud instance.
+                // pam/uat only; do not carry this to main. Defaults the branch's flags on where no
+                // SdkKey is set (local dev, self-host) without overriding configured values. The pins
+                // below override everything.
                 options.FlagValues.TryAdd(FeatureFlagKeys.Pam, "true");
                 options.FlagValues.TryAdd(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, "true");
             });
@@ -92,28 +88,17 @@ public static class ServerSdkCompatibilityExtensions
         // the application cares about, add them here.
         services.AddKnownFeatureFlags(FeatureFlagKeys.GetKeys());
 
-        // pam/uat only - do not carry this to main. A pin beats a flag value and LaunchDarkly
-        // alike, which is what a LaunchDarkly-connected environment such as UAT needs: the
-        // FlagValues defaults above only feed the data source when no SdkKey is set, so on UAT
-        // they are inert and /config reported pm-37044-pam-v-0 as false.
-        //   - Pam and PM28191_CipherAdminOpsToSdk: the branch ships PAM as a whole and UAT has
-        //     to serve it. Note this is stronger than the defaults above and gives up the
-        //     flag-off A/B check - remove the entry to get that back.
-        //   - PamAccessConnector: same reasoning, and it needs the pin for a second reason -
-        //     LaunchDarkly has no pm-42354-rotation-daemon flag at all, so /config left the key
-        //     out entirely rather than stating it false. GetAll() only reports the intersection
-        //     of the known keys and what LaunchDarkly holds, and an omitted key sends the
-        //     clients to their own default (FALSE for PamRotation), so the connector surface was
-        //     gated off on both sides.
-        //   - VFO1Foundation: the branch stays on the v1 layout while the VFO refresh rolls out.
-        // Deliberately not pinned: PamDisableSqlAuditLogging. LaunchDarkly already states it
-        // false, which is the recording state, and pinning a kill switch would throw away the
-        // one thing it exists for - turning the audit writes off without a deploy.
+        // pam/uat only; do not carry this to main. Unlike the defaults above, a pin also overrides
+        // LaunchDarkly, which UAT needs. PamDisableSqlAuditLogging stays unpinned so its kill switch
+        // works without a deploy.
         services.PinFeatureFlags(new Dictionary<string, bool>
         {
+            // The branch ships PAM as a whole. Remove an entry to get the flag-off A/B check back.
             [FeatureFlagKeys.Pam] = true,
             [FeatureFlagKeys.PM28191_CipherAdminOpsToSdk] = true,
+            // LaunchDarkly lacks this flag, so without the pin /config omits it and the clients default it off.
             [FeatureFlagKeys.PamAccessConnector] = true,
+            // The branch stays on the v1 layout while the VFO refresh rolls out.
             [FeatureFlagKeys.VFO1Foundation] = false,
         });
 
@@ -133,13 +118,12 @@ public static class ServerSdkCompatibilityExtensions
     }
 
     /// <summary>
-    /// pam/uat only - do not carry this to main. Wraps the registered SDK
-    /// <see cref="IFeatureService"/> in a <see cref="PinnedFlagFeatureService"/>.
+    /// pam/uat only; do not carry this to main. Wraps the registered SDK <see cref="IFeatureService"/>
+    /// in a <see cref="PinnedFlagFeatureService"/>.
     /// </summary>
     /// <remarks>
-    /// Every entry point calls <c>UseBitwardenSdk()</c> on the host builder before
-    /// <c>UseStartup</c>, so the SDK registration is always in place by the time this runs;
-    /// a missing one means the wireup changed, and failing loudly beats silently unpinning.
+    /// <c>UseBitwardenSdk()</c> always registers it first, so a missing one throws rather than
+    /// silently unpinning.
     /// </remarks>
     private static IServiceCollection PinFeatureFlags(
         this IServiceCollection services,

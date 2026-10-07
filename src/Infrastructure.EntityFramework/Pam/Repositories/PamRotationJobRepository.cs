@@ -17,10 +17,8 @@ using EfTimeoutSweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamRotation
 namespace Bit.Infrastructure.EntityFramework.Pam.Repositories;
 
 /// <summary>
-/// EF counterpart of the MSSQL rotation-job procedures, rebuilding their <c>UPDLOCK, HOLDLOCK</c> range locks and
-/// <c>OUTPUT</c> clause from two portable primitives: a serializable transaction, and a single <c>ExecuteUpdate</c>
-/// whose <c>WHERE</c> carries the guard. Enforces the same invariants: <c>AtMostOneActiveJobPerConfig</c>,
-/// <c>AtMostOneInFlightAttemptPerJob</c>, first-claim-wins, and <c>VerifiedBeforeSuccess</c>.
+/// Rebuilds the procedures' <c>UPDLOCK, HOLDLOCK</c> range locks and <c>OUTPUT</c> clauses from serializable
+/// transactions and guarded <c>ExecuteUpdate</c> calls, enforcing the same invariants.
 /// </summary>
 public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotationJobRepository
 {
@@ -42,7 +40,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         // A loser aborted at commit by a concurrent Serializable transaction is replayed by SerializableRetry.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // Re-checked here, not just by the caller, so a config disabled or target switched to Manual meanwhile can't mint a job.
+        // Re-checked so a config or target disabled between read and write cannot mint a job.
         var offerable = await dbContext.PamRotationConfigs
             .Join(dbContext.PamTargetSystems, c => c.TargetSystemId, t => t.Id, (c, t) => new { Config = c, Target = t })
             .AnyAsync(x => x.Config.Id == job.RotationConfigId
@@ -55,8 +53,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return PamRotationJobCreateOutcome.ConfigNotOfferable;
         }
 
-        // AtMostOneActiveJobPerConfig: Serializable holds the predicate's range, so a concurrent create for the same config fails to serialize instead of duplicating.
-        // A timed-out job holds its config until the timeout sweep records it, so the sweep's reschedule lands first.
+        // AtMostOneActiveJobPerConfig: Serializable holds the predicate's range, so a concurrent create for the same
+        // config fails to serialize. A timed-out job holds its config until the sweep records it, so the sweep's
+        // reschedule lands first.
         var hasActiveJob = await dbContext.PamRotationJobs
             .AnyAsync(j => j.RotationConfigId == job.RotationConfigId
                 && (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
@@ -102,7 +101,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // First-claim-wins: the None predicate is evaluated under the row lock this UPDATE itself takes, so concurrent claims serialize.
+        // First-claim-wins: the None predicate is evaluated under the row lock this UPDATE itself takes, so concurrent
+        // claims serialize.
         var claimed = await EligibleJobs(dbContext, accessConnectorId)
             .Where(x => x.Job.Id == jobId
                 && x.Job.Action == PamRotationJobAction.None
@@ -118,8 +118,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         if (claimed == 0)
         {
-            // Classify eligibility first, so an unknown job and one this access connector may not claim produce the
-            // same NotEligible outcome -- the caller maps it to 404, leaving no existence oracle.
+            // An unknown job and one this access connector may not claim both yield NotEligible, which the caller maps
+            // to 404, so the outcome reveals nothing about existence.
             var eligible = await EligibleJobs(dbContext, accessConnectorId).AnyAsync(x => x.Job.Id == jobId);
             await transaction.RollbackAsync();
 
@@ -129,9 +129,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             };
         }
 
-        // AtMostOneInFlightAttemptPerJob: the attempt is inserted in the claim's own transaction, so a claimed job
-        // always has exactly one in-flight attempt from the moment it is claimed. Its CreationDate equals the job's
-        // ClaimedAt, which is how the claim's own attempt is recognised later.
+        // AtMostOneInFlightAttemptPerJob: inserted in the claim's own transaction, so a claimed job always has exactly
+        // one in-flight attempt. Its CreationDate equals the job's ClaimedAt, which is how the claim's attempt is
+        // recognised later.
         var attempt = new EfAttempt
         {
             Id = CombGuid.Generate(),
@@ -300,7 +300,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         var dbContext = GetDatabaseContext(scope);
         await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
 
-        // Serializable stands in for the MSSQL UPDLOCK on the job row, closing the check-then-act window against a concurrent release/timeout sweep.
+        // Serializable replaces the MSSQL UPDLOCK on the job row, closing the check-then-act window against a
+        // concurrent release.
         var target = await dbContext.PamRotationAttempts
             .Where(a => a.Id == attemptId
                 && a.Action == PamRotationAttemptAction.None
@@ -330,7 +331,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             return PamRotationCipherWriteOutcome.Rejected;
         }
 
-        // A drifted revision date means a concurrent user edit; refused rather than clobbered. Tolerance mirrors CipherService.
+        // A drifted revision date means a concurrent user edit; refused rather than clobbered. Tolerance mirrors
+        // CipherService.
         if (Math.Abs((cipher.RevisionDate - lastKnownRevisionDate).TotalMilliseconds) > 1000)
         {
             await transaction.RollbackAsync();
@@ -345,8 +347,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         await dbContext.SaveChangesAsync();
 
-        // Every other writer of Cipher ends here: without the bump a client that misses the push sees an unchanged
-        // AccountRevisionDate, skips the sync, and keeps serving the pre-rotation password.
+        // As every Cipher writer does: without the bump, a client that misses the push skips the sync and keeps
+        // serving the old password.
         await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(target.CipherId, target.OrganizationId);
         await dbContext.SaveChangesAsync();
 
@@ -434,7 +436,7 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
                 .SetProperty(a => a.SyncState, syncState)
                 .SetProperty(a => a.ResolvedDate, now));
 
-        // Abandoned attempts are deliberately not counted -- a release or timeout does not charge the retry budget.
+        // Abandoned attempts are not counted, so a release or timeout does not charge the retry budget.
         var erroredCount = await dbContext.PamRotationAttempts
             .CountAsync(a => a.JobId == jobId.Value && a.Action == PamRotationAttemptAction.Errored);
 
@@ -479,9 +481,9 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // A timeout is derived, not stored; PamRotationJobTimeoutSweep's journal decides which run owns a job.
-        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key. A Rotated
-        // attempt always comes with a Succeeded job, so success wins without checking attempts.
+        // A timeout is derived; the PamRotationJobTimeoutSweep primary key fails a losing sweep's SaveChanges, so no
+        // stronger isolation is needed. A Rotated attempt always has a Succeeded job, so success wins without checking
+        // attempts.
         var due = await dbContext.PamRotationJobs
             .Where(j => (j.Action == PamRotationJobAction.None || j.Action == PamRotationJobAction.Claimed)
                 && j.ExpiresAt <= now
@@ -533,8 +535,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
 
         var staleBefore = now - offlineAfter;
 
-        // Releases only at lease expiry (not stale detection) to preserve success-wins; keyed on heartbeat staleness alone, so a disabled access connector's jobs still release.
-        // A timed-out claim is the timeout sweep's, not a release; a Rotated attempt always comes with a Succeeded job.
+        // Needs an expired lease, not only a stale heartbeat, to preserve success-wins. A disabled access connector's
+        // jobs still release. A timed-out claim is the timeout sweep's; a Rotated attempt always has a Succeeded job.
         var candidates = await dbContext.PamRotationJobs
             .Where(j => j.Action == PamRotationJobAction.Claimed && j.ExpiresAt > now && j.ClaimedAt != null)
             .Join(dbContext.PamAccessConnectors, j => j.ClaimedByAccessConnectorId, d => d.Id,
@@ -553,7 +555,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
             .AsNoTracking()
             .ToListAsync();
 
-        // Computed in memory from the pre-clear ClaimedAt, since MySQL's UPDATE assigns left to right and would otherwise read the nulled column.
+        // Computed in memory from the pre-clear ClaimedAt, since MySQL's UPDATE assigns left to right and would
+        // otherwise read the nulled column.
         var released = candidates
             .Where(c => c.ClaimedAt!.Value + releaseDelay <= now)
             .ToList();
@@ -595,8 +598,8 @@ public class PamRotationJobRepository : BaseEntityFrameworkRepository, IPamRotat
     }
 
     /// <remarks>
-    /// The join set every eligibility decision shares: the job, its config and target, an assignment for this access
-    /// connector, and -- defense in depth -- the access connector itself, enabled and in the config's organization.
+    /// The join every eligibility decision shares. It re-checks that the access connector is enabled and in the
+    /// config's organization.
     /// </remarks>
     private static IQueryable<EligibleJob> EligibleJobs(DatabaseContext dbContext, Guid accessConnectorId) =>
         dbContext.PamRotationJobs

@@ -1,6 +1,6 @@
 -- Journal of jobs PamRotationJob_TimeoutDue has already returned; a timeout is derived, not stored.
--- Ensures the RotationJobTimedOut audit event and reschedule fire a single time per job, and marks the point at
--- which a timed-out job stops occupying its config.
+-- Makes the RotationJobTimedOut audit event and reschedule fire once per job, and the row ends the job's hold on
+-- its config.
 CREATE TABLE [dbo].[PamRotationJobTimeoutSweep] (
     [RotationJobId] UNIQUEIDENTIFIER    NOT NULL,
     [SweptDate]     DATETIME2(7)        NOT NULL,

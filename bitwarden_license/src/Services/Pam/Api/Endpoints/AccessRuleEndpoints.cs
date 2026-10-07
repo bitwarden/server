@@ -9,22 +9,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Services.Pam.Api.Endpoints;
 
 /// <summary>
-/// The <c>organizations/{orgId}/access-rules</c> resource: rule CRUD scoped to an organization. <c>orgId</c> is
-/// bound from the group's route prefix.
+/// The <c>organizations/{orgId}/access-rules</c> resource. The group requires <see cref="MemberRequirement"/> rather
+/// than <c>MemberOrProviderRequirement</c>, since access rules gate who can lease credentials and are not a provider's
+/// to read or change.
 /// </summary>
-/// <remarks>
-/// Authorization runs in the middleware rather than the handler. The group requires organization membership and the
-/// write endpoints additionally require <see cref="ManageAccessRulesRequirement"/>; ASP.NET combines the group and
-/// endpoint policies, so a write has to satisfy both. Both requirements read <c>orgId</c> off the route, which the
-/// group prefix supplies.
-/// <para>
-/// The group requirement is deliberately <see cref="MemberRequirement"/> and not
-/// <c>MemberOrProviderRequirement</c>: providers manage an organization's billing and configuration, but access
-/// rules gate who can lease credentials out of it, which is not theirs to read or change.
-/// <see cref="ManageAccessRulesRequirement"/> excludes providers on its own, so neither gate depends on the other
-/// to keep them out.
-/// </para>
-/// </remarks>
 internal static class AccessRuleEndpoints
 {
     public static RouteGroupBuilder MapAccessRuleEndpoints(this RouteGroupBuilder group)
@@ -38,7 +26,7 @@ internal static class AccessRuleEndpoints
         group.MapGet("{id:guid}", ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.Get(orgId, id))
             .WithName("Pam_AccessRules_Get");
 
-        // Admin-only: names credentials a rule fails to protect.
+        // Restricted to rule managers, since it reveals where a rule fails to protect credentials.
         group.MapGet("{id:guid}/bypassable-ciphers",
                 ([FromRoute] Guid orgId, Guid id, AccessRuleEndpointsHandler handler) => handler.GetBypassableCiphers(orgId, id))
             .WithName("Pam_AccessRules_GetBypassableCiphers")

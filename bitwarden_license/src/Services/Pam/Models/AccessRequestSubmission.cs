@@ -8,14 +8,10 @@ public sealed class AccessRequestSubmission
 {
     public int? DurationSeconds { get; init; }
 
-    /// <summary>
-    /// The start of the requested window, as a UTC instant.
-    /// </summary>
+    /// <summary>The start of the requested window, as a UTC instant.</summary>
     public DateTime? Start { get; init; }
 
-    /// <summary>
-    /// The end of the requested window, as a UTC instant.
-    /// </summary>
+    /// <summary>The end of the requested window, as a UTC instant.</summary>
     public DateTime? End { get; init; }
 
     public string? Reason { get; init; }

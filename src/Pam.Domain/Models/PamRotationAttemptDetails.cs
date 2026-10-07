@@ -4,7 +4,7 @@ using Bit.Pam.Enums;
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// A <see cref="PamRotationAttempt"/> with its status derived against its job — an element of
+/// A <see cref="PamRotationAttempt"/> with its status derived against its job, as listed in
 /// <see cref="PamRotationJobDetails.Attempts"/>.
 /// </summary>
 public class PamRotationAttemptDetails : PamRotationAttempt
@@ -17,7 +17,6 @@ public class PamRotationAttemptDetails : PamRotationAttempt
 
     /// <param name="job">The attempt's job as stored, whose claim fields decide whether this is the current
     /// attempt.</param>
-    /// <param name="jobStatus">The job's derived status.</param>
     public static PamRotationAttemptDetails From(PamRotationAttempt attempt, PamRotationJob job,
         PamRotationJobStatus jobStatus)
     {

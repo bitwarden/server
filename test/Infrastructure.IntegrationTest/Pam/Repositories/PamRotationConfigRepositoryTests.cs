@@ -67,8 +67,7 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationConfigRepository.GetByCipherIdAsync(Guid.NewGuid()));
     }
 
-    // IX_PamRotationConfig_CipherId enforces one config per cipher; unlike AccessLeaseRepository, this repo does not
-    // catch the violation, so the caller is expected to have already guarded via GetByCipherIdAsync.
+    // The repository lets the unique index violation throw, so callers check GetByCipherIdAsync first.
     [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_SecondConfigForSameCipher_Throws(
         IOrganizationRepository organizationRepository,
@@ -89,7 +88,6 @@ public class PamRotationConfigRepositoryTests
         Assert.NotNull(await pamRotationConfigRepository.GetByCipherIdAsync(cipher.Id));
     }
 
-    // Due = enabled + automatic + active-target + schedule due + no active job in flight.
     [DatabaseTheory, DatabaseData]
     public async Task GetManyDueAsync_ReturnsOnlyEnabledAutomaticActiveDueConfigs(
         IOrganizationRepository organizationRepository,
@@ -155,7 +153,7 @@ public class PamRotationConfigRepositoryTests
         var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
         await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
 
-        // Unlike the WithTerminateSessions sibling, any config naming the target keeps it.
+        // Any config counts, even one without TerminateSessions.
         Assert.True(await pamRotationConfigRepository.AnyByTargetSystemAsync(target.Id));
         Assert.False(await pamRotationConfigRepository.AnyByTargetSystemAsync(otherTarget.Id));
     }
@@ -228,7 +226,7 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationJobRepository.GetAttemptByIdAsync(claim.AttemptId!.Value));
     }
 
-    // HasActiveJob is computed and flips back to false once the job leaves Pending/Claimed.
+    // HasActiveJob is computed, so it clears once the job resolves or the sweep records its timeout.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByIdAsync_ProjectsTargetFieldsAndHasActiveJob(
         IOrganizationRepository organizationRepository,

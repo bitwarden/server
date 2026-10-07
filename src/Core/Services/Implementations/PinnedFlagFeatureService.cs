@@ -4,20 +4,17 @@ using Bitwarden.Server.Sdk.Features;
 namespace Bit.Core.Services.Implementations;
 
 /// <summary>
-/// pam/uat only - do not carry this to main. Reports a fixed value for a handful of flags and
-/// delegates everything else, so the branch can pin a flag against whatever LaunchDarkly says.
+/// pam/uat only; do not carry this to main. Pins a handful of flags regardless of LaunchDarkly and
+/// delegates the rest.
 /// </summary>
 /// <remarks>
-/// A <see cref="FeatureFlagOptions.FlagValues"/> entry cannot do this: flag values only feed the
-/// data source when no LaunchDarkly SdkKey is set, so a connected instance ignores them. Pinning
-/// here covers both the single checks and
-/// <see cref="Bitwarden.Server.Sdk.Features.IFeatureService.GetAll"/>, which is what the clients
-/// read through <c>/config</c>.
+/// A <see cref="FeatureFlagOptions.FlagValues"/> entry cannot do this, since a LaunchDarkly-connected
+/// instance ignores flag values.
 /// </remarks>
 public class PinnedFlagFeatureService : Bitwarden.Server.Sdk.Features.IFeatureService
 {
-    // Fully qualified throughout: the obsolete Bit.Core.Services.IFeatureService sits in the
-    // parent namespace and would win over the using directive, as in DelegatingFeatureService.
+    // Fully qualified because the obsolete Bit.Core.Services.IFeatureService in the parent namespace
+    // would win over the using directive.
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _inner;
     private readonly IReadOnlyDictionary<string, bool> _pinned;
 
@@ -35,7 +32,7 @@ public class PinnedFlagFeatureService : Bitwarden.Server.Sdk.Features.IFeatureSe
     public bool IsEnabled(string key, bool defaultValue = false) =>
         _pinned.TryGetValue(key, out var pinned) ? pinned : _inner.IsEnabled(key, defaultValue);
 
-    // A pinned flag has no variation to report, so the caller's default stands in.
+    // A pinned flag has no variation to report, so the caller's default is returned.
     public int GetIntVariation(string key, int defaultValue = 0) =>
         _pinned.ContainsKey(key) ? defaultValue : _inner.GetIntVariation(key, defaultValue);
 
@@ -46,8 +43,8 @@ public class PinnedFlagFeatureService : Bitwarden.Server.Sdk.Features.IFeatureSe
     {
         var all = new Dictionary<string, JsonValue>(_inner.GetAll());
 
-        // Assigned rather than added only when present: the clients fall back to their own
-        // default for a flag the server omits, so a pinned flag has to be stated outright.
+        // Set even when absent from the inner result, since the clients fall back to their own
+        // default for a flag the server omits.
         foreach (var (key, value) in _pinned)
         {
             all[key] = JsonValue.Create(value);

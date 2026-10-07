@@ -44,7 +44,7 @@ public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
         string cipherDataJson,
         DateTime lastKnownRevisionDate)
     {
-        // A cross-org attempt id must be indistinguishable from an unknown one, so no other org's trail leaks this access connector's name.
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
         var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
         var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
         var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);

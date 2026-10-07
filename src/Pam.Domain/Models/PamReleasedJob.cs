@@ -3,8 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// One job the release sweep returned to <see cref="PamRotationJobStatus.Pending"/>. Carries the fields the sweep
-/// needs to emit the <c>released</c> audit event, since the job's own claim fields are cleared by the same update.
+/// A job the release sweep returned to <see cref="PamRotationJobStatus.Pending"/>, with what its audit event needs,
+/// since the same update clears the job's claim fields.
 /// </summary>
 public record PamReleasedJob
 {
@@ -14,7 +14,5 @@ public record PamReleasedJob
     public required Guid CipherId { get; init; }
     public required PamRotationSource Source { get; init; }
 
-    /// <summary>The access connector whose claim was released — the job's pre-clear
-    /// <c>ClaimedByAccessConnectorId</c>.</summary>
     public required Guid ClaimedByAccessConnectorId { get; init; }
 }

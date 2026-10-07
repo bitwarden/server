@@ -40,8 +40,7 @@ public class PamAccessConnectorRepositoryTests
         Assert.Null(persisted.LastHeartbeatAt);
     }
 
-    // PamAccessConnectorClientProvider's token-issuance lookup, keyed by the ApiKey credential rather than the access
-    // connector's id.
+    // Backs token issuance in PamAccessConnectorClientProvider.
     [DatabaseTheory, DatabaseData]
     public async Task GetDetailsByApiKeyIdAsync_ReturnsAccessConnectorWithOrganizationLicensingFlags(
         IApiKeyRepository apiKeyRepository,
@@ -68,7 +67,7 @@ public class PamAccessConnectorRepositoryTests
         Assert.True(details.OrganizationEnabled);
         Assert.True(details.OrganizationUsePam);
 
-        // Flip UsePam only: OrganizationEnabled must stay true, proving the two columns map independently.
+        // Flip UsePam only, so OrganizationEnabled staying true proves the two columns map independently.
         organization.UsePam = false;
         await organizationRepository.ReplaceAsync(organization);
 
@@ -85,7 +84,6 @@ public class PamAccessConnectorRepositoryTests
         Assert.Null(await pamAccessConnectorRepository.GetDetailsByApiKeyIdAsync(Guid.NewGuid()));
     }
 
-    // The sproc's WHERE guard turns a poll before MinInterval into a no-op; only one after it bumps the column.
     [DatabaseTheory, DatabaseData]
     public async Task UpdateHeartbeatAsync_ConditionalBump(
         IApiKeyRepository apiKeyRepository,
@@ -104,19 +102,18 @@ public class PamAccessConnectorRepositoryTests
         var minInterval = TimeSpan.FromSeconds(15);
         var firstHeartbeat = DateTime.UtcNow;
 
-        // First heartbeat: LastHeartbeatAt was null, so it always bumps.
+        // A null LastHeartbeatAt always bumps.
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, firstHeartbeat, minInterval);
         var afterFirst = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.NotNull(afterFirst!.LastHeartbeatAt);
         var recordedFirst = afterFirst.LastHeartbeatAt!.Value;
 
-        // Second poll arrives well within MinInterval: the guard's WHERE clause keeps this a no-op.
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(
             accessConnector.Id, firstHeartbeat.AddSeconds(5), minInterval);
         var afterSecond = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
         Assert.Equal(recordedFirst, afterSecond!.LastHeartbeatAt);
 
-        // Third poll arrives after MinInterval has elapsed since the last recorded bump: it updates.
+        // MinInterval is measured from the last recorded bump, not the ignored poll.
         var thirdHeartbeat = firstHeartbeat.AddSeconds(20);
         await pamAccessConnectorRepository.UpdateHeartbeatAsync(accessConnector.Id, thirdHeartbeat, minInterval);
         var afterThird = await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id);
@@ -178,8 +175,7 @@ public class PamAccessConnectorRepositoryTests
         Assert.Empty(await pamAccessConnectorRepository.GetAssignmentsByOrganizationIdAsync(organization.Id));
     }
 
-    // PamAccessConnector_Update only declares Name/Status/RevisionDate; ApiKeyId and OrganizationId must be ignored
-    // even if set on the in-memory entity before ReplaceAsync.
+    // Mirrors PamAccessConnector_Update, which declares only Name, Status and RevisionDate.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_OnlyPersistsNameStatusRevisionDate(
         IApiKeyRepository apiKeyRepository,
@@ -242,7 +238,7 @@ public class PamAccessConnectorRepositoryTests
             ApiKeyId = apiKey.Id,
             Status = PamAccessConnectorStatus.Enabled,
         });
-        // An access connector with assignments cannot be deleted row-by-row: that FK is ON DELETE NO ACTION.
+        // The assignment FK is ON DELETE NO ACTION, so the delete has to clear assignments first.
         await pamAccessConnectorRepository.CreateAssignmentAsync(new PamAccessConnectorTargetAssignment
         {
             Id = CombGuid.Generate(),

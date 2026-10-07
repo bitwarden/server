@@ -1,8 +1,8 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The rotation counterpart to <see cref="AccessStatusDerivation"/>: job and attempt statuses are computed here at
-/// read time from what was recorded, against the same deadline comparison the timeout sweep uses.
+/// The rotation counterpart to <see cref="AccessStatusDerivation"/>. Computes job and attempt statuses at read time,
+/// with the same deadline comparison the timeout sweep uses.
 /// </summary>
 public static class PamRotationStatusDerivation
 {
@@ -25,13 +25,12 @@ public static class PamRotationStatusDerivation
     }
 
     /// <summary>
-    /// An attempt's status derived from its stored <see cref="PamRotationAttemptAction"/>. A report beats everything;
-    /// an unreported attempt is Executing only while it holds its job's live claim, and Abandoned once that claim was
-    /// released or timed out.
+    /// A report beats everything; an unreported attempt is Executing only while it holds its job's live claim, and
+    /// Abandoned once that claim was released or timed out.
     /// </summary>
-    /// <param name="isCurrentAttempt">Whether the claim the job records is the one that created this attempt; see
-    /// <see cref="PamRotationRules.IsCurrentAttempt"/>.</param>
-    /// <param name="jobStatus">The job's status from <see cref="ComputeJobStatus"/>.</param>
+    /// <param name="isCurrentAttempt">
+    /// Whether the job's claim created it (<see cref="PamRotationRules.IsCurrentAttempt"/>).
+    /// </param>
     public static PamRotationAttemptStatus ComputeAttemptStatus(
         PamRotationAttemptAction action, bool isCurrentAttempt, PamRotationJobStatus jobStatus) =>
         action switch

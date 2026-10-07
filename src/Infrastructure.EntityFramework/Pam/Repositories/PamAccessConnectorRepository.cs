@@ -36,8 +36,6 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // The organization's licensing state travels with the access connector so the token path resolves both in one
-        // read.
         return await dbContext.PamAccessConnectors
             .Where(d => d.ApiKeyId == apiKeyId)
             .Join(dbContext.Organizations, d => d.OrganizationId, o => o.Id, (d, o) => new PamAccessConnectorDetails
@@ -58,9 +56,8 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
     }
 
     /// <remarks>
-    /// Narrowed to the same three columns PamAccessConnector_Update writes: ApiKeyId and OrganizationId must not move
-    /// via a whole-entity replace, and LastHeartbeatAt has its own conditional-bump path so a routine edit doesn't race
-    /// the access connector's poll.
+    /// Writes only the columns PamAccessConnector_Update does: ApiKeyId and OrganizationId never move, and
+    /// LastHeartbeatAt has its own conditional bump so an edit cannot race the poll.
     /// </remarks>
     public override async Task ReplaceAsync(CoreEntity obj)
     {
@@ -81,8 +78,8 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Conditional in the predicate rather than read-then-write, so a tightly polling access connector issues one
-        // statement and concurrent requests cannot each decide the value is stale.
+        // Conditional in the predicate rather than read-then-write, so concurrent requests cannot each decide the
+        // value is stale.
         var staleBefore = now - minInterval;
         await dbContext.PamAccessConnectors
             .Where(d => d.Id == accessConnectorId && (d.LastHeartbeatAt == null || d.LastHeartbeatAt < staleBefore))
@@ -90,8 +87,8 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
     }
 
     /// <remarks>
-    /// Mirrors PamAccessConnector_DeleteById: releases the access connector's claimed jobs first, since the release
-    /// sweep finds stale claimants by joining PamAccessConnector and would miss them once the row is gone.
+    /// Releases the claimed jobs first, as PamAccessConnector_DeleteById does, since the release sweep joins
+    /// PamAccessConnector and would miss them once the row is gone.
     /// </remarks>
     public override async Task DeleteAsync(CoreEntity obj)
     {
@@ -102,7 +99,7 @@ public class PamAccessConnectorRepository : Repository<CoreEntity, EfModel, Guid
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         var now = DateTime.UtcNow;
-        // obj.ApiKeyId is not trusted here -- the stored row decides which credential goes.
+        // The stored row, not obj.ApiKeyId, decides which credential goes.
         var apiKeyId = await dbContext.PamAccessConnectors
             .Where(d => d.Id == obj.Id)
             .Select(d => d.ApiKeyId)

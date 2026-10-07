@@ -16,7 +16,7 @@ CREATE TABLE [dbo].[PamAccessConnector] (
 );
 GO
 
--- OneKeyPerAccessConnector; also the lookup path PamAccessConnectorDetails_ReadByApiKeyId uses at token time.
+-- One credential per access connector; also the lookup PamAccessConnectorDetails_ReadByApiKeyId uses at token time.
 CREATE UNIQUE NONCLUSTERED INDEX [IX_PamAccessConnector_ApiKeyId]
     ON [dbo].[PamAccessConnector] ([ApiKeyId] ASC);
 GO

@@ -8,10 +8,8 @@ using Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-connectors</c> resource: fleet registration, enable/disable,
-/// deletion, and target assignment. Organization authority is already settled by
-/// <c>ManageAccessConnectorRequirement</c>; the commands underneath still re-verify every id argument belongs to
-/// the route organization (404, never 403).
+/// Handler for the <c>organizations/{orgId}/access-connectors</c> resource, authorized in the middleware by
+/// <c>ManageAccessConnectorRequirement</c>.
 /// </summary>
 public class AccessConnectorEndpointsHandler(
     ICurrentContext currentContext,

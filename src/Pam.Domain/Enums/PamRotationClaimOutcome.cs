@@ -1,28 +1,25 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// The result of the atomic first-claim-wins <c>PamRotationJob_Claim</c> update: a lost race, vs. an access connector
-/// that was never eligible to claim the job.
+/// The result of the first-claim-wins <c>PamRotationJob_Claim</c>; each value is the code it returns.
 /// </summary>
 public enum PamRotationClaimOutcome
 {
     /// <summary>
-    /// The claim succeeded and an Executing <see cref="Entities.PamRotationAttempt"/> was inserted in the same
-    /// transaction (stored proc returned 1).
+    /// The job is claimed, with an Executing <see cref="Entities.PamRotationAttempt"/> inserted in the same
+    /// transaction.
     /// </summary>
     Claimed = 1,
 
     /// <summary>
-    /// The job was not Pending, or its <see cref="Entities.PamRotationJob.NextClaimableAt"/> had not arrived
-    /// (stored proc returned 0) — another access connector likely won the race.
+    /// The job is not Pending or still in backoff, or its config or target is disabled. Usually another access
+    /// connector won the race.
     /// </summary>
     NotClaimable = 0,
 
     /// <summary>
-    /// The guard <c>EligibleClaimsOnly</c> failed: the config is disabled, the target is not
-    /// <see cref="PamTargetSystemStatus.Active"/>, the access connector has no assignment to the target, or the access
-    /// connector's organization does not match the config's organization (stored proc returned -1). Nothing was
-    /// persisted.
+    /// The job is unknown or outside this access connector's assignments or organization, or the access connector is
+    /// disabled. Nothing is persisted.
     /// </summary>
     NotEligible = -1,
 }

@@ -15,9 +15,7 @@ using Xunit;
 
 namespace Bit.Services.Pam.IntegrationTest;
 
-/// <summary>
-/// The access-audit trail over the real request pipeline, round-tripping through SQLite.
-/// </summary>
+/// <summary>The access-audit trail over the real request pipeline, round-tripping through SQLite.</summary>
 public class AuditTrailTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-audit-trail")
 {
@@ -68,11 +66,9 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(owner.Email, row["requesterEmail"]!.GetValue<string>());
         Assert.False(row["automated"]!.GetValue<bool>());
         Assert.False(row["incomplete"]!.GetValue<bool>());
-        // Serialized as UTC.
         Assert.EndsWith("Z", row["occurredAt"]!.GetValue<string>());
     }
 
-    // An action with no recorded outcome reads as its attempt, flagged incomplete.
     [Fact]
     public async Task Audit_APairAndAnOrphanAttempt_CollapseToOneRowEach()
     {
@@ -103,7 +99,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.False(rows[1]!["incomplete"]!.GetValue<bool>());
     }
 
-    // Rule create, rename, and delete each appear in the trail.
     [Fact]
     public async Task Audit_RuleCreateUpdateDelete_AreRecordedWithTheRuleName()
     {
@@ -195,7 +190,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
-    // The kill switch stops writes and withdraws the trail.
     [Fact]
     public async Task Audit_WithSqlAuditLoggingDisabled_WritesNothingAndWithdrawsTheTrail()
     {
@@ -226,7 +220,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, trail.StatusCode);
     }
 
-    // Filters apply server-side.
     [Fact]
     public async Task Audit_WithAKindFilter_ReturnsOnlyTheMatchingRows()
     {
@@ -280,7 +273,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Empty(outOfRange);
     }
 
-    // A full page carries a continuation token; the last page doesn't.
     [Fact]
     public async Task Audit_MoreThanOnePage_CarriesAContinuationTokenAndPagesThroughExactlyOnce()
     {
@@ -295,7 +287,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
             {
                 Kind = AccessAuditEventKind.CredentialAccessed,
                 Phase = AccessAuditEventPhase.Outcome,
-                // Same instant for all.
+                // Same instant for all, so the page boundary falls inside a tie.
                 OccurredDate = occurredAt,
                 OrganizationId = Organization.Id,
                 AccessRequestId = requestId,
@@ -338,7 +330,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.True(body["continuationToken"] == null || body["continuationToken"]!.GetValue<string?>() == null);
     }
 
-    // Unknown kinds and foreign tokens are rejected.
     [Theory]
     [InlineData("?kind=notAKind")]
     [InlineData("?continuationToken=forged")]
@@ -349,7 +340,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // A range wider than the retention window is rejected.
     [Fact]
     public async Task Audit_WithARangeWiderThanRetention_Returns400()
     {
@@ -359,7 +349,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // The distinct subjects for the Item filter.
     [Fact]
     public async Task AuditItems_NamesEverySubjectTheTrailCarries_OncePerSubject()
     {
@@ -402,7 +391,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal("Production database", rule["ruleName"]!.GetValue<string>());
     }
 
-    // Items are limited to the requested range.
     [Fact]
     public async Task AuditItems_FollowsTheRange()
     {
@@ -434,7 +422,6 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(recentCipherId, Assert.Single(narrowed)!["cipherId"]!.GetValue<Guid>());
     }
 
-    // Cipher and rule filters union.
     [Fact]
     public async Task Audit_WithAnItemFilter_UnionsCiphersWithRules()
     {

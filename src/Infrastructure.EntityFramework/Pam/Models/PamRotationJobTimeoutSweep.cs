@@ -3,10 +3,8 @@
 namespace Bit.Infrastructure.EntityFramework.Pam.Models;
 
 /// <summary>
-/// The timeout sweep's journal, mirroring [dbo].[PamRotationJobTimeoutSweep]: one row per job
-/// <c>IPamRotationJobRepository.TimeoutDueAsync</c> has already returned.
-/// This journal, not a status flip, keeps the sweep from returning a job twice and ends the job's hold on its config;
-/// pure bookkeeping with no <c>Bit.Pam</c> counterpart.
+/// The timeout sweep's journal, in place of a status flip: one row per job already returned, so none is returned
+/// twice, and the row ends the job's hold on its config. Pure bookkeeping, with no <c>Bit.Pam</c> entity.
 /// </summary>
 public class PamRotationJobTimeoutSweep
 {

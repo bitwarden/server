@@ -42,8 +42,7 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
             throw new NotFoundException();
         }
 
-        // Both rows were just loaded against the same route organization, so the same-org invariant holds by
-        // construction.
+        // Both rows matched the route organization, so the same-org invariant holds.
         if (accessConnector.Status != PamAccessConnectorStatus.Enabled)
         {
             throw new BadRequestException("This access connector is deactivated.");
@@ -67,12 +66,10 @@ public class AssignAccessConnectorToTargetCommand : IAssignAccessConnectorToTarg
             OrganizationId = organizationId,
             CreationDate = now,
         };
-        // CreateAssignmentAsync is a guarded custom insert, not the generic single-object CreateAsync -- it expects
-        // the id to already be assigned.
+        // CreateAssignmentAsync, unlike the generic CreateAsync, does not assign the id.
         assignment.SetNewId();
 
-        // audit (before/after): both names are snapshotted here (the commands hold the entities) rather than joined
-        // on read.
+        // Attempt before the insert, outcome after.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorAssignedToTarget,

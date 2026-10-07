@@ -10,10 +10,8 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/target-systems</c> resource. Authority over
-/// the organization is already settled by the time a handler runs -- <c>PamEndpointsExtensions</c> gates the whole
-/// connector admin group on <c>ManageAccessConnectorRequirement</c> through the authorization middleware. What is
-/// left is resource scoping: the commands underneath re-verify every id argument belongs to the route organization.
+/// Handler for the <c>organizations/{orgId}/access-connectors/rotation/target-systems</c> resource, authorized in the
+/// middleware by <c>ManageAccessConnectorRequirement</c>.
 /// </summary>
 public class TargetSystemEndpointsHandler(
     ICurrentContext currentContext,
@@ -55,8 +53,8 @@ public class TargetSystemEndpointsHandler(
     }
 
     /// <remarks>
-    /// Fans out to both the rename and policy commands. The policy update goes first, since it carries the
-    /// stricter guards, so a rejected policy leaves the name untouched rather than half-applying the update.
+    /// Fans out to the policy and rename commands, policy first since its guards are stricter, so a rejected policy
+    /// leaves the name untouched.
     /// </remarks>
     public async Task Put(Guid orgId, Guid id, UpdateTargetSystemRequestModel model)
     {

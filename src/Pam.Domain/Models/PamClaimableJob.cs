@@ -3,10 +3,8 @@
 namespace Bit.Pam.Models;
 
 /// <summary>
-/// A claimable <see cref="PamRotationJob"/> together with the target system it rotates against — the read model for an
-/// access connector's poll (<c>GET rotation/access connector/jobs</c>). The job row carries only
-/// <c>RotationConfigId</c>, and the poll query already joins <see cref="PamRotationConfig"/> to check eligibility, so
-/// the target id is projected there rather than re-read per job.
+/// A claimable <see cref="PamRotationJob"/> with its target system, for an access connector's poll. The poll query
+/// already joins <see cref="PamRotationConfig"/>, so the target id is projected there rather than read per job.
 /// </summary>
 public class PamClaimableJob : PamRotationJob
 {

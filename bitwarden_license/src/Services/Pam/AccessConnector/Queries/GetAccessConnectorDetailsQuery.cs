@@ -10,10 +10,7 @@ namespace Bit.Services.Pam.AccessConnector.Queries;
 /// <inheritdoc cref="IGetAccessConnectorDetailsQuery" />
 public class GetAccessConnectorDetailsQuery : IGetAccessConnectorDetailsQuery
 {
-    /// <summary>
-    /// How many of the access connector's jobs the detail page shows. An access connector accumulates a job per
-    /// rotation it executes for the lifetime of the fleet, so this read is capped rather than unbounded.
-    /// </summary>
+    /// <summary>Caps the read, since an access connector accumulates a job per rotation it ever executes.</summary>
     private const int RecentJobLimit = 50;
 
     private readonly IPamAccessConnectorRepository _accessConnectorRepository;
