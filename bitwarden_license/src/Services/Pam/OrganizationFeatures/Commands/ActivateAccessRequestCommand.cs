@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
@@ -18,6 +19,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
 
     public ActivateAccessRequestCommand(
         IAccessRequestRepository accessRequestRepository,
@@ -25,7 +27,8 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IAccessAuditEventEmitter accessAuditEventEmitter)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
@@ -33,6 +36,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _resolver = resolver;
         _ruleEngine = ruleEngine;
         _currentContext = currentContext;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
     }
 
     public async Task<AccessLease> ActivateAsync(Guid userId, Guid requestId, DateTime now)
@@ -99,10 +103,36 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         // Binds only where every cipher path is singleton-governed; enforced under a range lock in the mint proc.
         var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
 
+        // Attempt before the mint, outcome after. A race lost to another activation leaves the attempt without one.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseActivated,
+            OccurredDate = now,
+            OrganizationId = request.OrganizationId,
+            ActorId = userId,
+            RequesterId = request.RequesterId,
+            CollectionId = request.CollectionId,
+            CipherId = request.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotBefore = lease.NotBefore,
+            LeaseNotAfter = lease.NotAfter,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         // Automated conditions (e.g. an IP allowlist) must still hold at activation, not just at submit.
         var denial = await FindConditionDenialAsync(userId, request, now);
         if (denial is not null)
         {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.LeaseActivationRejected,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    AccessLeaseId = null,
+                    // The reason code, not the localized message.
+                    Detail = denial.Reason.ToString(),
+                });
             throw new BadRequestException(AccessDenialMessage.For(denial));
         }
 
@@ -110,6 +140,8 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         if (outcome == AccessLeaseMintOutcome.SingleActiveLeaseConflict)
         {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
         }
 
@@ -121,8 +153,12 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             {
                 return winner;
             }
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
             throw new ConflictException("This request can no longer be activated.");
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         return lease;
     }

@@ -1,4 +1,5 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Pam.Services;
+using Bit.HttpExtensions;
 using Bit.Services.Pam.AccessConnector.Api.Endpoints.Handlers;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Endpoints;
@@ -21,16 +22,21 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AccessRequestEndpointsHandler>();
         services.AddScoped<AccessRuleEndpointsHandler>();
         services.AddScoped<CipherLeaseEndpointsHandler>();
+        services.AddScoped<AuditEndpointsHandler>();
         services.AddScoped<AccessConnectorEndpointsHandler>();
         services.AddScoped<TargetSystemEndpointsHandler>();
         services.AddScoped<RotationConfigEndpointsHandler>();
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
 
+        // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate.
+        services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
+
         // Rule evaluation engine. Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
 
         services.AddScoped<IGoverningRuleResolver, GoverningRuleResolver>();
+        services.AddScoped<IGatingCollectionResolver, GatingCollectionResolver>();
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IAccessRuleValidator, AccessRuleValidator>();
@@ -39,12 +45,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUpdateAccessRuleCommand, UpdateAccessRuleCommand>();
         services.AddScoped<IDeleteAccessRuleCommand, DeleteAccessRuleCommand>();
 
+        services.AddScoped<IAccessPreCheckQuery, AccessPreCheckQuery>();
+        services.AddScoped<IGetCipherAccessStateQuery, GetCipherAccessStateQuery>();
         services.AddScoped<IGetAccessRequestDetailsQuery, GetAccessRequestDetailsQuery>();
         services.AddScoped<IListInboxRequestsQuery, ListInboxRequestsQuery>();
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
         services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
+        services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
+        services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
+        services.AddScoped<IListRuleBypassableCiphersQuery, ListRuleBypassableCiphersQuery>();
 
         services.AddScoped<ISubmitAccessRequestCommand, SubmitAccessRequestCommand>();
         services.AddScoped<IDecideAccessRequestCommand, DecideAccessRequestCommand>();
@@ -55,6 +66,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
         services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
+
+        services.AddScoped<IAccessAuditEventEmitter, AccessAuditEventEmitter>();
 
         services.AddPamOpenApiEndpointDataSource();
 
