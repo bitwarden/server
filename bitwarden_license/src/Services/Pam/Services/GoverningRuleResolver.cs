@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
@@ -13,18 +14,15 @@ public class GoverningRuleResolver : IGoverningRuleResolver
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAccessRuleRepository _accessRuleRepository;
-    private readonly IAccessRuleEngine _ruleEngine;
 
     public GoverningRuleResolver(
         ICollectionCipherRepository collectionCipherRepository,
         ICollectionRepository collectionRepository,
-        IAccessRuleRepository accessRuleRepository,
-        IAccessRuleEngine ruleEngine)
+        IAccessRuleRepository accessRuleRepository)
     {
         _collectionCipherRepository = collectionCipherRepository;
         _collectionRepository = collectionRepository;
         _accessRuleRepository = accessRuleRepository;
-        _ruleEngine = ruleEngine;
     }
 
     public async Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals)
@@ -42,7 +40,7 @@ public class GoverningRuleResolver : IGoverningRuleResolver
 
         // Every path to the cipher must gate. A path with no rule, a disabled rule, or a deleted one is an escape,
         // so nothing governs.
-        var candidates = new List<(AccessRule Rule, GoverningRule Governing)>();
+        var candidates = new List<(Collection Collection, AccessRule Rule)>();
         foreach (var collection in paths)
         {
             if (!collection.AccessRuleId.HasValue)
@@ -56,7 +54,7 @@ public class GoverningRuleResolver : IGoverningRuleResolver
                 return null;
             }
 
-            candidates.Add((accessRule, Build(collection.OrganizationId, collection.Id, accessRule)));
+            candidates.Add((collection, accessRule));
         }
 
         // Only reachable when no mapped collection loaded: no path is left to gate.
@@ -65,12 +63,13 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             return null;
         }
 
-        return candidates
-            .OrderBy(c => TierOf(c.Governing, signals))
-            .ThenBy(c => c.Rule.CreationDate)
+        // Oldest wins, even where a newer path's rule would be more permissive.
+        var (governingCollection, governingRule) = candidates
+            .OrderBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
-            .First()
-            .Governing;
+            .First();
+
+        return Build(governingCollection.OrganizationId, governingCollection.Id, governingRule);
     }
 
     public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)
@@ -79,35 +78,6 @@ public class GoverningRuleResolver : IGoverningRuleResolver
 
         // A disabled or deleted rule governs nothing, as in ResolveAsync.
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
-    }
-
-    /// <summary>Where a governing candidate ranks; a lower tier governs.</summary>
-    private enum Tier
-    {
-        AutomaticAllows,
-        HumanApproval,
-        // Still governs, so Submit surfaces the denial.
-        AutomaticDenies,
-        // Its fail-safe approval cannot activate while the rule stays unreadable, so any readable rule goes first.
-        Unreadable,
-    }
-
-    // Predicts what Submit and Activate do with the chosen rule; change them together.
-    private Tier TierOf(GoverningRule rule, AccessSignals signals)
-    {
-        if (rule.ConditionsUnreadable)
-        {
-            return Tier.Unreadable;
-        }
-
-        if (rule.RequiresHumanApproval)
-        {
-            return Tier.HumanApproval;
-        }
-
-        return _ruleEngine.Evaluate(rule.Conditions, signals).Outcome == AccessEvaluationOutcome.Allow
-            ? Tier.AutomaticAllows
-            : Tier.AutomaticDenies;
     }
 
     private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)

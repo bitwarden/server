@@ -39,8 +39,8 @@ public class ClaimRotationJobCommand : IClaimRotationJobCommand
         switch (result.Outcome)
         {
             case PamRotationClaimOutcome.Claimed:
-                // The access connector's organization is the config's organization by construction of
-                // EligibleClaimsOnly, so it is a cheap, correct stand-in for the audit's required OrganizationId.
+                // EligibleClaimsOnly makes the access connector's organization the config's, so the audit uses it as
+                // OrganizationId.
                 var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
                 var job = await _jobRepository.GetByIdAsync(jobId);
 
@@ -63,11 +63,11 @@ public class ClaimRotationJobCommand : IClaimRotationJobCommand
                 return result;
 
             case PamRotationClaimOutcome.NotClaimable:
-                // Another access connector likely won the race -- 409, retry a different job.
+                // Another access connector likely won the race; the caller should claim a different job.
                 throw new ConflictException("This job is no longer claimable.");
 
             default:
-                // NotEligible: never leak *why* -- looks the same as a job that never existed.
+                // NotEligible answers like an unknown job, so it reveals nothing about why.
                 throw new NotFoundException();
         }
     }

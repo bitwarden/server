@@ -5,11 +5,7 @@ using Quartz;
 
 namespace Bit.Services.Pam.AccessConnector.Jobs;
 
-/// <summary>
-/// Quartz entry point for <see cref="IPamRotationSweepService"/>. Gated on
-/// <see cref="FeatureFlagKeys.PamAccessConnector"/>: the job no-ops on its first line if the flag is off.
-/// Registered from <c>JobsHostedService</c> inside <c>#if !OSS</c>.
-/// </summary>
+/// <summary>Quartz entry point for <see cref="IPamRotationSweepService"/>.</summary>
 public class PamRotationSweepJob : BaseJob
 {
     private readonly IFeatureService _featureService;

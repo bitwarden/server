@@ -6,7 +6,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Caller's open request for the cipher; a lapsed one derives Expired, allowing resubmission.
+    -- Caller's open request for the cipher; a lapsed one derives Expired, so the caller can resubmit.
     SELECT TOP 1
         *
     FROM

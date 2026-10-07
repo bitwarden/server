@@ -30,7 +30,7 @@ BEGIN
             AND [NotAfter] > @Now
     )
     BEGIN
-        -- Records a denied, answerable request that still counts toward the extension cap.
+        -- Records a denied request, which still counts toward the extension cap.
         INSERT INTO [dbo].[AccessRequest]
         (
             [Id], [ExtensionOfLeaseId], [OrganizationId], [CollectionId], [CipherId], [RequesterId],

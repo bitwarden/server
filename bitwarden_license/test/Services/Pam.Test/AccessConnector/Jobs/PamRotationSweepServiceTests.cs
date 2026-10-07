@@ -46,7 +46,6 @@ public class PamRotationSweepServiceTests
         sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config1.Id, PamRotationSource.Scheduled)
             .Returns(Task.FromException<PamRotationJobCreateOutcome>(new InvalidOperationException("boom")));
 
-        // config1's failure must not stop config2 from processing, or escape SweepAsync itself.
         await sutProvider.Sut.SweepAsync();
 
         await sutProvider.GetDependency<IOfferRotationCommand>().Received(1)
@@ -107,7 +106,6 @@ public class PamRotationSweepServiceTests
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
-        // The timeout is still audited -- only the scheduling side effect is suppressed.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationJobTimedOut));
     }

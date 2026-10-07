@@ -53,8 +53,6 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
             throw new NotFoundException();
         }
 
-        // Same termination-capability guard as create: only an automatic target reporting the capability may have
-        // TerminateSessions set.
         if (terminateSessions &&
             !(details.TargetSystemMethod == PamTargetSystemMethod.Automatic && target.SupportsSessionTermination == true))
         {
@@ -77,8 +75,8 @@ public class UpdateRotationAccountCommand : IUpdateRotationAccountCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Persist a plain PamRotationConfig: the PamRotationConfigDetails projection carries extra display-only
-        // properties the base ReplaceAsync must not forward.
+        // A plain PamRotationConfig, since ReplaceAsync must not forward the details projection's display-only
+        // properties.
         var toPersist = new PamRotationConfig
         {
             Id = details.Id,

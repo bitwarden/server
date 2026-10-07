@@ -70,8 +70,7 @@ public class ManageAccessRulesRequirementTests
     [Fact]
     public async Task AuthorizeAsync_DoesNotAuthorizeProviderForTheOrganization()
     {
-        // A provider user arrives with no organization claims. BasePermissionRequirement authorizes them in its last
-        // arm, so this requirement must not derive from it.
+        // A provider user arrives with no organization claims.
         Assert.False(await _sut.AuthorizeAsync(null, () => IsProviderUserForOrg()));
     }
 

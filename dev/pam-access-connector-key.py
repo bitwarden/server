@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
-"""Build a PAM access connector credential with a *valid* organization key for local dev.
+"""Build a PAM access connector credential with a valid organization key, for local dev only.
 
-LOCAL DEV ONLY. Operates on seeded synthetic data in `vault_dev`:
-  * Seeded users draw their RSA keypair from the fixed pool in
-    util/RustSdk/rust/src/rsa_keys.rs (selected by poolIndex). The private key is
-    therefore a known constant in the repo, so we can RSA-OAEP-SHA1 decrypt the
-    org key stored (RSA-wrapped) in OrganizationUser.Key -- exactly what a real
-    client does at access connector registration.
-  * We mirror the Secrets Manager access-token layout (CONTRACT C1): a random
-    16-byte seed is generated; the 64-byte symmetric key is *derived* from that seed
-    via `bitwarden_crypto::derive_shareable_key(seed, "accesstoken",
-    Some("sm-access-token"))`; the payload is encrypted under that derived key; and
-    the connector token embeds the base64-encoded seed (not the key) after the ':'.
+Seeded users draw their RSA keypair from the fixed pool in util/RustSdk/rust/src/rsa_keys.rs,
+so the script can decrypt OrganizationUser.Key as a client does at registration.
 
-This deliberately reconstructs an org key from test data. It is NOT a break of the
-zero-knowledge design: the RSA keys are test-only constants committed to the repo,
-the master password is the public seeder default, and there is no real vault data.
+The token embeds a random 16-byte seed that derives the payload key, following the Secrets
+Manager access-token layout the access connector's token.rs uses (CONTRACT C1).
+
+This does not break zero knowledge: the RSA keys are test constants committed to the repo, the
+master password is the seeder default, and vault_dev holds no real vault data.
 
 Usage:
   python3 dev/pam-access-connector-key.py \
@@ -48,10 +41,9 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDFExpand
 
 
 def sql_password():
-    """Read the SqlServer SA password from dev/secrets.json.
+    """Read the SA password from the first vault_dev connection string in dev/secrets.json.
 
-    Parsing the whole JSONC file is brittle (comments, `http://` in strings), so
-    pull the first `Database=vault_dev` connection string's Password directly.
+    A regex, since the file is JSONC with comments and `http://` inside strings.
     """
     raw = open(SECRETS_JSON).read()
     for conn in re.findall(r'"connectionString"\s*:\s*"([^"]+)"', raw):
@@ -101,18 +93,10 @@ def encstring_type2(plaintext: bytes, key64: bytes) -> str:
 
 
 def derive_connector_key(seed16: bytes) -> bytes:
-    """Derive a 64-byte symmetric key from a 16-byte seed.
+    """Mirror `bitwarden_crypto::derive_shareable_key(seed, "accesstoken", Some("sm-access-token"))`.
 
-    Mirrors `bitwarden_crypto::derive_shareable_key(seed, "accesstoken",
-    Some("sm-access-token"))` — CONTRACT C1.
-
-    Step 1: HMAC-SHA256 extract
-        prk = HMAC-SHA256(key=b"bitwarden-accesstoken", msg=seed16)
-    Step 2: HKDF-Expand (SHA-256, no extract step)
-        key64 = HKDFExpand(prk, info=b"sm-access-token", length=64)
-
-    The returned 64 bytes are split enc_key=[:32] / mac_key=[32:] by encstring_type2,
-    matching the Aes256CbcHmacKey layout used by the access connector.
+    Yields the 64-byte enc || mac key that encstring_type2 splits, matching the access connector's
+    Aes256CbcHmacKey.
     """
     prk = hmac.new(b"bitwarden-accesstoken", seed16, hashlib.sha256).digest()
     hkdf = HKDFExpand(algorithm=hashes.SHA256(), length=64, info=b"sm-access-token")
@@ -164,8 +148,7 @@ def main():
     assert len(org_key) == 64, f"unexpected org key length {len(org_key)}"
     org_key_b64 = base64.b64encode(org_key).decode()
 
-    # Mirrors the SM access-token layout (CONTRACT C1): the 16-byte seed derives the key, and only the
-    # seed (not the key) is stored, base64-encoded.
+    # Only the seed, not the key it derives, is stored.
     seed = os.urandom(16)
     seed_b64 = base64.b64encode(seed).decode()
     k = derive_connector_key(seed)
@@ -217,5 +200,5 @@ def main():
 
 
 if __name__ == "__main__":
-    import urllib.parse  # noqa: E402  (kept local so --dry-run has no import cost surprises)
+    import urllib.parse  # noqa: E402
     main()

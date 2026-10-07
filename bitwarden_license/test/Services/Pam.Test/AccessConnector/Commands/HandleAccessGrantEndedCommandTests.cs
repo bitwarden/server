@@ -105,7 +105,7 @@ public class HandleAccessGrantEndedCommandTests
             .OfferAsync(config.Id, PamRotationSource.AccessEnd);
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
-        // OfferRotationCommand owns its own audit; the automatic branch here emits nothing directly.
+        // OfferRotationCommand audits the offer itself.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
     }

@@ -47,8 +47,8 @@ public class AccessRequest : ITableObject<Guid>
     public DateTime? ActionDate { get; set; }
 
     /// <summary>
-    /// The governing rule, resolved once at submit so later operations read the same rule. Null once the rule is
-    /// deleted, or when no stored rule gated the cipher.
+    /// The governing rule, resolved once at submit (oldest wins) so later operations read the same rule. Null once the
+    /// rule is deleted, or when no stored rule gated the cipher.
     /// </summary>
     public Guid? RuleId { get; set; }
 

@@ -18,7 +18,7 @@ BEGIN
 
     UPDATE J
     SET J.[Action] = 0, -- None
-        -- Uses the pre-clear ClaimedAt, still visible here, so re-claim time is exactly ExecuteBy.
+        -- Uses the pre-clear ClaimedAt, still visible here, so re-claim time equals ExecuteBy.
         J.[NextClaimableAt] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedAt]),
         J.[ClaimedByAccessConnectorId] = NULL,
         J.[ClaimedAt] = NULL

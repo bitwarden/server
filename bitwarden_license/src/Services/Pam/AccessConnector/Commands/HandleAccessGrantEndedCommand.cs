@@ -48,7 +48,7 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
             return;
         }
 
-        // Paused/disabled is a no-op; the deferred access-end latch discharges it on Enable/Resume instead.
+        // Dropped while paused; the spec's DeferAccessEndWhileUnavailable latch is not implemented.
         if (!config.Enabled)
         {
             return;
@@ -62,12 +62,12 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
 
         if (target.Method == PamTargetSystemMethod.Automatic)
         {
-            // OfferRotationCommand re-checks can_offer itself and no-ops silently if it doesn't hold.
+            // OfferAsync re-checks can_offer and no-ops when it does not hold.
             await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.AccessEnd);
             return;
         }
 
-        // Manual target: there is no access connector to offer a job to, so the obligation is pulled due immediately.
+        // A manual target has no access connector to offer a job to, so its rotation is pulled due now.
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var toPersist = new PamRotationConfig
         {

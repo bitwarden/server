@@ -14,8 +14,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Api;
 
 /// <remarks>
-/// Covers the heartbeat write and its one guard. The filter does not check access connector eligibility, so that is
-/// covered by PamAccessConnectorClientProviderTests and PamRotationJobRepositoryTests instead.
+/// The filter does not check connector eligibility; PamAccessConnectorClientProviderTests and
+/// PamRotationJobRepositoryTests cover it.
 /// </remarks>
 public class AccessConnectorHeartbeatEndpointFilterTests
 {
@@ -55,8 +55,8 @@ public class AccessConnectorHeartbeatEndpointFilterTests
     }
 
     /// <remarks>
-    /// The access connector id comes straight off the token, so the poll route -- the one an access connector hits
-    /// continuously -- pays one conditional write and no reads.
+    /// The id comes off the token, so the poll route a connector hits continuously pays one conditional write and no
+    /// reads.
     /// </remarks>
     [Fact]
     public async Task InvokeAsync_AccessConnectorIdInContext_WritesTheHeartbeatWithoutReadingTheAccessConnectorRow()

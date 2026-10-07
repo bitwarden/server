@@ -68,7 +68,6 @@ public class UpdateTargetSystemPolicyCommandTests
         sutProvider.GetDependency<IPamRotationConfigRepository>()
             .AnyByTargetSystemWithTerminateSessionsAsync(target.Id).Returns(true);
 
-        // Withdrawing (true -> false) while a config on this target still requires termination must be rejected.
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateAsync(target.OrganizationId, actingUserId, target.Id, _policy, false));
 

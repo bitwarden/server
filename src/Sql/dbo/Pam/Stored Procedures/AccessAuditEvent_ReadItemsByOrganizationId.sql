@@ -6,11 +6,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- What the trail's Item filter is built from. Neither obvious source works: a page of the trail cannot name
-    -- every item in range, and the caller's own vault would offer every credential they hold whether the trail
-    -- mentions it or not. No cipher name is returned, because the store holds none; the caller resolves it from its
-    -- own vault. Ranked rather than aggregated so each subject carries its most recent context, where MIN/MAX would
-    -- pick alphabetically and for a renamed rule that is the wrong name.
+    -- The subjects the trail's Item filter offers; the caller resolves cipher names from its own vault. Ranked rather
+    -- than aggregated, so a renamed rule carries its newest name where MIN/MAX would pick alphabetically.
     WITH [Ciphers] AS (
         SELECT
             [CipherId],
