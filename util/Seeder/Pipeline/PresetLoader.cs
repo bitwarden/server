@@ -241,6 +241,7 @@ internal static class PresetLoader
         LimitItemDeletion = org.LimitItemDeletion,
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
+        UsePam = org.UsePam,
     };
 
     private static MemberDecryptionType ParseMemberDecryptionType(string? encryptionType) =>
