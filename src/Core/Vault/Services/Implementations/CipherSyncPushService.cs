@@ -2,8 +2,8 @@
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Vault.Services;
