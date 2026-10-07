@@ -2,6 +2,6 @@
 
 public interface IPauseRotationCommand
 {
-    /// <summary>Pauses a rotation config (spec <c>PauseRotation</c>). Guard: the config must currently be enabled.</summary>
+    /// <summary>Pauses an enabled rotation config (spec <c>PauseRotation</c>).</summary>
     Task PauseAsync(Guid organizationId, Guid actingUserId, Guid configId);
 }

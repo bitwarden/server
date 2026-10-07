@@ -121,7 +121,6 @@ public class PamAccessConnectorClientProviderTests
         Assert.NotNull(client);
         Assert.Equal($"access-connector.{apiKeyId}", client.ClientId);
         Assert.True(client.RequireClientSecret);
-        // The usage of this secret is tested in integration tests
         Assert.Single(client.ClientSecrets);
         var scope = Assert.Single(client.AllowedScopes);
         Assert.Equal(ApiScopes.ApiPamRotation, scope);
@@ -147,7 +146,7 @@ public class PamAccessConnectorClientProviderTests
 
         var client = await _sut.GetAsync(apiKeyId.ToString());
 
-        // Access connector credentials are long-lived: a null ExpireAt must not be treated as expired.
+        // Access connector credentials are long-lived, so a null ExpireAt never expires.
         Assert.NotNull(client);
     }
 

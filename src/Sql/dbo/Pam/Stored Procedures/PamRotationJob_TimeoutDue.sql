@@ -4,9 +4,9 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- A timeout is derived, not stored; PamRotationJobTimeoutSweep's INSERT decides which run owns a job.
-    -- UPDLOCK/HOLDLOCK serializes concurrent sweeps; a loser re-checks after commit and skips it.
-    -- A Rotated attempt always comes with a Succeeded job, so success wins without checking attempts.
+    -- A timeout is derived; the PamRotationJobTimeoutSweep INSERT decides which run owns a job, and UPDLOCK/HOLDLOCK
+    -- makes a losing sweep skip it. A Rotated attempt always has a Succeeded job, so success wins without checking
+    -- attempts.
     DECLARE @Due TABLE ([RotationJobId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY);
 
     INSERT INTO [dbo].[PamRotationJobTimeoutSweep] ([RotationJobId], [SweptDate])

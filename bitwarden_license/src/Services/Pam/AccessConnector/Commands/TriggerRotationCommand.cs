@@ -44,8 +44,7 @@ public class TriggerRotationCommand : ITriggerRotationCommand
             throw new NotFoundException();
         }
 
-        // Surface guard can_offer: enabled, automatic, target active, plus no active job, checked separately
-        // since it needs a repository lookup.
+        // Spec can_offer: CanOffer plus the active-job check it leaves to callers.
         var canOffer = PamRotationRules.CanOffer(details, details.TargetSystemMethod, target.Status)
             && !details.HasActiveJob;
         if (!canOffer)
@@ -59,8 +58,7 @@ public class TriggerRotationCommand : ITriggerRotationCommand
             throw new BadRequestException("This rotation config was rotated recently; try again later.");
         }
 
-        // No audit here -- OfferRotationCommand is the single creation point and writes the `offered` audit event
-        // itself (RotationSource.OnDemand distinguishes this from a scheduled or access-end offer).
+        // No audit here; OfferAsync writes the offered event, with OnDemand as its source.
         await _offerRotationCommand.OfferAsync(configId, PamRotationSource.OnDemand);
     }
 }

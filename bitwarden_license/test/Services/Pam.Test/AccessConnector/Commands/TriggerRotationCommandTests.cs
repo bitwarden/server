@@ -144,7 +144,7 @@ public class TriggerRotationCommandTests
     {
         var sutProvider = Setup();
         SetupOfferable(sutProvider, details, target);
-        details.LastRotationAt = null; // no prior rotation, so no cooldown
+        details.LastRotationAt = null;
 
         await sutProvider.Sut.TriggerAsync(details.OrganizationId, actingUserId, details.Id);
 
@@ -152,7 +152,6 @@ public class TriggerRotationCommandTests
             .OfferAsync(details.Id, PamRotationSource.OnDemand);
     }
 
-    /// <summary>An offerable baseline: enabled, automatic method, active target, no active job.</summary>
     private static void SetupOfferable(
         SutProvider<TriggerRotationCommand> sutProvider, PamRotationConfigDetails details, PamTargetSystem target)
     {
