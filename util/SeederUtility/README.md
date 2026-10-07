@@ -34,6 +34,12 @@ dotnet run -- organization -n CustomOrg -d custom.example -u 10 -c 100 -g 3 --pa
 
 Additional flags include `--region`, `--kdf-iterations`, and `--plan-type`. Run `dotnet run -- organization --help` for the full list.
 
+Add `--use-pam` for an org subscribed to Privileged Access Management. No plan turns PAM on by default, so this flag is the only way to get it, and every member the run seeds is created with `AccessPam = 1`. Presets can do the same with `"usePam": true` on the preset's `organization` block.
+
+```bash
+dotnet run -- organization -n "PAM Org" -d pam.example -u 10 --use-pam --mangle
+```
+
 Add `--stripe-billing` for an org whose subscription pages actually work — see [Stripe billing](#stripe-billing) below.
 
 ### `individual` - Seed an Individual User
