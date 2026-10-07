@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Controllers;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
+using Bit.DataMigrations;
+using Bit.Infrastructure.EntityFramework.Repositories;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -66,6 +68,7 @@ public class Startup
             default:
                 break;
         }
+        services.AddDataMigrations<DatabaseContext>();
         services.AddTestPlayIdTracking(globalSettings);
 
         // Context

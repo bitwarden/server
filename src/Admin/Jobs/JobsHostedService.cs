@@ -83,6 +83,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 */5 * * * ?")
             .Build();
+        var dataMigrationsTrigger = TriggerBuilder.Create()
+            .WithIdentity("DataMigrationsTrigger")
+            .StartNow()
+            .WithCronSchedule("0 */15 * ? * *")
+            .Build();
 
         var jobs = new List<Tuple<Type, ITrigger>>
         {
@@ -104,6 +109,7 @@ public class JobsHostedService : BaseJobsHostedService
         if (!_globalSettings.SelfHosted)
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(AliveJob), everyTopOfTheHourTrigger));
+            jobs.Add(new Tuple<Type, ITrigger>(typeof(DataMigrationsJob), dataMigrationsTrigger));
         }
 
         Jobs = jobs;
@@ -115,6 +121,7 @@ public class JobsHostedService : BaseJobsHostedService
         if (!selfHosted)
         {
             services.AddTransient<AliveJob>();
+            services.AddTransient<DataMigrationsJob>();
         }
         services.AddTransient<OrganizationDeleteTasksJob>();
         services.TryAddEnumerable(
