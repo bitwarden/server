@@ -2,9 +2,8 @@
 
   <PropertyGroup>
     <RootNamespace>Bit.Services.Pam</RootNamespace>
-    <!-- Emit XML docs so the access-rule DTO descriptions flow into the generated OpenAPI spec (the Api project
-         includes this file via AddSwaggerGen). Suppress missing-doc warnings (1591/1573) as Core.csproj does, since
-         TreatWarningsAsErrors is on. -->
+    <!-- Emit XML docs so PAM request and response model descriptions flow into the generated OpenAPI spec. Missing-doc
+         warnings (1591/1573) are suppressed as in Core.csproj, since warnings are errors. -->
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <NoWarn>1701;1702;1591;1573</NoWarn>
   </PropertyGroup>

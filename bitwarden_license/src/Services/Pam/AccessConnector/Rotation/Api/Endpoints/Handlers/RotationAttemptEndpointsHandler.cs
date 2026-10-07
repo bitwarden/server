@@ -7,10 +7,8 @@ using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the <c>access-connectors/rotation/attempts/{id}</c> connector-facing actions: reading and writing back
-/// the claimed attempt's cipher, and reporting its outcome. Runs behind <c>Policies.AccessConnector</c>; every
-/// command throws 404 for an unknown attempt id (no audit -- nothing to audit against) and 409 for a stale report or
-/// a lost write race (audited as <c>report_rejected</c> / <c>write_rejected</c>).
+/// Handler for the connector-facing <c>access-connectors/rotation/attempts/{id}</c> actions. The commands throw 404
+/// for an unknown attempt (not audited) and 409 for a stale report or a lost write race (audited).
 /// </summary>
 public class RotationAttemptEndpointsHandler(
     ICurrentContext currentContext,
@@ -37,12 +35,6 @@ public class RotationAttemptEndpointsHandler(
             currentContext.PamAccessConnectorId!.Value, id, model.SessionTermination!.Value);
     }
 
-    /// <summary>
-    /// The contract forbids forwarding raw target-system error output (it can echo credentials) -- the access
-    /// connector sends only a bounded <see cref="ReportRotationFailedRequestModel.ErrorCode"/> plus optional
-    /// <see cref="ReportRotationFailedRequestModel.Detail"/>, combined here and truncated to 500 characters by the
-    /// command regardless (never rejected).
-    /// </summary>
     public async Task Failure(Guid id, ReportRotationFailedRequestModel model)
     {
         await reportRotationFailedCommand.ReportFailedAsync(

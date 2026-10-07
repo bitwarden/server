@@ -7,21 +7,14 @@ using Microsoft.Extensions.Options;
 namespace Bit.Services.Pam.AccessConnector.Api.Endpoints.Filters;
 
 /// <summary>
-/// Records the access connector's heartbeat on every connector-facing rotation route by bumping
-/// <see cref="PamAccessConnector.LastHeartbeatAt"/>. The write is conditional in the repository, touching the row at
-/// most once per <c>HeartbeatMinInterval</c>, so a tightly polling access connector does not hammer it.
+/// Bumps <see cref="PamAccessConnector.LastHeartbeatAt"/> on every connector-facing route, at most once per
+/// <c>HeartbeatMinInterval</c> since the repository write is conditional. Authorizes nothing; token issuance and the
+/// work queries check eligibility.
 /// </summary>
-/// <remarks>
-/// This filter authorizes nothing. An access connector's eligibility is established at token issuance
-/// (<see cref="Bit.Core.Auth.Identity.Policies.AccessConnector"/>, <c>PamAccessConnectorClientProvider</c>) and
-/// re-established by the work queries themselves, which join <c>PamAccessConnector</c> on Enabled and organization.
-/// </remarks>
 public class AccessConnectorHeartbeatEndpointFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        // Resolved per invocation from the scoped provider rather than constructor-injected, since a filter
-        // instance registered via AddEndpointFilter<T>() can otherwise be built once and outlive any one request.
         var services = context.HttpContext.RequestServices;
         var currentContext = services.GetRequiredService<ICurrentContext>();
         var accessConnectorRepository = services.GetRequiredService<IPamAccessConnectorRepository>();

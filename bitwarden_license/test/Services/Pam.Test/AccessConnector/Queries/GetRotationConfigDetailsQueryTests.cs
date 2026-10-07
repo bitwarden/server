@@ -11,9 +11,8 @@ using Xunit;
 namespace Bit.Services.Pam.Test.AccessConnector.Queries;
 
 /// <summary>
-/// ManageAccessConnectorRequirement only proves the caller administers the organization named in the route, so this query's
-/// own OrganizationId check is the sole thing keeping an Owner of one organization from reading another's rotation
-/// config and its full job/attempt history.
+/// ManageAccessConnectorRequirement only proves the caller administers the route's organization, so this query
+/// has to refuse another organization's config and its job history.
 /// </summary>
 [SutProviderCustomize]
 public class GetRotationConfigDetailsQueryTests

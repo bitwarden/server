@@ -16,18 +16,9 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// Shared harness for the <c>organizations/{orgId}/access-rules</c> integration tests: the Api host over SQLite, the
-/// PAM feature flag on, and an enterprise organization whose owner can be logged in.
+/// Base for the PAM integration tests: the Api host over SQLite, the PAM flag on, and an enterprise organization.
+/// Setup runs per test, so a test that turns a flag off does not leak into its siblings.
 /// </summary>
-/// <remarks>
-/// PAM ships under <c>bitwarden_license</c>, so its integration tests live here. Api.IntegrationTest is referenced
-/// only for the host fixture and the organization/login helpers, the same way Billing.IntegrationTest consumes them.
-/// <para>
-/// Each test class gets its own <see cref="ApiApplicationFactory"/> — and so its own database — because xUnit scopes
-/// <see cref="IClassFixture{T}"/> per class. Setup runs per test, since xUnit constructs a fresh test-class instance
-/// for every test, which is what keeps a test that flips the feature flag from leaking into its siblings.
-/// </para>
-/// </remarks>
 public abstract class AccessRuleIntegrationTestBase : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _emailPrefix;
@@ -35,8 +26,7 @@ public abstract class AccessRuleIntegrationTestBase : IClassFixture<ApiApplicati
     protected AccessRuleIntegrationTestBase(ApiApplicationFactory factory, string emailPrefix)
     {
         Factory = factory;
-        // Every PAM group sits behind RequireFeature(FeatureFlagKeys.Pam), so without a substituted feature service
-        // the whole surface is unroutable and every assertion below would pass for the wrong reason.
+        // Every PAM group sits behind a feature flag, so without a substitute feature service nothing is routable.
         Factory.SubstituteService<IFeatureService>(_ => { });
         Client = factory.CreateClient();
         LoginHelper = new LoginHelper(factory, Client);

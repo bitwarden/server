@@ -29,9 +29,8 @@ public class AccessRuleResponseModelTests
     }
 
     /// <summary>
-    /// A rule stored before a conditions-format change has to stay readable, so an unparseable document reads back as
-    /// no conditions rather than failing the request. Note the engine treats a rule with no conditions as satisfied,
-    /// which makes this a fail-open read — deliberate, and worth knowing about when the format next changes.
+    /// Rules stored in an earlier conditions format have to stay readable. Evaluation does not read this model; the
+    /// resolver fails safe to human approval on the same document.
     /// </summary>
     [Fact]
     public void Constructor_WithStoredConditionsThatDoNotParse_ReturnsNullConditions()
@@ -42,9 +41,7 @@ public class AccessRuleResponseModelTests
     }
 
     /// <summary>
-    /// Dapper materializes these timestamps with <see cref="DateTimeKind.Unspecified"/>, which serializes without a
-    /// timezone designator and is then read as local time by a JavaScript client. The stored values are already UTC
-    /// instants, so the kind is relabelled — the clock must not move.
+    /// Dapper materializes these as <see cref="DateTimeKind.Unspecified"/>, which JavaScript reads as local time.
     /// </summary>
     [Fact]
     public void Constructor_MarksTheTimestampsAsUtcWithoutShiftingThem()

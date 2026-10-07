@@ -38,8 +38,7 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
         {
             try
             {
-                // Machinery event: single Outcome-phase, no human actor -- mirrors RevokeAccessLeaseCommand's
-                // LeaseRevoked construction, adapted for a lease that ended on its own rather than by a decision.
+                // Machinery event: single Outcome-phase, no human actor.
                 var audit = new AccessAuditEventData
                 {
                     Kind = AccessAuditEventKind.LeaseExpired,
@@ -53,8 +52,8 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                     LeaseNotBefore = lease.NotBefore,
                     LeaseNotAfter = lease.NotAfter,
                 };
-                // Independent try blocks: sharing one meant an audit-store hiccup silently swallowed the
-                // rotation trigger, which is the control that stops the credential the user just held.
+                // A separate try, so an audit failure cannot skip the rotation trigger that retires the credential
+                // the user held.
                 try
                 {
                     await _accessAuditEventEmitter.EmitAsync(audit);
@@ -66,8 +65,7 @@ public class PamLeaseExpirySweepService : IPamLeaseExpirySweepService
                         lease.Id);
                 }
 
-                // Self-gates on the PamRotation flag -- safe to call unconditionally here, the same as the
-                // RevokeAccessLeaseCommand hook.
+                // Gates itself on the PamAccessConnector flag, so it is safe to call unconditionally.
                 await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);
             }
             catch (Exception ex)

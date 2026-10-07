@@ -5,9 +5,8 @@ namespace Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 public interface IGetRotationConfigDetailsQuery
 {
     /// <summary>
-    /// A single rotation config's detail view, including its job/attempt history. Throws
-    /// <see cref="Bit.Core.Exceptions.NotFoundException"/> for a config that does not exist or belongs to a
-    /// different organization.
+    /// A rotation config with its job and attempt history. Throws <see cref="Bit.Core.Exceptions.NotFoundException"/>
+    /// if it does not exist or belongs to another organization.
     /// </summary>
     Task<PamRotationConfigHistory> GetAsync(Guid organizationId, Guid configId);
 }

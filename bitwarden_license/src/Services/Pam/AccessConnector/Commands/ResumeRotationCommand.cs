@@ -43,8 +43,6 @@ public class ResumeRotationCommand : IResumeRotationCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A manual-target config with a due obligation, read while paused, has that obligation pulled due rather
-        // than pushed further out by recomputing from the schedule.
         var nextRotationAt =
             details.TargetSystemMethod == PamTargetSystemMethod.Manual
             && details.NextRotationAt is { } nextRotationDue && nextRotationDue <= now

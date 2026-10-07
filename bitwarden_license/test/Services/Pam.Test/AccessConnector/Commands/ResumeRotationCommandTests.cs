@@ -64,14 +64,13 @@ public class ResumeRotationCommandTests
         var sutProvider = Setup();
         details.Enabled = false;
         details.TargetSystemMethod = PamTargetSystemMethod.Manual;
-        details.NextRotationAt = _now.AddMinutes(-5); // due while paused
+        details.NextRotationAt = _now.AddMinutes(-5);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
 
         await sutProvider.Sut.ResumeAsync(details.OrganizationId, actingUserId, details.Id);
 
         await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(Arg.Is<PamRotationConfig>(c =>
             c.Id == details.Id && c.Enabled && c.NextRotationAt == _now));
-        // The due obligation is pulled to now, not recomputed from the schedule.
         sutProvider.GetDependency<IRotationScheduleCalculator>().DidNotReceiveWithAnyArgs()
             .GetNextOccurrence(default, default);
     }
@@ -82,7 +81,7 @@ public class ResumeRotationCommandTests
         var sutProvider = Setup();
         details.Enabled = false;
         details.TargetSystemMethod = PamTargetSystemMethod.Manual;
-        details.NextRotationAt = _now.AddDays(1); // not yet due
+        details.NextRotationAt = _now.AddDays(1);
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         var recomputed = _now.AddDays(2);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(details.ScheduleCron, _now)
@@ -100,7 +99,7 @@ public class ResumeRotationCommandTests
         var sutProvider = Setup();
         details.Enabled = false;
         details.TargetSystemMethod = PamTargetSystemMethod.Automatic;
-        details.NextRotationAt = _now.AddMinutes(-5); // "due", but automatic never gets pulled to now here
+        details.NextRotationAt = _now.AddMinutes(-5); // past due, but only a manual config is pulled to now
         sutProvider.GetDependency<IPamRotationConfigRepository>().GetDetailsByIdAsync(details.Id).Returns(details);
         var recomputed = _now.AddHours(3);
         sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(details.ScheduleCron, _now)

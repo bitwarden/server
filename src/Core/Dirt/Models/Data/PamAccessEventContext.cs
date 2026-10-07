@@ -5,33 +5,27 @@ using Bit.Core.Enums;
 namespace Bit.Core.Models.Data;
 
 /// <summary>
-/// The organization-event-log projection of one PAM audit event. PAM's own append-only audit store stays the system of
-/// record for the full trail; this carries just the facts <c>dbo.Event</c> can represent, so
-/// <see cref="Bit.Core.Services.IEventService"/> does not have to depend on the PAM domain (and the PAM audit kinds do
-/// not have to leak into Core).
+/// The organization-event-log projection of a PAM audit event, carrying only what <c>dbo.Event</c> can represent so
+/// <see cref="Bit.Core.Services.IEventService"/> need not depend on the PAM domain.
 /// </summary>
 public record PamAccessEventContext
 {
     public required Guid OrganizationId { get; init; }
 
-    /// <summary>
-    /// The action's own timestamp as recorded by PAM, not the fan-out's, so the two trails agree on a timestamp.
-    /// </summary>
+    /// <summary>The action's own timestamp as recorded by PAM, so the two trails agree.</summary>
     public required DateTime Date { get; init; }
 
     /// <summary>
-    /// Who performed the action. Null for a system / automatic action (an automatic decision, a sweep), which sets
-    /// <see cref="SystemUser"/> instead so the event log still names an actor.
+    /// Null for an automatic action, which sets <see cref="SystemUser"/> instead so the event log still names an actor.
     /// </summary>
     public Guid? ActingUserId { get; init; }
 
-    /// <summary>The member the action was about — the access requester.</summary>
+    /// <summary>The access requester.</summary>
     public Guid? UserId { get; init; }
 
     /// <summary>
-    /// The vault item the access concerns. Populated for every PAM event that reaches the organization event log, and
-    /// the fact an administrator reading that log actually wants — the subject ids below are correlation handles into
-    /// the PAM trail. Setting it also files the event under the item's own event history.
+    /// Also files the event under the item's own history; null on rule events. The ids below are correlation handles
+    /// into the PAM trail.
     /// </summary>
     public Guid? CipherId { get; init; }
 
@@ -41,6 +35,5 @@ public record PamAccessEventContext
     public Guid? AccessRequestId { get; init; }
     public Guid? AccessLeaseId { get; init; }
 
-    /// <summary>Set in place of <see cref="ActingUserId"/> for an action PAM itself performed.</summary>
     public EventSystemUser? SystemUser { get; init; }
 }

@@ -41,7 +41,6 @@ public class AssignAccessConnectorToTargetCommandTests
         sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnector.Id)
             .Returns(accessConnector);
 
-        // accessConnector.OrganizationId is an unrelated AutoFixture Guid.
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.AssignAsync(Guid.NewGuid(), actingUserId, accessConnector.Id, targetSystemId));
 

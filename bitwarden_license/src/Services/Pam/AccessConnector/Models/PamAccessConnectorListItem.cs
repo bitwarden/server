@@ -3,9 +3,7 @@
 namespace Bit.Services.Pam.AccessConnector.Models;
 
 /// <summary>
-/// An access connector together with its derived liveness (spec <c>ConnectorConnection</c>, see
-/// <c>PamRotationRules.IsConnected</c>) and the target systems it is assigned to — the list view model for the
-/// access connectors admin surface.
+/// An access connector with its derived liveness (spec <c>ConnectorConnection</c>) and assigned target systems.
 /// </summary>
 public sealed record PamAccessConnectorListItem(
     PamAccessConnector AccessConnector,

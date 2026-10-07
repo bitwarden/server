@@ -17,7 +17,6 @@ namespace Bit.Services.Pam.AccessConnector.Commands;
 /// <inheritdoc cref="IRegisterAccessConnectorCommand" />
 public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 {
-    /// <summary>The scope every access connector credential carries — mirrors Secrets Manager's access-token scope shape.</summary>
     private const string AccessConnectorScope = "[\"api.pam.rotation\"]";
     private const int ClientSecretLength = 30;
 
@@ -48,7 +47,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Records the registration attempt before either row is written, then the outcome after both exist.
+        // Attempt before either row is written, outcome after both exist.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorRegistered,
@@ -59,9 +58,8 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // The access connector's machine credential is a generic dbo.ApiKey row (ServiceAccountId null), reusing the
-        // Secrets Manager credential store. Hashing mirrors CreateAccessTokenCommand, since the same provider-side
-        // verification reads this hash.
+        // A generic dbo.ApiKey row (null ServiceAccountId) in the Secrets Manager credential store, hashed as
+        // CreateAccessTokenCommand does so Identity verifies it the same way.
         var clientSecret = CoreHelpers.SecureRandomString(ClientSecretLength);
         var apiKey = new ApiKey
         {
@@ -88,7 +86,7 @@ public class RegisterAccessConnectorCommand : IRegisterAccessConnectorCommand
         await _accessAuditEventEmitter.EmitAsync(
             audit with { Phase = AccessAuditEventPhase.Outcome, AccessConnectorId = createdAccessConnector.Id });
 
-        // The plaintext client secret is surfaced here only; the server never persists or logs it again.
+        // The plaintext secret leaves the server only here; it is never persisted or logged.
         return new PamAccessConnectorRegistrationResult(createdAccessConnector, clientSecret);
     }
 

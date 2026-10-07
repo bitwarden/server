@@ -3,10 +3,9 @@
 public interface ITriggerRotationCommand
 {
     /// <summary>
-    /// Triggers an on-demand rotation for a config (spec <c>TriggerRotationNow</c>). Guards: the surface guard
-    /// <c>can_offer</c> (enabled, automatic target, target active, no active job) and the on-demand cooldown since
-    /// <c>LastRotationAt</c>. Delegates the actual offer to <see cref="IOfferRotationCommand"/> with
-    /// <see cref="Bit.Pam.Enums.PamRotationSource.OnDemand"/> — the audit trail is written there.
+    /// Triggers an on-demand rotation (spec <c>TriggerRotationNow</c>), guarded by <c>can_offer</c> and the on-demand
+    /// cooldown since <c>LastRotationAt</c>. <see cref="IOfferRotationCommand"/> creates the job and writes the audit
+    /// event.
     /// </summary>
     Task TriggerAsync(Guid organizationId, Guid actingUserId, Guid configId);
 }

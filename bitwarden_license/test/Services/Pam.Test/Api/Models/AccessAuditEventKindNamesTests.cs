@@ -6,8 +6,8 @@ namespace Bit.Services.Pam.Test.Api.Models;
 
 /// <summary>
 /// The wire names are a contract with the web client's copy in
-/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. If the pinned
-/// list below fails, update the client enum, its label map, and <c>apps/web/src/locales/en/messages.json</c> too.
+/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. Changing them
+/// means updating that enum, its label map and <c>messages.json</c>.
 /// </summary>
 public class AccessAuditEventKindNamesTests
 {
@@ -100,8 +100,8 @@ public class AccessAuditEventKindNamesTests
     }
 
     /// <summary>
-    /// A web bundle loaded before the daemon → access connector rename still posts the old fleet names in the kind
-    /// filter, and an unknown name fails the whole read. They parse for one release; they are never reported.
+    /// Stale web bundles still post the pre-rename fleet names in the kind filter, and an unknown name fails the whole
+    /// read.
     /// </summary>
     [Theory]
     [InlineData("daemonRegistered", AccessAuditEventKind.AccessConnectorRegistered)]

@@ -5,9 +5,8 @@ namespace Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 public interface IGetAccessConnectorDetailsQuery
 {
     /// <summary>
-    /// A single access connector's detail view: derived connection state, target assignments, and recent rotation
-    /// activity. Throws <see cref="Bit.Core.Exceptions.NotFoundException"/> if the access connector doesn't exist or
-    /// belongs to a different organization.
+    /// An access connector's detail view. Throws <see cref="Bit.Core.Exceptions.NotFoundException"/> if it does not
+    /// exist or belongs to another organization.
     /// </summary>
     Task<PamAccessConnectorHistory> GetAsync(Guid organizationId, Guid accessConnectorId);
 }
