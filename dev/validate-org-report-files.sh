@@ -56,23 +56,16 @@ fi
 
 _sqlcmd() { docker exec "$CONTAINER" "$SQLCMD" -S localhost -U SA -P "$PW" -C -d "$DB" "$@"; }
 
-_sqlcmd -h -1 -W -Q "
+_sqlcmd -W -Q "
 SET NOCOUNT ON;
 UPDATE OrganizationReport
 SET ReportFile = JSON_MODIFY(ReportFile, '\$.Validated', CAST(1 AS BIT)),
     RevisionDate = SYSUTCDATETIME()
+OUTPUT DELETED.Id,
+  CONVERT(varchar(30), DELETED.CreationDate, 126) AS Created,
+  JSON_VALUE(INSERTED.ReportFile, '\$.Validated') AS Validated,
+  JSON_VALUE(INSERTED.ReportFile, '\$.Size') AS Size
 WHERE ReportFile IS NOT NULL
   AND ISJSON(ReportFile) = 1
   AND ISNULL(JSON_VALUE(ReportFile, '\$.Validated'), 'false') <> 'true'
-  ${ORG_FILTER};
-SELECT CONCAT('rows validated this run: ', @@ROWCOUNT);"
-
-_sqlcmd -W -Q "
-SET NOCOUNT ON;
-SELECT Id,
-  CONVERT(varchar(30), CreationDate, 126) AS Created,
-  JSON_VALUE(ReportFile, '\$.Validated') AS Validated,
-  JSON_VALUE(ReportFile, '\$.Size') AS Size
-FROM OrganizationReport
-WHERE ReportFile IS NOT NULL AND ISJSON(ReportFile) = 1 ${ORG_FILTER}
-ORDER BY CreationDate DESC;"
+  ${ORG_FILTER};"
