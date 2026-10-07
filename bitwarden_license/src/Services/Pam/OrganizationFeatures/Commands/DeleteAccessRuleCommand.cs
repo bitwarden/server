@@ -43,7 +43,7 @@ public class DeleteAccessRuleCommand : IDeleteAccessRuleCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Hard delete: remove the rule and clear its collection links (they become ungoverned).
+        // The rule's collections become ungoverned.
         await _repository.DeleteAsync(existing);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });

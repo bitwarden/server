@@ -3,8 +3,8 @@
 public interface IDeleteTargetSystemCommand
 {
     /// <summary>
-    /// Permanently deletes a target system, cascading the access connector assignments that point at it.
-    /// Guard: no rotation config may still name the target. Unlike disable, this is not reversible.
+    /// Permanently deletes a target system and its access connector assignments, refused while a rotation config
+    /// names it.
     /// </summary>
     Task DeleteAsync(Guid organizationId, Guid actingUserId, Guid targetSystemId);
 }

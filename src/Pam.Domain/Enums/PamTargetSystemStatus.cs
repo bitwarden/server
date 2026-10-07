@@ -1,8 +1,8 @@
 ﻿namespace Bit.Pam.Enums;
 
 /// <summary>
-/// Lifecycle of a <see cref="Entities.PamTargetSystem"/>. Only an <see cref="Active"/> target is offerable for
-/// rotation (spec <c>can_offer</c>) or assignable to an access connector.
+/// Lifecycle of a <see cref="Entities.PamTargetSystem"/>. Only an <see cref="Active"/> target gets rotation jobs
+/// offered or claimed.
 /// </summary>
 public enum PamTargetSystemStatus : byte
 {

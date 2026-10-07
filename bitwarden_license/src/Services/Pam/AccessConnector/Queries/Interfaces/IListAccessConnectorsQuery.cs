@@ -4,6 +4,6 @@ namespace Bit.Services.Pam.AccessConnector.Queries.Interfaces;
 
 public interface IListAccessConnectorsQuery
 {
-    /// <summary>The access connectors list view for an organization, with derived connection state and target assignments.</summary>
+    /// <summary>An organization's access connectors, with derived connection state and target assignments.</summary>
     Task<ICollection<PamAccessConnectorListItem>> ListAsync(Guid organizationId);
 }

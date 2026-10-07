@@ -26,7 +26,6 @@ public class SubmitAccessRequestCommandTests
 {
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>Default organization for <see cref="SetupCipher"/>.</summary>
     private static readonly Guid _defaultOrganizationId = Guid.NewGuid();
 
     [Theory, BitAutoData]
@@ -51,7 +50,7 @@ public class SubmitAccessRequestCommandTests
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("Privileged Controls license is required", ex.Message);
 
-        // Refused before the rule is consulted.
+        // Refused before resolution, so the refusal cannot leak whether the item is governed.
         await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
             .ResolveAsync(default, default, default!);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
@@ -164,7 +163,7 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("maximum", ex.Message);
     }
 
-    // The rule's own MaxLeaseDurationSeconds must be read at submit, not just the global 24h ceiling.
+    // Submit enforces the rule's own MaxLeaseDurationSeconds as well as the global ceiling.
     [Theory, BitAutoData]
     public async Task SubmitAsync_AutomaticDurationExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -185,7 +184,7 @@ public class SubmitAccessRequestCommandTests
 
     [Theory]
     [BitAutoData(900)]
-    // Submit refused anything past 24h before the ceiling was raised, whatever the rule stored.
+    // A multi-day cap, still under the global ceiling.
     [BitAutoData(7 * 24 * 60 * 60)]
     public async Task SubmitAsync_AutomaticDurationEqualToRuleMax_CreatesRequest(
         int capSeconds, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -301,7 +300,7 @@ public class SubmitAccessRequestCommandTests
             .NotifyPendingRequestAsync(default!);
     }
 
-    // The window is pinned at submit, so the rule's cap must be refused here, not left for the approver.
+    // The window is fixed at submit, so the rule's cap is enforced here rather than left to the approver.
     [Theory, BitAutoData]
     public async Task SubmitAsync_HumanWindowExceedsRuleMax_ThrowsBadRequestAndCreatesNoRequest(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
@@ -574,7 +573,6 @@ public class SubmitAccessRequestCommandTests
             .CreateAsync(Arg.Any<AccessRequest>())
             .Returns(callInfo => callInfo.Arg<AccessRequest>());
 
-    // Defaults to an organization-owned, licensed cipher; pass `licensed: false` or `organizationId: null` to override.
     private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
         Guid? organizationId = null, bool licensed = true, bool userOwned = false)
     {

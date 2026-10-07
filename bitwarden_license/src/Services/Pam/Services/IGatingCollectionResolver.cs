@@ -3,11 +3,8 @@
 public interface IGatingCollectionResolver
 {
     /// <summary>
-    /// The organization's collection ids gated by a currently-enabled access rule.
+    /// The organization's collection ids gated by an enabled access rule. Resolved org-wide rather than per caller, so
+    /// an administrator assigned to no collection still gets the full set.
     /// </summary>
-    /// <remarks>
-    /// Resolved from the organization's rules and collections rather than a caller's, so an administrator
-    /// assigned to nothing still resolves the full gated set.
-    /// </remarks>
     Task<ISet<Guid>> GetGatingCollectionIdsAsync(Guid organizationId);
 }

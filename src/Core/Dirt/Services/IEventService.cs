@@ -61,8 +61,8 @@ public interface IEventService
     Task LogSendEventsAsync(IEnumerable<(Send send, EventType type)> events, Guid organizationId);
 
     /// <summary>
-    /// Logs one PAM access event to the organization's event log. PAM's own audit store is the system of record;
-    /// this is a derived copy, gated on the organization's event entitlement like every other organization event.
+    /// Copies one PAM access event to the organization's event log, gated on its event entitlement like any
+    /// organization event. PAM's own audit store stays the system of record.
     /// </summary>
     Task LogPamAccessEventAsync(EventType type, PamAccessEventContext context);
 }

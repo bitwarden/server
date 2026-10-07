@@ -1,9 +1,7 @@
 ﻿namespace Bit.Services.Pam.Models.Conditions;
 
 /// <summary>
-/// The result of checking a condition (or a rule's whole conditions document) is well-formed: whether it is valid
-/// and, when not, an actionable message. Produced at write time by <see cref="AccessCondition.Validate"/> and by
-/// <see cref="Bit.Services.Pam.Services.IAccessRuleValidator"/>.
+/// The write-time result of checking that a condition, or a rule's whole conditions document, is well-formed.
 /// </summary>
 public sealed record AccessRuleValidationResult(bool IsValid, string? Error)
 {

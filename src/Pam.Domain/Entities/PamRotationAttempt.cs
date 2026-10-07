@@ -5,23 +5,17 @@ using Bit.Pam.Enums;
 
 namespace Bit.Pam.Entities;
 
-/// <summary>
-/// One access connector's try at executing a <see cref="PamRotationJob"/>. Invariant
-/// <c>AtMostOneInFlightAttemptPerJob</c> — a job has at most one <see cref="PamRotationAttemptStatus.Executing"/>
-/// attempt at a time, inserted atomically with the claim that creates it. Reaching
-/// <see cref="PamRotationAttemptStatus.Rotated"/> requires both a written cipher (<see cref="CipherUpdated"/>) and a
-/// claimant-verified success report — the <c>VerifiedBeforeSuccess</c> backstop.
-/// </summary>
+/// <summary>One access connector's try at a <see cref="PamRotationJob"/>, inserted atomically with its claim.</summary>
 public class PamRotationAttempt : ITableObject<Guid>
 {
     public Guid Id { get; set; }
 
     public Guid JobId { get; set; }
 
-    /// <summary>The access connector executing this attempt, fixed for its lifetime (unlike the job's claim fields, this is never cleared).</summary>
+    /// <summary>Never cleared, unlike the job's claim fields.</summary>
     public Guid ClaimedByAccessConnectorId { get; set; }
 
-    /// <summary>Whether the access connector has written the rotated secret back to the cipher via the atomic accept-write path.</summary>
+    /// <summary>Set once the rotated secret is written to the cipher; a success report requires it.</summary>
     public bool CipherUpdated { get; set; }
 
     /// <summary>
@@ -31,17 +25,16 @@ public class PamRotationAttempt : ITableObject<Guid>
     public PamRotationAttemptAction Action { get; set; }
 
     /// <summary>
-    /// A bounded, human-readable failure reason, truncated to 500 characters server-side. Set only on
-    /// <see cref="PamRotationAttemptStatus.Errored"/>; forwarding raw target-system error output is forbidden
-    /// since it can echo credentials.
+    /// Set only on <see cref="PamRotationAttemptStatus.Errored"/>, truncated to 500 characters. Never raw
+    /// target-system output, which can echo credentials.
     /// </summary>
     [MaxLength(500)]
     public string? FailureReason { get; set; }
 
-    /// <summary>Whether the target system's password was left changed by a failed attempt, set only on Errored.</summary>
+    /// <summary>Set only on Errored.</summary>
     public PamRotationSyncState? SyncState { get; set; }
 
-    /// <summary>The outcome of the requested session termination, set only by a Rotated attempt that reports it.</summary>
+    /// <summary>Set only on Rotated.</summary>
     public PamSessionTerminationOutcome? SessionTermination { get; set; }
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

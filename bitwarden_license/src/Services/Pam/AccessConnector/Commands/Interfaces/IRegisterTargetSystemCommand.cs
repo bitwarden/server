@@ -7,12 +7,9 @@ namespace Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 public interface IRegisterTargetSystemCommand
 {
     /// <summary>
-    /// Registers a new target system, automatic or manual (spec <c>RegisterAutomaticTargetSystem</c> /
-    /// <c>RegisterManualTargetSystem</c>). An <see cref="PamTargetSystemMethod.Automatic"/> target requires
-    /// <paramref name="kind"/>, <paramref name="passwordPolicy"/>, and <paramref name="supportsSessionTermination"/>;
-    /// a <see cref="PamTargetSystemMethod.Manual"/> target requires <paramref name="kind"/> and
-    /// <paramref name="supportsSessionTermination"/> to be null, and takes <paramref name="passwordPolicy"/> as
-    /// guidance for the operator who rotates by hand.
+    /// Registers a target system (spec <c>RegisterAutomaticTargetSystem</c> / <c>RegisterManualTargetSystem</c>). An
+    /// automatic target requires <paramref name="kind"/>, <paramref name="passwordPolicy"/> and
+    /// <paramref name="supportsSessionTermination"/>; a manual target takes at most a policy, as operator guidance.
     /// </summary>
     Task<PamTargetSystem> RegisterAsync(
         Guid organizationId,

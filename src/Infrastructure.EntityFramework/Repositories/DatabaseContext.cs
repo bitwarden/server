@@ -257,8 +257,8 @@ public class DatabaseContext : DbContext
             .IsDescending(false, true, true);
         eAccessAuditEvent.HasIndex(p => p.CorrelationId);
 
-        // PAM rotation: mirrors the MSSQL schema's keys/indexes/delete behavior so all four databases agree.
-        // Organization is the only cascade; everything else is NO ACTION so attached rotation work blocks removal.
+        // PAM rotation mirrors the MSSQL keys, indexes and delete behavior. Only Organization and the timeout journal
+        // cascade; everything else is NO ACTION, so attached rotation work blocks removal.
         ePamTargetSystem.Property(p => p.Id).ValueGeneratedNever();
         ePamTargetSystem.HasIndex(p => p.OrganizationId);
         ePamTargetSystem

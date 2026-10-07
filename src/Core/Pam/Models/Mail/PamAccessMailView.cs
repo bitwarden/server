@@ -3,15 +3,11 @@ using Bit.Core.Platform.Mail.Mailer;
 
 namespace Bit.Core.Pam.Models.Mail;
 
-/// <summary>
-/// The half every PAM access mail shares: which organization the request belongs to, and the link back to the
-/// request itself.
-/// </summary>
+/// <summary>What every PAM access mail shares: the request's organization and a link back to the request.</summary>
 public abstract class PamAccessMailView : BaseMailView
 {
     /// <summary>
-    /// UTC is spelled out in the rendered string: there is no per-recipient timezone on this path, so an unqualified
-    /// instant would be read as local time and misstate the window.
+    /// Spells out UTC, since there is no per-recipient timezone here and an unqualified time would read as local.
     /// </summary>
     private const string _windowFormat = "d MMM yyyy 'at' HH:mm 'UTC'";
 
@@ -22,10 +18,8 @@ public abstract class PamAccessMailView : BaseMailView
     public required string OrganizationName { get; init; }
 
     /// <summary>
-    /// The recipient's view of the request. The user-scoped PAM pages mount at <c>pam</c>
-    /// (<c>apps/web/src/app/oss-routing.module.ts:687</c>) with the request page at <c>requests/:id</c> beneath it
-    /// (<c>access-requests-routing.module.ts:47</c>). The organization-scoped tree under
-    /// <c>/organizations/:organizationId/pam</c> is a different route tree and does not serve this page.
+    /// The web vault's user-scoped request page, not the organization-scoped <c>/organizations/:organizationId/pam</c>
+    /// tree, which does not serve it.
     /// </summary>
     public string Url => $"{WebVaultUrl}/pam/requests/{AccessRequestId}";
 

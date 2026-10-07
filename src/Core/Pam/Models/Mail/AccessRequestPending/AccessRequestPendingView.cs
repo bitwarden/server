@@ -3,15 +3,9 @@
 namespace Bit.Core.Pam.Models.Mail.AccessRequestPending;
 
 /// <summary>
-/// One approver's notification that a named requester is waiting on their decision.
+/// Tells an approver a request awaits their decision. Zero knowledge bounds the content: no collection or cipher
+/// names, and no reason, which is stored in the clear but could name the system being accessed.
 /// </summary>
-/// <remarks>
-/// What may appear here is bounded by zero knowledge, not by copywriting. The collection and the cipher are named
-/// only by ciphertext the server cannot read, and <c>AccessRequest.Reason</c> is withheld: though stored in the
-/// clear, it is user-typed free text that would name the very system being accessed. The body identifies the
-/// request by the organization, the requester and the window, and sends the approver to
-/// <see cref="PamAccessMailView.Url" /> for everything else.
-/// </remarks>
 public class AccessRequestPendingView : PamAccessMailView
 {
     public required string RequesterEmail { get; init; }

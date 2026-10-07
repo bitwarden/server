@@ -26,7 +26,7 @@ CREATE UNIQUE NONCLUSTERED INDEX [IX_PamRotationConfig_CipherId]
     ON [dbo].[PamRotationConfig] ([CipherId] ASC);
 GO
 
--- Backs the due-rotation sweep; excludes paused/one-shot/access-end-only configs from the scan.
+-- Backs the due-rotation sweep; the filter keeps paused and unscheduled configs out of the scan.
 CREATE NONCLUSTERED INDEX [IX_PamRotationConfig_NextRotationAt]
     ON [dbo].[PamRotationConfig] ([NextRotationAt] ASC)
     WHERE [Enabled] = 1 AND [NextRotationAt] IS NOT NULL;

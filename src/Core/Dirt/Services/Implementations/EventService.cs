@@ -834,8 +834,8 @@ public class EventService : IEventService
             return;
         }
 
-        // A system-performed action has no request to take an IP address or device type from, so it's recorded
-        // as a server-side action rather than a half-populated request context.
+        // A system action has no request to take an IP address or device type from, so it is recorded as a
+        // server-side action.
         var e = context.SystemUser.HasValue
             ? new EventMessage { SystemUser = context.SystemUser, DeviceType = DeviceType.Server }
             : new EventMessage(_currentContext) { ActingUserId = context.ActingUserId };

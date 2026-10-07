@@ -34,7 +34,7 @@ public class DeleteAccessConnectorCommand : IDeleteAccessConnectorCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): record the attempt, then the outcome around the point of no return.
+        // Attempt before the delete, outcome after.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.AccessConnectorDeleted,

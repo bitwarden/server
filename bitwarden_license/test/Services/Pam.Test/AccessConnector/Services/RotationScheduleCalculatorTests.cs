@@ -13,7 +13,7 @@ public class RotationScheduleCalculatorTests
     [Fact]
     public void GetNextOccurrence_ValidSixFieldCron_ReturnsNextOccurrence()
     {
-        // Every 15 minutes; after 12:07 the next run is 12:15.
+        // Every 15 minutes.
         var after = new DateTime(2026, 7, 6, 12, 7, 0, DateTimeKind.Utc);
 
         var next = _sut.GetNextOccurrence("0 0/15 * * * ?", after);
@@ -34,7 +34,7 @@ public class RotationScheduleCalculatorTests
     [Fact]
     public void GetNextOccurrence_DayAnchoredCron_IsEvaluatedInUtc()
     {
-        // Daily at 03:00 UTC; after 2026-07-06 12:00 UTC the next run should be 03:00 UTC the following day.
+        // Daily at 03:00.
         var next = _sut.GetNextOccurrence("0 0 3 * * ?", _afterUtc);
 
         Assert.Equal(new DateTime(2026, 7, 7, 3, 0, 0, DateTimeKind.Utc), next);

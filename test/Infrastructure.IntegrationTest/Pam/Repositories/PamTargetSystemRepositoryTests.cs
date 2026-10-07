@@ -49,7 +49,7 @@ public class PamTargetSystemRepositoryTests
         Assert.Equal(PamTargetSystemStatus.Active, persisted.Status);
     }
 
-    // A manual target carries no connector; Kind/PasswordPolicy stay null through the round trip.
+    // A manual target, so the replace has to keep Kind and PasswordPolicy null.
     [DatabaseTheory, DatabaseData]
     public async Task ReplaceAsync_UpdatesFields(
         IOrganizationRepository organizationRepository,
@@ -143,19 +143,17 @@ public class PamTargetSystemRepositoryTests
             RevisionDate = now,
         });
 
-        // Delete is refused while a config names the target.
         Assert.False(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
         Assert.NotNull(await pamTargetSystemRepository.GetByIdAsync(target.Id));
         Assert.True(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
 
         Assert.True(await pamRotationConfigRepository.DeleteWithJobsAsync(config.Id));
 
-        // The assignment (connector-to-target edge) cascades with the target rather than blocking on the NO ACTION FK.
+        // The assignment is deleted with the target instead of blocking on its NO ACTION FK.
         Assert.True(await pamTargetSystemRepository.DeleteWithAssignmentsAsync(target.Id));
 
         Assert.Null(await pamTargetSystemRepository.GetByIdAsync(target.Id));
         Assert.False(await pamAccessConnectorRepository.AssignmentExistsAsync(accessConnector.Id, target.Id));
-        // The access connector itself outlives the target it was assigned to.
         Assert.NotNull(await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id));
     }
 

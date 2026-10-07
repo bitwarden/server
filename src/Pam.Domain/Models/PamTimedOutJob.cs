@@ -14,9 +14,9 @@ public record PamTimedOutJob
     public required Guid CipherId { get; init; }
     public required PamRotationSource Source { get; init; }
 
-    /// <summary>The access connector holding the claim at timeout, or null when never claimed.</summary>
+    /// <summary>The claim held at timeout; null when the job was Pending.</summary>
     public Guid? ClaimedByAccessConnectorId { get; init; }
 
-    /// <summary>The number of attempts recorded against the job: zero means unroutable (never claimed), nonzero means stuck.</summary>
+    /// <summary>Zero means unroutable (never claimed); nonzero means stuck.</summary>
     public required int AttemptCount { get; init; }
 }

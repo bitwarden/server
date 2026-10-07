@@ -59,7 +59,7 @@ public class DeleteTargetSystemCommandTests
 
         await sutProvider.GetDependency<IPamTargetSystemRepository>().DidNotReceiveWithAnyArgs()
             .DeleteWithAssignmentsAsync(default);
-        // The common refusal is caught ahead of the audit, so it leaves no in-doubt Attempt in the trail.
+        // The common refusal comes before the audit, so it leaves no in-doubt Attempt.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
     }
@@ -86,7 +86,7 @@ public class DeleteTargetSystemCommandTests
     {
         var sutProvider = Setup();
         sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(target.Id).Returns(target);
-        // The repository's own guard re-checks under lock and refuses after a config is created in the window.
+        // The repository re-checks under lock, refusing a config created in the window.
         sutProvider.GetDependency<IPamTargetSystemRepository>().DeleteWithAssignmentsAsync(target.Id).Returns(false);
 
         await Assert.ThrowsAsync<BadRequestException>(

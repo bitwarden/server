@@ -63,8 +63,7 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             return null;
         }
 
-        // Oldest wins: the rule with the earliest CreationDate governs, ties broken on rule id, regardless of
-        // whether a newer path would have been more permissive.
+        // Oldest wins, even where a newer path's rule would be more permissive.
         var (governingCollection, governingRule) = candidates
             .OrderBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
@@ -81,9 +80,6 @@ public class GoverningRuleResolver : IGoverningRuleResolver
         return rule is { Enabled: true } ? Build(rule.OrganizationId, collectionId, rule) : null;
     }
 
-    /// <summary>
-    /// Projects a stored rule onto a <see cref="GoverningRule"/>, identically for both resolution paths.
-    /// </summary>
     private static GoverningRule Build(Guid organizationId, Guid collectionId, AccessRule rule)
     {
         var (conditions, unreadable) = Parse(rule.Conditions);
@@ -117,10 +113,8 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             var conditions = JsonSerializer.Deserialize<List<AccessCondition>>(conditionsJson, AccessConditionJson.Options);
             return conditions is null ? FailSafe() : (conditions, false);
         }
-        // NotSupportedException alongside JsonException: the polymorphic reader reports a missing or unreadable
-        // "kind" that way, and it is not a JsonException. Left uncaught it would escape ResolveAsync entirely,
-        // breaking the fail-safe this method exists to provide — a stored document the server cannot interpret has
-        // to route to an approver, not surface as an unhandled exception.
+        // The polymorphic reader reports a missing or unknown "kind" as NotSupportedException. Caught too, so an
+        // uninterpretable document routes to an approver instead of throwing.
         catch (Exception ex) when (ex is JsonException or NotSupportedException)
         {
             return FailSafe();

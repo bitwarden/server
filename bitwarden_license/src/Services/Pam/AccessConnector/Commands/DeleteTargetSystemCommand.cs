@@ -43,8 +43,7 @@ public class DeleteTargetSystemCommand : IDeleteTargetSystemCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // audit (before/after): the name is captured before the delete, since the durable record of it is this event
-        // rather than the row.
+        // Attempt before the delete, outcome after.
         var audit = new AccessAuditEventData
         {
             Kind = AccessAuditEventKind.TargetSystemDeleted,
@@ -56,8 +55,8 @@ public class DeleteTargetSystemCommand : IDeleteTargetSystemCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // Cascades the target's access connector assignments in the same transaction. The repository re-checks
-        // the rotation-config guard under lock, so a config created since the read above blocks the delete.
+        // Deletes the assignments in the same transaction, re-checking the config guard under lock so a config
+        // created since the read above blocks the delete.
         if (!await _targetSystemRepository.DeleteWithAssignmentsAsync(targetSystemId))
         {
             throw new BadRequestException(

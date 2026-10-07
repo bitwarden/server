@@ -123,9 +123,8 @@ public class ServerContextBuilder : IContextBuilder
 
             case IdentityClientType.AccessConnector:
                 {
-                    // A PAM access connector's bearer token carries no device/user/organization claim recognized by
-                    // the other branches above, so it needs its own context kind or every flag falls back to
-                    // defaultValue on every connector-facing request (mirrors ServiceAccount's fallback).
+                    // A PAM access connector's token carries none of the claims the branches above key on, so it
+                    // needs its own context kind or every flag evaluates to its default for the connector.
                     if (currentContext.PamAccessConnectorId.HasValue)
                     {
                         var ldAccessConnector = LaunchDarkly.Sdk.Context.Builder(

@@ -7,13 +7,12 @@ namespace Bit.Services.Pam.Services;
 
 public class AccessMailNotifier : IAccessMailNotifier
 {
-    // Every send costs a retry delay while delivery is down, and the access-request command awaits this batch. One
-    // failure is as likely to be one unusable address as an outage; two in a row is not.
+    // The calling command awaits this batch, and each failed send costs a retry delay. One failure may be a bad
+    // address; two in a row suggest an outage.
     private const int ConsecutiveFailureLimit = 2;
 
-    // The SendGrid path swallows a failed send once it has retried, so it never reaches the count above and only
-    // elapsed time reveals it. Deliberately far above what a healthy batch costs, since the managing-user set this
-    // sends to has no upper bound: a large one that is merely slow must finish, not be silently cut short.
+    // SendGrid swallows a failed send after retrying, so only elapsed time reveals an outage there. Far above a
+    // healthy batch's cost, since the recipient set is unbounded and a large, slow batch must still finish.
     private static readonly TimeSpan _batchBudget = TimeSpan.FromSeconds(30);
 
     private readonly IMailer _mailer;
@@ -76,16 +75,15 @@ public class AccessMailNotifier : IAccessMailNotifier
         List<Recipient> recipients;
         try
         {
-            // Projected before the first send: the rows carry a decrypted master-password hash and user key, and
-            // holding the whole batch of them alive for the length of the batch is a needlessly long exposure.
+            // Projected before the first send, so the rows' decrypted master-password hashes and user keys are not
+            // held for the whole batch.
             recipients = (await _userRepository.GetManyAsync(userIds))
                 .Select(user => new Recipient(user.Id, user.Email))
                 .ToList();
         }
         catch (Exception ex)
         {
-            // The read covers every recipient, so its failure is the whole batch's failure and there is no
-            // per-recipient id worth naming.
+            // One read covers every recipient, so there is no single user id to log.
             _logger.LogError(ex, "PAM access mail: failed to resolve {RecipientCount} recipients.", userIds.Count);
             return;
         }
@@ -138,7 +136,7 @@ public class AccessMailNotifier : IAccessMailNotifier
     }
 
     private void LogFailure(Exception ex, Guid userId) =>
-        // Ids only. The recipient's address is the one thing this type always holds and must never record.
+        // Ids only; the recipient's address must never be logged.
         _logger.LogError(ex, "PAM access mail to user {UserId} could not be sent.", userId);
 
     private sealed record Recipient(Guid Id, string? Email);

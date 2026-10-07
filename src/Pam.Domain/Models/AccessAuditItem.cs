@@ -1,10 +1,8 @@
 ﻿namespace Bit.Pam.Models;
 
 /// <summary>
-/// One subject the access-audit trail names within a range, either a cipher or an access rule. Exactly one of the two
-/// pairs is set. A rule's name is plaintext organization configuration and travels with it, while a cipher's name is
-/// vault data the store never holds, so the client resolves cipher names from its own vault and drops the ones it
-/// cannot read.
+/// A cipher or an access rule the audit trail names within a range; exactly one pair is set. Cipher names are vault
+/// data the store never holds, so the client resolves them from its own vault.
 /// </summary>
 public class AccessAuditItem
 {
@@ -18,9 +16,6 @@ public class AccessAuditItem
 
     public Guid? RuleId { get; set; }
 
-    /// <summary>
-    /// The rule's name as the most recent event in range recorded it, so a renamed rule reads in the menu the way the
-    /// newest rows read in the table.
-    /// </summary>
+    /// <summary>As the most recent event in range recorded it, so a renamed rule shows its newest name.</summary>
     public string? RuleName { get; set; }
 }

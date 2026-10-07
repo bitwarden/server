@@ -45,7 +45,7 @@ public class RegisterAccessConnectorCommandTests
 
         var result = await sutProvider.Sut.RegisterAsync(organizationId, actingUserId, name, encryptedPayload, key);
 
-        // Not an SM key: ServiceAccountId stays null, scope is the fixed rotation scope, value is a hash.
+        // Not a Secrets Manager key, so it has no service account.
         await sutProvider.GetDependency<IApiKeyRepository>().Received(1).CreateAsync(Arg.Is<ApiKey>(k =>
             k.ServiceAccountId == null
             && k.Name == name

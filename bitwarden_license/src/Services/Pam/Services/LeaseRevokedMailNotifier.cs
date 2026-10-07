@@ -37,8 +37,7 @@ public class LeaseRevokedMailNotifier : ILeaseRevokedMailNotifier
             return;
         }
 
-        // Duplicates the guard inside IAccessMailNotifier to keep the organization read off every revocation in the
-        // flag-off state, which is every revocation on self-host.
+        // Repeats IAccessMailNotifier's flag guard to skip the organization read when the flag is off, as on self-host.
         if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
@@ -68,7 +67,7 @@ public class LeaseRevokedMailNotifier : ILeaseRevokedMailNotifier
         }
         catch (Exception ex)
         {
-            // Ids only: not the holder's address, and never the reason the operator gave for revoking.
+            // Ids only; no address and never the operator's revoke reason.
             _logger.LogError(ex, "PAM lease-revoked mail for lease {AccessLeaseId} could not be sent.", lease.Id);
         }
     }

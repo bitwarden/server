@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Set up and trigger a PAM credential-rotation job from the admin side, on the local dev stack.
 
-LOCAL DEV ONLY. Drives the admin HTTP surface exactly as the admin console would, then
-leaves a claimable job for a *real* access connector to pick up, execute, and report on:
+Drives the admin HTTP surface as the admin console would, on seeded data in vault_dev, and
+leaves a claimable job for a real access connector to execute and report on:
 
   ADMIN (owner bearer, client_credentials on the seeded user's ApiKey)
     1. register an automatic target system   POST  organizations/{org}/access-connectors/rotation/target-systems
@@ -11,12 +11,8 @@ leaves a claimable job for a *real* access connector to pick up, execute, and re
     3. create a rotation config for a cipher   POST  organizations/{org}/access-connectors/rotation/configs
     4. trigger an on-demand rotation           POST  organizations/{org}/access-connectors/rotation/configs/{id}/rotate
 
-The connector side (poll access-connectors/rotation/jobs -> claim -> read/write cipher -> report) is
-NOT done here -- an actual access connector handles that. By default this creates a fresh target + config
-on a fresh cipher, which sidesteps the on-demand cooldown and the "config already has an
-active job" guard so repeated runs don't 400.
-
-This is all seeded synthetic data in vault_dev.
+By default it creates a fresh target and config on a fresh cipher, so repeated runs avoid the
+on-demand cooldown and the active-job guard.
 
 Usage:
   python3 dev/pam-rotation-sim.py \

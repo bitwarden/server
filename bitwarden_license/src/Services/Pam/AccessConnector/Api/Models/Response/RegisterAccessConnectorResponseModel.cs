@@ -22,43 +22,22 @@ public class RegisterAccessConnectorResponseModel : ResponseModel
         ClientSecret = result.ClientSecret;
     }
 
-    /// <summary>
-    /// The access connector's unique identifier.
-    /// </summary>
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// The organization the access connector was registered in.
-    /// </summary>
     public Guid OrganizationId { get; set; }
 
-    /// <summary>
-    /// The access connector's display label, as supplied at registration.
-    /// </summary>
     public string Name { get; set; } = null!;
 
-    /// <summary>
-    /// Whether the access connector may authenticate, poll, and claim jobs -- see
-    /// <see cref="PamAccessConnectorStatus"/>.
-    /// </summary>
     public PamAccessConnectorStatus Status { get; set; }
 
-    /// <summary>
-    /// When the access connector was registered (UTC).
-    /// </summary>
     public DateTime CreationDate { get; set; }
 
-    /// <summary>
-    /// The id of the access connector's <c>dbo.ApiKey</c> credential. The operator assembles the access connector's
-    /// OAuth client id from it (<c>access-connector.&lt;ApiKeyId&gt;</c>, resolved server-side by
-    /// <c>PamAccessConnectorClientProvider</c> in Identity).
-    /// </summary>
+    /// <summary>The access connector's OAuth client id is <c>access-connector.&lt;ApiKeyId&gt;</c>.</summary>
     public Guid ApiKeyId { get; set; }
 
     /// <summary>
-    /// WARNING: shown exactly once. The plaintext client secret for the access connector's credential; the server
-    /// hashes it for storage and never returns it again. Pair with the client-wrapped org key to assemble the
-    /// token (<c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>).
+    /// WARNING: shown exactly once; the server stores only its hash. Combine it with the client-side encryption key to
+    /// form the token, <c>0.access-connector.&lt;apiKeyId&gt;.&lt;client_secret&gt;:&lt;encryption_key&gt;</c>.
     /// </summary>
     public string ClientSecret { get; set; } = null!;
 }

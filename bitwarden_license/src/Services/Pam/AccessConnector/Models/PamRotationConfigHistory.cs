@@ -3,9 +3,8 @@
 namespace Bit.Services.Pam.AccessConnector.Models;
 
 /// <summary>
-/// A rotation config's detail view: its <see cref="PamRotationConfigDetails"/> projection together with every job
-/// recorded against it (each carrying its own attempts, oldest first) — the read model for
-/// <c>GET configs/{id}</c>.
+/// A rotation config's detail view: the config plus every job recorded against it, newest first, each with its
+/// attempts oldest first.
 /// </summary>
 public sealed record PamRotationConfigHistory(
     PamRotationConfigDetails Config,
