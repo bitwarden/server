@@ -76,31 +76,11 @@ public static class ServerSdkCompatibilityExtensions
                 {
                     options.FlagValues.TryAdd(key, value);
                 }
-
-                // pam/uat only; do not carry this to main. Defaults the branch's flags on where no
-                // SdkKey is set (local dev, self-host) without overriding configured values. The pins
-                // below override everything.
-                options.FlagValues.TryAdd(FeatureFlagKeys.Pam, "true");
-                options.FlagValues.TryAdd(FeatureFlagKeys.PM28191_CipherAdminOpsToSdk, "true");
             });
 
         // Server has a class that contains all the feature flag keys
         // the application cares about, add them here.
         services.AddKnownFeatureFlags(FeatureFlagKeys.GetKeys());
-
-        // pam/uat only; do not carry this to main. Unlike the defaults above, a pin also overrides
-        // LaunchDarkly, which UAT needs. PamDisableSqlAuditLogging stays unpinned so its kill switch
-        // works without a deploy.
-        services.PinFeatureFlags(new Dictionary<string, bool>
-        {
-            // The branch ships PAM as a whole. Remove an entry to get the flag-off A/B check back.
-            [FeatureFlagKeys.Pam] = true,
-            [FeatureFlagKeys.PM28191_CipherAdminOpsToSdk] = true,
-            // LaunchDarkly lacks this flag, so without the pin /config omits it and the clients default it off.
-            [FeatureFlagKeys.PamAccessConnector] = true,
-            // The branch stays on the v1 layout while the VFO refresh rolls out.
-            [FeatureFlagKeys.VFO1Foundation] = false,
-        });
 
         // ServerContextBuilder needs IHttpContextAccessor and resolves ICurrentContext per-request.
         // Every consuming Startup already registers ICurrentContext, but TryAdd lets this compat
@@ -113,44 +93,6 @@ public static class ServerSdkCompatibilityExtensions
         // the new IFeatureService under the hood. This should help ease migration but should
         // eventually go away
         services.TryAddScoped<Bit.Core.Services.IFeatureService, DelegatingFeatureService>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// pam/uat only; do not carry this to main. Wraps the registered SDK <see cref="IFeatureService"/>
-    /// in a <see cref="PinnedFlagFeatureService"/>.
-    /// </summary>
-    /// <remarks>
-    /// <c>UseBitwardenSdk()</c> always registers it first, so a missing one throws rather than
-    /// silently unpinning.
-    /// </remarks>
-    private static IServiceCollection PinFeatureFlags(
-        this IServiceCollection services,
-        IReadOnlyDictionary<string, bool> pinned)
-    {
-        var descriptor = services.LastOrDefault(
-                service => !service.IsKeyedService && service.ServiceType == typeof(IFeatureService))
-            ?? throw new InvalidOperationException(
-                "No IFeatureService is registered - AddFeatureFlagServices() must run first.");
-
-        services.Remove(descriptor);
-
-        var inner = descriptor switch
-        {
-            { ImplementationFactory: not null } =>
-                provider => (IFeatureService)descriptor.ImplementationFactory(provider)!,
-            { ImplementationInstance: not null } =>
-                (Func<IServiceProvider, IFeatureService>)(_ => (IFeatureService)descriptor.ImplementationInstance),
-            { ImplementationType: not null } =>
-                provider => (IFeatureService)ActivatorUtilities.CreateInstance(provider, descriptor.ImplementationType),
-            _ => throw new InvalidOperationException("The registered IFeatureService cannot be decorated."),
-        };
-
-        services.Add(new ServiceDescriptor(
-            typeof(IFeatureService),
-            provider => new PinnedFlagFeatureService(inner(provider), pinned),
-            descriptor.Lifetime));
 
         return services;
     }
