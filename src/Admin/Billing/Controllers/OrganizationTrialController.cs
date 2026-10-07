@@ -41,7 +41,9 @@ public class OrganizationTrialController(
 
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = ModelState.GetErrorMessage();
+            var validationError = ModelState.GetErrorMessage();
+            LogRejectedAttempt(organization.Id, model.Days, validationError);
+            TempData["Error"] = validationError;
             return RedirectToEdit(organizationId);
         }
 
@@ -58,7 +60,11 @@ public class OrganizationTrialController(
                     User?.Identity?.Name ?? "unknown", organization.Id, days, newTrialEnd.AddDays(-days), newTrialEnd);
                 TempData["Success"] = $"Trial extended to {newTrialEnd:yyyy-MM-dd} UTC.";
             },
-            badRequest => TempData["Error"] = badRequest.Response,
+            badRequest =>
+            {
+                LogRejectedAttempt(organization.Id, days, badRequest.Response);
+                TempData["Error"] = badRequest.Response;
+            },
             conflict =>
             {
                 LogFailedAttempt(organization.Id, days, conflict.Response, exception: null);
@@ -72,6 +78,11 @@ public class OrganizationTrialController(
 
         return RedirectToEdit(organizationId);
     }
+
+    private void LogRejectedAttempt(Guid organizationId, int? days, string reason) =>
+        logger.LogWarning(
+            "Trial extension by {Actor} for organization ({OrganizationId}) by {Days} days rejected: {Reason}",
+            User?.Identity?.Name ?? "unknown", organizationId, days, reason);
 
     private void LogFailedAttempt(Guid organizationId, int days, string reason, Exception? exception) =>
         logger.LogError(exception,

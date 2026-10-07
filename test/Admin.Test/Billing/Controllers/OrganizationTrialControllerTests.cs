@@ -165,6 +165,65 @@ public class OrganizationTrialControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Extend_InvalidModelState_LogsWarningWithActorOrganizationDaysAndReason(
+        Organization organization,
+        SutProvider<OrganizationTrialController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        sutProvider.Sut.ModelState.AddModelError(nameof(ExtendTrialModel.Days), "Days must be between 1 and 30.");
+
+        await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 31 });
+
+        sutProvider.GetDependency<ILogger<OrganizationTrialController>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(state =>
+                    state.ToString()!.Contains(_actorEmail) &&
+                    state.ToString()!.Contains(organization.Id.ToString()) &&
+                    state.ToString()!.Contains("by 31 days") &&
+                    state.ToString()!.Contains("Days must be between 1 and 30.")),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task Extend_CommandReturnsBadRequest_LogsWarningWithActorOrganizationDaysAndReason(
+        Organization organization,
+        SutProvider<OrganizationTrialController> sutProvider)
+    {
+        Arrange(sutProvider, organization);
+        const string reason = "Trial cannot be extended because 30 or more days remain.";
+        sutProvider.GetDependency<IExtendOrganizationTrialCommand>()
+            .Run(organization, 7)
+            .Returns(new BillingCommandResult<DateTime>(new BadRequest(reason)));
+
+        await sutProvider.Sut.ExtendAsync(organization.Id, new ExtendTrialModel { Days = 7 });
+
+        sutProvider.GetDependency<ILogger<OrganizationTrialController>>()
+            .Received(1)
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(state =>
+                    state.ToString()!.Contains(_actorEmail) &&
+                    state.ToString()!.Contains(organization.Id.ToString()) &&
+                    state.ToString()!.Contains("by 7 days") &&
+                    state.ToString()!.Contains(reason)),
+                null,
+                Arg.Any<Func<object, Exception?, string>>());
+        sutProvider.GetDependency<ILogger<OrganizationTrialController>>()
+            .DidNotReceive()
+            .Log(
+                LogLevel.Error,
+                Arg.Any<EventId>(),
+                Arg.Any<object>(),
+                Arg.Any<Exception?>(),
+                Arg.Any<Func<object, Exception?, string>>());
+    }
+
+    [Theory, BitAutoData]
     public async Task Extend_CommandReturnsBadRequest_SetsErrorWithResponseMessage(
         Organization organization,
         SutProvider<OrganizationTrialController> sutProvider)
