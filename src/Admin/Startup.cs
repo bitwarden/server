@@ -51,22 +51,13 @@ public class Startup
 
         // Repositories
         var databaseProvider = services.AddDatabaseRepositories(globalSettings);
-        switch (databaseProvider)
+        if (databaseProvider == Core.Enums.SupportedDatabaseProviders.SqlServer)
         {
-            case Core.Enums.SupportedDatabaseProviders.SqlServer:
-                services.AddSingleton<IDbMigrator, Migrator.SqlServerDbMigrator>();
-                break;
-            case Core.Enums.SupportedDatabaseProviders.MySql:
-                services.AddSingleton<IDbMigrator, MySqlMigrations.MySqlDbMigrator>();
-                break;
-            case Core.Enums.SupportedDatabaseProviders.Postgres:
-                services.AddSingleton<IDbMigrator, PostgresMigrations.PostgresDbMigrator>();
-                break;
-            case Core.Enums.SupportedDatabaseProviders.Sqlite:
-                services.AddSingleton<IDbMigrator, SqliteMigrations.SqliteDbMigrator>();
-                break;
-            default:
-                break;
+            services.AddSingleton<IDbMigrator, Migrator.SqlServerDbMigrator>();
+        }
+        else
+        {
+            services.AddSingleton<IDbMigrator, Infrastructure.EntityFramework.EfDbMigrator>();
         }
         services.AddDataMigrations<DatabaseContext>();
         services.AddTestPlayIdTracking(globalSettings);
