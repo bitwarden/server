@@ -16,32 +16,47 @@
 # cached, so the change takes effect on the next /latest call.
 #
 # Usage:
-#   ./validate-org-report-files.sh                # validate ALL unvalidated file rows
+#   ./validate-org-report-files.sh                    # validate ALL unvalidated file rows
 #   ./validate-org-report-files.sh <organizationId>   # scope to one org
 #
-# Requires: the bitwardenserver-mssql-1 container running, and dev/.env with MSSQL_PASSWORD.
+# Requires: dev/.env with MSSQL_PASSWORD, and the MSSQL container running.
+#
+# Configuration (override via environment variables or dev/.env):
+#   BW_MSSQL_CONTAINER  Docker container name (default: bitwardenserver-mssql-1)
+#   BW_MSSQL_DB         Database name         (default: vault_dev)
+#   BW_SQLCMD           Path to sqlcmd        (default: /opt/mssql-tools18/bin/sqlcmd)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEV_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEV_DIR="$SCRIPT_DIR"
 
-CONTAINER="bitwardenserver-mssql-1"
-DB="vault_dev"
-SQLCMD="/opt/mssql-tools18/bin/sqlcmd"
+_env_val() { grep -E "^${1}=" "$DEV_DIR/.env" 2>/dev/null | cut -d= -f2- | tail -1; }
+_resolve()  { local v; v="$(_env_val "$1")"; echo "${!1:-${v:-$2}}"; }
 
-ORG_FILTER=""
+CONTAINER="$(_resolve BW_MSSQL_CONTAINER bitwardenserver-mssql-1)"
+DB="$(_resolve BW_MSSQL_DB vault_dev)"
+SQLCMD="$(_resolve BW_SQLCMD /opt/mssql-tools18/bin/sqlcmd)"
+
 if [[ "${1:-}" != "" ]]; then
+  if [[ ! "${1}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+    echo "Error: organizationId must be a valid UUID" >&2
+    exit 1
+  fi
   ORG_FILTER="AND OrganizationId = '${1}'"
+else
+  ORG_FILTER=""
 fi
 
-PW="$(grep -E '^MSSQL_PASSWORD=' "$DEV_DIR/.env" | cut -d= -f2-)"
+PW="$(_resolve MSSQL_PASSWORD "")"
 if [[ -z "$PW" ]]; then
   echo "Could not read MSSQL_PASSWORD from $DEV_DIR/.env" >&2
   exit 1
 fi
 
-docker exec "$CONTAINER" "$SQLCMD" -S localhost -U SA -P "$PW" -C -d "$DB" -h -1 -W -s "|" -Q "
+_sqlcmd() { docker exec "$CONTAINER" "$SQLCMD" -S localhost -U SA -P "$PW" -C -d "$DB" "$@"; }
+
+_sqlcmd -h -1 -W -Q "
 SET NOCOUNT ON;
 UPDATE OrganizationReport
 SET ReportFile = JSON_MODIFY(ReportFile, '\$.Validated', CAST(1 AS BIT)),
@@ -50,7 +65,10 @@ WHERE ReportFile IS NOT NULL
   AND ISJSON(ReportFile) = 1
   AND ISNULL(JSON_VALUE(ReportFile, '\$.Validated'), 'false') <> 'true'
   ${ORG_FILTER};
-SELECT CONCAT('rows validated this run: ', @@ROWCOUNT);
+SELECT CONCAT('rows validated this run: ', @@ROWCOUNT);"
+
+_sqlcmd -W -Q "
+SET NOCOUNT ON;
 SELECT Id,
   CONVERT(varchar(30), CreationDate, 126) AS Created,
   JSON_VALUE(ReportFile, '\$.Validated') AS Validated,
