@@ -213,6 +213,9 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IUpdateInviteSupportConfirmCommand, UpdateInviteSupportConfirmCommand>();
         services.TryAddScoped<IDeleteOrganizationInviteLinkCommand, DeleteOrganizationInviteLinkCommand>();
         services.TryAddScoped<IRefreshOrganizationInviteLinkCommand, RefreshOrganizationInviteLinkCommand>();
+        services.TryAddScoped<IInviteLinkEligibilityValidator, InviteLinkEligibilityValidator>();
+        services.TryAddScoped<IInviteLinkPolicyValidator, InviteLinkPolicyValidator>();
+        services.TryAddScoped<IInviteLinkOrganizationCapabilityValidator, InviteLinkOrganizationCapabilityValidator>();
         services.TryAddScoped<IAcceptInviteLinkMembershipValidator, AcceptInviteLinkMembershipValidator>();
         services.TryAddScoped<IAcceptOrganizationInviteLinkCommand, AcceptOrganizationInviteLinkCommand>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
