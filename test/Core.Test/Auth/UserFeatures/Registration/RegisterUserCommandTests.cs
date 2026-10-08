@@ -124,7 +124,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -190,7 +190,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -224,7 +224,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(false);
 
@@ -1101,7 +1101,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1164,7 +1164,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1252,7 +1252,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -1987,7 +1987,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2203,7 +2203,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.OrganizationId)
             .Returns((Organization)null);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2247,7 +2247,7 @@ public class RegisterUserCommandTests
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
@@ -2301,7 +2301,7 @@ public class RegisterUserCommandTests
             .GetByIdAsync(orgUser.OrganizationId)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.MjmlWelcomeEmailTemplates)
             .Returns(true);
 
