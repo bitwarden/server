@@ -1,0 +1,57 @@
+@using Bit.Admin.Enums
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Settings.GlobalSettings GlobalSettings
+@model OrganizationViewModel
+@{
+    var canCreatePartnership = !GlobalSettings.SelfHosted
+                               && AccessControlService.UserHasPermission(Permission.Org_Plan_Edit);
+}
+
+<h2>Partnership</h2>
+@if (Model.Partnership != null)
+{
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Name</dt>
+        <dd id="partnership-name" class="col-sm-8 col-lg-9">@Model.Partnership.Name</dd>
+
+        <dt class="col-sm-4 col-lg-3">Status</dt>
+        <dd id="partnership-status" class="col-sm-8 col-lg-9">@Model.Partnership.Status</dd>
+
+        <dt class="col-sm-4 col-lg-3">Sponsored plan type</dt>
+        <dd id="partnership-sponsored-plan-type" class="col-sm-8 col-lg-9">@Model.Partnership.SponsoredPlanType</dd>
+
+        <dt class="col-sm-4 col-lg-3">Binding mode</dt>
+        <dd id="partnership-binding-mode" class="col-sm-8 col-lg-9">@Model.Partnership.BindingMode</dd>
+
+        <dt class="col-sm-4 col-lg-3">Registered return origins</dt>
+        <dd id="partnership-return-origins" class="col-sm-8 col-lg-9">
+            @{ var origins = Model.Partnership.GetRegisteredReturnOrigins().ToList(); }
+            @if (origins.Count == 0)
+            {
+                <span>-</span>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var origin in origins)
+                    {
+                        <li><code>@origin</code></li>
+                    }
+                </ul>
+            }
+        </dd>
+
+        <dt class="col-sm-4 col-lg-3">Created</dt>
+        <dd id="partnership-creation-date" class="col-sm-8 col-lg-9">@Model.Partnership.CreationDate.ToString()</dd>
+    </dl>
+}
+else
+{
+    <p>This organization has no partnership.</p>
+    @if (canCreatePartnership)
+    {
+        <a asp-controller="OrganizationPartnerships" asp-action="Create"
+           asp-route-organizationId="@Model.Organization.Id"
+           class="btn btn-secondary mb-3">Create partnership</a>
+    }
+}

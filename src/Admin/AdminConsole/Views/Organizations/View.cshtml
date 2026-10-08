@@ -13,6 +13,10 @@
 }
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@if (Model.PartnershipsEnabled)
+{
+    @await Html.PartialAsync("_PartnershipInformation", Model)
+}
 @if(GlobalSettings.SelfHosted)
 {
     @await Html.PartialAsync("Connections", Model)
