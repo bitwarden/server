@@ -34,6 +34,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.SelfRevokeUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.StagedUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships;
+using Bit.Core.AdminConsole.OrganizationFeatures.Partnerships.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
@@ -72,6 +74,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationInviteLinkCommandsQueries();
+        services.AddOrganizationPartnershipCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
         services.AddOrganizationDeleteCommands();
@@ -218,6 +221,14 @@ public static class OrganizationServiceCollectionExtensions
         services.TryAddScoped<IConfirmOrganizationInviteLinkValidator, ConfirmOrganizationInviteLinkValidator>();
         services.TryAddScoped<IConfirmOrganizationInviteLinkCommand, ConfirmOrganizationInviteLinkCommand>();
         services.TryAddScoped<IGetOrganizationInviteCommand, GetOrganizationInviteCommand>();
+    }
+
+    private static void AddOrganizationPartnershipCommandsQueries(this IServiceCollection services)
+    {
+        services.TryAddScoped<ICreateOrganizationPartnershipCommand, CreateOrganizationPartnershipCommand>();
+        services.TryAddScoped<IProvisionPartnershipEntitlementCommand, ProvisionPartnershipEntitlementCommand>();
+        services.TryAddScoped<ITransitionPartnershipEntitlementCommand, TransitionPartnershipEntitlementCommand>();
+        services.TryAddScoped<IGetPartnershipEntitlementByExternalIdQuery, GetPartnershipEntitlementByExternalIdQuery>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)

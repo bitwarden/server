@@ -205,6 +205,42 @@ public class EventServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task LogOrganizationPartnershipEvent_LogsOrganizationEventWithoutUserIdentity(Guid organizationId,
+        EventType eventType, DateTime date, Guid actingUserId, string ipAddress, SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = true, UseEvents = true });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+
+        await sutProvider.Sut.LogOrganizationPartnershipEventAsync(organizationId, eventType, date);
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
+            e.OrganizationId == organizationId &&
+            e.Type == eventType &&
+            e.Date == date &&
+            e.UserId == null &&
+            e.ActingUserId == null &&
+            e.OrganizationUserId == null &&
+            e.IpAddress == null &&
+            e.DeviceType == DeviceType.Server));
+    }
+
+    [Theory]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
+    public async Task LogOrganizationPartnershipEvent_WhenOrgCannotUseEvents_DoesNotLog(bool enabled, bool useEvents,
+        Guid organizationId, EventType eventType, SutProvider<EventService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>().GetOrganizationAbilityAsync(organizationId)
+            .Returns(new OrganizationAbility { Id = organizationId, Enabled = enabled, UseEvents = useEvents });
+
+        await sutProvider.Sut.LogOrganizationPartnershipEventAsync(organizationId, eventType);
+
+        await sutProvider.GetDependency<IEventWriteService>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task LogOrganizationUserEvent_LogsRequiredInfo(OrganizationUser orgUser, EventType eventType, DateTime date,
         Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
     {
