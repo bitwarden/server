@@ -34,6 +34,7 @@ internal record SeedPresetOrganization
     public bool? LimitItemDeletion { get; init; }
     public bool? LimitCollectionCreation { get; init; }
     public bool? LimitCollectionDeletion { get; init; }
+    public bool? UsePam { get; init; }
 }
 
 internal record SeedPresetSso

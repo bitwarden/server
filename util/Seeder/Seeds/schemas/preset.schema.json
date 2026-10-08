@@ -74,6 +74,10 @@
         "limitCollectionDeletion": {
           "type": "boolean",
           "description": "When true, only owners, admins, and some custom users can delete collections."
+        },
+        "usePam": {
+          "type": "boolean",
+          "description": "When true, the organization is subscribed to Privileged Access Management and seeded members are created with PAM access."
         }
       }
     },
