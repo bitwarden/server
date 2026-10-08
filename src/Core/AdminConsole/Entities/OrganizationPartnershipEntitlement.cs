@@ -86,7 +86,7 @@ public class OrganizationPartnershipEntitlement : ITableObject<Guid>
     {
         if (Id == default)
         {
-            Id = CoreHelpers.GenerateComb();
+            Id = CombGuid.Generate();
         }
     }
 }
