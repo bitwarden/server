@@ -38,7 +38,7 @@
     <RestrictedDependencyAnalysis Condition="'$(RestrictedDependencyAnalysis)' == ''">false</RestrictedDependencyAnalysis>
     <RestrictedDependencyBaselinesPath Condition="'$(RestrictedDependencyAnalysis)' == 'true'">$(RepoRoot)util/RestrictedDependencies/baselines</RestrictedDependencyBaselinesPath>
     <RestrictedDependencyUpdateCommand Condition="'$(RestrictedDependencyAnalysis)' == 'true'">dotnet run --project util/RestrictedDependencies/RestrictedDependencyBaselines -- update</RestrictedDependencyUpdateCommand>
-    <BitwardenRestrictedDependenciesVersion>0.1.0-demo.2</BitwardenRestrictedDependenciesVersion>
+    <BitwardenRestrictedDependenciesVersion>0.1.0-stack.1</BitwardenRestrictedDependenciesVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(RestrictedDependencyAnalysis)' == 'true'">

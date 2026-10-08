@@ -37,8 +37,8 @@
       },
       "Bitwarden.Server.Sdk.RestrictedDependencies": {
         "type": "Transitive",
-        "resolved": "0.1.0-demo.2",
-        "contentHash": "BwdWftjCW9BcOnAXwSM6FTntS6avwWYbEf2K7m3XlRRbL+hMR3O7sq4e3Z6rpspkFYrcWzPKDgGqWIDG3yAQdw=="
+        "resolved": "0.1.0-stack.1",
+        "contentHash": "TC6ejaN6gvs5pqa3knMdavrnRQ5CuwmJJDYiTTPf60oEgIOC1vYsSOFw9pw9bVRUBA7v+k+SnYuG802igOVJRw=="
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -279,7 +279,7 @@
       "restricteddependencybaselines": {
         "type": "Project",
         "dependencies": {
-          "Bitwarden.Server.Sdk.RestrictedDependencies": "[0.1.0-demo.2, )",
+          "Bitwarden.Server.Sdk.RestrictedDependencies": "[0.1.0-stack.1, )",
           "Microsoft.Build.Locator": "[1.11.2, 1.11.2]",
           "Microsoft.CodeAnalysis.CSharp.Workspaces": "[5.9.0, 5.9.0]",
           "Microsoft.CodeAnalysis.Workspaces.MSBuild": "[5.9.0, 5.9.0]"
