@@ -112,7 +112,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     }
 
     [Fact]
-    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success_PM44658()
+    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success()
     {
         // Arrange
         var localFactory = new IdentityApplicationFactory();

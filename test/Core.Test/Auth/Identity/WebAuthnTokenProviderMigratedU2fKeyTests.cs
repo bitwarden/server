@@ -23,7 +23,7 @@ namespace Bit.Core.Test.Auth.Identity;
 /// <summary>
 /// PM-44658. Runs against the real Fido2 library (no <see cref="IFido2"/> mock) with a YubiKey registered as
 /// U2F and migrated to WebAuthn. The tests assert that two-factor login works for that key and that the server
-/// applies its own U2F AppID. The test <c>MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash_Bug_PM44658</c>
+/// applies its own U2F AppID. The test <c>MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash</c>
 /// documents the Fido2 4.0.1 library behavior (AppID is not serialized), not provider behavior.
 /// </summary>
 public class WebAuthnTokenProviderMigratedU2fKeyTests
@@ -34,7 +34,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     private const string _foreignAppIdUrl = "https://evil.example/app-id.json";
 
     [Fact]
-    public async Task MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash_Bug_PM44658()
+    public async Task MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -64,7 +64,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_NativeWebAuthnKeyAssertionScopedToRpId_ReturnsTrue_NegativeControl_PM44658()
+    public async Task ValidateAsync_NativeWebAuthnKeyAssertionScopedToRpId_ReturnsTrue()
     {
         using var authenticator = new FakeWebAuthnAuthenticator();
         var harness = CreateHarness(CreateNativeWebAuthnUser(authenticator));
@@ -82,7 +82,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task GenerateAsync_MigratedU2fKey_ClientOptionsCarryAppIdExtensionOnce_Fix_PM44658()
+    public async Task GenerateAsync_MigratedU2fKey_ClientOptionsCarryAppIdExtensionOnce()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -94,7 +94,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task GenerateAsync_MigratedU2fKey_StoredChallengeCarriesAppIdExtension_Fix_PM44658()
+    public async Task GenerateAsync_MigratedU2fKey_StoredChallengeCarriesAppIdExtension()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -106,7 +106,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_ReturnsTrue_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_ReturnsTrue()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -124,7 +124,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyWithChallengeStoredWithoutAppId_ReturnsTrue_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyWithChallengeStoredWithoutAppId_ReturnsTrue()
     {
         // ValidateAsync must always apply the server's own U2F AppID, also after a Fido2 version that serializes it again.
         // The AppID never comes from the stored challenge or the client, so challenges stored without one still validate.
@@ -156,7 +156,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToForeignAppId_ReturnsFalse_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToForeignAppId_ReturnsFalse()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -176,7 +176,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToForeignAppId_ReturnsFalse_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToForeignAppId_ReturnsFalse()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -196,7 +196,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToServerAppId_ReturnsTrue_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToServerAppId_ReturnsTrue()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -215,7 +215,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyAppIdScopedAssertionWithoutAppIdExtensionResult_ReturnsFalse_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyAppIdScopedAssertionWithoutAppIdExtensionResult_ReturnsFalse()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -234,7 +234,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_UpdatesStoredSignatureCounter_Fix_PM44658()
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_UpdatesStoredSignatureCounter()
     {
         using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
@@ -255,7 +255,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
-    public void WebClientTokenString_CarriesAppIdExtensionResultIntoAssertionResponse_Prerequisite_PM44658()
+    public void WebClientTokenString_CarriesAppIdExtensionResultIntoAssertionResponse()
     {
         // Guards the round trip test: the extension result the web client sends under the "extensions" key
         // must reach the Fido2 model, otherwise the failure above could be blamed on a dropped result.
