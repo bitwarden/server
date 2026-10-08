@@ -27,8 +27,8 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public required ProductTierType ProductTier { get; set; }
 
     /// <summary>
-    /// Currently we only support one product type at a time, despite Products being a collection.
-    /// If we receive both PasswordManager and SecretsManager, we send the user to the PM trial route.
+    /// The trial's products, used to select the sign-up route. Supported combinations are Password
+    /// Manager, Password Manager + Secrets Manager, and Password Manager + Privileged Controls.
     /// </summary>
     public required IEnumerable<ProductType> Products { get; set; }
 
@@ -86,10 +86,11 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     };
 
     /// <summary>
-    /// The destination URL for the invitation CTA. Mirrors the two-branch new-user routing in
+    /// The destination URL for the invitation CTA. Mirrors the new-user routing in
     /// <see cref="Bit.Core.Billing.Models.Mail.TrialInitiationVerifyEmail"/>:
     /// <list type="bullet">
-    /// <item>PM trial → <c>trial-initiation</c>;</item>
+    /// <item>PM + Privileged Controls trial → <c>privileged-controls-trial-initiation</c>;</item>
+    /// <item>PM or PM + SM trial → <c>trial-initiation</c>;</item>
     /// <item>SM-only trial → <c>secrets-manager-trial-initiation</c>.</item>
     /// </list>
     /// Unlike the legacy <c>HandlebarsMailService</c> flow, the IMailer pattern has no service layer to
@@ -104,9 +105,22 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
                       $"&email={WebUtility.UrlEncode(Email)}" +
                       "&paymentOptional=true&fromEmail=true";
 
-    private string Route => Products.Any(p => p == ProductType.PasswordManager)
-        ? "trial-initiation"
-        : "secrets-manager-trial-initiation";
+    private string Route
+    {
+        get
+        {
+            var hasPasswordManager = Products.Contains(ProductType.PasswordManager);
+
+            return hasPasswordManager switch
+            {
+                true when Products.Contains(ProductType.PrivilegedControls) => "privileged-controls-trial-initiation",
+                // Password Manager only or Password Manager + Secrets Manager
+                true => "trial-initiation",
+                // Secrets Manager only.
+                _ => "secrets-manager-trial-initiation"
+            };
+        }
+    }
 }
 
 public class SalesAssistedTrialInvitationEmail : BaseMail<SalesAssistedTrialInvitationEmailView>
