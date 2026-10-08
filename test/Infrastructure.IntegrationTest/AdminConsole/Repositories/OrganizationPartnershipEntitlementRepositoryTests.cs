@@ -436,6 +436,85 @@ public class OrganizationPartnershipEntitlementRepositoryTests
         Assert.Equal(kept.AccountRef, result.AccountRef);
     }
 
+    [Theory, DatabaseData]
+    public async Task CreateAsync_DerivesExternalIdHashFromExternalId(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var entitlement = NewEntitlement(partnership, "customer-1");
+        entitlement.ExternalIdHash = "stale";
+
+        await repository.CreateAsync(entitlement);
+
+        var found = await repository.GetByExternalIdAsync(partnership.Id, "customer-1");
+        Assert.NotNull(found);
+        Assert.Equal(OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, "customer-1"),
+            found.ExternalIdHash);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReleaseExpiredResumeWindowBindingAsync_Qualifying_ReleasesBinding(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        var entitlement = await CreateCanceledAsync(repository, partnership, "customer-1", user.Id, _asOf.AddDays(-1));
+
+        var released = await repository.ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, _asOf, _asOf);
+
+        Assert.True(released);
+        var stored = await repository.GetByIdAsync(entitlement.Id);
+        Assert.NotNull(stored);
+        Assert.Null(stored.UserId);
+        Assert.Null(stored.AccountRef);
+        Assert.Equal(PartnershipEntitlementState.Canceled, stored.State);
+        Assert.Equal("customer-1", stored.ExternalId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReleaseExpiredResumeWindowBindingAsync_ChangedSinceRead_LeavesRowUntouched(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        var entitlement = await CreateCanceledAsync(repository, partnership, "customer-1", user.Id, _asOf.AddDays(-1));
+        entitlement.State = PartnershipEntitlementState.Active;
+        await repository.ReplaceAsync(entitlement);
+
+        var released = await repository.ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, _asOf, _asOf);
+
+        Assert.False(released);
+        var stored = await repository.GetByIdAsync(entitlement.Id);
+        Assert.NotNull(stored);
+        Assert.Equal(PartnershipEntitlementState.Active, stored.State);
+        Assert.Equal(user.Id, stored.UserId);
+    }
+
+    [Theory, DatabaseData]
+    public async Task ReleaseExpiredResumeWindowBindingAsync_WindowNotExpired_LeavesBinding(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        var entitlement = await CreateCanceledAsync(repository, partnership, "customer-1", user.Id, _asOf.AddSeconds(1));
+
+        var released = await repository.ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, _asOf, _asOf);
+
+        Assert.False(released);
+        Assert.Equal(user.Id, (await repository.GetByIdAsync(entitlement.Id))!.UserId);
+    }
+
     private static async Task<OrganizationPartnership> CreatePartnershipAsync(
         IOrganizationPartnershipRepository partnershipRepository,
         IOrganizationRepository organizationRepository)

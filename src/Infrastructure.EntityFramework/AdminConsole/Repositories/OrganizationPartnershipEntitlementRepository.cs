@@ -66,6 +66,23 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var rowsAffected = await dbContext.OrganizationPartnershipEntitlements
+            .Where(e =>
+                e.Id == id &&
+                e.State == PartnershipEntitlementState.Canceled &&
+                e.UserId != null &&
+                e.ResumeWindowExpirationDate <= asOf)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(e => e.UserId, (Guid?)null)
+                .SetProperty(e => e.AccountRef, (Guid?)null)
+                .SetProperty(e => e.RevisionDate, revisionDate));
+        return rowsAffected > 0;
+    }
+
     public override async Task<AdminConsoleEntities.OrganizationPartnershipEntitlement> CreateAsync(
         AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement)
     {
@@ -82,6 +99,8 @@ public class OrganizationPartnershipEntitlementRepository
         AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement, Func<Task> saveTask)
     {
         var originalExternalId = entitlement.ExternalId;
+        entitlement.ExternalIdHash = AdminConsoleEntities.OrganizationPartnershipEntitlement.ComputeExternalIdHash(
+            entitlement.OrganizationPartnershipId, originalExternalId);
         entitlement.ExternalId = DatabaseFieldProtectionHelper.Protect(_dataProtector, entitlement.ExternalId)!;
         try
         {
