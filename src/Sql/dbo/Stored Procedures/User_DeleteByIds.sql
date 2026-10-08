@@ -156,7 +156,16 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
-    
+
+    -- Unbind Organization Partnership Entitlements
+    UPDATE
+        [dbo].[OrganizationPartnershipEntitlement]
+    SET
+        [UserId] = NULL,
+        [AccountRef] = NULL
+    WHERE
+        [UserId] IN (SELECT * FROM @ParsedIds)
+
     -- Finally, delete the user
     DELETE
     FROM
