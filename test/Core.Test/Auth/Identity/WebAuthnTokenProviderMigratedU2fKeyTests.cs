@@ -1,6 +1,7 @@
 ﻿using System.Buffers.Text;
 using System.Formats.Cbor;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
@@ -30,6 +31,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     private const string _vaultUrl = "https://vault.bitwarden.com";
     private const string _rpId = "vault.bitwarden.com";
     private const string _u2fAppIdUrl = "https://vault.bitwarden.com/app-id.json";
+    private const string _foreignAppIdUrl = "https://evil.example/app-id.json";
 
     [Fact]
     public async Task MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash_Bug_PM44658()
@@ -163,7 +165,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
 
         var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null,
-            appId: "https://evil.example/app-id.json");
+            appId: _foreignAppIdUrl);
         Assert.True(assertion.ClientExtensionResults.AppID);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
@@ -171,6 +173,45 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
             SubstituteUserManager(), userFromStorage);
 
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToForeignAppId_ReturnsFalse_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+        ReplaceStoredChallengeAppId(harness.User, _foreignAppIdUrl);
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _foreignAppIdUrl);
+        Assert.True(assertion.ClientExtensionResults.AppID);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToServerAppId_ReturnsTrue_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+        ReplaceStoredChallengeAppId(harness.User, _foreignAppIdUrl);
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.True(result);
     }
 
     [Fact]
@@ -225,6 +266,15 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
             BuildWebClientTokenString(assertion), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.True(parsed!.ClientExtensionResults.AppID);
+    }
+
+    private static void ReplaceStoredChallengeAppId(User user, string appId)
+    {
+        var providers = user.GetTwoFactorProviders();
+        var login = JsonNode.Parse((string)providers[TwoFactorProviderType.WebAuthn].MetaData["login"])!.AsObject();
+        login["extensions"]!.AsObject()["appid"] = appId;
+        providers[TwoFactorProviderType.WebAuthn].MetaData["login"] = login.ToJsonString();
+        user.SetTwoFactorProviders(providers);
     }
 
     private static void AssertExtensionsCarryAppIdOnce(string json)

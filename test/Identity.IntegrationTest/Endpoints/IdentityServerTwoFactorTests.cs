@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.Buffers.Text;
+using System.Formats.Cbor;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -15,6 +17,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -24,6 +27,7 @@ using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
 using Microsoft.EntityFrameworkCore;
+using Fido2NetLib;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
 using Xunit;
@@ -105,6 +109,37 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
 
         var providers = AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
         Assert.True(providers.TryGetProperty("7", out _));
+    }
+
+    [Fact]
+    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success_PM44658()
+    {
+        // Arrange
+        var localFactory = new IdentityApplicationFactory();
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        await CreateUserAsync(localFactory, _testEmail, BuildMigratedU2fWebAuthnTwoFactorJson(authenticator));
+        var appId = CoreHelpers.U2fAppIdUrl(localFactory.GetService<GlobalSettings>());
+
+        // Act: password login returns the WebAuthn challenge
+        var challengeContext = await localFactory.ContextFromPasswordAsync(_testEmail, _testPassword);
+
+        // Assert: the client is told to also use the server's U2F AppID
+        var challengeBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(challengeContext);
+        var providers = AssertHelper.AssertJsonProperty(challengeBody.RootElement, "TwoFactorProviders2", JsonValueKind.Object);
+        Assert.True(providers.TryGetProperty("7", out var webAuthnOptions));
+        Assert.Equal(appId, webAuthnOptions.GetProperty("extensions").GetProperty("appid").GetString());
+
+        // Act: the authenticator signs for the AppID, as a browser does after the appid fallback
+        var challenge = AssertionOptions.FromJson(webAuthnOptions.GetRawText()).Challenge;
+        var assertion = authenticator.MakeAssertion(challenge, "localhost", "https://localhost:8080",
+            userHandle: null, appId: appId);
+        var loginContext = await localFactory.ContextFromPasswordWithTwoFactorAsync(
+            _testEmail, _testPassword, twoFactorProviderType: "7", twoFactorToken: BuildWebClientTokenString(assertion));
+
+        // Assert
+        var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
+        var accessToken = AssertHelper.AssertJsonProperty(loginBody.RootElement, "access_token", JsonValueKind.String).GetString();
+        Assert.NotNull(accessToken);
     }
 
     [Fact]
@@ -424,6 +459,69 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
+    }
+
+    /// <summary>
+    /// A WebAuthn provider with one key in the shape the 2020 U2F-to-WebAuthn migration wrote it: Migrated, the
+    /// 64-byte U2F key handle as standard Base64 descriptor id, a carried-over counter and no user handle.
+    /// </summary>
+    private static string BuildMigratedU2fWebAuthnTwoFactorJson(FakeWebAuthnAuthenticator authenticator)
+    {
+        const uint carriedOverU2fCounter = 7;
+        authenticator.SignatureCounter = carriedOverU2fCounter;
+
+        var u2fPublicKey = authenticator.GetU2fRawPublicKey();
+        var x = u2fPublicKey[1..33];
+        var y = u2fPublicKey[33..65];
+        var cbor = new CborWriter(CborConformanceMode.Lax);
+        cbor.WriteStartMap(5);
+        cbor.WriteInt32(-3); cbor.WriteByteString(y);
+        cbor.WriteInt32(-2); cbor.WriteByteString(x);
+        cbor.WriteInt32(-1); cbor.WriteInt32(1);
+        cbor.WriteInt32(1); cbor.WriteInt32(2);
+        cbor.WriteInt32(3); cbor.WriteInt32(-7);
+        cbor.WriteEndMap();
+
+        return "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"YubiKey 5 NFC\",\"Descriptor\":{\"Id\":\""
+            + Convert.ToBase64String(authenticator.CredentialId) + "\",\"Type\":0,\"Transports\":null},"
+            + "\"PublicKey\":\"" + Convert.ToBase64String(cbor.Encode()) + "\",\"UserHandle\":null,"
+            + "\"SignatureCounter\":" + carriedOverU2fCounter + ",\"CredType\":null,\"RegDate\":\"0001-01-01T00:00:00\","
+            + "\"Migrated\":true,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}";
+    }
+
+    private static byte[] LegacyU2fKeyHandle()
+    {
+        var keyHandle = new byte[64];
+        for (var i = 0; i < keyHandle.Length; i++)
+        {
+            keyHandle[i] = (byte)(i * 7 + 3);
+        }
+        keyHandle[0] = 0xfb;
+        keyHandle[1] = 0xff;
+        return keyHandle;
+    }
+
+    /// <summary>
+    /// Same JSON shape as <c>buildDataString</c> in the web client's common-webauthn.ts: extension results travel
+    /// under the "extensions" key.
+    /// </summary>
+    private static string BuildWebClientTokenString(AuthenticatorAssertionRawResponse assertion)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            id = assertion.Id,
+            rawId = Base64Url.EncodeToString(assertion.RawId),
+            type = "public-key",
+            extensions = assertion.ClientExtensionResults.AppID == true
+                ? new Dictionary<string, object> { ["appid"] = true }
+                : new Dictionary<string, object>(),
+            response = new
+            {
+                authenticatorData = Base64Url.EncodeToString(assertion.Response.AuthenticatorData),
+                clientDataJson = Base64Url.EncodeToString(assertion.Response.ClientDataJson),
+                signature = Base64Url.EncodeToString(assertion.Response.Signature),
+            },
+        });
     }
 
     private async Task CreateUserAsync(
