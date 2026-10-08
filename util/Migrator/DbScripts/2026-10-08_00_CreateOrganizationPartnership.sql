@@ -66,6 +66,13 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_OrganizationPartnershipEntitlement_UserId' AND object_id = OBJECT_ID('[dbo].[OrganizationPartnershipEntitlement]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_UserId]
+        ON [dbo].[OrganizationPartnershipEntitlement]([UserId] ASC);
+END
+GO
+
 CREATE OR ALTER VIEW [dbo].[OrganizationPartnershipView]
 AS
 SELECT

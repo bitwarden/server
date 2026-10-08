@@ -29,3 +29,7 @@ CREATE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_State_ResumeWin
     ON [dbo].[OrganizationPartnershipEntitlement]([State] ASC, [ResumeWindowExpirationDate] ASC)
     WHERE [UserId] IS NOT NULL;
 GO
+
+CREATE NONCLUSTERED INDEX [IX_OrganizationPartnershipEntitlement_UserId]
+    ON [dbo].[OrganizationPartnershipEntitlement]([UserId] ASC);
+GO
