@@ -15,6 +15,7 @@ public class ServerContextBuilder : IContextBuilder
     private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
+    private const string _contextKindAccessConnector = "access-connector";
 
     private const string _contextAttributeClientVersion = "client-version";
     private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
@@ -116,6 +117,30 @@ public class ServerContextBuilder : IContextBuilder
                         SetCommonContextAttributes(ldServiceAccount);
 
                         builder.Add(ldServiceAccount.Build());
+                    }
+                }
+                break;
+
+            case IdentityClientType.AccessConnector:
+                {
+                    // A PAM access connector's token carries none of the claims the branches above key on, so it
+                    // needs its own context kind or every flag evaluates to its default for the connector.
+                    if (currentContext.PamAccessConnectorId.HasValue)
+                    {
+                        var ldAccessConnector = LaunchDarkly.Sdk.Context.Builder(
+                            currentContext.PamAccessConnectorId.Value.ToString());
+
+                        ldAccessConnector.Kind(_contextKindAccessConnector);
+                        SetCommonContextAttributes(ldAccessConnector);
+
+                        if (currentContext.PamAccessConnectorOrganizationId.HasValue)
+                        {
+                            ldAccessConnector.Set(_contextAttributeOrganizations,
+                                LdValue.ArrayOf(
+                                    LdValue.Of(currentContext.PamAccessConnectorOrganizationId.Value.ToString())));
+                        }
+
+                        builder.Add(ldAccessConnector.Build());
                     }
                 }
                 break;

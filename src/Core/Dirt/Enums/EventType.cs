@@ -173,4 +173,21 @@ public enum EventType : int
     Send_Accessed_File = 2511,
     Send_PolicyDisabled = 2512,
     Send_PolicyEnabled = 2513,
+
+    // PAM: the AccessAuditEventKind outcomes worth surfacing organization-wide. The PAM audit store keeps the full
+    // trail.
+    Pam_AccessRequest_Submitted = 2600,
+    Pam_AccessRequest_Approved = 2601,
+    Pam_AccessRequest_Denied = 2602,
+    Pam_AccessLease_Activated = 2603,
+    Pam_AccessLease_Revoked = 2604,
+    // Appended rather than grouped above, since the values are persisted.
+    Pam_AccessRequest_Cancelled = 2605,
+    Pam_AccessLease_Extended = 2606,
+    Pam_AccessLease_Expired = 2607,
+    Pam_AccessLease_ActivationRejected = 2608,
+    // Rule events carry no subject id: a rule governs many collections, and dbo.Event has no column for the rule.
+    Pam_AccessRule_Created = 2609,
+    Pam_AccessRule_Updated = 2610,
+    Pam_AccessRule_Deleted = 2611,
 }

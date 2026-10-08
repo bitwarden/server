@@ -6,8 +6,8 @@ namespace Bit.Services.Pam.Test.Api.Models;
 
 /// <summary>
 /// The wire names are a contract with the web client's copy in
-/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. If the pinned
-/// list below fails, update the client enum, its label map, and <c>apps/web/src/locales/en/messages.json</c> too.
+/// <c>bitwarden_license/bit-web/src/app/pam/access-audit/responses/access-audit-event.response.ts</c>. Changing them
+/// means updating that enum, its label map and <c>messages.json</c>.
 /// </summary>
 public class AccessAuditEventKindNamesTests
 {
@@ -97,5 +97,25 @@ public class AccessAuditEventKindNamesTests
     public void TryParse_RefusesANameItDoesNotReport(string name)
     {
         Assert.False(AccessAuditEventKindNames.TryParse(name, out _));
+    }
+
+    /// <summary>
+    /// Stale web bundles still post the pre-rename fleet names in the kind filter, and an unknown name fails the whole
+    /// read.
+    /// </summary>
+    [Theory]
+    [InlineData("daemonRegistered", AccessAuditEventKind.AccessConnectorRegistered)]
+    [InlineData("daemonRevoked", AccessAuditEventKind.AccessConnectorRevoked)]
+    [InlineData("daemonDisabled", AccessAuditEventKind.AccessConnectorDisabled)]
+    [InlineData("daemonEnabled", AccessAuditEventKind.AccessConnectorEnabled)]
+    [InlineData("daemonDeleted", AccessAuditEventKind.AccessConnectorDeleted)]
+    [InlineData("daemonAssignedToTarget", AccessAuditEventKind.AccessConnectorAssignedToTarget)]
+    [InlineData("daemonUnassignedFromTarget", AccessAuditEventKind.AccessConnectorUnassignedFromTarget)]
+    public void TryParse_StillReadsThePreRenameFleetNames(string name, AccessAuditEventKind expected)
+    {
+        Assert.True(AccessAuditEventKindNames.TryParse(name, out var parsed));
+        Assert.Equal(expected, parsed);
+        Assert.DoesNotContain(name, _vocabulary);
+        Assert.NotEqual(name, AccessAuditEventKindNames.From(expected));
     }
 }

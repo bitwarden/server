@@ -85,18 +85,16 @@ public class AccessRuleRepository : Repository<CoreEntity, EfModel, Guid>, IAcce
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        // Clear the collection links before deleting the rule: the FK Collection.AccessRuleId -> AccessRule does
-        // not cascade (RESTRICT here, NO ACTION on SQL Server), so the delete fails while any collection still
-        // points at it.
+        // Detach collections first: FK Collection.AccessRuleId does not cascade (RESTRICT here, NO ACTION on SQL
+        // Server), so the delete fails while any collection points at the rule.
         await dbContext.Collections
             .Where(c => c.AccessRuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(c => c.AccessRuleId, (Guid?)null)
                 .SetProperty(c => c.RevisionDate, DateTime.UtcNow));
 
-        // Detach the requests that pinned this rule for the same reason: FK_AccessRequest_AccessRule does not
-        // cascade either, so a request recording this rule as its governing rule would block the delete. RuleId is
-        // provenance rather than authority, and is already nullable for requests never gated through a stored rule.
+        // Detach the requests that pinned this rule, since FK_AccessRequest_AccessRule does not cascade either. RuleId
+        // is provenance, not authority, so clearing it changes no grant.
         await dbContext.AccessRequests
             .Where(r => r.RuleId == accessRule.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.RuleId, (Guid?)null));

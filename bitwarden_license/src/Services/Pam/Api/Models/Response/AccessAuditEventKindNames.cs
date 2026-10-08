@@ -118,8 +118,23 @@ public static class AccessAuditEventKindNames
         Enum.GetValues<AccessAuditEventKind>().ToDictionary(From, kind => kind, StringComparer.Ordinal);
 
     /// <summary>
-    /// Reads a wire name back into its kind. False for an unknown name.
+    /// Names that older web bundles still post in the kind filter. Parse-only; drop once no such bundle can be open.
+    /// </summary>
+    private static readonly Dictionary<string, AccessAuditEventKind> _preRenameFleetNames = new(StringComparer.Ordinal)
+    {
+        ["daemonRegistered"] = AccessAuditEventKind.AccessConnectorRegistered,
+        ["daemonRevoked"] = AccessAuditEventKind.AccessConnectorRevoked,
+        ["daemonDisabled"] = AccessAuditEventKind.AccessConnectorDisabled,
+        ["daemonEnabled"] = AccessAuditEventKind.AccessConnectorEnabled,
+        ["daemonDeleted"] = AccessAuditEventKind.AccessConnectorDeleted,
+        ["daemonAssignedToTarget"] = AccessAuditEventKind.AccessConnectorAssignedToTarget,
+        ["daemonUnassignedFromTarget"] = AccessAuditEventKind.AccessConnectorUnassignedFromTarget,
+    };
+
+    /// <summary>
+    /// Reads a wire name, or a name in <see cref="_preRenameFleetNames"/>, back into its kind. False for an unknown
+    /// name.
     /// </summary>
     public static bool TryParse(string name, out AccessAuditEventKind kind) =>
-        _byName.TryGetValue(name, out kind);
+        _byName.TryGetValue(name, out kind) || _preRenameFleetNames.TryGetValue(name, out kind);
 }

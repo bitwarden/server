@@ -1,69 +1,60 @@
 ﻿using Bit.HttpExtensions;
+using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
-/// <summary>A registered target system, as the fleet-admin surface renders it. The view model for <c>GET
-/// access-connectors/target-systems</c>.</summary>
+/// <summary>A registered target system.</summary>
 public class PamTargetSystemResponseModel : ResponseModel
 {
-    public PamTargetSystemResponseModel()
+    public PamTargetSystemResponseModel(PamTargetSystem targetSystem)
         : base("pamTargetSystem")
     {
+        ArgumentNullException.ThrowIfNull(targetSystem);
+
+        Id = targetSystem.Id;
+        OrganizationId = targetSystem.OrganizationId;
+        Name = targetSystem.Name;
+        Method = targetSystem.Method;
+        Kind = targetSystem.Kind;
+        var policy = PamPasswordPolicy.Parse(targetSystem.PasswordPolicy);
+        PasswordPolicy = policy is null ? null : new PamPasswordPolicyResponseModel(policy);
+        SupportsSessionTermination = targetSystem.SupportsSessionTermination;
+        Status = targetSystem.Status;
+        CreationDate = targetSystem.CreationDate.AsUtc();
+        RevisionDate = targetSystem.RevisionDate.AsUtc();
     }
 
-    /// <summary>
-    /// The target system's unique identifier.
-    /// </summary>
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// The organization this target system belongs to.
-    /// </summary>
     public Guid OrganizationId { get; set; }
 
-    /// <summary>
-    /// The target system's display name, shown wherever targets are listed and managed.
-    /// </summary>
     public string Name { get; set; } = null!;
 
-    /// <summary>
-    /// How the target's credentials are rotated -- see <see cref="PamTargetSystemMethod"/>. Decides which of the
-    /// fields below carry a value.
-    /// </summary>
+    /// <summary>Decides which of the fields below carry a value.</summary>
     public PamTargetSystemMethod Method { get; set; }
 
-    /// <summary>
-    /// The integration an automatic target is rotated through -- see <see cref="PamTargetSystemKind"/>. Null on a
-    /// manual target, which has no integration.
-    /// </summary>
+    /// <summary>The integration an automatic target is rotated through. Null on a manual target.</summary>
     public PamTargetSystemKind? Kind { get; set; }
 
     /// <summary>
-    /// The password-generation constraints the access connector must satisfy when rotating credentials on this target.
-    /// Null on a manual target.
+    /// The constraints the access connector must satisfy. On a manual target it is advisory, and null when none was
+    /// set.
     /// </summary>
     public PamPasswordPolicyResponseModel? PasswordPolicy { get; set; }
 
     /// <summary>
-    /// Whether the integration can terminate the account's live sessions after a rotation; gates whether rotation
-    /// configs on this target may request session termination. Null on a manual target.
+    /// Whether the integration can terminate live sessions after a rotation; configs on this target can request
+    /// termination only when true. Null on a manual target.
     /// </summary>
     public bool? SupportsSessionTermination { get; set; }
 
-    /// <summary>
-    /// Whether the target is offerable for rotation and assignable to an access connector -- see
-    /// <see cref="PamTargetSystemStatus"/>.
-    /// </summary>
+    /// <summary>Whether the target is offerable for rotation and accepts new rotation configs.</summary>
     public PamTargetSystemStatus Status { get; set; }
 
-    /// <summary>
-    /// When the target system was registered (UTC).
-    /// </summary>
     public DateTime CreationDate { get; set; }
 
-    /// <summary>
-    /// When the target system was last modified (UTC).
-    /// </summary>
     public DateTime RevisionDate { get; set; }
 }

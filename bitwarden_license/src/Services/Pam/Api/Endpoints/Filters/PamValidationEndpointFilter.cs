@@ -4,21 +4,13 @@ using Bit.Core.Models.Api;
 namespace Bit.Services.Pam.Api.Endpoints.Filters;
 
 /// <summary>
-/// Minimal API equivalent of the MVC <c>ModelStateValidationFilterAttribute</c>: runs DataAnnotations validation
-/// (including <see cref="IValidatableObject"/>) over the request-model arguments and, on failure, short-circuits
-/// with Bitwarden's internal <see cref="ErrorResponseModel"/> 400 — the same body the controllers produced.
+/// Minimal API equivalent of the MVC <c>ModelStateValidationFilterAttribute</c>. Also validates nested request models,
+/// which <see cref="Validator.TryValidateObject(object, ValidationContext, ICollection{ValidationResult}, bool)"/>
+/// does not recurse into.
 /// </summary>
-/// <remarks>
-/// <see cref="Validator.TryValidateObject(object, ValidationContext, ICollection{ValidationResult}, bool)"/> does not
-/// recurse into complex properties, so nested request models are walked explicitly. MVC's model validator does
-/// recurse, and without this a nested model's own attributes and <see cref="IValidatableObject"/> rules would never
-/// run — the rotation password policy is only ever reached as a nested property.
-/// </remarks>
 public class PamValidationEndpointFilter : IEndpointFilter
 {
-    // A prefix/suffix match rather than an exact one, so nested feature subtrees that mirror the same
-    // Api/Models/Request folder convention -- e.g. Rotation's Bit.Services.Pam.AccessConnector.Api.Models.Request --
-    // are covered without this filter needing to know about every subtree by name.
+    // Matched by prefix and suffix, so request models in nested features such as AccessConnector.Rotation are covered.
     private const string RequestModelNamespacePrefix = "Bit.Services.Pam.";
     private const string RequestModelNamespaceSuffix = ".Api.Models.Request";
 
@@ -53,10 +45,6 @@ public class PamValidationEndpointFilter : IEndpointFilter
         return await next(context);
     }
 
-    /// <remarks>
-    /// The <paramref name="visited"/> set is reference-based, so a model that cycles back to an ancestor terminates
-    /// rather than recursing forever.
-    /// </remarks>
     private static void Validate(object model, List<ValidationResult> results, HashSet<object> visited)
     {
         if (!visited.Add(model))

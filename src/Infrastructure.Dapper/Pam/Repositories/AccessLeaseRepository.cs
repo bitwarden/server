@@ -3,6 +3,7 @@ using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -122,8 +123,8 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
         }
         catch (SqlException e) when (e.Number is 2601 or 2627)
         {
-            // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won the race after
-            // our NOT EXISTS guard passed. Same outcome as the guard catching it — the caller re-reads the winner.
+            // Unique-index backstop ([IX_AccessLease_AccessRequestId]): a concurrent activation won after the
+            // NOT EXISTS guard passed, so the caller re-reads the winner.
             return AccessLeaseMintOutcome.PreconditionFailed;
         }
     }
@@ -143,5 +144,16 @@ public class AccessLeaseRepository : Repository<AccessLease, Guid>, IAccessLease
                 Now = now,
             },
             commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<PamExpiredLease>(
+            $"[{Schema}].[AccessLease_ExpireDue]",
+            new { Now = now },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
     }
 }

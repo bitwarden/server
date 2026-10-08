@@ -1,0 +1,103 @@
+﻿using Bit.Core.Exceptions;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.Services;
+
+namespace Bit.Services.Pam.AccessConnector.Commands;
+
+/// <inheritdoc cref="IReportRotationSucceededCommand" />
+public class ReportRotationSucceededCommand : IReportRotationSucceededCommand
+{
+    private readonly IPamRotationJobRepository _jobRepository;
+    private readonly IPamRotationConfigRepository _configRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
+    private readonly IRotationScheduleCalculator _scheduleCalculator;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly TimeProvider _timeProvider;
+
+    public ReportRotationSucceededCommand(
+        IPamRotationJobRepository jobRepository,
+        IPamRotationConfigRepository configRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
+        IRotationScheduleCalculator scheduleCalculator,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
+        TimeProvider timeProvider)
+    {
+        _jobRepository = jobRepository;
+        _configRepository = configRepository;
+        _accessConnectorRepository = accessConnectorRepository;
+        _scheduleCalculator = scheduleCalculator;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
+        _timeProvider = timeProvider;
+    }
+
+    public async Task<PamRotationAttempt> ReportSucceededAsync(
+        Guid accessConnectorId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
+    {
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
+        var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
+        var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
+        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var outcome = await _jobRepository.MarkAttemptRotatedAsync(
+            attemptId, accessConnectorId, sessionTermination, now);
+
+        if (outcome != PamRotationAttemptResolveOutcome.Resolved)
+        {
+            // Stale report (spec RejectStaleSuccess): nothing changed, but the report itself is worth auditing.
+            var rejectedAudit = new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RotationReportRejected,
+                OccurredDate = now,
+                OrganizationId = config.OrganizationId,
+                ActorId = null,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
+                RotationJobId = job?.Id,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
+                Detail = "Stale success report: the attempt is no longer executing under this access connector's claim.",
+            };
+            await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
+
+            throw new ConflictException("This attempt is no longer executing.");
+        }
+
+        config.LastRotationAt = now;
+        config.NextRotationAt = _scheduleCalculator.GetNextOccurrence(config.ScheduleCron, now);
+        config.RevisionDate = now;
+        await _configRepository.ReplaceAsync(config);
+
+        // Machinery event: single Outcome-phase, no human actor.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.RotationSucceeded,
+            OccurredDate = now,
+            OrganizationId = config.OrganizationId,
+            ActorId = null,
+            AccessConnectorId = accessConnectorId,
+            AccessConnectorName = accessConnector.Name,
+            RotationJobId = job?.Id,
+            RotationConfigId = config.Id,
+            CipherId = config.CipherId,
+            RotationSource = job?.Source,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit);
+
+        // The repository resolved the attempt, so re-read it for the response.
+        return await _jobRepository.GetAttemptByIdAsync(attemptId) ?? attempt;
+    }
+}

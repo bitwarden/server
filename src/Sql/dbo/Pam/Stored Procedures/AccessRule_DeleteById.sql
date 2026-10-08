@@ -16,17 +16,15 @@ BEGIN
         RETURN
     END
 
-    -- Clear the collection links first: the FK Collection.AccessRuleId -> AccessRule is ON DELETE NO ACTION, so the
-    -- referencing rows must be detached before the rule can be removed. A cleared collection is simply ungoverned.
+    -- Detach collections first, since FK Collection.AccessRuleId is ON DELETE NO ACTION. A detached collection is
+    -- ungoverned.
     UPDATE [dbo].[Collection]
     SET [AccessRuleId] = NULL,
         [RevisionDate] = SYSUTCDATETIME()
     WHERE [AccessRuleId] = @Id
 
-    -- Detach the requests that pinned this rule, for the same reason: FK_AccessRequest_AccessRule is ON DELETE
-    -- NO ACTION, so any request that recorded this rule as its governing rule would block the delete outright. RuleId
-    -- is provenance rather than authority -- the request's own window and decision log are what was actually granted,
-    -- and the column is already nullable for requests that were never gated through a stored rule.
+    -- Detach the requests that pinned this rule, since FK_AccessRequest_AccessRule is ON DELETE NO ACTION too. RuleId
+    -- is provenance, not authority, so clearing it changes no grant.
     UPDATE [dbo].[AccessRequest]
     SET [RuleId] = NULL
     WHERE [RuleId] = @Id

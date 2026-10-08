@@ -39,13 +39,18 @@ internal class SecretsManagerApiKeyProvider : IClientProvider
 
         switch (apiKey)
         {
-            case ServiceAccountApiKeyDetails key:
+            // Every API key loads as ServiceAccountApiKeyDetails, so a PAM access connector's key arrives here too,
+            // with ServiceAccountOrganizationId defaulted. Match on ServiceAccountId and refuse the rest, which have
+            // their own provider.
+            case ServiceAccountApiKeyDetails { ServiceAccountId: not null } key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager || !org.Enabled)
+                if (org == null || !org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
                 break;
+            default:
+                return null;
         }
 
         var client = new Client

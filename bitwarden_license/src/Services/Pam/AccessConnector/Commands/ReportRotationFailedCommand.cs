@@ -1,0 +1,145 @@
+﻿using Bit.Core.Exceptions;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.Services;
+using Microsoft.Extensions.Options;
+
+namespace Bit.Services.Pam.AccessConnector.Commands;
+
+/// <inheritdoc cref="IReportRotationFailedCommand" />
+public class ReportRotationFailedCommand : IReportRotationFailedCommand
+{
+    private const int FailureReasonMaxLength = 500;
+
+    private readonly IPamRotationJobRepository _jobRepository;
+    private readonly IPamRotationConfigRepository _configRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly IOptions<PamRotationOptions> _options;
+    private readonly TimeProvider _timeProvider;
+
+    public ReportRotationFailedCommand(
+        IPamRotationJobRepository jobRepository,
+        IPamRotationConfigRepository configRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
+        IOptions<PamRotationOptions> options,
+        TimeProvider timeProvider)
+    {
+        _jobRepository = jobRepository;
+        _configRepository = configRepository;
+        _accessConnectorRepository = accessConnectorRepository;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
+        _options = options;
+        _timeProvider = timeProvider;
+    }
+
+    public async Task<PamRotationAttempt> ReportFailedAsync(
+        Guid accessConnectorId, Guid attemptId, string? failureReason, PamRotationSyncState syncState)
+    {
+        // The reason is a connector-defined code and detail, never raw target output, which can echo credentials.
+        // It is truncated rather than rejected, since the two combined can exceed the stored length.
+        var truncatedReason = Truncate(failureReason);
+
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
+        var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
+        var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
+        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var result = await _jobRepository.MarkAttemptErroredAsync(
+            attemptId, accessConnectorId, truncatedReason, syncState, now, _options.Value.MaxAttempts,
+            _options.Value.RetryBaseDelay);
+
+        if (result.Outcome != PamRotationAttemptResolveOutcome.Resolved)
+        {
+            // Stale report (spec RejectStaleFailureReport): nothing changed, but the report itself is worth auditing.
+            var rejectedAudit = new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RotationReportRejected,
+                OccurredDate = now,
+                OrganizationId = config.OrganizationId,
+                ActorId = null,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
+                RotationJobId = job?.Id,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
+                Detail = "Stale failure report: the attempt is no longer executing under this access connector's claim.",
+            };
+            await _accessAuditEventEmitter.EmitAsync(rejectedAudit);
+
+            throw new ConflictException("This attempt is no longer executing.");
+        }
+
+        var organizationId = config.OrganizationId;
+
+        if (result.JobStatus == PamRotationJobStatus.Failed)
+        {
+            // Retry budget exhausted: push the next rotation out instead of retrying immediately, if scheduled.
+            if (config.ScheduleCron is not null)
+            {
+                config.NextRotationAt = now + _options.Value.FailureRetryDelay;
+                config.RevisionDate = now;
+                await _configRepository.ReplaceAsync(config);
+            }
+
+            var failedAudit = new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RotationFailed,
+                OccurredDate = now,
+                OrganizationId = organizationId,
+                ActorId = null,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
+                RotationJobId = job?.Id,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
+                RotationSource = job?.Source,
+                SyncState = syncState,
+                Detail = truncatedReason,
+            };
+            await _accessAuditEventEmitter.EmitAsync(failedAudit);
+        }
+        else
+        {
+            // Retry budget remains: the job went back to Pending for another attempt.
+            var attemptFailedAudit = new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RotationAttemptFailed,
+                OccurredDate = now,
+                OrganizationId = organizationId,
+                ActorId = null,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
+                RotationJobId = job?.Id,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
+                RotationSource = job?.Source,
+                SyncState = syncState,
+                Detail = truncatedReason,
+            };
+            await _accessAuditEventEmitter.EmitAsync(attemptFailedAudit);
+        }
+
+        // The repository resolved the attempt, so re-read it for the response.
+        return await _jobRepository.GetAttemptByIdAsync(attemptId) ?? attempt;
+    }
+
+    private static string? Truncate(string? failureReason) =>
+        failureReason is not null && failureReason.Length > FailureReasonMaxLength
+            ? failureReason[..FailureReasonMaxLength]
+            : failureReason;
+}

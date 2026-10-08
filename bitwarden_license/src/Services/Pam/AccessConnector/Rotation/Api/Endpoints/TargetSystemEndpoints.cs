@@ -4,10 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints;
 
-/// <summary>
-/// The <c>organizations/{orgId}/access-connectors/rotation/target-systems</c> resource. <c>orgId</c> is bound from the group's
-/// route prefix.
-/// </summary>
+/// <summary>The <c>organizations/{orgId}/access-connectors/rotation/target-systems</c> resource.</summary>
 internal static class TargetSystemEndpoints
 {
     public static RouteGroupBuilder MapTargetSystemEndpoints(this RouteGroupBuilder group)

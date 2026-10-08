@@ -1,0 +1,149 @@
+﻿using Bit.Core.Exceptions;
+using Bit.Pam.Entities;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector;
+using Bit.Services.Pam.AccessConnector.Commands;
+using Bit.Services.Pam.Services;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Services.Pam.Test.AccessConnector.Commands;
+
+[SutProviderCustomize]
+public class ReportRotationSucceededCommandTests
+{
+    private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime _nextOccurrence = new(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc);
+
+    [Theory, BitAutoData]
+    public async Task ReportSucceededAsync_UnknownAttempt_ThrowsNotFound_NoAudit(
+        Guid accessConnectorId, Guid attemptId, PamSessionTerminationOutcome sessionTermination)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attemptId)
+            .Returns((PamRotationAttempt?)null);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.ReportSucceededAsync(accessConnectorId, attemptId, sessionTermination));
+
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .MarkAttemptRotatedAsync(default, default, default, default);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportSucceededAsync_Resolved_UpdatesConfigAndEmitsRotationSucceededAudit(
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, PamSessionTerminationOutcome sessionTermination)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        accessConnector.Id = accessConnectorId;
+        accessConnector.OrganizationId = config.OrganizationId;
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>()
+            .MarkAttemptRotatedAsync(attempt.Id, accessConnectorId, sessionTermination, _now)
+            .Returns(PamRotationAttemptResolveOutcome.Resolved);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
+        sutProvider.GetDependency<IRotationScheduleCalculator>().GetNextOccurrence(config.ScheduleCron, _now)
+            .Returns(_nextOccurrence);
+
+        var returned = await sutProvider.Sut.ReportSucceededAsync(accessConnectorId, attempt.Id, sessionTermination);
+
+        Assert.Same(attempt, returned);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).ReplaceAsync(
+            Arg.Is<PamRotationConfig>(c => c.Id == config.Id
+                && c.LastRotationAt == _now
+                && c.NextRotationAt == _nextOccurrence));
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationSucceeded
+                && a.OrganizationId == config.OrganizationId
+                && a.ActorId == null
+                && a.AccessConnectorId == accessConnectorId
+                && a.AccessConnectorName == accessConnector.Name
+                && a.RotationJobId == job.Id
+                && a.RotationConfigId == config.Id
+                && a.CipherId == config.CipherId
+                && a.RotationSource == job.Source));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportSucceededAsync_Rejected_EmitsReportRejectedAuditAndThrowsConflict_ConfigNotUpdated(
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, PamSessionTerminationOutcome sessionTermination)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        accessConnector.Id = accessConnectorId;
+        accessConnector.OrganizationId = config.OrganizationId;
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>()
+            .MarkAttemptRotatedAsync(attempt.Id, accessConnectorId, sessionTermination, _now)
+            .Returns(PamRotationAttemptResolveOutcome.Rejected);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
+
+        await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.ReportSucceededAsync(accessConnectorId, attempt.Id, sessionTermination));
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(a => a.Kind == AccessAuditEventKind.RotationReportRejected
+                && a.OrganizationId == config.OrganizationId
+                && a.AccessConnectorId == accessConnectorId
+                && a.RotationJobId == job.Id
+                && a.RotationConfigId == config.Id
+                && a.CipherId == config.CipherId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ReportSucceededAsync_AttemptInAnotherOrganization_ThrowsNotFound_NoAudit(
+        Guid accessConnectorId, PamRotationAttempt attempt, PamRotationJob job, PamRotationConfig config,
+        PamAccessConnector accessConnector, PamSessionTerminationOutcome sessionTermination)
+    {
+        var sutProvider = Setup();
+        job.RotationConfigId = config.Id;
+        attempt.JobId = job.Id;
+        accessConnector.Id = accessConnectorId;
+        accessConnector.OrganizationId = Guid.NewGuid();
+        config.OrganizationId = Guid.NewGuid();
+        SetupAttempt(sutProvider, attempt);
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetByIdAsync(job.Id).Returns(job);
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByIdAsync(config.Id).Returns(config);
+        sutProvider.GetDependency<IPamAccessConnectorRepository>().GetByIdAsync(accessConnectorId)
+            .Returns(accessConnector);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.ReportSucceededAsync(accessConnectorId, attempt.Id, sessionTermination));
+
+        // Indistinguishable from an attempt that does not exist.
+        await sutProvider.GetDependency<IPamRotationJobRepository>().DidNotReceiveWithAnyArgs()
+            .MarkAttemptRotatedAsync(default, default, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+    }
+
+    private static SutProvider<ReportRotationSucceededCommand> Setup()
+    {
+        var sutProvider = new SutProvider<ReportRotationSucceededCommand>().WithFakeTimeProvider().Create();
+        sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        return sutProvider;
+    }
+
+    private static void SetupAttempt(SutProvider<ReportRotationSucceededCommand> sutProvider, PamRotationAttempt attempt) =>
+        sutProvider.GetDependency<IPamRotationJobRepository>().GetAttemptByIdAsync(attempt.Id).Returns(attempt);
+}

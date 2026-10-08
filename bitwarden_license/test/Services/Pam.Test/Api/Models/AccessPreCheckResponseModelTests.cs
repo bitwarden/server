@@ -19,7 +19,7 @@ public class AccessPreCheckResponseModelTests
 
         var actual = Assert.NotNull(model.SlotFreesAt);
         Assert.Equal(DateTimeKind.Utc, actual.Kind);
-        // Relabelled, not converted: the clock reading must be untouched.
+        // Relabelled, not shifted.
         Assert.Equal(slotFreesAt.TimeOfDay, actual.TimeOfDay);
     }
 
@@ -40,7 +40,6 @@ public class AccessPreCheckResponseModelTests
     [Fact]
     public void DefaultConstructed_ReadsAsStartable()
     {
-        // "Absence means startable" must hold even for the parameterless constructor.
         Assert.True(new AccessPreCheckResponseModel().CanStartLease);
     }
 

@@ -1,0 +1,97 @@
+﻿using Bit.Core.Exceptions;
+using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
+using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
+using Bit.Services.Pam.Services;
+
+namespace Bit.Services.Pam.AccessConnector.Commands;
+
+/// <inheritdoc cref="ISubmitCipherUpdateCommand" />
+public class SubmitCipherUpdateCommand : ISubmitCipherUpdateCommand
+{
+    private readonly IPamRotationJobRepository _jobRepository;
+    private readonly IPamRotationConfigRepository _configRepository;
+    private readonly IPamAccessConnectorRepository _accessConnectorRepository;
+    private readonly ICipherRepository _cipherRepository;
+    private readonly ICipherSyncPushService _cipherSyncPushService;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
+    private readonly TimeProvider _timeProvider;
+
+    public SubmitCipherUpdateCommand(
+        IPamRotationJobRepository jobRepository,
+        IPamRotationConfigRepository configRepository,
+        IPamAccessConnectorRepository accessConnectorRepository,
+        ICipherRepository cipherRepository,
+        ICipherSyncPushService cipherSyncPushService,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
+        TimeProvider timeProvider)
+    {
+        _jobRepository = jobRepository;
+        _configRepository = configRepository;
+        _accessConnectorRepository = accessConnectorRepository;
+        _cipherRepository = cipherRepository;
+        _cipherSyncPushService = cipherSyncPushService;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
+        _timeProvider = timeProvider;
+    }
+
+    public async Task SubmitAsync(
+        Guid accessConnectorId,
+        Guid attemptId,
+        string cipherDataJson,
+        DateTime lastKnownRevisionDate)
+    {
+        // A cross-org attempt looks unknown, so this access connector's name stays out of another org's trail.
+        var attempt = await _jobRepository.GetAttemptByIdAsync(attemptId);
+        var job = attempt is null ? null : await _jobRepository.GetByIdAsync(attempt.JobId);
+        var config = job is null ? null : await _configRepository.GetByIdAsync(job.RotationConfigId);
+        var accessConnector = await _accessConnectorRepository.GetByIdAsync(accessConnectorId);
+
+        if (attempt is null
+            || config is null
+            || accessConnector is null
+            || config.OrganizationId != accessConnector.OrganizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var outcome = await _jobRepository.AcceptCipherWriteAsync(
+            attemptId, accessConnectorId, cipherDataJson, lastKnownRevisionDate, now);
+
+        if (outcome != PamRotationCipherWriteOutcome.Accepted)
+        {
+            var audit = new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RotationCipherWriteRejected,
+                OccurredDate = now,
+                OrganizationId = config.OrganizationId,
+                ActorId = null,
+                AccessConnectorId = accessConnectorId,
+                AccessConnectorName = accessConnector.Name,
+                RotationJobId = job?.Id,
+                RotationConfigId = config.Id,
+                CipherId = config.CipherId,
+                Detail = outcome == PamRotationCipherWriteOutcome.RevisionMismatch
+                    ? "The cipher was modified since it was last read; the write capability held but the revision date no longer matched."
+                    : "The write capability no longer held: the job is not claimed by this access connector, or the attempt is not executing.",
+            };
+            await _accessAuditEventEmitter.EmitAsync(audit);
+
+            throw new ConflictException(outcome == PamRotationCipherWriteOutcome.RevisionMismatch
+                ? "The cipher has been modified since it was last read."
+                : "This attempt can no longer write to the cipher.");
+        }
+
+        // Push a resync so open clients pick up the rotated secret; the durable fallback is the account revision
+        // date bumped in the same transaction.
+        var cipher = await _cipherRepository.GetByIdAsync(config.CipherId);
+        if (cipher is not null)
+        {
+            await _cipherSyncPushService.PushSyncCipherUpdateAsync(cipher, []);
+        }
+    }
+}

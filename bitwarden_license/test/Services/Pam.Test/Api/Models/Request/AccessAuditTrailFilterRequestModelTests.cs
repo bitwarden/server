@@ -25,7 +25,6 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Null(options.Before);
     }
 
-    // A dimension carries a list of values.
     [Fact]
     public void ToQueryOptions_ReadsEachKindOffTheGovernanceVocabulary()
     {
@@ -54,7 +53,6 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Throws<BadRequestException>(() => model.ToQueryOptions());
     }
 
-    // Cipher and rule filters union.
     [Fact]
     public void ToQueryOptions_CarriesBothHalvesOfAnItemSelection()
     {
@@ -103,7 +101,7 @@ public class AccessAuditTrailFilterRequestModelTests
         Assert.Throws<BadRequestException>(() => model.ToQueryOptions());
     }
 
-    // Bounds with and without an offset resolve to the same UTC instant.
+    // An unspecified kind is read as UTC; a local one is converted.
     [Theory]
     [InlineData(DateTimeKind.Utc)]
     [InlineData(DateTimeKind.Unspecified)]
