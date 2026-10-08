@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Vault.Entities;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Admin.AdminConsole.Models;
 
@@ -76,4 +77,8 @@ public class OrganizationViewModel
     public bool UseDisableSmAdsForUsers => Organization.UseDisableSmAdsForUsers;
     public IEnumerable<OrganizationUserUserDetails> OwnersDetails { get; set; }
     public IEnumerable<OrganizationUserUserDetails> AdminsDetails { get; set; }
+    [BindNever]
+    public bool PartnershipsEnabled { get; set; }
+    [BindNever]
+    public OrganizationPartnership Partnership { get; set; }
 }
