@@ -46,7 +46,7 @@ public class SendSalesAssistedTrialInvitationCommand(
         {
             ValidatePrivilegedControlsConfiguration(productTier, requestedProducts);
         }
-        
+
         if (requestedProducts.Contains(ProductType.PasswordManager) && requestedProducts.Contains(ProductType.SecretsManager))
         {
             throw new BadRequestException("Secrets Manager cannot be combined with Password Manager.");
