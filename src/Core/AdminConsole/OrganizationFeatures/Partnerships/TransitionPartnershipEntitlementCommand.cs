@@ -82,7 +82,7 @@ public class TransitionPartnershipEntitlementCommand(
             PartnershipEntitlementAction.Resume => Resume(entitlement, now),
             PartnershipEntitlementAction.Cancel => Cancel(entitlement, effectiveAt,
                 PartnershipEntitlementState.Active, PartnershipEntitlementState.Suspended),
-            PartnershipEntitlementAction.UserExit => Cancel(entitlement, effectiveAt, PartnershipEntitlementState.Active),
+            PartnershipEntitlementAction.UserExit => UserExit(entitlement, effectiveAt),
             _ => new IllegalEntitlementTransition(),
         };
 
@@ -205,6 +205,25 @@ public class TransitionPartnershipEntitlementCommand(
         entitlement.State = PartnershipEntitlementState.Canceled;
         entitlement.CanceledDate = effectiveAt;
         entitlement.ResumeWindowExpirationDate = effectiveAt + globalSettings.Partnerships.ResumeWindow;
+        return null;
+    }
+
+    /// <summary>
+    /// Ends the sponsorship and releases the binding at once, with no resume window, so only the customer's own
+    /// activation after a re-provision can attach the entitlement to their account again.
+    /// </summary>
+    private static Error? UserExit(OrganizationPartnershipEntitlement entitlement, DateTime effectiveAt)
+    {
+        if (entitlement.State != PartnershipEntitlementState.Active)
+        {
+            return new IllegalEntitlementTransition();
+        }
+
+        entitlement.State = PartnershipEntitlementState.Canceled;
+        entitlement.CanceledDate = effectiveAt;
+        entitlement.ResumeWindowExpirationDate = null;
+        entitlement.UserId = null;
+        entitlement.AccountRef = null;
         return null;
     }
 

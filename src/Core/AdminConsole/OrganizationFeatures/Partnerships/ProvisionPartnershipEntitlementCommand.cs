@@ -56,7 +56,6 @@ public class ProvisionPartnershipEntitlementCommand(
             {
                 OrganizationPartnershipId = partnership.Id,
                 ExternalId = request.ExternalId,
-                ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, request.ExternalId),
                 State = PartnershipEntitlementState.Provisioned,
                 LastAppliedEffectiveDate = effectiveAt,
                 CreationDate = now,
