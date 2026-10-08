@@ -290,6 +290,12 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 .ExecuteDeleteAsync();
             await dbContext.OrganizationConnections.Where(oc => oc.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
+            await dbContext.OrganizationPartnershipEntitlements
+                .Where(e => dbContext.OrganizationPartnerships
+                    .Any(p => p.Id == e.OrganizationPartnershipId && p.OrganizationId == organization.Id))
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationPartnerships.Where(p => p.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             var sponsoringOrgs = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationId == organization.Id)
                 .ToListAsync();
