@@ -358,7 +358,6 @@ public class SubmitAccessRequestCommandTests
 
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
-        // No approval gate on the auto path, but other devices still learn of the new request.
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
             .NotifyRequesterAsync(userId);
     }

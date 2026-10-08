@@ -178,7 +178,6 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
                     Detail = LeaseEndedDenialComment,
                 });
 
-            // Not the approvers, since nothing about the collection's leases changed.
             await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 
             return Project(request, AccessRequestAction.Denied, AccessDecisionVerdict.Deny,
@@ -187,7 +186,6 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The lease's window just grew.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
 

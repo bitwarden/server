@@ -31,7 +31,6 @@ public class RequesterMailNotifier : IRequesterMailNotifier
 
     public async Task NotifyDecisionAsync(AccessRequest request, bool approved)
     {
-        // Repeats IAccessMailNotifier's flag guard to skip the organization read when the flag is off, as on self-host.
         if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
@@ -63,7 +62,6 @@ public class RequesterMailNotifier : IRequesterMailNotifier
         }
         catch (Exception ex)
         {
-            // Ids only; no address and never the request's reason or the approver's comment.
             _logger.LogError(ex,
                 "PAM decision mail for access request {AccessRequestId} could not be sent.", request.Id);
         }

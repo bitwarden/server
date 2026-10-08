@@ -412,7 +412,6 @@ public class RequestLeaseExtensionCommandTests
                 && e.LeaseNotAfter == lease.NotAfter
                 && e.Detail == _leaseEndedComment));
 
-        // No collection-wide lease state changed; only the requester's own devices are notified.
         await sutProvider.GetDependency<IRequesterNotifier>().Received(1).NotifyRequesterAsync(lease.RequesterId);
         await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyCollectionApproversAsync(default);
