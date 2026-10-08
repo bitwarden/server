@@ -74,6 +74,16 @@ public class OrganizationPartnershipEntitlementRepository
         return entitlements;
     }
 
+    public async Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var rowsAffected = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[{Table}_ReleaseExpiredResumeWindowBinding]",
+            new { Id = id, AsOf = asOf, RevisionDate = revisionDate },
+            commandType: CommandType.StoredProcedure);
+        return rowsAffected > 0;
+    }
+
     public override async Task<OrganizationPartnershipEntitlement> CreateAsync(
         OrganizationPartnershipEntitlement entitlement)
     {
@@ -89,6 +99,8 @@ public class OrganizationPartnershipEntitlementRepository
     private async Task ProtectDataAndSaveAsync(OrganizationPartnershipEntitlement entitlement, Func<Task> saveTask)
     {
         var originalExternalId = entitlement.ExternalId;
+        entitlement.ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(
+            entitlement.OrganizationPartnershipId, originalExternalId);
         entitlement.ExternalId = DatabaseFieldProtectionHelper.Protect(_dataProtector, entitlement.ExternalId)!;
         try
         {

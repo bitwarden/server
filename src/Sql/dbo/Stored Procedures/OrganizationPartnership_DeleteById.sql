@@ -4,7 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    BEGIN TRANSACTION OrganizationPartnership_DeleteById
+    BEGIN TRANSACTION OrgPartnership_DeleteById
 
     DELETE
     FROM
@@ -18,5 +18,5 @@ BEGIN
     WHERE
         [Id] = @Id
 
-    COMMIT TRANSACTION OrganizationPartnership_DeleteById
+    COMMIT TRANSACTION OrgPartnership_DeleteById
 END
