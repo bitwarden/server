@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Public.Request;
 using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.AdminConsole.Public.Models.Request;
@@ -13,7 +14,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -197,5 +198,96 @@ public class CollectionsControllerTests : IClassFixture<ApiApplicationFactory>, 
             $"organizations/{_organization.Id}/collections/{collection.Id}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetAllWithAccess_AsOwner_ReturnsBothSharedAndDefaultCollections()
+    {
+        // Arrange
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var collectionRepository = _factory.GetService<ICollectionRepository>();
+        var groupRepository = _factory.GetService<IGroupRepository>();
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = _organization.Id,
+            Name = $"GetAllWithAccess-Group-{Guid.NewGuid()}",
+            ExternalId = $"GetAllWithAccess-Group-{Guid.NewGuid()}",
+        });
+
+        // Shared collection with a user grant
+        var sharedCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            $"Shared-{Guid.NewGuid()}",
+            users:
+            [
+                new CollectionAccessSelection { Id = _organizationOwner.Id, ReadOnly = true, HidePasswords = false, Manage = false }
+            ]);
+
+        // Default user collection
+        var defaultCollection = new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Default-{Guid.NewGuid()}",
+            Type = CollectionType.DefaultUserCollection
+        };
+        await collectionRepository.CreateAsync(defaultCollection, null,
+        [
+            new CollectionAccessSelection { Id = _organizationOwner.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+        ]);
+
+        // Collection reachable only through a group grant
+        var groupOnlyCollection = await OrganizationTestHelpers.CreateCollectionAsync(
+            _factory,
+            _organization.Id,
+            $"GroupOnly-{Guid.NewGuid()}",
+            groups:
+            [
+                new CollectionAccessSelection { Id = group.Id, ReadOnly = false, HidePasswords = false, Manage = true }
+            ]);
+
+        // Act
+        var httpResponse = await _client.GetAsync($"organizations/{_organization.Id}/collections/access");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, httpResponse.StatusCode);
+
+        using var jsonDoc = JsonDocument.Parse(await httpResponse.Content.ReadAsStringAsync());
+        var data = jsonDoc.RootElement.GetProperty("data").EnumerateArray().ToList();
+
+        var ids = data.Select(c => c.GetProperty("id").GetGuid()).ToHashSet();
+        Assert.Contains(sharedCollection.Id, ids);
+        Assert.Contains(defaultCollection.Id, ids);
+        Assert.Contains(groupOnlyCollection.Id, ids);
+
+        var sharedResult = data.Single(c => c.GetProperty("id").GetGuid() == sharedCollection.Id);
+        Assert.Equal((int)CollectionType.SharedCollection, sharedResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(sharedResult.GetProperty("users").EnumerateArray());
+
+        var defaultResult = data.Single(c => c.GetProperty("id").GetGuid() == defaultCollection.Id);
+        Assert.Equal((int)CollectionType.DefaultUserCollection, defaultResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(defaultResult.GetProperty("users").EnumerateArray());
+
+        var groupOnlyResult = data.Single(c => c.GetProperty("id").GetGuid() == groupOnlyCollection.Id);
+        Assert.Equal((int)CollectionType.SharedCollection, groupOnlyResult.GetProperty("type").GetInt32());
+        Assert.NotEmpty(groupOnlyResult.GetProperty("groups").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task GetAllWithAccess_AsUserWithoutAccessReports_ReturnsUnauthorized()
+    {
+        var (userEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            _organization.Id,
+            OrganizationUserType.User);
+
+        await _loginHelper.LoginAsync(userEmail);
+
+        var response = await _client.GetAsync(
+            $"organizations/{_organization.Id}/collections/access");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
