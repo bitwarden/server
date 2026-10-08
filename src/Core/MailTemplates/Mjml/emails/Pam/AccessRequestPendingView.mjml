@@ -29,7 +29,7 @@
             border-radius="20px"
             font-weight="600"
             align="left"
-            href="{{{Url}}}"
+            href="{{Url}}"
             >Review the request</mj-button
           >
           <mj-text padding="0px" font-size="12px" font-weight="400" line-height="24px">
