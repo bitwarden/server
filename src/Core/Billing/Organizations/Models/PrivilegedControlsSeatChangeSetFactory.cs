@@ -46,7 +46,7 @@ public class PrivilegedControlsSeatChangeSetFactory(
             return new BadRequest("At least one Privileged Controls seat is required.");
         }
 
-        var minimum = organization.PamSeatMinimum ?? plan.PrivilegedControls.SeatMinimum;
+        var minimum = organization.PamSeatMinimum ?? plan.PrivilegedControls.DefaultSeatMinimum;
         var builder = OrganizationSubscriptionChangeSet.Builder(plan);
 
         var currentSeats = organization.PamSeats.GetValueOrDefault();
