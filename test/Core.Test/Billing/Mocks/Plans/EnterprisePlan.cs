@@ -49,7 +49,7 @@ public record EnterprisePlan : Plan
         public EnterprisePrivilegedControlsFeatures(bool isAnnual)
         {
             BaseSeats = 0;
-            SeatMinimum = 10;
+            DefaultSeatMinimum = 10;
             PromotionalSeatMinimums = [4, 6, 8];
 
             if (isAnnual)

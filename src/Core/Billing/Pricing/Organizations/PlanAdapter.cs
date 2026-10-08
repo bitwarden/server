@@ -185,7 +185,7 @@ public record PlanAdapter : Core.Models.StaticStore.Plan
             StripeSeatPlanId = privilegedControls.Seats.StripePriceId,
             SeatPrice = privilegedControls.Seats.Price,
             BaseSeats = privilegedControls.Seats.Provided,
-            SeatMinimum = privilegedControls.SeatMinimum,
+            DefaultSeatMinimum = privilegedControls.DefaultSeatMinimum,
             PromotionalSeatMinimums = privilegedControls.PromotionalSeatMinimums
         };
     }

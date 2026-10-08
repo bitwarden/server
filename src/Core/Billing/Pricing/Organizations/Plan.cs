@@ -28,6 +28,6 @@ public class SecretsManagerPurchasables
 public class PrivilegedControlsPurchasables
 {
     public required Scalable Seats { get; set; }
-    public int SeatMinimum { get; set; }
+    public required int DefaultSeatMinimum { get; set; }
     public required int[] PromotionalSeatMinimums { get; set; }
 }

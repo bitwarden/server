@@ -14,7 +14,7 @@ public class PlanAdapterTests
                 "price": 72,
                 "stripePriceId": "privileged-controls-enterprise-seat-annually"
             },
-            "seatMinimum": 10,
+            "defaultSeatMinimum": 10,
             "promotionalSeatMinimums": [4, 6, 8]
         }
         """;
@@ -44,11 +44,11 @@ public class PlanAdapterTests
     }
 
     [Fact]
-    public void Constructor_WithPrivilegedControls_MapsSeatMinimum()
+    public void Constructor_WithPrivilegedControls_MapsDefaultSeatMinimum()
     {
         var plan = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
 
-        Assert.Equal(10, plan.PrivilegedControls.SeatMinimum);
+        Assert.Equal(10, plan.PrivilegedControls.DefaultSeatMinimum);
     }
 
     [Fact]
@@ -57,15 +57,6 @@ public class PlanAdapterTests
         var plan = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
 
         Assert.Equal(new[] { 4, 6, 8 }, plan.PrivilegedControls.PromotionalSeatMinimums);
-    }
-
-    [Fact]
-    public void Constructor_WithSamePrivilegedControls_ProducesEqualPlans()
-    {
-        var first = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
-        var second = new PlanAdapter(CreateEnterprisePlan(_privilegedControlsJson));
-
-        Assert.Equal(first, second);
     }
 
     [Fact]

@@ -248,7 +248,7 @@ public class PricingClientTests
                         "price": 72,
                         "stripePriceId": "privileged-controls-enterprise-seat-annually"
                     },
-                    "seatMinimum": 10,
+                    "defaultSeatMinimum": 10,
                     "promotionalSeatMinimums": [4, 6, 8]
                 }
                 """);
@@ -271,7 +271,7 @@ public class PricingClientTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(10, result.PrivilegedControls.SeatMinimum);
+        Assert.Equal(10, result.PrivilegedControls.DefaultSeatMinimum);
         Assert.Equal(new[] { 4, 6, 8 }, result.PrivilegedControls.PromotionalSeatMinimums);
     }
 
