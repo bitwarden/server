@@ -473,6 +473,11 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => s.UserId == user.Id));
             dbContext.NotificationStatuses.RemoveRange(dbContext.NotificationStatuses.Where(ns => ns.UserId == user.Id));
             dbContext.Notifications.RemoveRange(dbContext.Notifications.Where(n => n.UserId == user.Id));
+            await dbContext.OrganizationPartnershipEntitlements
+                .Where(e => e.UserId == user.Id)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.UserId, (Guid?)null)
+                    .SetProperty(e => e.AccountRef, (Guid?)null));
 
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);
@@ -525,6 +530,11 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.Sends.Where(s => targetIds.Contains(s.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.NotificationStatuses.Where(ns => targetIds.Contains(ns.UserId)).ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => targetIds.Contains(n.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.OrganizationPartnershipEntitlements
+                .Where(e => targetIds.Contains(e.UserId ?? default))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.UserId, (Guid?)null)
+                    .SetProperty(e => e.AccountRef, (Guid?)null));
 
             await dbContext.Users.Where(u => targetIds.Contains(u.Id)).ExecuteDeleteAsync();
 
