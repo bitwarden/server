@@ -19,7 +19,7 @@ using Xunit;
 namespace Bit.Core.Test.Auth.Identity;
 
 /// <summary>
-/// PM-44658. Runs against the real Fido2 library (no <see cref="IFido2"/> mock) with a YubiKey registered as
+/// Runs against the real Fido2 library (no <see cref="IFido2"/> mock) with a YubiKey registered as
 /// U2F and migrated to WebAuthn. The tests assert that two-factor login works for that key and that the server
 /// applies its own U2F AppID. The test <c>MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash</c>
 /// documents the Fido2 4.0.1 library behavior (AppID is not serialized), not provider behavior.
@@ -108,6 +108,24 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     {
         using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task TwoFactorLogin_MigratedU2fKeyResavedAfterMigration_ReturnsTrue()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateResavedMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
         var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
@@ -242,14 +260,14 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
 
         var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
-        Assert.Equal(7u, LoadStoredKey(userFromStorage).SignatureCounter);
+        Assert.Equal(FakeWebAuthnAuthenticator.CarriedOverU2fCounter, LoadStoredKey(userFromStorage).SignatureCounter);
 
         var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.True(result);
         Assert.Equal(authenticator.SignatureCounter, LoadStoredKey(userFromStorage).SignatureCounter);
-        Assert.True(authenticator.SignatureCounter > 7u);
+        Assert.True(authenticator.SignatureCounter > FakeWebAuthnAuthenticator.CarriedOverU2fCounter);
     }
 
     [Fact]
@@ -346,25 +364,27 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     /// <summary>
-    /// A user whose WebAuthn provider holds one key in the shape the 2020 U2F-to-WebAuthn migration wrote it
-    /// (util/Migrator/DbScripts/2020-09-09_00-ScriptMigrateU2FToWebAuthn.cs, TwoFactorProvider.U2fMetaData.ToWebAuthnData).
-    /// UserHandle, CredType, RegDate and AaGuid were never set by the migration and keep their defaults.
+    /// A user whose <c>TwoFactorProviders</c> JSON is exactly what the 2020 U2F-to-WebAuthn migration wrote.
     /// </summary>
     private static User CreateMigratedU2fUser(FakeWebAuthnAuthenticator authenticator)
     {
-        const uint carriedOverU2fCounter = 7;
-        authenticator.SignatureCounter = carriedOverU2fCounter;
-
-        var key = new TwoFactorProvider.WebAuthnData
+        return new User
         {
-            Name = "YubiKey 5 NFC",
-            Descriptor = new PublicKeyCredentialDescriptor(authenticator.CredentialId),
-            PublicKey = authenticator.GetMigratedU2fCosePublicKey(),
-            SignatureCounter = carriedOverU2fCounter,
-            Migrated = true,
+            TwoFactorProviders = authenticator.GetMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC",
+                FakeWebAuthnAuthenticator.CarriedOverU2fCounter),
         };
+    }
 
-        return CreateUserWithStoredKey(key);
+    /// <summary>
+    /// A user whose migrated key the server saved again after a successful two-factor login.
+    /// </summary>
+    private static User CreateResavedMigratedU2fUser(FakeWebAuthnAuthenticator authenticator)
+    {
+        return new User
+        {
+            TwoFactorProviders = authenticator.GetResavedMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC",
+                FakeWebAuthnAuthenticator.CarriedOverU2fCounter),
+        };
     }
 
     private static User CreateNativeWebAuthnUser(FakeWebAuthnAuthenticator authenticator)

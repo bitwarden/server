@@ -3,7 +3,12 @@ using System.Buffers.Text;
 using System.Formats.Cbor;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
+using Bit.Core.Entities;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 
@@ -15,6 +20,12 @@ namespace Bit.Test.Common.Fakes;
 /// </summary>
 public sealed class FakeWebAuthnAuthenticator : IDisposable
 {
+    /// <summary>
+    /// A realistic signature counter for a key that someone used with U2F before the 2020 migration, which carried
+    /// the U2F counter into the WebAuthn record. It is above zero, so the server's counter check compares against it.
+    /// </summary>
+    public const uint CarriedOverU2fCounter = 7;
+
     private readonly ECDsa _keyPair;
 
     public byte[] CredentialId { get; }
@@ -57,9 +68,8 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
     }
 
     /// <summary>
-    /// Returns the public key as the 2020 U2F-to-WebAuthn migration stored it: COSE EC2 / ES256 / P-256 built from
-    /// the raw U2F key. The original used PeterO.Cbor, which writes integer map keys in ascending numeric order
-    /// (-3, -2, -1, 1, 3), reproduced here.
+    /// Returns the public key as the 2020 U2F-to-WebAuthn migration stored it: a COSE EC2 / ES256 / P-256 key
+    /// built from the raw U2F key, with the map keys in CTAP2 canonical order (1, 3, -1, -2, -3).
     /// </summary>
     public byte[] GetMigratedU2fCosePublicKey()
     {
@@ -67,20 +77,102 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
         var x = u2fPublicKey[1..33];
         var y = u2fPublicKey[33..65];
 
-        var writer = new CborWriter(CborConformanceMode.Lax);
+        var writer = new CborWriter(CborConformanceMode.Ctap2Canonical);
         writer.WriteStartMap(5);
-        writer.WriteInt32(-3); writer.WriteByteString(y);
+        writer.WriteInt32(1); writer.WriteInt32(2);             // kty = EC2
+        writer.WriteInt32(3); writer.WriteInt32(-7);            // alg = ES256
+        writer.WriteInt32(-1); writer.WriteInt32(1);            // crv = P-256
         writer.WriteInt32(-2); writer.WriteByteString(x);
-        writer.WriteInt32(-1); writer.WriteInt32(1);
-        writer.WriteInt32(1); writer.WriteInt32(2);
-        writer.WriteInt32(3); writer.WriteInt32(-7);
+        writer.WriteInt32(-3); writer.WriteByteString(y);
         writer.WriteEndMap();
         return writer.Encode();
     }
 
     /// <summary>
+    /// Returns the user's <c>TwoFactorProviders</c> JSON as the 2020 U2F-to-WebAuthn migration wrote it, for a user
+    /// who has not saved their two-factor providers since. The migration serialized the whole provider dictionary
+    /// with Newtonsoft defaults and the Fido2 1.1.0 models, which gives these properties:
+    /// <list type="number">
+    /// <item>Provider keys are enum names ("U2f", "WebAuthn"), not numbers.</item>
+    /// <item>The original U2f entry stays next to the WebAuthn entry, and both use the U2F key name "Key1".</item>
+    /// <item>The descriptor is <c>{"type":"public-key","id":&lt;Base64url&gt;}</c>.</item>
+    /// </list>
+    /// Sets <see cref="SignatureCounter"/> to <paramref name="signatureCounter"/>, so the stored counter and the
+    /// key's counter match. The server ignores the U2f entry, so its certificate is opaque filler.
+    /// </summary>
+    public string GetMigratedU2fTwoFactorProvidersJson(string name, uint signatureCounter)
+    {
+        SignatureCounter = signatureCounter;
+
+        var providers = new JsonObject
+        {
+            ["U2f"] = new JsonObject
+            {
+                ["Enabled"] = true,
+                ["MetaData"] = new JsonObject
+                {
+                    ["Key1"] = new JsonObject
+                    {
+                        ["Name"] = name,
+                        ["KeyHandle"] = Base64Url.EncodeToString(CredentialId),
+                        ["PublicKey"] = Base64Url.EncodeToString(GetU2fRawPublicKey()),
+                        ["Certificate"] = Base64Url.EncodeToString("u2f-attestation-certificate"u8),
+                        ["Counter"] = SignatureCounter,
+                        ["Compromised"] = false,
+                    },
+                },
+            },
+            ["WebAuthn"] = new JsonObject
+            {
+                ["Enabled"] = true,
+                ["MetaData"] = new JsonObject
+                {
+                    ["Key1"] = new JsonObject
+                    {
+                        ["Name"] = name,
+                        ["Descriptor"] = new JsonObject
+                        {
+                            ["type"] = "public-key",
+                            ["id"] = Base64Url.EncodeToString(CredentialId),
+                        },
+                        ["PublicKey"] = Convert.ToBase64String(GetMigratedU2fCosePublicKey()),
+                        ["UserHandle"] = null,
+                        ["SignatureCounter"] = SignatureCounter,
+                        ["CredType"] = null,
+                        ["RegDate"] = "0001-01-01T00:00:00",
+                        ["AaGuid"] = "00000000-0000-0000-0000-000000000000",
+                        ["Migrated"] = true,
+                    },
+                },
+            },
+        };
+
+        // Match Newtonsoft, which does not escape '+' in Base64 strings.
+        return providers.ToJsonString(new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+    }
+
+    /// <summary>
+    /// Returns the <see cref="GetMigratedU2fTwoFactorProvidersJson"/> record after the server saved each key
+    /// again as a <see cref="TwoFactorProvider.WebAuthnData"/>, as a successful two-factor login with the key does.
+    /// </summary>
+    public string GetResavedMigratedU2fTwoFactorProvidersJson(string name, uint signatureCounter)
+    {
+        var user = new User { TwoFactorProviders = GetMigratedU2fTwoFactorProvidersJson(name, signatureCounter) };
+        var providers = user.GetTwoFactorProviders()!;
+        var metaData = providers[TwoFactorProviderType.WebAuthn].MetaData;
+        foreach (var keyName in metaData.Keys.Where(k => k.StartsWith("Key")).ToList())
+        {
+            metaData[keyName] = new TwoFactorProvider.WebAuthnData((dynamic)metaData[keyName]);
+        }
+
+        user.SetTwoFactorProviders(providers);
+        return user.TwoFactorProviders;
+    }
+
+    /// <summary>
     /// A U2F key handle is an opaque, authenticator-chosen blob (64 bytes here). The leading bytes make the
-    /// standard Base64 form contain '+' and '/', which is how Newtonsoft stored <c>Descriptor.Id</c>.
+    /// Base64url form ('-', '_') differ from the standard Base64 form ('+', '/'), so decoding a stored
+    /// descriptor id with the wrong alphabet fails.
     /// </summary>
     public static byte[] GetLegacyU2fKeyHandle()
     {

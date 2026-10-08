@@ -109,13 +109,19 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         Assert.True(providers.TryGetProperty("7", out _));
     }
 
-    [Fact]
-    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task TokenEndpoint_GrantTypePassword_MigratedU2fKeyWebAuthnTwoFactor_AssertionScopedToAppId_Success(
+        bool resavedAfterSuccessfulLogin)
     {
         // Arrange
         var localFactory = new IdentityApplicationFactory();
         using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
-        await CreateUserAsync(localFactory, _testEmail, BuildMigratedU2fWebAuthnTwoFactorJson(authenticator));
+        var twoFactorProviders = resavedAfterSuccessfulLogin
+            ? authenticator.GetResavedMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC", FakeWebAuthnAuthenticator.CarriedOverU2fCounter)
+            : authenticator.GetMigratedU2fTwoFactorProvidersJson("YubiKey 5 NFC", FakeWebAuthnAuthenticator.CarriedOverU2fCounter);
+        await CreateUserAsync(localFactory, _testEmail, twoFactorProviders);
         var appId = CoreHelpers.U2fAppIdUrl(localFactory.GetService<GlobalSettings>());
 
         // Act: password login returns the WebAuthn challenge
@@ -457,22 +463,6 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.Equal("Two factor required.", error);
-    }
-
-    /// <summary>
-    /// A WebAuthn provider with one key in the shape the 2020 U2F-to-WebAuthn migration wrote it: Migrated, the
-    /// 64-byte U2F key handle as standard Base64 descriptor id, a carried-over counter and no user handle.
-    /// </summary>
-    private static string BuildMigratedU2fWebAuthnTwoFactorJson(FakeWebAuthnAuthenticator authenticator)
-    {
-        const uint carriedOverU2fCounter = 7;
-        authenticator.SignatureCounter = carriedOverU2fCounter;
-
-        return "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"YubiKey 5 NFC\",\"Descriptor\":{\"Id\":\""
-            + Convert.ToBase64String(authenticator.CredentialId) + "\",\"Type\":0,\"Transports\":null},"
-            + "\"PublicKey\":\"" + Convert.ToBase64String(authenticator.GetMigratedU2fCosePublicKey()) + "\",\"UserHandle\":null,"
-            + "\"SignatureCounter\":" + carriedOverU2fCounter + ",\"CredType\":null,\"RegDate\":\"0001-01-01T00:00:00\","
-            + "\"Migrated\":true,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}";
     }
 
     private async Task CreateUserAsync(
