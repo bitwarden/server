@@ -664,10 +664,9 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (sendRememberToken)
         {
-            // The device is non-null here even though the signature allows null: this runs only
-            // after device validation succeeded, and DeviceValidator assigns (and saves, for a new
-            // device) the row on every success path.
-            customResponse.Add("TwoFactorToken", await _issueTwoFactorRememberTokenCommand.IssueAsync(user, device));
+            // The device is non-null here because this runs only after DeviceValidator succeeded
+            var rememberToken = await _issueTwoFactorRememberTokenCommand.IssueAsync(user, device);
+            customResponse.Add("TwoFactorToken", rememberToken);
         }
 
         return customResponse;
