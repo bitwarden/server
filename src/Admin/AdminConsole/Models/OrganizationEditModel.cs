@@ -235,8 +235,9 @@ public class OrganizationEditModel : OrganizationViewModel, IValidatableObject
     public bool MigrationCohortOrphaned { get; set; }
 
     /// <summary>
-    /// The organization's Stripe trial; null when the subscription is not trialing or the current user lacks the
-    /// permission to extend trials.
+    /// The organization's Stripe trial; null when the subscription is not trialing, or when the current user lacks
+    /// <c>Org_ExtendTrial</c> and the Trial section is not rendered. <see cref="OrganizationTrial.CanExtend"/> is Stripe
+    /// eligibility, not the user's permission.
     /// </summary>
     public OrganizationTrial Trial { get; set; }
 
