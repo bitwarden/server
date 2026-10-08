@@ -49,7 +49,10 @@ public class PrivilegedControlsSeatChangeSetFactory(
         var minimum = organization.PamSeatMinimum ?? plan.PrivilegedControls.SeatMinimum;
         var builder = OrganizationSubscriptionChangeSet.Builder(plan);
 
-        if (organization.PamSeats is not { } currentSeats)
+        var currentSeats = organization.PamSeats.GetValueOrDefault();
+
+        // No seats saved, or none left, means there is no seat line item on the subscription to update.
+        if (currentSeats < 1)
         {
             return seats < minimum
                 ? BelowMinimum(minimum)

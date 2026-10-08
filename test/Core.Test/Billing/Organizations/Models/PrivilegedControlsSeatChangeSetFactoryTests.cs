@@ -44,6 +44,27 @@ public class PrivilegedControlsSeatChangeSetFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_ZeroSavedSeatsBelowMinimum_ReturnsBadRequest()
+    {
+        var organization = CreateOrganization(pamSeats: 0);
+
+        var result = await _factory.CreateAsync(organization, _planDefaultMinimum - 1);
+
+        Assert.Equal("Privileged Controls requires at least 10 seats.", result.AsT1.Response);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ZeroSavedSeatsAtMinimum_BuildsAddChange()
+    {
+        var organization = CreateOrganization(pamSeats: 0);
+
+        var result = await _factory.CreateAsync(organization, _planDefaultMinimum);
+
+        var item = Assert.Single(result.AsT0.Changes).AsT0;
+        Assert.Equal(_planDefaultMinimum, item.Quantity);
+    }
+
+    [Fact]
     public async Task CreateAsync_ReductionBelowMinimum_ReturnsBadRequest()
     {
         var organization = CreateOrganization(pamSeats: 15);
