@@ -116,13 +116,8 @@ public class DecideAccessRequestCommand : IDecideAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The request has left every approver's pending queue.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
-
-        // The requester's open clients show the verdict without a refresh.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
-
-        // Also by email, since the push only reaches open clients.
         await _requesterMailNotifier.NotifyDecisionAsync(request, approved);
 
         // Mirror what the repository stamped rather than re-reading.

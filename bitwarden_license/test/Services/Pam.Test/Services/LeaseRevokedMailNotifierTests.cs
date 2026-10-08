@@ -38,7 +38,6 @@ public class LeaseRevokedMailNotifierTests
         Assert.Equal(_organizationName, mail.View.OrganizationName);
         Assert.Equal("1 Sep 2026 at 17:00 UTC", mail.View.ScheduledEnd);
         Assert.Equal($"{_vaultUrl}/pam/requests/{lease.AccessRequestId}", mail.View.Url);
-        // One message per recipient, so the holder is never named alongside anyone else.
         await sutProvider.GetDependency<IAccessMailNotifier>().DidNotReceiveWithAnyArgs()
             .SendToUsersAsync(default!, (Func<string, BaseMail<AccessLeaseRevokedView>>)default!);
     }

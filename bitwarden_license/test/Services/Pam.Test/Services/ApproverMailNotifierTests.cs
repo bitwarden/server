@@ -71,10 +71,6 @@ public class ApproverMailNotifierTests
         Assert.Equal(new[] { firstApprover, secondApprover }, recipients);
     }
 
-    /// <summary>
-    /// An Owner manages every collection when AllowAdminAccessToAllCollectionItems is on, and
-    /// DecideAccessRequestCommand refuses a self-decision.
-    /// </summary>
     [Theory, BitAutoData]
     public async Task NotifyPendingRequestAsync_RequesterManagesTheCollection_IsNotMailedTheirOwnRequest(
         AccessRequest request, Guid approverId)

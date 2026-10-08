@@ -3,8 +3,7 @@
 namespace Bit.Core.Pam.Models.Mail.AccessRequestPending;
 
 /// <summary>
-/// Tells an approver a request awaits their decision. Zero knowledge bounds the content: no collection or cipher
-/// names, and no reason, which is stored in the clear but could name the system being accessed.
+/// Tells an approver a request awaits their decision. Names no collection or cipher and omits the reason.
 /// </summary>
 public class AccessRequestPendingView : PamAccessMailView
 {

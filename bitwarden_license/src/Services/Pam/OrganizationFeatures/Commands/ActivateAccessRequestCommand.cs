@@ -166,10 +166,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The approvers' history now shows the request as activated, with a revocable lease.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
-
-        // The requester's other devices pick up the live lease.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
 
         return lease;

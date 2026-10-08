@@ -37,7 +37,6 @@ public class LeaseRevokedMailNotifier : ILeaseRevokedMailNotifier
             return;
         }
 
-        // Repeats IAccessMailNotifier's flag guard to skip the organization read when the flag is off, as on self-host.
         if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
@@ -67,7 +66,6 @@ public class LeaseRevokedMailNotifier : ILeaseRevokedMailNotifier
         }
         catch (Exception ex)
         {
-            // Ids only; no address and never the operator's revoke reason.
             _logger.LogError(ex, "PAM lease-revoked mail for lease {AccessLeaseId} could not be sent.", lease.Id);
         }
     }

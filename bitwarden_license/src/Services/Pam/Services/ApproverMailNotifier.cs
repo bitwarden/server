@@ -37,7 +37,6 @@ public class ApproverMailNotifier : IApproverMailNotifier
 
     public async Task NotifyPendingRequestAsync(AccessRequest request)
     {
-        // Repeats IAccessMailNotifier's flag guard to skip the reads below when the flag is off, as on self-host.
         if (!_featureService.IsEnabled(FeatureFlagKeys.Pam))
         {
             return;
@@ -45,7 +44,6 @@ public class ApproverMailNotifier : IApproverMailNotifier
 
         try
         {
-            // The requester may manage the collection too, but cannot decide their own request.
             var approverIds = (await _collectionRepository.GetManagingUserIdsAsync(request.CollectionId))
                 .Where(id => id != request.RequesterId)
                 .ToList();
@@ -82,7 +80,6 @@ public class ApproverMailNotifier : IApproverMailNotifier
         }
         catch (Exception ex)
         {
-            // Ids only; no addresses and never the request's reason.
             _logger.LogError(ex,
                 "PAM pending-request mail for access request {AccessRequestId} could not be sent.", request.Id);
         }

@@ -48,9 +48,6 @@ public class AccessRequestDecidedViewTests
         }
     }
 
-    /// <summary>
-    /// The comment is free text that may name the system being accessed, so it is linked to, not rendered.
-    /// </summary>
     [Fact]
     public void View_HasNoPlaceToCarryTheApproverComment() =>
         Assert.DoesNotContain(
@@ -89,9 +86,7 @@ public class AccessRequestDecidedViewTests
         NotAfter = new DateTime(2026, 9, 1, 17, 0, 0, DateTimeKind.Utc),
     };
 
-    /// <summary>
-    /// Both templates wrap copy across source lines; collapsing whitespace keeps the specs about wording.
-    /// </summary>
+    /// <summary>Collapses whitespace so assertions ignore line wrapping.</summary>
     private static string Reflow(string body) => Regex.Replace(body, @"\s+", " ");
 
     private static Task<(string html, string txt)> RenderAsync(BaseMailView view) =>

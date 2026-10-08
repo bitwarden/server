@@ -133,10 +133,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // Drops the request from the approvers' inboxes.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
-
-        // Reaches the requester on a manager's retraction, and the requester's other devices on a withdrawal.
         await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
     }
 }

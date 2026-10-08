@@ -112,14 +112,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
                 lease.CipherId, lease.Id);
         }
 
-        // The lease drops out of the approvers' active leases.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(lease.CollectionId);
-
-        // An open cipher re-locks on the holder's clients.
         await _requesterNotifier.NotifyRequesterAsync(lease.RequesterId);
-
-        // Also by email, since the push only reaches open clients. Only a revocation is mailed, not a holder ending
-        // their own access.
         await _leaseRevokedMailNotifier.NotifyLeaseEndedAsync(lease, endAction);
     }
 }

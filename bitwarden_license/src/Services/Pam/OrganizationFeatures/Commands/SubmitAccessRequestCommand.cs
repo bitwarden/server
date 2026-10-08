@@ -183,7 +183,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
         await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // Lets the requester's other devices offer to activate the request.
         await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Automatic(request, decision);
@@ -259,13 +258,8 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         await _accessAuditEventEmitter.EmitAsync(
             audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });
 
-        // The request has entered every approver's pending queue.
         await _approverInboxNotifier.NotifyCollectionApproversAsync(created.CollectionId);
-
-        // Also by email, since the push only reaches open clients.
         await _approverMailNotifier.NotifyPendingRequestAsync(created);
-
-        // Shows the pending request on the requester's other devices.
         await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Human(created);

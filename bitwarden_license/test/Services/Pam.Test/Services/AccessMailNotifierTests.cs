@@ -18,7 +18,6 @@ public class AccessMailNotifierTests
 {
     private static readonly DateTime _now = new(2026, 6, 4, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>The per-send delay a delivery service spends retrying before it reports anything.</summary>
     private static readonly TimeSpan _retryDelay = TimeSpan.FromSeconds(2);
 
     private class TestMailView : BaseMailView;
@@ -53,7 +52,6 @@ public class AccessMailNotifierTests
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(recipients);
 
-    /// <summary>Fails each send after its retry delay, as a dead delivery service does.</summary>
     private static void FailEverySendSlowly(SutProvider<AccessMailNotifier> sutProvider)
     {
         var time = sutProvider.GetDependency<FakeTimeProvider>();
@@ -210,7 +208,6 @@ public class AccessMailNotifierTests
         Assert.Null(exception);
         await sutProvider.GetDependency<IMailer>().Received(2)
             .SendEmail(Arg.Any<BaseMail<TestMailView>>());
-        // The caller waits out the two attempts, not one retry delay per recipient.
         var elapsed = sutProvider.GetDependency<FakeTimeProvider>().GetElapsedTime(startedAt);
         Assert.Equal(_retryDelay * 2, elapsed);
     }
@@ -222,7 +219,6 @@ public class AccessMailNotifierTests
         EnableFlag(sutProvider);
         var recipients = Recipients(4);
         ResolveTo(sutProvider, recipients);
-        // An isolated bad address must not read as the delivery path being down.
         foreach (var failing in new[] { recipients[0], recipients[2] })
         {
             sutProvider.GetDependency<IMailer>()
@@ -241,7 +237,6 @@ public class AccessMailNotifierTests
     {
         var sutProvider = Setup();
         EnableFlag(sutProvider);
-        // The managing-user set has no upper bound, so a large healthy batch must still finish.
         var recipients = Recipients(100);
         ResolveTo(sutProvider, recipients);
         var time = sutProvider.GetDependency<FakeTimeProvider>();
@@ -266,7 +261,6 @@ public class AccessMailNotifierTests
         EnableFlag(sutProvider);
         var recipients = Recipients(40);
         ResolveTo(sutProvider, recipients);
-        // The SendGrid path reports success after retrying, so only the time it burns bounds the batch.
         var time = sutProvider.GetDependency<FakeTimeProvider>();
         sutProvider.GetDependency<IMailer>()
             .SendEmail(Arg.Any<BaseMail<TestMailView>>())
@@ -278,7 +272,7 @@ public class AccessMailNotifierTests
 
         await sutProvider.Sut.SendToUsersAsync(recipients.Select(r => r.Id), Build());
 
-        // 30s of budget against a 2s cost per send, rather than all 40.
+        // 30s budget at 2s per send.
         await sutProvider.GetDependency<IMailer>().Received(15)
             .SendEmail(Arg.Any<BaseMail<TestMailView>>());
     }

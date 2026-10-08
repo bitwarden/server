@@ -79,9 +79,6 @@ public class ServiceCollectionExtensionsTests
         Assert.Contains(services, d => d.ServiceType == typeof(TimeProvider));
     }
 
-    /// <summary>
-    /// Easy to drop by mistake, and a missing one fails every access-request and lease command that depends on it.
-    /// </summary>
     [Theory]
     [InlineData(typeof(IAccessAuditEventEmitter), typeof(AccessAuditEventEmitter))]
     [InlineData(typeof(IApproverInboxNotifier), typeof(ApproverInboxNotifier))]
