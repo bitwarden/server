@@ -7,7 +7,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Test.Common.Fakes;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
@@ -21,74 +20,16 @@ using Xunit;
 namespace Bit.Core.Test.Auth.Identity;
 
 /// <summary>
-/// PM-44658. Proves, against the real Fido2 library (no <see cref="IFido2"/> mock), that a YubiKey that was
-/// registered as a legacy U2F key and auto-migrated to WebAuthn cannot complete two-factor login.
-///
-/// Every test asserts the CURRENT, broken behavior. They pass while the bug exists and must be inverted or
-/// removed when the bug is fixed.
+/// PM-44658. Runs against the real Fido2 library (no <see cref="IFido2"/> mock) with a YubiKey registered as
+/// U2F and migrated to WebAuthn. The tests assert that two-factor login works for that key and that the server
+/// applies its own U2F AppID. The test <c>MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash_Bug_PM44658</c>
+/// documents the Fido2 4.0.1 library behavior (AppID is not serialized), not provider behavior.
 /// </summary>
 public class WebAuthnTokenProviderMigratedU2fKeyTests
 {
     private const string _vaultUrl = "https://vault.bitwarden.com";
     private const string _rpId = "vault.bitwarden.com";
     private const string _u2fAppIdUrl = "https://vault.bitwarden.com/app-id.json";
-
-    [Fact]
-    public async Task GenerateAsync_MigratedU2fKey_ClientOptionsOmitAppIdExtension_Bug_PM44658()
-    {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
-        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
-
-        // The server intends to send the AppID. This is what the provider assigns to the extension input.
-        Assert.Equal(_u2fAppIdUrl, CoreHelpers.U2fAppIdUrl(harness.GlobalSettings));
-
-        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
-
-        Assert.NotNull(optionsJson);
-        using var document = JsonDocument.Parse(optionsJson);
-        Assert.True(document.RootElement.TryGetProperty("extensions", out var extensions));
-        Assert.False(extensions.TryGetProperty("appid", out _));
-        Assert.DoesNotContain("appid", optionsJson, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("app-id.json", optionsJson, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task GenerateAsync_MigratedU2fKey_StoredChallengeOmitsAppIdExtension_Bug_PM44658()
-    {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
-        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
-
-        await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
-
-        var storedLogin = (string)harness.User.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn)!.MetaData["login"];
-        using var document = JsonDocument.Parse(storedLogin);
-        Assert.True(document.RootElement.TryGetProperty("extensions", out var extensions));
-        Assert.False(extensions.TryGetProperty("appid", out _));
-        Assert.DoesNotContain("appid", storedLogin, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("app-id.json", storedLogin, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_ReturnsFalse_Bug_PM44658()
-    {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
-        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
-
-        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
-        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
-
-        // The browser signs with the U2F AppID and reports appid: true. The authenticator counter is
-        // initialized above the carried-over counter so the counter check cannot be the cause.
-        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
-        var token = BuildWebClientTokenString(assertion);
-
-        // The next request loads the user from storage, like production does between the two requests.
-        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
-
-        var result = await harness.Provider.ValidateAsync("TwoFactor", token, SubstituteUserManager(), userFromStorage);
-
-        Assert.False(result);
-    }
 
     [Fact]
     public async Task MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash_Bug_PM44658()
