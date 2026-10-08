@@ -57,9 +57,10 @@ public class AccessLeaseExpiryTests
         var active = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddMinutes(-5), now.AddHours(1));
 
-        // Past its window but revoked, and the revoke path already fired its access-end trigger.
+        // Revoked mid-window (a lapsed lease can't be) and now past it; its access-end trigger already fired.
         var revoked = await SeedActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
+        var revokedAt = now.AddMinutes(-90);
         await accessLeaseRepository.RevokeAsync(revoked, AccessLeaseAction.Revoked, new AccessDecision
         {
             Id = CombGuid.Generate(),
@@ -68,8 +69,8 @@ public class AccessLeaseExpiryTests
             ApproverId = Guid.NewGuid(),
             Verdict = AccessDecisionVerdict.Deny,
             Comment = "ended for test",
-            CreationDate = now,
-        }, now);
+            CreationDate = revokedAt,
+        }, revokedAt);
 
         var expired = await accessLeaseRepository.ExpireDueAsync(now);
 
