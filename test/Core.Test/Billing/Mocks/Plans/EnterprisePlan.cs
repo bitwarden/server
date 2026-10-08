@@ -46,11 +46,14 @@ public record EnterprisePlan : Plan
 
     private record EnterprisePrivilegedControlsFeatures : PrivilegedControlsPlanFeatures
     {
+        // Records compare arrays by reference, so every mock instance shares one array to stay equal.
+        private static readonly int[] _promotionalSeatMinimums = [4, 6, 8];
+
         public EnterprisePrivilegedControlsFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             DefaultSeatMinimum = 10;
-            PromotionalSeatMinimums = [4, 6, 8];
+            PromotionalSeatMinimums = _promotionalSeatMinimums;
 
             if (isAnnual)
             {
