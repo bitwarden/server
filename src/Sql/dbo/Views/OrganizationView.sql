@@ -69,6 +69,7 @@ SELECT
     [UseInviteLinks],
     [UsePam],
     [PamSeats],
-    [MaxAutoscalePamSeats]
+    [MaxAutoscalePamSeats],
+    [PamSeatMinimum]
 FROM
     [dbo].[Organization]

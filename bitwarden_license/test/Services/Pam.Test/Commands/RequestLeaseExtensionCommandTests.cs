@@ -2,6 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models;
@@ -394,6 +395,25 @@ public class RequestLeaseExtensionCommandTests
         // The repository records the command-supplied comment on the Deny it writes.
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
             Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>(), _now, _leaseEndedComment);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ExtendAsync_RepoReportsLeaseNotActive_AuditsTheDenial(AccessLease lease)
+    {
+        var sutProvider = Setup();
+        SetupExtendableLease(sutProvider, lease);
+        SetupOutcome(sutProvider, AccessLeaseExtendOutcome.LeaseNotActive);
+
+        await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
+
+        // The outcome carries the denial and the lease's unchanged end.
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.Kind == AccessAuditEventKind.RequestDenied
+                && e.Phase == AccessAuditEventPhase.Outcome
+                && e.AccessLeaseId == lease.Id
+                && e.LeaseNotAfter == lease.NotAfter
+                && e.Detail == _leaseEndedComment));
     }
 
     [Theory, BitAutoData]

@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Stripe;
 using Xunit;
 
-namespace Bit.Core.Test.Billing.Organizations.Schedules;
+namespace Bit.Core.Test.Billing.Subscriptions.Schedules;
 
 using static StripeConstants;
 
@@ -34,16 +34,26 @@ public class SubscriptionScheduleOwnershipMapperTests
         Schedule = schedule
     };
 
+    private static SubscriptionSchedule ManagedSchedule(
+        string managingSystem,
+        Dictionary<string, string>? phaseMetadata = null) => new()
+        {
+            Id = "sub_sched_1",
+            Status = SubscriptionScheduleStatus.Active,
+            Metadata = new Dictionary<string, string> { [MetadataKeys.ManagingSystem] = managingSystem },
+            Phases = [new SubscriptionSchedulePhase { Metadata = phaseMetadata }]
+        };
+
     [Fact]
     public void Map_NoAttachedSchedule_ReturnsNone() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.None,
+            SubscriptionScheduleOwnership.None,
             SubscriptionScheduleOwnershipMapper.Map(new Subscription { Id = "sub_1" }));
 
     [Fact]
     public void Map_ScheduleIdSetButNotExpanded_ReturnsUnexpanded() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Unexpanded,
+            SubscriptionScheduleOwnership.Unexpanded,
             SubscriptionScheduleOwnershipMapper.Map(
                 new Subscription { Id = "sub_1", ScheduleId = "sub_sched_1", Schedule = null }));
 
@@ -54,20 +64,20 @@ public class SubscriptionScheduleOwnershipMapperTests
     [InlineData(SubscriptionScheduleStatus.Completed)]
     public void Map_ScheduleNotActive_ReturnsNone(string status) =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.None,
+            SubscriptionScheduleOwnership.None,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(status: status))));
 
     [Fact]
     public void Map_AnnualUpgradeMetadata_ReturnsAnnualUpgrade() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnership.AnnualUpgrade,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(
                 phaseMetadata: new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" }))));
 
     [Fact]
-    public void Map_MigrationCohortMetadata_ReturnsPriceMigration() =>
+    public void Map_MigrationCohortMetadata_ReturnsBusinessPriceIncrease() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.PriceMigration,
+            SubscriptionScheduleOwnership.BusinessPriceIncrease,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(
                 phaseMetadata: new Dictionary<string, string>
                 {
@@ -80,7 +90,7 @@ public class SubscriptionScheduleOwnershipMapperTests
         // Precedence is defined and pinned even though redemption creates its schedule with
         // FromSubscription, so Stripe builds phase 1 clean and no marker rides along.
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnership.AnnualUpgrade,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(
                 phaseMetadata: new Dictionary<string, string>
                 {
@@ -106,34 +116,34 @@ public class SubscriptionScheduleOwnershipMapperTests
         };
 
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnership.AnnualUpgrade,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(schedule)));
     }
 
     [Fact]
     public void Map_UnrecognizedMetadataOnly_ReturnsForeign() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(
                 phaseMetadata: new Dictionary<string, string> { ["negotiated_term"] = "3y" }))));
 
     [Fact]
     public void Map_NullPhaseMetadata_ReturnsForeign() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(Schedule(phaseMetadata: null))));
 
     [Fact]
     public void Map_EmptyPhaseMetadata_ReturnsForeign() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(
                 Schedule(phaseMetadata: new Dictionary<string, string>()))));
 
     [Fact]
     public void Map_NoPhases_ReturnsForeign() =>
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(new SubscriptionSchedule
             {
                 Id = "sub_sched_1",
@@ -146,7 +156,7 @@ public class SubscriptionScheduleOwnershipMapperTests
         // Pins that content matching is gone. Under the previous implementation a phase carrying
         // the annual-latest seat price was classified as ours on that basis alone.
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnership.Foreign,
             SubscriptionScheduleOwnershipMapper.Map(WithSchedule(
                 Schedule(phaseMetadata: null, priceIds: "2023-enterprise-seat-annually"))));
 
@@ -166,12 +176,12 @@ public class SubscriptionScheduleOwnershipMapperTests
         };
 
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade,
+            SubscriptionScheduleOwnership.AnnualUpgrade,
             SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
     }
 
     [Fact]
-    public void MapSchedule_MigrationCohortMetadata_ReturnsPriceMigration()
+    public void MapSchedule_MigrationCohortMetadata_ReturnsBusinessPriceIncrease()
     {
         var schedule = new SubscriptionSchedule
         {
@@ -186,7 +196,73 @@ public class SubscriptionScheduleOwnershipMapperTests
         };
 
         Assert.Equal(
-            OrganizationSubscriptionScheduleOwnership.PriceMigration,
+            SubscriptionScheduleOwnership.BusinessPriceIncrease,
             SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
     }
+
+    [Theory]
+    [InlineData(ManagingSystems.AnnualUpgrade, SubscriptionScheduleOwnership.AnnualUpgrade)]
+    [InlineData(ManagingSystems.BusinessPriceIncrease, SubscriptionScheduleOwnership.BusinessPriceIncrease)]
+    [InlineData(ManagingSystems.PersonalPriceIncrease, SubscriptionScheduleOwnership.PersonalPriceIncrease)]
+    public void MapSchedule_ManagingSystem_ReturnsItsOwnership(string managingSystem, SubscriptionScheduleOwnership expected) =>
+        Assert.Equal(expected, SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(managingSystem)));
+
+    [Fact]
+    public void Map_ManagingSystem_ReturnsItsOwnership() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.PersonalPriceIncrease,
+            SubscriptionScheduleOwnershipMapper.Map(WithSchedule(ManagedSchedule(ManagingSystems.PersonalPriceIncrease))));
+
+    [Theory]
+    [InlineData("some_future_system")]
+    [InlineData("")]
+    public void MapSchedule_UnrecognizedManagingSystem_ReturnsUnrecognized(string managingSystem) =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Unrecognized,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(managingSystem)));
+
+    [Fact]
+    public void MapSchedule_UnrecognizedManagingSystemAndLegacyPhaseMarker_ReturnsUnrecognized() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Unrecognized,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(
+                "some_future_system",
+                new Dictionary<string, string> { [MetadataKeys.MigrationCohortId] = "cohort-1" })));
+
+    [Fact]
+    public void ManagingSystemOf_ScheduleWithManagingSystem_ReturnsTheValue() =>
+        Assert.Equal("some_future_system",
+            SubscriptionScheduleOwnershipMapper.ManagingSystemOf(ManagedSchedule("some_future_system")));
+
+    [Fact]
+    public void ManagingSystemOf_ScheduleWithoutMetadata_ReturnsNull() =>
+        Assert.Null(SubscriptionScheduleOwnershipMapper.ManagingSystemOf(new SubscriptionSchedule()));
+
+    [Fact]
+    public void MapSchedule_ManagingSystemAndConflictingLegacyPhaseMarker_PrefersManagingSystem() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.BusinessPriceIncrease,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(ManagedSchedule(
+                ManagingSystems.BusinessPriceIncrease,
+                new Dictionary<string, string> { [MetadataKeys.AnnualUpgrade] = "TeamsMonthly" })));
+
+    [Fact]
+    public void MapSchedule_ManagingSystemOnInactiveSchedule_ReturnsNone()
+    {
+        var schedule = ManagedSchedule(ManagingSystems.AnnualUpgrade);
+        schedule.Status = SubscriptionScheduleStatus.Released;
+
+        Assert.Equal(SubscriptionScheduleOwnership.None, SubscriptionScheduleOwnershipMapper.MapSchedule(schedule));
+    }
+
+    [Fact]
+    public void MapSchedule_EmptyScheduleMetadataAndNoPhaseMarkers_ReturnsForeign() =>
+        Assert.Equal(
+            SubscriptionScheduleOwnership.Foreign,
+            SubscriptionScheduleOwnershipMapper.MapSchedule(new SubscriptionSchedule
+            {
+                Status = SubscriptionScheduleStatus.Active,
+                Metadata = new Dictionary<string, string>(),
+                Phases = [new SubscriptionSchedulePhase { Metadata = null }]
+            }));
 }
