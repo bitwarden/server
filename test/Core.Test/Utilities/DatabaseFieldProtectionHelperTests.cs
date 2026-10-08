@@ -31,6 +31,17 @@ public class DatabaseFieldProtectionHelperTests
     }
 
     [Fact]
+    public void Protect_IgnorableCharacterBeforePrefix_ProtectsInsteadOfThrowing()
+    {
+        var dataProtector = CreateDataProtector();
+        var value = "\u200B" + Constants.DatabaseFieldProtectedPrefix + "cust_1";
+
+        var result = DatabaseFieldProtectionHelper.Protect(dataProtector, value);
+
+        Assert.Equal(value, DatabaseFieldProtectionHelper.Unprotect(dataProtector, result));
+    }
+
+    [Fact]
     public void Protect_AlreadyGenuinelyProtectedValue_RemainsProtectedWithSamePlaintext()
     {
         var dataProtector = CreateDataProtector();
