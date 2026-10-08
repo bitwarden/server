@@ -43,10 +43,13 @@ public class ExpirePartnershipResumeWindowsCommand(
                     continue;
                 }
 
-                entitlement.UserId = null;
-                entitlement.AccountRef = null;
-                entitlement.RevisionDate = now;
-                await organizationPartnershipEntitlementRepository.ReplaceAsync(entitlement);
+                var wasReleased = await organizationPartnershipEntitlementRepository
+                    .ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, now, now);
+                if (!wasReleased)
+                {
+                    continue;
+                }
+
                 released++;
 
                 await eventService.LogOrganizationPartnershipEventAsync(
