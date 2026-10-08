@@ -159,7 +159,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         return provider?.MetaData?.Any() ?? false;
     }
 
-    // TODO: Remove this when Fido2 serializes the appid extension input (fixed upstream in Fido2 5.x)
+    // Fido2 4.x does not serialize the appid extension input. Fido2 5.x fixes this, and then this helper is no longer needed.
     private static string WithAppIdExtension(string optionsJson, string appId)
     {
         var root = JsonNode.Parse(optionsJson)!.AsObject();
