@@ -54,10 +54,12 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return null;
         }
 
+        var appId = CoreHelpers.U2fAppIdUrl(_globalSettings);
+
         var exts = new AuthenticationExtensionsClientInputs()
         {
             UserVerificationMethod = true,
-            AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
+            AppID = appId,
         };
 
         var options = _fido2.GetAssertionOptions(new GetAssertionOptionsParams
@@ -66,8 +68,6 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             UserVerification = UserVerificationRequirement.Discouraged,
             Extensions = exts
         });
-
-        var appId = CoreHelpers.U2fAppIdUrl(_globalSettings);
 
         // TODO: Remove this when newtonsoft legacy converters are gone
         provider.MetaData["login"] = WithAppIdExtension(JsonSerializer.Serialize(options), appId);
@@ -159,6 +159,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         return provider?.MetaData?.Any() ?? false;
     }
 
+    // TODO: Remove this when Fido2 serializes the appid extension input (fixed upstream in Fido2 5.x)
     private static string WithAppIdExtension(string optionsJson, string appId)
     {
         var root = JsonNode.Parse(optionsJson)!.AsObject();
