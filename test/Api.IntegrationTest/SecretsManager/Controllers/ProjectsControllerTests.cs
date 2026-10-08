@@ -7,6 +7,7 @@ using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.Helpers;
@@ -23,6 +24,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly ApiApplicationFactory _factory;
     private readonly IProjectRepository _projectRepository;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly LoginHelper _loginHelper;
 
     private string _email = null!;
@@ -34,6 +36,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         _client = _factory.CreateClient();
         _projectRepository = _factory.GetService<IProjectRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
+        _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _loginHelper = new LoginHelper(_factory, _client);
     }
 
@@ -484,5 +487,40 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
         return initialProject;
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task Create_OrganizationAccessRevokedAfterLogin_NotFound(bool useSecretsManager, bool enabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        // The token still carries the Secrets Manager claim, so only the organization's current state can deny access.
+        org.UseSecretsManager = useSecretsManager;
+        org.Enabled = enabled;
+        await _organizationRepository.ReplaceAsync(org);
+
+        var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/projects", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task ListByOrganization_OrganizationAccessRevokedAfterLogin_NotFound(bool useSecretsManager, bool enabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+
+        org.UseSecretsManager = useSecretsManager;
+        org.Enabled = enabled;
+        await _organizationRepository.ReplaceAsync(org);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

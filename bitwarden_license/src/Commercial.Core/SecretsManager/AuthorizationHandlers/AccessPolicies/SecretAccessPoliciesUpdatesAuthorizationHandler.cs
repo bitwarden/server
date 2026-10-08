@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Enums.AccessPolicies;
@@ -16,18 +15,18 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
     SecretAccessPoliciesUpdates>
 {
     private readonly IAccessClientQuery _accessClientQuery;
-    private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
     private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public SecretAccessPoliciesUpdatesAuthorizationHandler(ICurrentContext currentContext,
+    public SecretAccessPoliciesUpdatesAuthorizationHandler(ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IAccessClientQuery accessClientQuery,
         ISecretRepository secretRepository,
         ISameOrganizationQuery sameOrganizationQuery,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _accessClientQuery = accessClientQuery;
         _sameOrganizationQuery = sameOrganizationQuery;
         _serviceAccountRepository = serviceAccountRepository;
@@ -38,7 +37,7 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandler : AuthorizationHand
         SecretAccessPoliciesOperationRequirement requirement,
         SecretAccessPoliciesUpdates resource)
     {
-        if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(resource.OrganizationId))
         {
             return;
         }

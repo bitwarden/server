@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
@@ -37,7 +36,7 @@ public class BulkSecretAuthorizationHandlerTests
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources[0].OrganizationId = Guid.NewGuid();
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(true);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resources);
@@ -55,7 +54,7 @@ public class BulkSecretAuthorizationHandlerTests
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Any<Guid>())
             .ReturnsForAnyArgs(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resources);
@@ -205,7 +204,7 @@ public class BulkSecretAuthorizationHandlerTests
         Guid organizationId,
         Guid userId = new())
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(organizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default!, organizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
