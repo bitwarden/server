@@ -25,6 +25,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
     public RequestLeaseExtensionCommand(
@@ -33,6 +34,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         IAccessRuleEngine ruleEngine,
         IAccessRequestRepository accessRequestRepository,
         ICurrentContext currentContext,
+        IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessLeaseRepository = accessLeaseRepository;
@@ -40,6 +42,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         _ruleEngine = ruleEngine;
         _accessRequestRepository = accessRequestRepository;
         _currentContext = currentContext;
+        _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
 
@@ -140,6 +143,23 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         };
         decision.SetNewId();
 
+        // Attempt before the write, outcome after. AlreadyExtended leaves the attempt without one.
+        var audit = new AccessAuditEventData
+        {
+            Kind = AccessAuditEventKind.LeaseExtended,
+            OccurredDate = now,
+            OrganizationId = lease.OrganizationId,
+            ActorId = userId,
+            RequesterId = lease.RequesterId,
+            CollectionId = lease.CollectionId,
+            CipherId = lease.CipherId,
+            AccessRequestId = request.Id,
+            AccessLeaseId = lease.Id,
+            LeaseNotAfter = request.NotAfter,
+            Detail = request.Reason,
+        };
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
+
         var outcome = await _accessRequestRepository.CreateApprovedExtensionAsync(
             request, decision, now, LeaseEndedDenialComment);
 
@@ -152,9 +172,20 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         {
             // The lease ran out or was ended under the request. The repository recorded that as a denied request
             // rather than refusing the write, so this is a resolved outcome to report, not an error to throw.
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with
+                {
+                    Kind = AccessAuditEventKind.RequestDenied,
+                    Phase = AccessAuditEventPhase.Outcome,
+                    LeaseNotAfter = lease.NotAfter,
+                    Detail = LeaseEndedDenialComment,
+                });
+
             return Project(request, AccessRequestAction.Denied, AccessDecisionVerdict.Deny,
                 LeaseEndedDenialComment, now);
         }
+
+        await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
         // The parent lease's end has already been pushed out, so the next access-state snapshot re-emits the longer
         // countdown.

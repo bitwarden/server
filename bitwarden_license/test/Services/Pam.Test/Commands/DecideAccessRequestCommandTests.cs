@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
+using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands;
@@ -165,6 +166,8 @@ public class DecideAccessRequestCommandTests
         // A denial without a reason must leave the request pending, not written or notified.
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
+            .EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -217,6 +220,8 @@ public class DecideAccessRequestCommandTests
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Deny("not needed")));
 
         Assert.Equal("This request has already been resolved.", exception.Message);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
+            .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
     }
 
     private static AccessDecisionSubmission Approve(string? comment = null) =>

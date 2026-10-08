@@ -238,4 +238,38 @@ public class AccountsControllerTests
         await _sendTrialInitiationEmailForRegistrationCommand.Received(1)
             .Handle(email, name, receiveMarketingEmails, productTier, products, 14, true);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostTrialInitiationSendVerificationEmailAsync_PamSeatMinimum_PassedToCommand(
+        string email,
+        string name,
+        bool receiveMarketingEmails,
+        ProductTierType productTier,
+        IEnumerable<ProductType> products)
+    {
+        // Arrange
+        var model = new TrialSendVerificationEmailRequestModel
+        {
+            Email = email,
+            Name = name,
+            ReceiveMarketingEmails = receiveMarketingEmails,
+            ProductTier = productTier,
+            Products = products,
+            TrialLength = 7,
+            PaymentOptional = false,
+            PamSeatMinimum = 25
+        };
+
+        _sendTrialInitiationEmailForRegistrationCommand
+            .Handle(email, name, receiveMarketingEmails, productTier, products, 7, false, 25)
+            .Returns((string?)null);
+
+        // Act
+        await _sut.PostTrialInitiationSendVerificationEmailAsync(model);
+
+        // Assert
+        await _sendTrialInitiationEmailForRegistrationCommand.Received(1)
+            .Handle(email, name, receiveMarketingEmails, productTier, products, 7, false, 25);
+    }
 }
