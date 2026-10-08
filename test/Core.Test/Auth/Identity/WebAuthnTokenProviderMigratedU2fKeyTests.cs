@@ -1,6 +1,4 @@
-﻿using System.Buffers.Text;
-using System.Formats.Cbor;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -36,7 +34,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task MakeAssertionAsync_MigratedU2fKeyWithStoredOptions_ThrowsInvalidRpidHash()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -73,7 +71,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
 
         var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: [7, 8, 9]);
-        var token = BuildWebClientTokenString(assertion);
+        var token = FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
         var result = await harness.Provider.ValidateAsync("TwoFactor", token, SubstituteUserManager(), userFromStorage);
@@ -84,7 +82,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task GenerateAsync_MigratedU2fKey_ClientOptionsCarryAppIdExtensionOnce()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -96,7 +94,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task GenerateAsync_MigratedU2fKey_StoredChallengeCarriesAppIdExtension()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -108,7 +106,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_ReturnsTrue()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -117,7 +115,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.True(result);
@@ -128,7 +126,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     {
         // ValidateAsync must always apply the server's own U2F AppID, also after a Fido2 version that serializes it again.
         // The AppID never comes from the stored challenge or the client, so challenges stored without one still validate.
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         // A challenge in the shape written before the fix: serialized options without the AppID extension.
@@ -149,7 +147,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
             appId: _u2fAppIdUrl);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.True(result);
@@ -158,7 +156,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToForeignAppId_ReturnsFalse()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -169,7 +167,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         Assert.True(assertion.ClientExtensionResults.AppID);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.False(result);
@@ -178,7 +176,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToForeignAppId_ReturnsFalse()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -189,7 +187,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         Assert.True(assertion.ClientExtensionResults.AppID);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.False(result);
@@ -198,7 +196,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyWithForeignAppIdInStoredChallenge_AssertionScopedToServerAppId_ReturnsTrue()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -208,7 +206,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.True(result);
@@ -217,7 +215,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyAppIdScopedAssertionWithoutAppIdExtensionResult_ReturnsFalse()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -227,7 +225,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         assertion.ClientExtensionResults.AppID = false;
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.False(result);
@@ -236,7 +234,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     [Fact]
     public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_UpdatesStoredSignatureCounter()
     {
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
 
         var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
@@ -246,7 +244,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
         Assert.Equal(7u, LoadStoredKey(userFromStorage).SignatureCounter);
 
-        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+        var result = await harness.Provider.ValidateAsync("TwoFactor", FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion),
             SubstituteUserManager(), userFromStorage);
 
         Assert.True(result);
@@ -259,11 +257,11 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     {
         // Guards the round trip test: the extension result the web client sends under the "extensions" key
         // must reach the Fido2 model, otherwise the failure above could be blamed on a dropped result.
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         var assertion = authenticator.MakeAssertion([1, 2, 3], _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
 
         var parsed = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(
-            BuildWebClientTokenString(assertion), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.True(parsed!.ClientExtensionResults.AppID);
     }
@@ -361,7 +359,7 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         {
             Name = "YubiKey 5 NFC",
             Descriptor = new PublicKeyCredentialDescriptor(authenticator.CredentialId),
-            PublicKey = CreatePublicKeyFromU2fRegistrationData(authenticator.GetU2fRawPublicKey()),
+            PublicKey = authenticator.GetMigratedU2fCosePublicKey(),
             SignatureCounter = carriedOverU2fCounter,
             Migrated = true,
         };
@@ -405,68 +403,6 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
         });
 
         return new User { TwoFactorProviders = writer.TwoFactorProviders };
-    }
-
-    /// <summary>
-    /// Port of the deleted <c>U2fMetaData.CreatePublicKeyFromU2fRegistrationData</c>: X is bytes 1..32 and Y is
-    /// bytes 33..64 of the U2F public key, wrapped as COSE EC2 / ES256 / P-256. The original used PeterO.Cbor,
-    /// which writes integer map keys in ascending numeric order (-3, -2, -1, 1, 3), reproduced here.
-    /// </summary>
-    private static byte[] CreatePublicKeyFromU2fRegistrationData(byte[] publicKeyData)
-    {
-        var x = new byte[32];
-        var y = new byte[32];
-        Buffer.BlockCopy(publicKeyData, 1, x, 0, 32);
-        Buffer.BlockCopy(publicKeyData, 33, y, 0, 32);
-
-        var writer = new CborWriter(CborConformanceMode.Lax);
-        writer.WriteStartMap(5);
-        writer.WriteInt32(-3); writer.WriteByteString(y);
-        writer.WriteInt32(-2); writer.WriteByteString(x);
-        writer.WriteInt32(-1); writer.WriteInt32(1);
-        writer.WriteInt32(1); writer.WriteInt32(2);
-        writer.WriteInt32(3); writer.WriteInt32(-7);
-        writer.WriteEndMap();
-        return writer.Encode();
-    }
-
-    /// <summary>
-    /// A U2F key handle is an opaque, authenticator-chosen blob (64 bytes here). The leading bytes make the
-    /// standard Base64 form contain '+' and '/', which is how Newtonsoft stored <c>Descriptor.Id</c>.
-    /// </summary>
-    private static byte[] LegacyU2fKeyHandle()
-    {
-        var keyHandle = new byte[64];
-        for (var i = 0; i < keyHandle.Length; i++)
-        {
-            keyHandle[i] = (byte)(i * 7 + 3);
-        }
-        keyHandle[0] = 0xfb;
-        keyHandle[1] = 0xff;
-        return keyHandle;
-    }
-
-    /// <summary>
-    /// Same JSON shape as <c>buildDataString</c> in clients/apps/web/src/connectors/common-webauthn.ts.
-    /// The extension results travel under the "extensions" key, as the web client sends them.
-    /// </summary>
-    private static string BuildWebClientTokenString(AuthenticatorAssertionRawResponse assertion)
-    {
-        return JsonSerializer.Serialize(new
-        {
-            id = assertion.Id,
-            rawId = Base64Url.EncodeToString(assertion.RawId),
-            type = "public-key",
-            extensions = assertion.ClientExtensionResults.AppID == true
-                ? new Dictionary<string, object> { ["appid"] = true }
-                : new Dictionary<string, object>(),
-            response = new
-            {
-                authenticatorData = Base64Url.EncodeToString(assertion.Response.AuthenticatorData),
-                clientDataJson = Base64Url.EncodeToString(assertion.Response.ClientDataJson),
-                signature = Base64Url.EncodeToString(assertion.Response.Signature),
-            },
-        });
     }
 
     private static UserManager<User> SubstituteUserManager()

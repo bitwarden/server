@@ -1,6 +1,4 @@
-﻿using System.Buffers.Text;
-using System.Formats.Cbor;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.AbilitiesCache;
@@ -116,7 +114,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     {
         // Arrange
         var localFactory = new IdentityApplicationFactory();
-        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        using var authenticator = new FakeWebAuthnAuthenticator(FakeWebAuthnAuthenticator.GetLegacyU2fKeyHandle());
         await CreateUserAsync(localFactory, _testEmail, BuildMigratedU2fWebAuthnTwoFactorJson(authenticator));
         var appId = CoreHelpers.U2fAppIdUrl(localFactory.GetService<GlobalSettings>());
 
@@ -134,7 +132,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         var assertion = authenticator.MakeAssertion(challenge, "localhost", "https://localhost:8080",
             userHandle: null, appId: appId);
         var loginContext = await localFactory.ContextFromPasswordWithTwoFactorAsync(
-            _testEmail, _testPassword, twoFactorProviderType: "7", twoFactorToken: BuildWebClientTokenString(assertion));
+            _testEmail, _testPassword, twoFactorProviderType: "7", twoFactorToken: FakeWebAuthnAuthenticator.MakeWebClientTokenString(assertion));
 
         // Assert
         var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
@@ -470,58 +468,11 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         const uint carriedOverU2fCounter = 7;
         authenticator.SignatureCounter = carriedOverU2fCounter;
 
-        var u2fPublicKey = authenticator.GetU2fRawPublicKey();
-        var x = u2fPublicKey[1..33];
-        var y = u2fPublicKey[33..65];
-        var cbor = new CborWriter(CborConformanceMode.Lax);
-        cbor.WriteStartMap(5);
-        cbor.WriteInt32(-3); cbor.WriteByteString(y);
-        cbor.WriteInt32(-2); cbor.WriteByteString(x);
-        cbor.WriteInt32(-1); cbor.WriteInt32(1);
-        cbor.WriteInt32(1); cbor.WriteInt32(2);
-        cbor.WriteInt32(3); cbor.WriteInt32(-7);
-        cbor.WriteEndMap();
-
         return "{\"7\":{\"Enabled\":true,\"MetaData\":{\"Key0\":{\"Name\":\"YubiKey 5 NFC\",\"Descriptor\":{\"Id\":\""
             + Convert.ToBase64String(authenticator.CredentialId) + "\",\"Type\":0,\"Transports\":null},"
-            + "\"PublicKey\":\"" + Convert.ToBase64String(cbor.Encode()) + "\",\"UserHandle\":null,"
+            + "\"PublicKey\":\"" + Convert.ToBase64String(authenticator.GetMigratedU2fCosePublicKey()) + "\",\"UserHandle\":null,"
             + "\"SignatureCounter\":" + carriedOverU2fCounter + ",\"CredType\":null,\"RegDate\":\"0001-01-01T00:00:00\","
             + "\"Migrated\":true,\"AaGuid\":\"00000000-0000-0000-0000-000000000000\"}}}}";
-    }
-
-    private static byte[] LegacyU2fKeyHandle()
-    {
-        var keyHandle = new byte[64];
-        for (var i = 0; i < keyHandle.Length; i++)
-        {
-            keyHandle[i] = (byte)(i * 7 + 3);
-        }
-        keyHandle[0] = 0xfb;
-        keyHandle[1] = 0xff;
-        return keyHandle;
-    }
-
-    /// <summary>
-    /// Same JSON shape as <c>buildDataString</c> in the web client's common-webauthn.ts: extension results travel
-    /// under the "extensions" key.
-    /// </summary>
-    private static string BuildWebClientTokenString(AuthenticatorAssertionRawResponse assertion)
-    {
-        return JsonSerializer.Serialize(new
-        {
-            id = assertion.Id,
-            rawId = Base64Url.EncodeToString(assertion.RawId),
-            type = "public-key",
-            extensions = assertion.ClientExtensionResults.AppID == true
-                ? new Dictionary<string, object> { ["appid"] = true }
-                : new Dictionary<string, object>(),
-            response = new
-            {
-                authenticatorData = Base64Url.EncodeToString(assertion.Response.AuthenticatorData),
-                clientDataJson = Base64Url.EncodeToString(assertion.Response.ClientDataJson),
-                signature = Base64Url.EncodeToString(assertion.Response.Signature),
-            },
-        });
     }
 
     private async Task CreateUserAsync(

@@ -1,4 +1,5 @@
 ﻿using System.Buffers.Binary;
+using System.Buffers.Text;
 using System.Formats.Cbor;
 using System.Security.Cryptography;
 using System.Text;
@@ -53,6 +54,67 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
         writer.WriteInt32(-3); writer.WriteByteString(parameters.Q.Y!);
         writer.WriteEndMap();
         return writer.Encode();
+    }
+
+    /// <summary>
+    /// Returns the public key as the 2020 U2F-to-WebAuthn migration stored it: COSE EC2 / ES256 / P-256 built from
+    /// the raw U2F key. The original used PeterO.Cbor, which writes integer map keys in ascending numeric order
+    /// (-3, -2, -1, 1, 3), reproduced here.
+    /// </summary>
+    public byte[] GetMigratedU2fCosePublicKey()
+    {
+        var u2fPublicKey = GetU2fRawPublicKey();
+        var x = u2fPublicKey[1..33];
+        var y = u2fPublicKey[33..65];
+
+        var writer = new CborWriter(CborConformanceMode.Lax);
+        writer.WriteStartMap(5);
+        writer.WriteInt32(-3); writer.WriteByteString(y);
+        writer.WriteInt32(-2); writer.WriteByteString(x);
+        writer.WriteInt32(-1); writer.WriteInt32(1);
+        writer.WriteInt32(1); writer.WriteInt32(2);
+        writer.WriteInt32(3); writer.WriteInt32(-7);
+        writer.WriteEndMap();
+        return writer.Encode();
+    }
+
+    /// <summary>
+    /// A U2F key handle is an opaque, authenticator-chosen blob (64 bytes here). The leading bytes make the
+    /// standard Base64 form contain '+' and '/', which is how Newtonsoft stored <c>Descriptor.Id</c>.
+    /// </summary>
+    public static byte[] GetLegacyU2fKeyHandle()
+    {
+        var keyHandle = new byte[64];
+        for (var i = 0; i < keyHandle.Length; i++)
+        {
+            keyHandle[i] = (byte)(i * 7 + 3);
+        }
+        keyHandle[0] = 0xfb;
+        keyHandle[1] = 0xff;
+        return keyHandle;
+    }
+
+    /// <summary>
+    /// Same JSON shape as <c>buildDataString</c> in clients/apps/web/src/connectors/common-webauthn.ts.
+    /// The extension results travel under the "extensions" key, as the web client sends them.
+    /// </summary>
+    public static string MakeWebClientTokenString(AuthenticatorAssertionRawResponse assertion)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            id = assertion.Id,
+            rawId = Base64Url.EncodeToString(assertion.RawId),
+            type = "public-key",
+            extensions = assertion.ClientExtensionResults.AppID == true
+                ? new Dictionary<string, object> { ["appid"] = true }
+                : new Dictionary<string, object>(),
+            response = new
+            {
+                authenticatorData = Base64Url.EncodeToString(assertion.Response.AuthenticatorData),
+                clientDataJson = Base64Url.EncodeToString(assertion.Response.ClientDataJson),
+                signature = Base64Url.EncodeToString(assertion.Response.Signature),
+            },
+        });
     }
 
     /// <summary>
