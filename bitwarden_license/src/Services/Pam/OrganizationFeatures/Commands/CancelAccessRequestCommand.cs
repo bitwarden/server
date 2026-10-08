@@ -13,6 +13,8 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
     private readonly IAccessRequestRepository _accessRequestRepository;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverCollectionAccessQuery _approverCollectionAccessQuery;
+    private readonly IApproverInboxNotifier _approverInboxNotifier;
+    private readonly IRequesterNotifier _requesterNotifier;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly TimeProvider _timeProvider;
 
@@ -20,12 +22,16 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         IAccessRequestRepository accessRequestRepository,
         IAccessLeaseRepository accessLeaseRepository,
         IApproverCollectionAccessQuery approverCollectionAccessQuery,
+        IApproverInboxNotifier approverInboxNotifier,
+        IRequesterNotifier requesterNotifier,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         TimeProvider timeProvider)
     {
         _accessRequestRepository = accessRequestRepository;
         _accessLeaseRepository = accessLeaseRepository;
         _approverCollectionAccessQuery = approverCollectionAccessQuery;
+        _approverInboxNotifier = approverInboxNotifier;
+        _requesterNotifier = requesterNotifier;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _timeProvider = timeProvider;
     }
@@ -55,7 +61,6 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
                 "This request extended an existing lease and cannot be revoked; revoke the lease instead.");
         }
 
-        // Only an open request, or an approved one not yet activated, can be cancelled.
         if (request.Action is not (AccessRequestAction.None or AccessRequestAction.Approved))
         {
             throw new ConflictException("This request has already been resolved.");
@@ -63,8 +68,7 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // A minted lease governs the request. Checked before the window guard, since an extension can keep the lease
-        // live after the request's window lapses.
+        // Checked before the window guard, since an extension can keep the lease live past the request's window.
         var lease = await _accessLeaseRepository.GetByAccessRequestIdAsync(requestId);
         if (lease is not null)
         {
@@ -128,5 +132,11 @@ public class CancelAccessRequestCommand : ICancelAccessRequestCommand
         }
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
+
+        // Drops the request from the approvers' inboxes.
+        await _approverInboxNotifier.NotifyCollectionApproversAsync(request.CollectionId);
+
+        // Reaches the requester on a manager's retraction, and the requester's other devices on a withdrawal.
+        await _requesterNotifier.NotifyRequesterAsync(request.RequesterId);
     }
 }

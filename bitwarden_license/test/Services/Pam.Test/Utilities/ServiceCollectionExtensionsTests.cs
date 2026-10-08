@@ -7,17 +7,13 @@ using Xunit;
 namespace Bit.Services.Pam.Test.Utilities;
 
 /// <summary>
-/// Guards the PAM DI graph. A missing registration here is invisible at compile time and surfaces as a 500 on the
-/// first request that touches the service, so these tests assert the wiring rather than any behaviour.
+/// A missing PAM registration is invisible at compile time and surfaces as a 500 on the first request that needs it.
 /// </summary>
 public class ServiceCollectionExtensionsTests
 {
     private static IServiceCollection PamServices() =>
         new ServiceCollection().AddPamServices();
 
-    /// <summary>
-    /// Every PAM-owned dependency of every PAM-registered service must itself be registered.
-    /// </summary>
     [Fact]
     public void AddPamServices_RegistersEveryPamOwnedDependency()
     {
@@ -25,7 +21,6 @@ public class ServiceCollectionExtensionsTests
         var registered = services.Select(d => d.ServiceType).ToHashSet();
         var pamAssembly = typeof(ServiceCollectionExtensions).Assembly;
 
-        // The concrete types AddPamServices wires up, plus the endpoint handlers it registers by concrete type.
         var implementations = services
             .Select(d => d.ImplementationType)
             .Where(t => t is not null && t.Assembly == pamAssembly)
@@ -41,8 +36,8 @@ public class ServiceCollectionExtensionsTests
             {
                 foreach (var parameter in constructor.GetParameters())
                 {
-                    // Only PAM's own seams are this method's responsibility; repositories, ICurrentContext and the
-                    // like are registered by the host.
+                    // Only PAM's own seams are this method's responsibility; the host registers the rest, such as
+                    // repositories and ICurrentContext.
                     if (parameter.ParameterType.Assembly != pamAssembly || !parameter.ParameterType.IsInterface)
                     {
                         continue;
@@ -76,12 +71,29 @@ public class ServiceCollectionExtensionsTests
     [Fact]
     public void AddPamServices_RegistersTimeProvider()
     {
-        // Every command stamps its timestamps from TimeProvider rather than DateTime.UtcNow.
+        // Every command reads the clock from TimeProvider.
         var services = PamServices();
 
         Assert.Contains(services, d => d.ServiceType == typeof(TimeProvider));
     }
 
+    /// <summary>
+    /// Easy to drop by mistake, and a missing one fails every access-request and lease command that depends on it.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(IAccessAuditEventEmitter), typeof(AccessAuditEventEmitter))]
+    [InlineData(typeof(IApproverInboxNotifier), typeof(ApproverInboxNotifier))]
+    [InlineData(typeof(IRequesterNotifier), typeof(RequesterNotifier))]
+    [InlineData(typeof(IAccessMailNotifier), typeof(AccessMailNotifier))]
+    public void AddPamServices_RegistersSideChannelSeam(Type serviceType, Type expectedImplementation)
+    {
+        var services = PamServices();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == serviceType);
+        Assert.Equal(expectedImplementation, descriptor.ImplementationType);
+    }
+
+    /// <remarks>Discovered by reflection so a new handler cannot be left out.</remarks>
     public static TheoryData<Type> EndpointHandlers()
     {
         var data = new TheoryData<Type>();
