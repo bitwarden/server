@@ -369,7 +369,7 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
-    public async Task DeleteUser_LeavesStateAndRevisionDateUnchanged(
+    public async Task DeleteUser_CancelsActiveEntitlementWithNoResumeWindow(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
         IOrganizationRepository organizationRepository,
@@ -388,8 +388,36 @@ public class OrganizationPartnershipEntitlementRepositoryTests
 
         var result = await repository.GetByIdAsync(entitlement.Id);
         Assert.NotNull(result);
-        Assert.Equal(PartnershipEntitlementState.Active, result.State);
-        Assert.Equal(entitlement.RevisionDate, result.RevisionDate);
+        Assert.Equal(PartnershipEntitlementState.Canceled, result.State);
+        Assert.NotNull(result.CanceledDate);
+        Assert.Null(result.ResumeWindowExpirationDate);
+        Assert.NotEqual(entitlement.RevisionDate, result.RevisionDate);
+    }
+
+    [Theory, DatabaseData]
+    public async Task DeleteUser_AlreadyCanceled_KeepsCanceledDateAndClosesWindow(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        var canceledDate = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var entitlement = NewEntitlement(partnership, "customer-1");
+        entitlement.State = PartnershipEntitlementState.Canceled;
+        entitlement.UserId = user.Id;
+        entitlement.CanceledDate = canceledDate;
+        entitlement.ResumeWindowExpirationDate = canceledDate.AddDays(30);
+        await repository.CreateAsync(entitlement);
+
+        await userRepository.DeleteAsync(user);
+
+        var result = await repository.GetByIdAsync(entitlement.Id);
+        Assert.NotNull(result);
+        Assert.Equal(canceledDate, result.CanceledDate);
+        Assert.Null(result.ResumeWindowExpirationDate);
+        Assert.Null(result.UserId);
     }
 
     [Theory, DatabaseData]
