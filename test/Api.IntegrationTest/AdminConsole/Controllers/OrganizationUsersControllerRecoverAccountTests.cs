@@ -116,11 +116,13 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         Assert.NotNull(userBefore);
 
         const string newMasterPasswordHash = "new-master-password-hash";
+        const string encryptedRecoveryKey =
+            "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
         var resetPasswordRequest = new OrganizationUserResetPasswordRequestModel
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = newMasterPasswordHash,
-            Key = "encrypted-recovery-key"
+            Key = encryptedRecoveryKey
         };
 
         // Act
@@ -133,7 +135,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
 
         var userAfter = await userRepository.GetByEmailAsync(targetEmail);
         Assert.NotNull(userAfter);
-        Assert.Equal("encrypted-recovery-key", userAfter.Key);
+        Assert.Equal(encryptedRecoveryKey, userAfter.Key);
         Assert.True(userAfter.ForcePasswordReset);
         Assert.Equal(PasswordVerificationResult.Success,
             passwordHasher.VerifyHashedPassword(userAfter, userAfter.MasterPassword!, newMasterPasswordHash));
@@ -216,7 +218,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
@@ -273,7 +275,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act
@@ -314,7 +316,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         {
             ResetMasterPassword = true,
             NewMasterPasswordHash = "new-master-password-hash",
-            Key = "encrypted-recovery-key"
+            Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
         };
 
         // Act

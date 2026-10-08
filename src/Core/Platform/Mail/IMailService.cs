@@ -47,7 +47,8 @@ public interface IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products,
         int trialLength,
-        bool paymentOptional = false);
+        bool paymentOptional = false,
+        int? pamSeatMinimum = null);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
     Task SendCannotDeleteClaimedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
@@ -134,7 +135,7 @@ public interface IMailService
     Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
     Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
-    Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier);
+    Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeDisplayName);
     Task SendTrialInitiationEmailAsync(string email);
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);

@@ -168,6 +168,7 @@ public static partial class FeatureFlagKeys
     public const string PM35092AuthSalesAssistedTrials = "pm-35092-auth-sales-assisted-trials";
     public const string PM27060_PasswordPreloginFromSdk = "pm-27060-password-prelogin-from-sdk";
     public const string PM42982_WantAssertionsSigned = "pm-42982-want-assertions-signed";
+    public const string PM44303_EmergencyAccessSdkApi = "pm-44303-emergency-access-sdk-api";
 
     /* Autofill Team */
     public const string NotificationRefresh = "notification-refresh";
@@ -259,11 +260,9 @@ public static partial class FeatureFlagKeys
     public const string PM28190CipherSharingOpsToSdk = "pm-28190-cipher-sharing-ops-to-sdk";
     public const string PhishingDetection = "phishing-detection";
     public const string PM22134SdkCipherListView = "pm-22134-sdk-cipher-list-view";
-    public const string PM22136_SdkCipherEncryption = "pm-22136-sdk-cipher-encryption";
     public const string MigrateMyVaultToMyItems = "pm-20558-migrate-myvault-to-myitems";
     public const string PM27632_CipherCrudOperationsToSdk = "pm-27632-cipher-crud-operations-to-sdk";
     public const string PM28191_CipherAdminOpsToSdk = "pm-28191-cipher-admin-ops-to-sdk";
-    public const string PM30521_AutofillButtonViewLoginScreen = "pm-30521-autofill-button-view-login-screen";
     public const string PM32180_PremiumUpsellAccountAge = "pm-32180-premium-upsell-account-age";
 
     public const string PM29438_DialogWithExtensionPromptAccountAge = "pm-29438-dialog-with-extension-prompt-account-age";
@@ -307,6 +306,11 @@ public static partial class FeatureFlagKeys
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
     public const string PamAccessConnector = "pm-42354-rotation-daemon";
+
+    /// <summary>
+    /// Kill switch for the PAM SQL audit trail. Turning it on stops the writes and withdraws the read endpoint.
+    /// </summary>
+    public const string PamDisableSqlAuditLogging = "pm-42480-disable-pam-sql-audit-logging";
 
     /* VFO */
     public const string VFO1Foundation = "vfo1-foundation";

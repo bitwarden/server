@@ -8,9 +8,10 @@ using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.ValueObjects;
 using Bit.Core.Billing.Organizations.Schedules;
-using Bit.Core.Billing.Organizations.Schedules.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Subscriptions.Schedules;
+using Bit.Core.Billing.Subscriptions.Schedules.Enums;
 using Microsoft.Extensions.Logging;
 using OneOf;
 using Stripe;
@@ -131,7 +132,7 @@ public class UpdateOrganizationSubscriptionCommand(
 
         if (activeSchedule is { Phases.Count: > 0 })
         {
-            // PM-40537: only rewrite schedules our code created, identified by phase metadata.
+            // PM-40537: only rewrite schedules our code created, as classified by SubscriptionScheduleOwnershipMapper.
             var annualUpgradePlans = await ResolveAnnualUpgradePhasePlansAsync(organization, subscription);
             var schedulePlans = annualUpgradePlans
                                 ?? await ResolveCohortMigrationPhasePlansAsync(organization, subscription);
@@ -182,9 +183,19 @@ public class UpdateOrganizationSubscriptionCommand(
                 return subscription;
             }
 
-            _logger.LogInformation(
-                "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is one our code did not create; leaving it untouched and updating the subscription directly",
-                CommandName, activeSchedule.Id, subscription.Id);
+            if (SubscriptionScheduleOwnershipMapper.Map(subscription) == SubscriptionScheduleOwnership.Unrecognized)
+            {
+                _logger.LogWarning(
+                    "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) has an unrecognized managing system ({ManagingSystem}); leaving it untouched and updating the subscription directly",
+                    CommandName, activeSchedule.Id, subscription.Id,
+                    SubscriptionScheduleOwnershipMapper.ManagingSystemOf(activeSchedule));
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "{Command}: Active schedule ({ScheduleId}) on subscription ({SubscriptionId}) is not an annual-upgrade or business price increase schedule; leaving it untouched and updating the subscription directly",
+                    CommandName, activeSchedule.Id, subscription.Id);
+            }
         }
 
         var options = new SubscriptionUpdateOptions { Items = items, ProrationBehavior = prorationBehavior };
@@ -237,8 +248,8 @@ public class UpdateOrganizationSubscriptionCommand(
         !(subscription.Discounts is { Count: > 0 } && subscription.Discounts.Any(d => d is null)) &&
         (subscription.TestClockId is null || subscription.TestClock is not null);
 
-    // An annual-upgrade schedule (PM-38333) is recognised by the marker redemption stamps on its
-    // phases. When recognised, source is the current monthly plan and target is the annual-latest
+    // An annual-upgrade schedule (PM-38333) is recognised by SubscriptionScheduleOwnershipMapper. When
+    // recognised, source is the current monthly plan and target is the annual-latest
     // plan, so phase 1 stays monthly (identity) and phase 2 maps to annual-latest. Returns null
     // when this is not an annual-upgrade schedule, letting the caller fall back to cohort-migration
     // resolution.
@@ -246,7 +257,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Organization organization, Subscription subscription)
     {
         if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
-            OrganizationSubscriptionScheduleOwnership.AnnualUpgrade)
+            SubscriptionScheduleOwnership.AnnualUpgrade)
         {
             return null;
         }
@@ -266,7 +277,7 @@ public class UpdateOrganizationSubscriptionCommand(
         Organization organization, Subscription subscription)
     {
         if (SubscriptionScheduleOwnershipMapper.Map(subscription) !=
-            OrganizationSubscriptionScheduleOwnership.PriceMigration)
+            SubscriptionScheduleOwnership.BusinessPriceIncrease)
         {
             return null;
         }
@@ -414,6 +425,7 @@ public class UpdateOrganizationSubscriptionCommand(
         {
             StartDate = sourcePhase.StartDate,
             EndDate = sourcePhase.EndDate,
+            TrialEnd = sourcePhase.TrialEnd,
             Items = SchedulePhaseMapper.ApplyChangesToPhaseItems(sourcePhase.Items, changes, source, target),
             Discounts = isFuture
                 ? DiscountExtensions.BuildPhaseLevelDiscounts(
