@@ -57,6 +57,8 @@ public class CancelAccessRequestCommandTests
             () => sutProvider.Sut.CancelAsync(request.RequesterId, request.Id, null));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
     [Theory]
@@ -83,7 +85,7 @@ public class CancelAccessRequestCommandTests
     [Theory]
     [BitAutoData(AccessRequestAction.None)]
     [BitAutoData(AccessRequestAction.Approved)]
-    public async Task CancelAsync_RequesterNoLease_Cancels(AccessRequestAction action, AccessRequest request)
+    public async Task CancelAsync_RequesterNoLease_CancelsAndNotifies(AccessRequestAction action, AccessRequest request)
     {
         var sutProvider = Setup();
         request.Action = action;
@@ -95,12 +97,16 @@ public class CancelAccessRequestCommandTests
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CancelAsync(request.Id, _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelWithDecisionAsync(default!, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory]
     [BitAutoData(AccessRequestAction.None)]
     [BitAutoData(AccessRequestAction.Approved)]
-    public async Task CancelAsync_ManagerNoLease_DeniesWithDecision(
+    public async Task CancelAsync_ManagerNoLease_DeniesWithDecisionAndNotifies(
         AccessRequestAction action, Guid managerId, AccessRequest request)
     {
         var sutProvider = Setup();
@@ -123,6 +129,10 @@ public class CancelAccessRequestCommandTests
             _now);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CancelAsync(default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
     }
 
     [Theory, BitAutoData]
@@ -295,6 +305,10 @@ public class CancelAccessRequestCommandTests
     {
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
             .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     private static async Task AssertNoRetractionAsync(SutProvider<CancelAccessRequestCommand> sutProvider)

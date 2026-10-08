@@ -139,70 +139,34 @@ public class RevokeAccessLeaseCommandTests
             .NotifyLeaseEndedAsync(lease, AccessLeaseAction.Revoked);
     }
 
-    // Ending by the holder and revocation by an operator are both LeaseRevoked.
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task RevokeAsync_Active_EmitsRevokedAttemptThenOutcome(
-        bool isHolder, Guid operatorId, AccessLease lease)
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_WindowAlreadyClosed_ThrowsConflictWithoutEndingTheLease(
+        Guid userId, AccessLease lease)
     {
+        // A lease whose window has closed carries no early end; revoking it would restamp an end that already happened.
         var sutProvider = Setup();
         lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now.AddHours(1);
-        var userId = isHolder ? lease.RequesterId : operatorId;
-        SetupManageableLease(sutProvider, userId, lease);
-        var emitted = CaptureEmitted(sutProvider);
-
-        await sutProvider.Sut.RevokeAsync(userId, lease.Id, "policy change");
-
-        Assert.Collection(emitted,
-            attempt => Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase),
-            outcome => Assert.Equal(AccessAuditEventPhase.Outcome, outcome.Phase));
-        Assert.All(emitted, e =>
-        {
-            Assert.Equal(AccessAuditEventKind.LeaseRevoked, e.Kind);
-            Assert.Equal(userId, e.ActorId);
-            Assert.Equal(lease.Id, e.AccessLeaseId);
-            Assert.Equal("policy change", e.Detail);
-        });
-        Assert.Equal(emitted[0].CorrelationId, emitted[1].CorrelationId);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeAsync_RevokeFails_EmitsAttemptWithoutOutcome(Guid userId, AccessLease lease)
-    {
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.None;
-        lease.NotAfter = _now.AddHours(1);
-        SetupManageableLease(sutProvider, userId, lease);
-        sutProvider.GetDependency<IAccessLeaseRepository>()
-            .RevokeAsync(lease, Arg.Any<AccessLeaseAction>(), Arg.Any<AccessDecision>(), _now)
-            .ThrowsAsync(new InvalidOperationException());
-        var emitted = CaptureEmitted(sutProvider);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
-
-        var attempt = Assert.Single(emitted);
-        Assert.Equal(AccessAuditEventPhase.Attempt, attempt.Phase);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RevokeAsync_NotActive_EmitsNothing(Guid userId, AccessLease lease)
-    {
-        var sutProvider = Setup();
-        lease.Action = AccessLeaseAction.Revoked;
+        lease.NotAfter = _now.AddMinutes(-1);
         SetupManageableLease(sutProvider, userId, lease);
 
         await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
 
-        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .RevokeAsync(default!, default, default!, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
     }
 
-    private static List<AccessAuditEventData> CaptureEmitted(SutProvider<RevokeAccessLeaseCommand> sutProvider)
+    [Theory, BitAutoData]
+    public async Task RevokeAsync_WindowClosesExactlyNow_ThrowsConflict(Guid userId, AccessLease lease)
     {
-        var emitted = new List<AccessAuditEventData>();
-        sutProvider.GetDependency<IAccessAuditEventEmitter>().EmitAsync(Arg.Do<AccessAuditEventData>(emitted.Add));
-        return emitted;
+        // NotAfter is exclusive everywhere (active reads use NotAfter > now), so the boundary instant is outside it.
+        var sutProvider = Setup();
+        lease.Action = AccessLeaseAction.None;
+        lease.NotAfter = _now;
+        SetupManageableLease(sutProvider, userId, lease);
+
+        await Assert.ThrowsAsync<ConflictException>(() => sutProvider.Sut.RevokeAsync(userId, lease.Id, null));
     }
 
     // Ending by the holder and revocation by an operator are both LeaseRevoked.

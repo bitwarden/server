@@ -40,6 +40,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -68,6 +72,10 @@ public class DecideAccessRequestCommandTests
 
         await Assert.ThrowsAsync<ConflictException>(
             () => sutProvider.Sut.DecideAsync(userId, request.Id, Approve()));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -84,6 +92,10 @@ public class DecideAccessRequestCommandTests
         Assert.Contains("your own request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -100,6 +112,10 @@ public class DecideAccessRequestCommandTests
         Assert.Contains("already ended", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .ResolveWithDecisionAsync(default!, default!, default, default);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -146,6 +162,12 @@ public class DecideAccessRequestCommandTests
                 d.Comment == "looks good"),
             AccessRequestAction.Approved,
             _now);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().Received(1)
+            .NotifyCollectionApproversAsync(request.CollectionId);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, true);
     }
 
     [Theory]
@@ -167,6 +189,10 @@ public class DecideAccessRequestCommandTests
             .ResolveWithDecisionAsync(default!, default!, default, default);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
     }
 
     [Theory, BitAutoData]
@@ -202,6 +228,10 @@ public class DecideAccessRequestCommandTests
                 d.Comment == "use the read replica instead"),
             AccessRequestAction.Denied,
             _now);
+        await sutProvider.GetDependency<IRequesterNotifier>().Received(1)
+            .NotifyRequesterAsync(request.RequesterId);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().Received(1)
+            .NotifyDecisionAsync(request, false);
     }
 
     [Theory, BitAutoData]
@@ -220,6 +250,10 @@ public class DecideAccessRequestCommandTests
         Assert.Equal("This request has already been resolved.", exception.Message);
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceive()
             .EmitAsync(Arg.Is<AccessAuditEventData>(e => e.Phase == AccessAuditEventPhase.Outcome));
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+        await sutProvider.GetDependency<IRequesterMailNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyDecisionAsync(default!, default);
     }
 
     private static AccessDecisionSubmission Approve(string? comment = null) =>
