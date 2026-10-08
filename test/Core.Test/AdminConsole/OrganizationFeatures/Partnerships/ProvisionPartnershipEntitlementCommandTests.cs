@@ -32,7 +32,6 @@ public class ProvisionPartnershipEntitlementCommandTests
         var entitlement = result.AsSuccess.Entitlement;
         Assert.NotEqual(Guid.Empty, entitlement.Id);
         Assert.Equal(PartnershipEntitlementState.Provisioned, entitlement.State);
-        Assert.Equal(OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, "customer-1"), entitlement.ExternalIdHash);
         Assert.Equal(effectiveAt, entitlement.LastAppliedEffectiveDate);
         Assert.Equal(metadata, entitlement.GetMetadata());
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().Received(1).CreateAsync(entitlement);

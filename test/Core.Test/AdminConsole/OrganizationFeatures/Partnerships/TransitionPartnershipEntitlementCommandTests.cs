@@ -204,6 +204,36 @@ public class TransitionPartnershipEntitlementCommandTests
     }
 
     [Fact]
+    public async Task TransitionAsync_UserExit_ReleasesBindingWithNoResumeWindow()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Active);
+        ArrangePartnership(sutProvider, entitlement);
+
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.UserExit));
+
+        var exited = result.AsSuccess.Entitlement;
+        Assert.Equal(PartnershipEntitlementState.Canceled, exited.State);
+        Assert.Null(exited.UserId);
+        Assert.Null(exited.AccountRef);
+        Assert.Null(exited.ResumeWindowExpirationDate);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_PartnerResumeAfterUserExit_ReturnsNotResumable()
+    {
+        var sutProvider = CreateSutProvider();
+        var entitlement = CreateEntitlement(PartnershipEntitlementState.Active);
+        ArrangePartnership(sutProvider, entitlement);
+
+        await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.UserExit));
+        var result = await sutProvider.Sut.TransitionAsync(CreateRequest(entitlement, PartnershipEntitlementAction.Resume));
+
+        Assert.IsType<EntitlementNotResumable>(result.AsError);
+        Assert.Null(entitlement.UserId);
+    }
+
+    [Fact]
     public async Task TransitionAsync_CancelThenResumeInsideWindow_KeepsSameUserAndAccountRef()
     {
         var sutProvider = CreateSutProvider();
