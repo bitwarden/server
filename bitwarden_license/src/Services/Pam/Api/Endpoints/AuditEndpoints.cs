@@ -2,6 +2,7 @@
 using Bit.Services.Pam.Api.Authorization;
 using Bit.Services.Pam.Api.Endpoints.Handlers;
 using Bit.Services.Pam.Api.Models.Request;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Services.Pam.Api.Endpoints;
 
@@ -17,13 +18,13 @@ internal static class AuditEndpoints
         group.RequireAuthorization(new AuthorizeAttribute<AccessAuditTrailRequirement>());
 
         group.MapGet("",
-                (AuditEndpointsHandler handler, Guid orgId, [AsParameters] AccessAuditTrailFilterRequestModel filter) =>
+                (AuditEndpointsHandler handler, [FromRoute] Guid orgId, [AsParameters] AccessAuditTrailFilterRequestModel filter) =>
                     handler.GetTrail(orgId, filter))
             .WithName("Pam_Audit_GetTrail");
 
         // The subjects the trail can be filtered by.
         group.MapGet("items",
-                (AuditEndpointsHandler handler, Guid orgId, [AsParameters] AccessAuditRangeRequestModel range) =>
+                (AuditEndpointsHandler handler, [FromRoute] Guid orgId, [AsParameters] AccessAuditRangeRequestModel range) =>
                     handler.GetItems(orgId, range))
             .WithName("Pam_Audit_GetItems");
 
