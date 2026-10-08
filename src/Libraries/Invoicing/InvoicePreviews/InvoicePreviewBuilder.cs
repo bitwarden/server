@@ -13,6 +13,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     internal InvoicePreview Build(Invoice invoice, PlanTierType planTier, PlanCadenceType cadence)
     {
         var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
+        var priceIdsByReference = new Dictionary<string, string>();
         var prorationLines = new List<(string Reference, InvoiceLineItem Line)>();
         var discounts = DiscountMapper.Partition(invoice, logger);
 
@@ -38,10 +39,13 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Cost = (price?.UnitAmountDecimal ?? 0) / 100m,
                 Discounts = discounts.ItemLevel.GetValueOrDefault(reference),
             };
+            var priceId = price!.Id;
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the invoice.");
+                throw new InvalidOperationException(
+                    $"Invoice {invoice.Id} resolved purchasable reference '{reference}' on two prices: {priceIdsByReference[reference]} and {priceId}.");
             }
+            priceIdsByReference[reference] = priceId;
         }
 
         return new InvoicePreview
@@ -49,9 +53,11 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             PlanTier = planTier,
             Cadence = CadenceFromInvoice(invoice) ?? cadence,
             PasswordManager = BuildPasswordManagerItems(lineItemsByReference,
-                SummarizeProrations(prorationLines, ProductType.PasswordManager)),
+                SummarizeProrations(prorationLines, InvoicePreviewSection.PasswordManager)),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference,
-                SummarizeProrations(prorationLines, ProductType.SecretsManager)),
+                SummarizeProrations(prorationLines, InvoicePreviewSection.SecretsManager)),
+            PrivilegedControls = BuildPrivilegedControlsItems(lineItemsByReference,
+                SummarizeProrations(prorationLines, InvoicePreviewSection.PrivilegedControls)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
@@ -84,6 +90,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     internal InvoicePreview Build(Subscription subscription, PlanTierType planTier, PlanCadenceType cadence)
     {
         var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
+        var priceIdsByReference = new Dictionary<string, string>();
         var total = 0m;
 
         foreach (var subscriptionItem in subscription.Items?.Data ?? [])
@@ -104,10 +111,13 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Quantity = subscriptionItem.Quantity,
                 Cost = unitCost,
             };
+            var priceId = subscriptionItem.Price!.Id;
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException($"The preview resolved a duplicate purchasable reference '{reference}' on the subscription.");
+                throw new InvalidOperationException(
+                    $"Subscription {subscription.Id} resolved purchasable reference '{reference}' on two prices: {priceIdsByReference[reference]} and {priceId}.");
             }
+            priceIdsByReference[reference] = priceId;
         }
 
         // Password Manager seats are the projection's invariant; a missing line is a Stripe misconfiguration.
@@ -123,6 +133,7 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             Cadence = cadence,
             PasswordManager = BuildPasswordManagerItems(lineItemsByReference, null),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference, null),
+            PrivilegedControls = BuildPrivilegedControlsItems(lineItemsByReference, null),
             Discounts = null,
             EstimatedTax = 0m,
             Total = total,
@@ -150,10 +161,10 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
 
     // One proration row per purchasable, so the client can tell which item each row offsets.
     private static PurchasableProration[]? SummarizeProrations(
-        List<(string Reference, InvoiceLineItem Line)> prorationLines, ProductType product)
+        List<(string Reference, InvoiceLineItem Line)> prorationLines, InvoicePreviewSection section)
     {
         var rows = prorationLines
-            .Where(proration => PurchasableReferences.ProductOf(proration.Reference) == product)
+            .Where(proration => PurchasableReferences.SectionOf(proration.Reference) == section)
             .GroupBy(proration => proration.Reference)
             .Select(group => ProrationMapper.Summarize(group.Key, group.Select(proration => proration.Line).ToList()))
             .OfType<PurchasableProration>()
@@ -187,6 +198,21 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         {
             Seats = seats,
             AdditionalServiceAccounts = serviceAccounts,
+            Prorations = prorations is { Length: > 0 } ? prorations : null,
+        };
+    }
+
+    private static PrivilegedControlsInvoiceItems? BuildPrivilegedControlsItems(
+        Dictionary<string, InvoicePreviewItem> lineItemsByReference, PurchasableProration[]? prorations)
+    {
+        var seats = lineItemsByReference.GetValueOrDefault(StripeConstants.PurchasableReferences.PrivilegedControlsSeat);
+        if (seats is null && prorations is not { Length: > 0 })
+        {
+            return null;
+        }
+        return new PrivilegedControlsInvoiceItems
+        {
+            Seats = seats,
             Prorations = prorations is { Length: > 0 } ? prorations : null,
         };
     }

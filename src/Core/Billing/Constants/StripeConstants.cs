@@ -140,6 +140,7 @@ public static class StripeConstants
         public const string PasswordManagerStorage = "pm-storage";
         public const string SecretsManagerSeat = "sm-seat";
         public const string SecretsManagerServiceAccount = "sm-service-account";
+        public const string PrivilegedControlsSeat = "pam-seat";
     }
 
     public static class CancellationOrigins

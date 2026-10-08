@@ -52,7 +52,6 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IStripeAdapter` | Fetching the preview invoice from Stripe |
 | `StripeConstants` | The `purchasable_reference` metadata key and reference values |
 | `PlanCadenceType` | The billing cadence carried on the preview |
-| `ProductType` | Routing a reference to its product family |
 | `BitwardenDiscountType` | The type of a projected discount |
 | `Storage` | Storage figures on the subscription preview |
 | `EnumMemberJsonConverter` | Serializing the projected enums (cadence, tier, discount type) as their EnumMember string values |

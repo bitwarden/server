@@ -47,8 +47,25 @@ public class InvoicePreviewSerializationTests
     {
         var json = JsonSerializer.Serialize(Sample(), Options);
         Assert.Contains("\"secretsManager\":null", json);
+        Assert.Contains("\"privilegedControls\":null", json);
         Assert.Contains("\"discounts\":null", json);
         Assert.Contains("\"startingBalance\":null", json);
+    }
+
+    [Fact]
+    public void Serializes_PrivilegedControlsSection_CamelCase()
+    {
+        var preview = Sample() with
+        {
+            PrivilegedControls = new PrivilegedControlsInvoiceItems
+            {
+                Seats = new InvoicePreviewItem { Reference = "pam-seat", Quantity = 25, Cost = 12m },
+                Prorations = [new PurchasableProration { Reference = "pam-seat", Credit = 0m, Charge = 110.14m, Tax = 0m, Total = 110.14m, Months = 11 }],
+            },
+        };
+        var json = JsonSerializer.Serialize(preview, Options);
+        Assert.Contains("\"privilegedControls\":{\"seats\":{\"reference\":\"pam-seat\",\"quantity\":25,\"cost\":12", json);
+        Assert.Contains("\"prorations\":[{\"reference\":\"pam-seat\",\"credit\":0,\"charge\":110.14,\"tax\":0,\"total\":110.14,\"months\":11}]", json);
     }
 
     private static SubscriptionPreview SampleSubscriptionPreview() => new()
