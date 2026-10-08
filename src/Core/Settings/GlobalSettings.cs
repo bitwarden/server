@@ -2,8 +2,10 @@
 #nullable disable
 
 using System.Globalization;
+using System.Text;
 
 using Bit.Core.Auth.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Settings;
 
@@ -825,6 +827,16 @@ public class GlobalSettings : IGlobalSettings
         /// How long a canceled entitlement holds its binding so a resume returns the customer to the same account.
         /// </summary>
         public TimeSpan ResumeWindow { get; set; } = TimeSpan.FromDays(30);
+        /// <summary>
+        /// Secret HMAC key for the external ID lookup hash, so the stored hash can't be reversed by enumeration.
+        /// </summary>
+        public string ExternalIdHashKey { get; set; }
+
+        /// <exception cref="InvalidOperationException">The key is not configured.</exception>
+        public byte[] GetExternalIdHashKey() =>
+            CoreHelpers.SettingHasValue(ExternalIdHashKey)
+                ? Encoding.UTF8.GetBytes(ExternalIdHashKey)
+                : throw new InvalidOperationException("Partnership external ID hash key is not configured.");
     }
 
     public class DomainVerificationSettings : IDomainVerificationSettings

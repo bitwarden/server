@@ -1,34 +1,57 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Settings;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Entities;
 
 public class OrganizationPartnershipEntitlementTests
 {
+    private static readonly byte[] _hashKey = "test-hash-key"u8.ToArray();
+
     [Fact]
     public void ComputeExternalIdHash_SameInputs_ReturnsSameHash()
     {
         var partnershipId = Guid.NewGuid();
 
         Assert.Equal(
-            OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnershipId, "cust_8827341"),
-            OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnershipId, "cust_8827341"));
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, partnershipId, "cust_8827341"),
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, partnershipId, "cust_8827341"));
     }
 
     [Fact]
     public void ComputeExternalIdHash_DifferentPartnerships_ReturnsDifferentHashes()
     {
         Assert.NotEqual(
-            OrganizationPartnershipEntitlement.ComputeExternalIdHash(Guid.NewGuid(), "cust_8827341"),
-            OrganizationPartnershipEntitlement.ComputeExternalIdHash(Guid.NewGuid(), "cust_8827341"));
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, Guid.NewGuid(), "cust_8827341"),
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, Guid.NewGuid(), "cust_8827341"));
+    }
+
+    [Fact]
+    public void ComputeExternalIdHash_DifferentKeys_ReturnsDifferentHashes()
+    {
+        var partnershipId = Guid.NewGuid();
+
+        Assert.NotEqual(
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, partnershipId, "cust_8827341"),
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash("other-key"u8.ToArray(), partnershipId, "cust_8827341"));
     }
 
     [Fact]
     public void ComputeExternalIdHash_IsSixtyFourHexCharacters()
     {
-        var hash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(Guid.NewGuid(), "cust_8827341");
+        var hash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(_hashKey, Guid.NewGuid(), "cust_8827341");
 
         Assert.Matches("^[0-9A-F]{64}$", hash);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void GetExternalIdHashKey_NotConfigured_Throws(string? key)
+    {
+        var settings = new GlobalSettings.PartnershipSettings { ExternalIdHashKey = key! };
+
+        Assert.Throws<InvalidOperationException>(() => settings.GetExternalIdHashKey());
     }
 
     [Fact]

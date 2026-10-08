@@ -72,13 +72,14 @@ public class OrganizationPartnershipEntitlement : ITableObject<Guid>
     public void SetNewAccountRef() => AccountRef = Guid.NewGuid();
 
     /// <summary>
-    /// Hex SHA-256 of the partnership ID and external identifier, scoped so the same customer ID
-    /// produces different hashes under different partnerships.
+    /// Hex HMAC-SHA256 of the partnership ID and external identifier under <paramref name="hashKey"/>. Keyed so a
+    /// database reader can't recover identifiers by enumeration, and scoped so one customer ID hashes differently
+    /// under each partnership.
     /// </summary>
-    public static string ComputeExternalIdHash(Guid organizationPartnershipId, string externalId)
+    public static string ComputeExternalIdHash(byte[] hashKey, Guid organizationPartnershipId, string externalId)
     {
         var bytes = Encoding.UTF8.GetBytes($"{organizationPartnershipId:N}:{externalId}");
-        return Convert.ToHexString(SHA256.HashData(bytes));
+        return Convert.ToHexString(HMACSHA256.HashData(hashKey, bytes));
     }
 
     public void SetNewId()
