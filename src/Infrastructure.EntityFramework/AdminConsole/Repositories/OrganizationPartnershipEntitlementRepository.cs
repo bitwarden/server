@@ -2,6 +2,7 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -17,13 +18,15 @@ public class OrganizationPartnershipEntitlementRepository
       IOrganizationPartnershipEntitlementRepository
 {
     private readonly IDataProtector _dataProtector;
+    private readonly GlobalSettings.PartnershipSettings _partnershipSettings;
 
     public OrganizationPartnershipEntitlementRepository(
         IServiceScopeFactory serviceScopeFactory, IMapper mapper,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider, GlobalSettings globalSettings)
         : base(serviceScopeFactory, mapper, context => context.OrganizationPartnershipEntitlements)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _partnershipSettings = globalSettings.Partnerships;
     }
 
     public override async Task<AdminConsoleEntities.OrganizationPartnershipEntitlement?> GetByIdAsync(Guid id)
@@ -36,8 +39,7 @@ public class OrganizationPartnershipEntitlementRepository
     public async Task<AdminConsoleEntities.OrganizationPartnershipEntitlement?> GetByExternalIdAsync(
         Guid organizationPartnershipId, string externalId)
     {
-        var externalIdHash = AdminConsoleEntities.OrganizationPartnershipEntitlement
-            .ComputeExternalIdHash(organizationPartnershipId, externalId);
+        var externalIdHash = ComputeExternalIdHash(organizationPartnershipId, externalId);
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -99,8 +101,7 @@ public class OrganizationPartnershipEntitlementRepository
         AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement, Func<Task> saveTask)
     {
         var originalExternalId = entitlement.ExternalId;
-        entitlement.ExternalIdHash = AdminConsoleEntities.OrganizationPartnershipEntitlement.ComputeExternalIdHash(
-            entitlement.OrganizationPartnershipId, originalExternalId);
+        entitlement.ExternalIdHash = ComputeExternalIdHash(entitlement.OrganizationPartnershipId, originalExternalId);
         entitlement.ExternalId = DatabaseFieldProtectionHelper.Protect(_dataProtector, entitlement.ExternalId)!;
         try
         {
@@ -111,6 +112,10 @@ public class OrganizationPartnershipEntitlementRepository
             entitlement.ExternalId = originalExternalId;
         }
     }
+
+    private string ComputeExternalIdHash(Guid organizationPartnershipId, string externalId) =>
+        AdminConsoleEntities.OrganizationPartnershipEntitlement.ComputeExternalIdHash(
+            _partnershipSettings.GetExternalIdHashKey(), organizationPartnershipId, externalId);
 
     private void UnprotectData(AdminConsoleEntities.OrganizationPartnershipEntitlement? entitlement)
     {
