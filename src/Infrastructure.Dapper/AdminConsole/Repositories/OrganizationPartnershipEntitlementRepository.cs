@@ -15,22 +15,26 @@ public class OrganizationPartnershipEntitlementRepository
     : Repository<OrganizationPartnershipEntitlement, Guid>, IOrganizationPartnershipEntitlementRepository
 {
     private readonly IDataProtector _dataProtector;
+    private readonly GlobalSettings.PartnershipSettings _partnershipSettings;
 
     public OrganizationPartnershipEntitlementRepository(
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider)
         : this(globalSettings.SqlServer.ConnectionString,
                globalSettings.SqlServer.ReadOnlyConnectionString,
-               dataProtectionProvider)
+               dataProtectionProvider,
+               globalSettings.Partnerships)
     { }
 
     public OrganizationPartnershipEntitlementRepository(
         string connectionString,
         string readOnlyConnectionString,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        GlobalSettings.PartnershipSettings partnershipSettings)
         : base(connectionString, readOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _partnershipSettings = partnershipSettings;
     }
 
     public override async Task<OrganizationPartnershipEntitlement?> GetByIdAsync(Guid id)
@@ -49,8 +53,7 @@ public class OrganizationPartnershipEntitlementRepository
             new
             {
                 OrganizationPartnershipId = organizationPartnershipId,
-                ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(
-                    organizationPartnershipId, externalId),
+                ExternalIdHash = ComputeExternalIdHash(organizationPartnershipId, externalId),
             },
             commandType: CommandType.StoredProcedure);
         var entitlement = results.SingleOrDefault();
@@ -99,8 +102,7 @@ public class OrganizationPartnershipEntitlementRepository
     private async Task ProtectDataAndSaveAsync(OrganizationPartnershipEntitlement entitlement, Func<Task> saveTask)
     {
         var originalExternalId = entitlement.ExternalId;
-        entitlement.ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(
-            entitlement.OrganizationPartnershipId, originalExternalId);
+        entitlement.ExternalIdHash = ComputeExternalIdHash(entitlement.OrganizationPartnershipId, originalExternalId);
         entitlement.ExternalId = DatabaseFieldProtectionHelper.Protect(_dataProtector, entitlement.ExternalId)!;
         try
         {
@@ -111,6 +113,10 @@ public class OrganizationPartnershipEntitlementRepository
             entitlement.ExternalId = originalExternalId;
         }
     }
+
+    private string ComputeExternalIdHash(Guid organizationPartnershipId, string externalId) =>
+        OrganizationPartnershipEntitlement.ComputeExternalIdHash(
+            _partnershipSettings.GetExternalIdHashKey(), organizationPartnershipId, externalId);
 
     private void UnprotectData(OrganizationPartnershipEntitlement? entitlement)
     {
