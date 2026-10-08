@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Sdk Name="Bitwarden.Server.Sdk" />
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="AgentFill.Test" />
+    <InternalsVisibleTo Include="Infrastructure.IntegrationTest" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
+    <ProjectReference Include="..\..\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+    <ProjectReference Include="..\ExceptionHandling\ExceptionHandling.csproj" />
+  </ItemGroup>
+
+</Project>

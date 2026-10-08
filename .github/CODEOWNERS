@@ -113,6 +113,10 @@ src/Core/Platform/Push/PushType.cs
 # PAM DB schema stays with DBOps, consistent with src/Sql/** above
 src/Sql/dbo/Pam @bitwarden/dept-dbops
 
+# Agent fill (AI Enablement)
+src/Libraries/AgentFill @bitwarden/team-ai-sme
+test/Libraries/AgentFill.Test @bitwarden/team-ai-sme
+
 # SDK
 util/RustSdk @bitwarden/team-sdk-sme @bitwarden/dept-architecture # joint ownership
 

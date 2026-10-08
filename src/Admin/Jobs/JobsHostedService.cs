@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using Bit.Admin.AgentFill.Jobs;
 using Bit.Admin.Auth.Jobs;
 using Bit.Admin.Tools.Jobs;
 using Bit.Core.Dirt.Services;
@@ -91,6 +92,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(DeleteCiphersJob), everyDayAtMidnightUtc),
             new Tuple<Type, ITrigger>(typeof(DatabaseExpiredSponsorshipsJob), everyMondayAtMidnightTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteAuthRequestsJob), everyFifteenMinutesTrigger),
+            new Tuple<Type, ITrigger>(typeof(DeleteExpiredAgentFillApprovalRequestsJob), everyFifteenMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(DeleteUnverifiedOrganizationDomainsJob), everyDayAtTwoAmUtcTrigger),
             new Tuple<Type, ITrigger>(typeof(OrganizationDeleteTasksJob), organizationDeleteTasksTrigger),
         };
@@ -126,6 +128,7 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<DeleteSendsJob>();
         services.AddTransient<DeleteCiphersJob>();
         services.AddTransient<DeleteAuthRequestsJob>();
+        services.AddTransient<DeleteExpiredAgentFillApprovalRequestsJob>();
         services.AddTransient<DeleteUnverifiedOrganizationDomainsJob>();
     }
 }

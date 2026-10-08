@@ -34,6 +34,7 @@ using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Enums;
+using Bit.AgentFill;
 using Bit.HttpExtensions;
 using Bit.Subscriptions.Organization;
 using Bit.Subscriptions.User;
@@ -214,6 +215,9 @@ public class Startup
         Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
+        // Agent fill approvals minimal API library
+        services.AddAgentFill();
+
         // Billing subscriptions minimal API libraries
         services.AddUserSubscriptions();
         services.AddOrganizationSubscriptions();
@@ -306,6 +310,9 @@ public class Startup
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
                 });
             }
+
+            // Agent fill approvals minimal API endpoints, gated by AgentFillFeatureFlags.AgentFillApprovals
+            endpoints.MapGroup("/agent-fill/approvals").MapAgentFillEndpoints();
 
             // Billing subscriptions minimal API endpoints
             if (!globalSettings.SelfHosted)

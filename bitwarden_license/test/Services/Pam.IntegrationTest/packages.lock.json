@@ -1895,9 +1895,21 @@
           "ZiggyCreatures.FusionCache": "2.0.2"
         }
       },
+      "agentfill": {
+        "type": "Project",
+        "dependencies": {
+          "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
+          "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Core": "[2026.10.0, )",
+          "ExceptionHandling": "[0.0.1, )",
+          "Infrastructure.Dapper": "[2026.10.0, )",
+          "Infrastructure.EntityFramework": "[2026.10.0, )"
+        }
+      },
       "api": {
         "type": "Project",
         "dependencies": {
+          "AgentFill": "[0.0.1, )",
           "AspNetCore.HealthChecks.SqlServer": "[8.0.2, 8.0.2]",
           "AspNetCore.HealthChecks.Uris": "[8.0.1, 8.0.1]",
           "Azure.Messaging.EventGrid": "[5.0.0, 5.0.0]",

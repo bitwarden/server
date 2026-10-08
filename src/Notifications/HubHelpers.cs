@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Platform.Push.Models;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Notifications;
@@ -243,6 +244,18 @@ public class HubHelpers
 
                 await _hubContext.Clients.User(premiumStatusNotification.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, premiumStatusNotification, cancellationToken);
+                break;
+            case PushType.AgentFillApprovalRequest:
+            case PushType.AgentFillApprovalResponse:
+                var agentFillNotification =
+                    notification.ToOutbound<AgentFillApprovalPushNotification>(_deserializerOptions);
+                if (agentFillNotification is null)
+                {
+                    break;
+                }
+
+                await _hubContext.Clients.User(agentFillNotification.Payload.UserId.ToString())
+                    .SendAsync(_receiveMessageMethod, agentFillNotification, cancellationToken);
                 break;
             default:
                 _logger.LogWarning("Notification type '{NotificationType}' has not been registered in HubHelpers and will not be pushed as as result", notification.Type);

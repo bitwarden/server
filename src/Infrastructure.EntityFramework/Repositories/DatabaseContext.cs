@@ -2,6 +2,7 @@
 using Bit.Core.Dirt.Reports.Models.Data;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
+using Bit.Infrastructure.EntityFramework.AgentFill.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
@@ -50,6 +51,7 @@ public class DatabaseContext : DbContext
     public DbSet<AccessLease> AccessLeases { get; set; }
     public DbSet<AccessDecision> AccessDecisions { get; set; }
     public DbSet<AccessAuditEvent> AccessAuditEvents { get; set; }
+    public DbSet<AgentFillApprovalRequest> AgentFillApprovalRequests { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }

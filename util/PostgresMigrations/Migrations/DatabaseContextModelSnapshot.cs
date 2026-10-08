@@ -617,6 +617,48 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("ProviderUser", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AgentFill.Models.AgentFillApprovalRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequestDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResponseDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResponseDeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SealedRequest")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SealedResponse")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpirationDate")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("RequestDeviceId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AgentFillApprovalRequest", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3395,6 +3437,25 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasForeignKey("UserId");
 
                     b.Navigation("Provider");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AgentFill.Models.AgentFillApprovalRequest", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "RequestDevice")
+                        .WithMany()
+                        .HasForeignKey("RequestDeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RequestDevice");
 
                     b.Navigation("User");
                 });

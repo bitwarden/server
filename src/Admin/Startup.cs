@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Admin.IdentityServer;
+using Bit.AgentFill;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -117,6 +118,7 @@ public class Startup
          });
 
         // Jobs service
+        services.AddAgentFill();
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
         if (globalSettings.SelfHosted)

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Billing.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Platform.Push.Models;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Notifications;
@@ -274,6 +275,32 @@ public class HubHelpersTest
             .Group(Arg.Any<string>());
     }
 
+    [Theory]
+    [BitAutoData(PushType.AgentFillApprovalRequest)]
+    [BitAutoData(PushType.AgentFillApprovalResponse)]
+    public async Task SendNotificationToHubAsync_AgentFillApproval_SentToUser(
+        PushType type,
+        SutProvider<HubHelpers> sutProvider,
+        AgentFillApprovalPushNotification notification,
+        string contextId,
+        CancellationToken cancellationToken)
+    {
+        var json = ToNotificationJson(notification, type, contextId);
+        await sutProvider.Sut.SendNotificationToHubAsync(json, cancellationToken);
+
+        await sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(1)
+            .User(notification.UserId.ToString())
+            .Received(1)
+            .SendCoreAsync("ReceiveMessage", Arg.Is<object?[]>(objects =>
+                    objects.Length == 1 && AssertAgentFillApprovalPushNotification(notification, objects[0],
+                        type, contextId)),
+                cancellationToken);
+        sutProvider.GetDependency<IHubContext<NotificationsHub>>().Clients.Received(0).Group(Arg.Any<string>());
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0).User(Arg.Any<string>());
+        sutProvider.GetDependency<IHubContext<AnonymousNotificationsHub>>().Clients.Received(0)
+            .Group(Arg.Any<string>());
+    }
+
     private static string ToNotificationJson(object payload, PushType type, string contextId)
     {
         var notification = new OutboundNotification<object> { Type = type, Payload = payload, ContextId = contextId };
@@ -325,5 +352,19 @@ public class HubHelpersTest
                pushNotificationData.ContextId == contextId &&
                expected.UserId == pushNotificationData.Payload.UserId &&
                expected.Premium == pushNotificationData.Payload.Premium;
+    }
+
+    private static bool AssertAgentFillApprovalPushNotification(AgentFillApprovalPushNotification expected,
+        object? actual, PushType type, string contextId)
+    {
+        if (actual is not OutboundNotification<AgentFillApprovalPushNotification> pushNotificationData)
+        {
+            return false;
+        }
+
+        return pushNotificationData.Type == type &&
+               pushNotificationData.ContextId == contextId &&
+               expected.Id == pushNotificationData.Payload.Id &&
+               expected.UserId == pushNotificationData.Payload.UserId;
     }
 }

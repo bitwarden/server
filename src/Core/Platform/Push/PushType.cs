@@ -105,4 +105,10 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-billing-dev", typeof(Billing.Models.PremiumStatusPushNotification))]
     PremiumStatusChanged = 27,
+
+    [NotificationInfo("@bitwarden/team-ai-sme", typeof(Platform.Push.Models.AgentFillApprovalPushNotification))]
+    AgentFillApprovalRequest = 28,
+
+    [NotificationInfo("@bitwarden/team-ai-sme", typeof(Platform.Push.Models.AgentFillApprovalPushNotification))]
+    AgentFillApprovalResponse = 29,
 }
