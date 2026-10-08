@@ -207,6 +207,17 @@ public class ProvisionPartnershipEntitlementCommandTests
     }
 
     [Fact]
+    public async Task ProvisionAsync_ExternalIdWithProtectedPrefix_ReturnsValidationError()
+    {
+        var sutProvider = CreateSutProvider();
+        var partnership = ArrangePartnership(sutProvider);
+
+        var result = await sutProvider.Sut.ProvisionAsync(CreateRequest(partnership) with { ExternalId = "P|cust_8827341" });
+
+        Assert.IsType<InvalidExternalId>(result.AsError);
+    }
+
+    [Fact]
     public async Task ProvisionAsync_ExternalIdAtMaxLength_IsAccepted()
     {
         var sutProvider = CreateSutProvider();
