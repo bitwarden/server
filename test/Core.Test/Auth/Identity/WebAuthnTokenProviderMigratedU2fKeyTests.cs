@@ -139,6 +139,140 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
     }
 
     [Fact]
+    public async Task GenerateAsync_MigratedU2fKey_ClientOptionsCarryAppIdExtensionOnce_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+
+        Assert.NotNull(optionsJson);
+        AssertExtensionsCarryAppIdOnce(optionsJson);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_MigratedU2fKey_StoredChallengeCarriesAppIdExtension_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+
+        var storedLogin = (string)harness.User.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn)!.MetaData["login"];
+        AssertExtensionsCarryAppIdOnce(storedLogin);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_ReturnsTrue_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyWithChallengeStoredWithoutAppId_ReturnsTrue_Fix_PM44658()
+    {
+        // ValidateAsync must always apply the server's own U2F AppID, also after a Fido2 version that serializes it again.
+        // The AppID never comes from the stored challenge or the client, so challenges stored without one still validate.
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        // A challenge in the shape written before the fix: serialized options without the AppID extension.
+        var legacyOptions = harness.Fido2.GetAssertionOptions(new GetAssertionOptionsParams
+        {
+            AllowedCredentials = [new PublicKeyCredentialDescriptor(authenticator.CredentialId)],
+            UserVerification = UserVerificationRequirement.Discouraged,
+            Extensions = new AuthenticationExtensionsClientInputs { UserVerificationMethod = true },
+        });
+        var legacyLogin = JsonSerializer.Serialize(legacyOptions);
+        Assert.DoesNotContain("appid", legacyLogin, StringComparison.OrdinalIgnoreCase);
+
+        var providers = harness.User.GetTwoFactorProviders();
+        providers[TwoFactorProviderType.WebAuthn].MetaData["login"] = legacyLogin;
+        harness.User.SetTwoFactorProviders(providers);
+
+        var assertion = authenticator.MakeAssertion(legacyOptions.Challenge, _rpId, _vaultUrl, userHandle: null,
+            appId: _u2fAppIdUrl);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToForeignAppId_ReturnsFalse_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null,
+            appId: "https://evil.example/app-id.json");
+        Assert.True(assertion.ClientExtensionResults.AppID);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyAppIdScopedAssertionWithoutAppIdExtensionResult_ReturnsFalse_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
+        assertion.ClientExtensionResults.AppID = false;
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MigratedU2fKeyAssertionScopedToAppId_UpdatesStoredSignatureCounter_Fix_PM44658()
+    {
+        using var authenticator = new FakeWebAuthnAuthenticator(LegacyU2fKeyHandle());
+        var harness = CreateHarness(CreateMigratedU2fUser(authenticator));
+
+        var optionsJson = await harness.Provider.GenerateAsync("TwoFactor", SubstituteUserManager(), harness.User);
+        var challenge = AssertionOptions.FromJson(optionsJson).Challenge;
+
+        var assertion = authenticator.MakeAssertion(challenge, _rpId, _vaultUrl, userHandle: null, appId: _u2fAppIdUrl);
+        var userFromStorage = new User { TwoFactorProviders = harness.User.TwoFactorProviders };
+        Assert.Equal(7u, LoadStoredKey(userFromStorage).SignatureCounter);
+
+        var result = await harness.Provider.ValidateAsync("TwoFactor", BuildWebClientTokenString(assertion),
+            SubstituteUserManager(), userFromStorage);
+
+        Assert.True(result);
+        Assert.Equal(authenticator.SignatureCounter, LoadStoredKey(userFromStorage).SignatureCounter);
+        Assert.True(authenticator.SignatureCounter > 7u);
+    }
+
+    [Fact]
     public void WebClientTokenString_CarriesAppIdExtensionResultIntoAssertionResponse_Prerequisite_PM44658()
     {
         // Guards the round trip test: the extension result the web client sends under the "extensions" key
@@ -150,6 +284,18 @@ public class WebAuthnTokenProviderMigratedU2fKeyTests
             BuildWebClientTokenString(assertion), new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.True(parsed!.ClientExtensionResults.AppID);
+    }
+
+    private static void AssertExtensionsCarryAppIdOnce(string json)
+    {
+        var occurrences = System.Text.RegularExpressions.Regex.Count(json, "\"appid\"",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        Assert.Equal(1, occurrences);
+
+        using var document = JsonDocument.Parse(json);
+        Assert.True(document.RootElement.TryGetProperty("extensions", out var extensions));
+        Assert.True(extensions.TryGetProperty("appid", out var appId));
+        Assert.Equal(_u2fAppIdUrl, appId.GetString());
     }
 
     private static MakeAssertionParams CreateMakeAssertionParams(AuthenticatorAssertionRawResponse assertion,
