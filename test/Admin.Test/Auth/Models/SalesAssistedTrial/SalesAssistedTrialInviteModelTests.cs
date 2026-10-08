@@ -11,7 +11,7 @@ public class SalesAssistedTrialInviteModelTests
         Email = "prospect@example.com",
         Name = "Prospect Company",
         ProductTier = ProductTierType.Enterprise,
-        Product = ProductType.PasswordManager,
+        Products = [ProductType.PasswordManager],
         TrialLength = 30,
     };
 
@@ -47,25 +47,80 @@ public class SalesAssistedTrialInviteModelTests
     // fail-fast feedback to tool users.
     // PM-41426
     [Fact]
-    public void Validate_WhenProductTierIsFamiliesAndProductIsSecretsManager_ReturnsError()
+    public void Validate_WhenProductTierIsFamiliesAndProductsIncludeSecretsManager_ReturnsError()
     {
         var model = BuildValidModel();
         model.ProductTier = ProductTierType.Families;
-        model.Product = ProductType.SecretsManager;
+        model.Products = [ProductType.PasswordManager, ProductType.SecretsManager];
 
         var results = model.Validate(new ValidationContext(model)).ToList();
 
         Assert.Single(results);
         Assert.Contains("Families", results[0].ErrorMessage);
-        Assert.Contains(nameof(model.Product), results[0].MemberNames);
+        Assert.Contains(nameof(model.Products), results[0].MemberNames);
     }
 
     [Fact]
-    public void Validate_WhenProductTierIsFreeAndProductIsSecretsManager_NoError()
+    public void Validate_WhenProductTierIsFreeAndProductsIncludeSecretsManager_NoError()
     {
         var model = BuildValidModel();
         model.ProductTier = ProductTierType.Free;
-        model.Product = ProductType.SecretsManager;
+        model.Products = [ProductType.SecretsManager];
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_WhenPrivilegedControlsWithoutPasswordManager_ReturnsError()
+    {
+        var model = BuildValidModel();
+        model.Products = [ProductType.PrivilegedControls];
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains("requires Password Manager", results[0].ErrorMessage);
+        Assert.Contains(nameof(model.Products), results[0].MemberNames);
+    }
+
+    [Theory]
+    [InlineData(ProductTierType.Free)]
+    [InlineData(ProductTierType.Families)]
+    [InlineData(ProductTierType.Teams)]
+    public void Validate_WhenPrivilegedControlsOnNonEnterpriseTier_ReturnsError(ProductTierType productTier)
+    {
+        var model = BuildValidModel();
+        model.ProductTier = productTier;
+        model.Products = [ProductType.PasswordManager, ProductType.PrivilegedControls];
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains("Password Manager Enterprise", results[0].ErrorMessage);
+        Assert.Contains(nameof(model.ProductTier), results[0].MemberNames);
+    }
+
+    [Fact]
+    public void Validate_WhenPrivilegedControlsWithSecretsManager_ReturnsError()
+    {
+        var model = BuildValidModel();
+        model.Products = [ProductType.PasswordManager, ProductType.SecretsManager, ProductType.PrivilegedControls];
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains("cannot be combined with Secrets Manager", results[0].ErrorMessage);
+        Assert.Contains(nameof(model.Products), results[0].MemberNames);
+    }
+
+    [Fact]
+    public void Validate_WhenPasswordManagerAndPrivilegedControlsOnEnterprise_NoError()
+    {
+        var model = BuildValidModel();
+        model.ProductTier = ProductTierType.Enterprise;
+        model.Products = [ProductType.PasswordManager, ProductType.PrivilegedControls];
 
         var results = model.Validate(new ValidationContext(model)).ToList();
 

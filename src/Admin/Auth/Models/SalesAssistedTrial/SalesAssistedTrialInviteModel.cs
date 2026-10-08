@@ -16,7 +16,8 @@ public class SalesAssistedTrialInviteModel : IValidatableObject
     public ProductTierType ProductTier { get; set; }
 
     [Required]
-    public ProductType Product { get; set; }
+    [MinLength(1, ErrorMessage = "Select at least one product.")]
+    public List<ProductType> Products { get; set; } = [];
 
     [Display(Name = "Trial Length (Days)")]
     [Required]
@@ -32,14 +33,38 @@ public class SalesAssistedTrialInviteModel : IValidatableObject
                 [nameof(ProductTier)]);
         }
 
-        if (ProductTier == ProductTierType.Families && Product == ProductType.SecretsManager)
+        if (ProductTier == ProductTierType.Families && Products.Contains(ProductType.SecretsManager))
         {
             // Current constraint of Families plan, hard-coded validation here for
             // fail-fast feedback to tool users.
             // PM-41426
             yield return new ValidationResult(
                 "Secrets Manager is not available for the Families plan.",
-                [nameof(Product)]);
+                [nameof(Products)]);
+        }
+
+        if (Products.Contains(ProductType.PrivilegedControls))
+        {
+            if (!Products.Contains(ProductType.PasswordManager))
+            {
+                yield return new ValidationResult(
+                    "Privileged Controls requires Password Manager.",
+                    [nameof(Products)]);
+            }
+
+            if (ProductTier != ProductTierType.Enterprise)
+            {
+                yield return new ValidationResult(
+                    "Privileged Controls is only available on Password Manager Enterprise.",
+                    [nameof(ProductTier)]);
+            }
+
+            if (Products.Contains(ProductType.SecretsManager))
+            {
+                yield return new ValidationResult(
+                    "Privileged Controls cannot be combined with Secrets Manager.",
+                    [nameof(Products)]);
+            }
         }
     }
 }
