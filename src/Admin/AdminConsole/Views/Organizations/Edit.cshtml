@@ -100,7 +100,7 @@
     @await Html.PartialAsync("_ViewInformation", Model)
 }
 
-@if (Model.PartnershipsEnabled)
+@if (Model.PartnershipsEnabled && canViewOrganizationInformation)
 {
     @await Html.PartialAsync("_PartnershipInformation", Model)
 }

@@ -1,4 +1,6 @@
-﻿@inject Bit.Core.Settings.GlobalSettings GlobalSettings
+﻿@using Bit.Admin.Enums;
+@inject Bit.Core.Settings.GlobalSettings GlobalSettings
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationViewModel
 @{
     ViewData["Title"] = "Organization: " + Model.Organization.DisplayName();
@@ -13,7 +15,7 @@
 }
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
-@if (Model.PartnershipsEnabled)
+@if (Model.PartnershipsEnabled && AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View))
 {
     @await Html.PartialAsync("_PartnershipInformation", Model)
 }
