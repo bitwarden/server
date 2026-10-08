@@ -29,7 +29,7 @@ public abstract record PartnershipValidationError(string Message, string Propert
 
 public record InvalidExternalId()
     : PartnershipValidationError(
-        $"External ID is required and must be at most {OrganizationPartnershipEntitlement.ExternalIdMaxLength} characters.",
+        $"External ID is required, must be at most {OrganizationPartnershipEntitlement.ExternalIdMaxLength} characters, and must not start with \"{Constants.DatabaseFieldProtectedPrefix}\".",
         "externalId", "invalid_external_id");
 
 public record TooManyMetadataKeys()
