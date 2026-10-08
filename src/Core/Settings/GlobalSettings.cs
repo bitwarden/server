@@ -89,6 +89,7 @@ public class GlobalSettings : IGlobalSettings
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
+    public virtual PartnershipSettings Partnerships { get; set; } = new PartnershipSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
@@ -812,6 +813,18 @@ public class GlobalSettings : IGlobalSettings
         public TimeSpan UserRequestExpiration { get; set; } = TimeSpan.FromMinutes(15);
         public TimeSpan AdminRequestExpiration { get; set; } = TimeSpan.FromDays(7);
         public TimeSpan AfterAdminApprovalExpiration { get; set; } = TimeSpan.FromHours(12);
+    }
+
+    public class PartnershipSettings
+    {
+        /// <summary>
+        /// How long a suspended entitlement keeps the sponsored plan before reverting to Free.
+        /// </summary>
+        public TimeSpan SuspensionGracePeriod { get; set; } = TimeSpan.FromDays(7);
+        /// <summary>
+        /// How long a canceled entitlement holds its binding so a resume returns the customer to the same account.
+        /// </summary>
+        public TimeSpan ResumeWindow { get; set; } = TimeSpan.FromDays(30);
     }
 
     public class DomainVerificationSettings : IDomainVerificationSettings
