@@ -14,11 +14,6 @@ public class OrganizationPartnershipEntitlementEntityTypeConfiguration
             .Property(e => e.Id)
             .ValueGeneratedNever();
 
-        // The column stores the protected value, so the entity's plaintext length limit does not apply.
-        builder
-            .Property(e => e.ExternalId)
-            .Metadata.SetMaxLength(null);
-
         builder
             .HasOne<OrganizationPartnership>()
             .WithMany()
