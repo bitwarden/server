@@ -6,7 +6,7 @@ using System.Text.Json;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 
-namespace Bit.IntegrationTestCommon.Fido2;
+namespace Bit.Test.Common.Fakes;
 
 /// <summary>
 /// Minimal in-memory WebAuthn authenticator for integration tests. Generates valid
@@ -16,12 +16,23 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
 {
     private readonly ECDsa _keyPair;
 
-    public byte[] CredentialId { get; } = RandomNumberGenerator.GetBytes(32);
-    public uint SignatureCounter { get; private set; }
+    public byte[] CredentialId { get; }
+    public uint SignatureCounter { get; set; }
 
-    public FakeWebAuthnAuthenticator()
+    public FakeWebAuthnAuthenticator(byte[]? credentialId = null)
     {
+        CredentialId = credentialId ?? RandomNumberGenerator.GetBytes(32);
         _keyPair = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+    }
+
+    /// <summary>
+    /// Returns the public key in the raw ANSI X9.62 uncompressed form a legacy U2F registration
+    /// carries: 0x04 || X (32 bytes) || Y (32 bytes).
+    /// </summary>
+    public byte[] GetU2fRawPublicKey()
+    {
+        var parameters = _keyPair.ExportParameters(includePrivateParameters: false);
+        return [0x04, .. parameters.Q.X!, .. parameters.Q.Y!];
     }
 
     /// <summary>
@@ -46,12 +57,16 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
 
     /// <summary>
     /// Produce a valid assertion for the given challenge and relying-party context.
+    /// When <paramref name="appId"/> is set, the authenticator data is scoped to that AppID
+    /// instead of <paramref name="rpId"/> and the client extension results report
+    /// <c>appid: true</c>, as a browser does after falling back to a U2F-scoped credential.
     /// </summary>
     public AuthenticatorAssertionRawResponse MakeAssertion(
         byte[] challenge,
         string rpId,
         string origin,
-        byte[] userHandle)
+        byte[]? userHandle,
+        string? appId = null)
     {
         // clientDataJSON per WebAuthn spec
         var clientData = new
@@ -64,7 +79,7 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
         var clientDataJson = JsonSerializer.SerializeToUtf8Bytes(clientData);
 
         // authenticatorData: rpIdHash (32) || flags (1) || signCount (4, big-endian)
-        var rpIdHash = SHA256.HashData(Encoding.UTF8.GetBytes(rpId));
+        var rpIdHash = SHA256.HashData(Encoding.UTF8.GetBytes(appId ?? rpId));
         const byte flags = 0x05; // UP (0x01) | UV (0x04)
         SignatureCounter++;
         var counterBytes = new byte[4];
@@ -88,7 +103,10 @@ public sealed class FakeWebAuthnAuthenticator : IDisposable
             Id = Base64UrlEncode(CredentialId),
             RawId = CredentialId,
             Type = PublicKeyCredentialType.PublicKey,
-            ClientExtensionResults = new AuthenticationExtensionsClientOutputs(),
+            ClientExtensionResults = new AuthenticationExtensionsClientOutputs
+            {
+                AppID = appId is not null,
+            },
             Response = new AuthenticatorAssertionRawResponse.AssertionResponse
             {
                 AuthenticatorData = authenticatorData,
