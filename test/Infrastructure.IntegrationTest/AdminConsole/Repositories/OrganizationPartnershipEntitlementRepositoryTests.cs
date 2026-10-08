@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
@@ -440,7 +441,8 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     public async Task CreateAsync_DerivesExternalIdHashFromExternalId(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        GlobalSettings globalSettings)
     {
         var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
         var entitlement = NewEntitlement(partnership, "customer-1");
@@ -450,7 +452,9 @@ public class OrganizationPartnershipEntitlementRepositoryTests
 
         var found = await repository.GetByExternalIdAsync(partnership.Id, "customer-1");
         Assert.NotNull(found);
-        Assert.Equal(OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, "customer-1"),
+        Assert.Equal(
+            OrganizationPartnershipEntitlement.ComputeExternalIdHash(
+                globalSettings.Partnerships.GetExternalIdHashKey(), partnership.Id, "customer-1"),
             found.ExternalIdHash);
     }
 
@@ -538,7 +542,7 @@ public class OrganizationPartnershipEntitlementRepositoryTests
         {
             OrganizationPartnershipId = partnership.Id,
             ExternalId = externalId,
-            ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, externalId),
+            ExternalIdHash = string.Empty,
             State = PartnershipEntitlementState.Provisioned,
             LastAppliedEffectiveDate = DateTime.UtcNow,
         };

@@ -130,7 +130,7 @@ public class OrganizationPartnershipRepositoryTests
         {
             OrganizationPartnershipId = partnership.Id,
             ExternalId = "customer-1",
-            ExternalIdHash = OrganizationPartnershipEntitlement.ComputeExternalIdHash(partnership.Id, "customer-1"),
+            ExternalIdHash = string.Empty,
             State = PartnershipEntitlementState.Provisioned,
             LastAppliedEffectiveDate = DateTime.UtcNow,
         });
