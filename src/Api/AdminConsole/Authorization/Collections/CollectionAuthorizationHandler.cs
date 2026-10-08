@@ -1,7 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.AdminConsole.Authorization.Collections;

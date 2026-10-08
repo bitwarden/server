@@ -6,8 +6,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Bitwarden.Server.Sdk.Features;
 
 #nullable enable
 
@@ -263,6 +263,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// NULL if autoscaling is not limited.
     /// </summary>
     public int? MaxAutoscalePamSeats { get; set; }
+    /// <summary>
+    /// The minimum number of Privileged Access Management seats the organization's subscription must retain.
+    /// NULL if the organization has never purchased Privileged Access Management.
+    /// </summary>
+    public int? PamSeatMinimum { get; set; }
     /// <summary>
     /// If set to true, only owners, admins, and some custom users can create and delete collections.
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
@@ -552,7 +557,15 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable
     /// <summary>
     /// Updates the organization's properties from a self-hosted license file.
     /// </summary>
-    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
+    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService) =>
+        UpdateFromLicense(license);
+
+    /// <inheritdoc cref="UpdateFromLicense(OrganizationLicense, IFeatureService)"/>
+    [Obsolete("Use the Bitwarden.Server.Sdk.Features.IFeatureService overload instead", DiagnosticId = "BWA0002")]
+    public void UpdateFromLicense(OrganizationLicense license, Bit.Core.Services.IFeatureService featureService) =>
+        UpdateFromLicense(license);
+
+    private void UpdateFromLicense(OrganizationLicense license)
     {
         // The following properties are intentionally excluded from being updated:
         // - Id - self-hosted org will have its own unique Guid
