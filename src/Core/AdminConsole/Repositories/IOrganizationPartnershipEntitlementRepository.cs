@@ -4,8 +4,8 @@ using Bit.Core.Repositories;
 namespace Bit.Core.AdminConsole.Repositories;
 
 /// <remarks>
-/// Implementations encrypt <see cref="OrganizationPartnershipEntitlement.ExternalId"/> at rest and
-/// return it decrypted.
+/// Implementations encrypt <see cref="OrganizationPartnershipEntitlement.ExternalId"/> at rest, return it
+/// decrypted, and derive <see cref="OrganizationPartnershipEntitlement.ExternalIdHash"/> from it on every write.
 /// </remarks>
 public interface IOrganizationPartnershipEntitlementRepository
     : IRepository<OrganizationPartnershipEntitlement, Guid>
@@ -19,4 +19,11 @@ public interface IOrganizationPartnershipEntitlementRepository
     /// Canceled entitlements that still hold a binding and whose resume window ended at or before <paramref name="asOf"/>.
     /// </summary>
     Task<ICollection<OrganizationPartnershipEntitlement>> GetManyCanceledWithExpiredResumeWindowAsync(DateTime asOf);
+
+    /// <summary>
+    /// Clears the held binding only if the entitlement is still canceled, still bound, and its resume window
+    /// ended at or before <paramref name="asOf"/>, so a concurrent change to the row is never overwritten.
+    /// </summary>
+    /// <returns>True if the binding was released.</returns>
+    Task<bool> ReleaseExpiredResumeWindowBindingAsync(Guid id, DateTime asOf, DateTime revisionDate);
 }

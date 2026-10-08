@@ -23,9 +23,9 @@ public class OrganizationPartnershipEntitlement : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid OrganizationPartnershipId { get; set; }
     /// <summary>
-    /// The partner's opaque customer identifier. Plaintext in memory; repositories encrypt it at rest.
+    /// The partner's opaque customer identifier, at most <see cref="ExternalIdMaxLength"/> characters.
+    /// Plaintext in memory; repositories encrypt it at rest, so the stored value is longer.
     /// </summary>
-    [MaxLength(ExternalIdMaxLength)]
     public string ExternalId { get; set; } = null!;
     /// <summary>
     /// Lookup key for <see cref="ExternalId"/>. See <see cref="ComputeExternalIdHash"/>.
