@@ -17,7 +17,7 @@ public class ExpirePartnershipResumeWindowsCommandTests
     private static readonly DateTime _now = new(2026, 10, 1, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task ExpireAsync_ExpiredBinding_ReleasesBindingAndStaysCanceled()
+    public async Task ExpireAsync_ExpiredBinding_ReleasesConditionallyAsOfNow()
     {
         var sutProvider = CreateSutProvider();
         var partnership = ArrangePartnership(sutProvider);
@@ -26,13 +26,9 @@ public class ExpirePartnershipResumeWindowsCommandTests
 
         await sutProvider.Sut.ExpireAsync();
 
-        await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e =>
-                e.Id == entitlement.Id &&
-                e.State == PartnershipEntitlementState.Canceled &&
-                e.UserId == null &&
-                e.AccountRef == null &&
-                e.RevisionDate == _now));
+        var repository = sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>();
+        await repository.Received(1).ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, _now, _now);
+        await repository.DidNotReceiveWithAnyArgs().ReplaceAsync(default!);
     }
 
     [Fact]
@@ -65,19 +61,19 @@ public class ExpirePartnershipResumeWindowsCommandTests
     }
 
     [Fact]
-    public async Task ExpireAsync_ExpiredBinding_LeavesEntitlementUnboundForAnotherUser()
+    public async Task ExpireAsync_ChangedSinceRead_NotCountedAndNoEvent()
     {
         var sutProvider = CreateSutProvider();
         var partnership = ArrangePartnership(sutProvider);
         var entitlement = CreateExpiredEntitlement(partnership);
         ArrangeExpired(sutProvider, entitlement);
+        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
+            .ReleaseExpiredResumeWindowBindingAsync(entitlement.Id, _now, _now).Returns(false);
 
-        await sutProvider.Sut.ExpireAsync();
+        var result = await sutProvider.Sut.ExpireAsync();
 
-        // Re-provisioning and activation by a different user require a canceled record with no held binding.
-        Assert.Equal(PartnershipEntitlementState.Canceled, entitlement.State);
-        Assert.Null(entitlement.UserId);
-        Assert.Null(entitlement.AccountRef);
+        Assert.Equal(0, result.AsSuccess);
+        Assert.Empty(sutProvider.GetDependency<IEventService>().ReceivedCalls());
     }
 
     [Fact]
@@ -114,7 +110,7 @@ public class ExpirePartnershipResumeWindowsCommandTests
 
         Assert.Equal(0, result.AsSuccess);
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
+            .ReleaseExpiredResumeWindowBindingAsync(default, default, default);
         Assert.Empty(sutProvider.GetDependency<IEventService>().ReceivedCalls());
     }
 
@@ -143,13 +139,13 @@ public class ExpirePartnershipResumeWindowsCommandTests
         var last = CreateExpiredEntitlement(partnership);
         ArrangeExpired(sutProvider, first, failing, last);
         var repository = sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>();
-        repository.ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.Id == failing.Id))
+        repository.ReleaseExpiredResumeWindowBindingAsync(failing.Id, _now, _now)
             .ThrowsAsync(new InvalidOperationException());
 
         await sutProvider.Sut.ExpireAsync();
 
-        await repository.Received(1).ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.Id == first.Id));
-        await repository.Received(1).ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.Id == last.Id));
+        await repository.Received(1).ReleaseExpiredResumeWindowBindingAsync(first.Id, _now, _now);
+        await repository.Received(1).ReleaseExpiredResumeWindowBindingAsync(last.Id, _now, _now);
     }
 
     [Fact]
@@ -160,7 +156,7 @@ public class ExpirePartnershipResumeWindowsCommandTests
         var failing = CreateExpiredEntitlement(partnership);
         ArrangeExpired(sutProvider, CreateExpiredEntitlement(partnership), failing, CreateExpiredEntitlement(partnership));
         sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
-            .ReplaceAsync(Arg.Is<OrganizationPartnershipEntitlement>(e => e.Id == failing.Id))
+            .ReleaseExpiredResumeWindowBindingAsync(failing.Id, _now, _now)
             .ThrowsAsync(new InvalidOperationException());
 
         var result = await sutProvider.Sut.ExpireAsync();
@@ -179,7 +175,7 @@ public class ExpirePartnershipResumeWindowsCommandTests
 
         Assert.Equal(0, result.AsSuccess);
         await sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceAsync(default!);
+            .ReleaseExpiredResumeWindowBindingAsync(default, default, default);
     }
 
     private static SutProvider<ExpirePartnershipResumeWindowsCommand> CreateSutProvider()
@@ -206,10 +202,12 @@ public class ExpirePartnershipResumeWindowsCommandTests
 
     private static void ArrangeExpired(
         SutProvider<ExpirePartnershipResumeWindowsCommand> sutProvider,
-        params OrganizationPartnershipEntitlement[] entitlements) =>
-        sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>()
-            .GetManyCanceledWithExpiredResumeWindowAsync(_now)
-            .Returns(entitlements.ToList());
+        params OrganizationPartnershipEntitlement[] entitlements)
+    {
+        var repository = sutProvider.GetDependency<IOrganizationPartnershipEntitlementRepository>();
+        repository.GetManyCanceledWithExpiredResumeWindowAsync(_now).Returns(entitlements.ToList());
+        repository.ReleaseExpiredResumeWindowBindingAsync(Arg.Any<Guid>(), _now, _now).Returns(true);
+    }
 
     private static OrganizationPartnershipEntitlement CreateExpiredEntitlement(OrganizationPartnership partnership)
     {
