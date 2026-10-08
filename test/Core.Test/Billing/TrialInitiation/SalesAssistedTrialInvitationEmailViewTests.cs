@@ -102,14 +102,6 @@ public class SalesAssistedTrialInvitationEmailViewTests
     }
 
     [Fact]
-    public void Url_PasswordManagerAndSecretsManager_UsesTrialInitiationRoute()
-    {
-        var view = CreateView(ProductTierType.Enterprise, [ProductType.PasswordManager, ProductType.SecretsManager]);
-
-        Assert.Contains("/trial-initiation?", view.Url);
-    }
-
-    [Fact]
     public void Url_SecretsManagerOnly_UsesSecretsManagerRoute()
     {
         var view = CreateView(ProductTierType.Enterprise, [ProductType.SecretsManager]);

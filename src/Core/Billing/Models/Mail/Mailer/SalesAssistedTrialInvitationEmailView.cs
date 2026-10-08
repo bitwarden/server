@@ -27,8 +27,8 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     public required ProductTierType ProductTier { get; set; }
 
     /// <summary>
-    /// The trial's products, used to select the sign-up route. Supported combinations are Password
-    /// Manager, Password Manager + Secrets Manager, and Password Manager + Privileged Controls.
+    /// The trial's products, used to select the sign-up route. Supported selections are Password
+    /// Manager, Secrets Manager, and Password Manager + Privileged Controls.
     /// </summary>
     public required IEnumerable<ProductType> Products { get; set; }
 
@@ -86,11 +86,10 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
     };
 
     /// <summary>
-    /// The destination URL for the invitation CTA. Mirrors the new-user routing in
-    /// <see cref="Bit.Core.Billing.Models.Mail.TrialInitiationVerifyEmail"/>:
+    /// The destination URL for the invitation CTA. Routing:
     /// <list type="bullet">
     /// <item>PM + Privileged Controls trial → <c>privileged-controls-trial-initiation</c>;</item>
-    /// <item>PM or PM + SM trial → <c>trial-initiation</c>;</item>
+    /// <item>PM trial → <c>trial-initiation</c>;</item>
     /// <item>SM-only trial → <c>secrets-manager-trial-initiation</c>.</item>
     /// </list>
     /// Unlike the legacy <c>HandlebarsMailService</c> flow, the IMailer pattern has no service layer to
@@ -114,7 +113,7 @@ public class SalesAssistedTrialInvitationEmailView : BaseMailView
             return hasPasswordManager switch
             {
                 true when Products.Contains(ProductType.PrivilegedControls) => "privileged-controls-trial-initiation",
-                // Password Manager only or Password Manager + Secrets Manager
+                // Password Manager only (Password Manager + Secrets Manager is rejected before this).
                 true => "trial-initiation",
                 // Secrets Manager only.
                 _ => "secrets-manager-trial-initiation"

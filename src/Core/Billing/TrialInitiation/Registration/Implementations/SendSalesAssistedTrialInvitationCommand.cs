@@ -47,6 +47,13 @@ public class SendSalesAssistedTrialInvitationCommand(
             ValidatePrivilegedControlsConfiguration(productTier, requestedProducts);
         }
 
+        // A Secrets Manager trial already includes Password Manager, so it must be sent on its own;
+        // combining the two routes to trial-initiation and silently drops Secrets Manager. PM-41426
+        if (requestedProducts.Contains(ProductType.PasswordManager) && requestedProducts.Contains(ProductType.SecretsManager))
+        {
+            throw new BadRequestException("Secrets Manager cannot be combined with Password Manager.");
+        }
+
         var existingUser = await userRepository.GetByEmailAsync(email);
         if (existingUser != null)
         {

@@ -269,6 +269,25 @@ public class SendSalesAssistedTrialInvitationCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task HandleAsync_PasswordManagerAndSecretsManager_ThrowsBadRequest(
+        string email,
+        string name,
+        string senderEmail,
+        SutProvider<SendSalesAssistedTrialInvitationCommand> sutProvider)
+    {
+        var products = new[] { ProductType.PasswordManager, ProductType.SecretsManager };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.HandleAsync(email, name, senderEmail, ProductTierType.Enterprise, products, 7));
+
+        Assert.Equal("Secrets Manager cannot be combined with Password Manager.", exception.Message);
+        await sutProvider.GetDependency<IMailer>()
+            .DidNotReceiveWithAnyArgs()
+            .SendEmail(Arg.Any<SalesAssistedTrialInvitationEmail>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task HandleAsync_PasswordManagerAndPrivilegedControls_SendsEmailWithBothProducts(
         string email,
         string name,

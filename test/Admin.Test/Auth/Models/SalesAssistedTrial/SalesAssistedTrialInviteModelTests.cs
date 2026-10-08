@@ -51,12 +51,26 @@ public class SalesAssistedTrialInviteModelTests
     {
         var model = BuildValidModel();
         model.ProductTier = ProductTierType.Families;
-        model.Products = [ProductType.PasswordManager, ProductType.SecretsManager];
+        model.Products = [ProductType.SecretsManager];
 
         var results = model.Validate(new ValidationContext(model)).ToList();
 
         Assert.Single(results);
         Assert.Contains("Families", results[0].ErrorMessage);
+        Assert.Contains(nameof(model.Products), results[0].MemberNames);
+    }
+
+    [Fact]
+    public void Validate_WhenProductsIncludePasswordManagerAndSecretsManager_ReturnsError()
+    {
+        var model = BuildValidModel();
+        model.ProductTier = ProductTierType.Enterprise;
+        model.Products = [ProductType.PasswordManager, ProductType.SecretsManager];
+
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        Assert.Single(results);
+        Assert.Contains("Secrets Manager cannot be combined with Password Manager", results[0].ErrorMessage);
         Assert.Contains(nameof(model.Products), results[0].MemberNames);
     }
 
@@ -110,9 +124,8 @@ public class SalesAssistedTrialInviteModelTests
 
         var results = model.Validate(new ValidationContext(model)).ToList();
 
-        Assert.Single(results);
-        Assert.Contains("cannot be combined with Secrets Manager", results[0].ErrorMessage);
-        Assert.Contains(nameof(model.Products), results[0].MemberNames);
+        Assert.Contains(results, r => r.ErrorMessage!.Contains("cannot be combined with Secrets Manager"));
+        Assert.All(results, r => Assert.Contains(nameof(model.Products), r.MemberNames));
     }
 
     [Fact]

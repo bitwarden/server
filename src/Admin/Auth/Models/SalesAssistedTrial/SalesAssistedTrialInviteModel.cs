@@ -43,6 +43,13 @@ public class SalesAssistedTrialInviteModel : IValidatableObject
                 [nameof(Products)]);
         }
 
+        if (Products.Contains(ProductType.PasswordManager) && Products.Contains(ProductType.SecretsManager))
+        {
+            yield return new ValidationResult(
+                "Secrets Manager cannot be combined with Password Manager.",
+                [nameof(Products)]);
+        }
+
         if (Products.Contains(ProductType.PrivilegedControls))
         {
             if (!Products.Contains(ProductType.PasswordManager))
