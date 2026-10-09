@@ -453,7 +453,7 @@ public class TwoFactorAuthenticationValidatorTests
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
         _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -461,7 +461,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.True(result.Succeeded);
-        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, DeviceIdentifier, token);
+        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, null, DeviceIdentifier, token);
     }
 
     [Theory, BitAutoData]
@@ -473,7 +473,7 @@ public class TwoFactorAuthenticationValidatorTests
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
         _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, DeviceIdentifier, token).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -481,6 +481,8 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.True(result.Succeeded);
+        // The query repeats the check, so it has to be handed the organization too.
+        await _validateTwoFactorRememberTokenQuery.Received(1).ValidateAsync(user, organization, DeviceIdentifier, token);
     }
 
     [Theory, BitAutoData]
@@ -492,7 +494,7 @@ public class TwoFactorAuthenticationValidatorTests
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
         _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(false);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, organization, DeviceIdentifier, token).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -500,7 +502,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Assert
         Assert.False(result.Succeeded);
-        await _validateTwoFactorRememberTokenQuery.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default!, default!);
+        await _validateTwoFactorRememberTokenQuery.DidNotReceiveWithAnyArgs().ValidateAsync(default!, default!, default!, default!);
     }
 
     // ---------------------------------------------------------------------------------------
@@ -608,7 +610,7 @@ public class TwoFactorAuthenticationValidatorTests
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + "current-format-token";
         _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(true);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(true);
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
         // Act
@@ -626,7 +628,7 @@ public class TwoFactorAuthenticationValidatorTests
         // Arrange
         var token = TwoFactorRememberTokenable.ClearTextPrefix + tokenBody;
         _twoFactorEnabledQuery.TwoFactorIsEnabledAsync(user).Returns(true);
-        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, DeviceIdentifier, token).Returns(false);
+        _validateTwoFactorRememberTokenQuery.ValidateAsync(user, null, DeviceIdentifier, token).Returns(false);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
