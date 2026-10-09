@@ -395,6 +395,30 @@ public class OrganizationPartnershipEntitlementRepositoryTests
     }
 
     [Theory, DatabaseData]
+    public async Task DeleteUser_ActiveWithEarlierCanceledDate_StampsNewCanceledDate(
+        IOrganizationPartnershipEntitlementRepository repository,
+        IOrganizationPartnershipRepository partnershipRepository,
+        IOrganizationRepository organizationRepository,
+        IUserRepository userRepository)
+    {
+        var partnership = await CreatePartnershipAsync(partnershipRepository, organizationRepository);
+        var user = await userRepository.CreateTestUserAsync();
+        var earlierCanceledDate = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var entitlement = NewEntitlement(partnership, "customer-1");
+        entitlement.State = PartnershipEntitlementState.Active;
+        entitlement.UserId = user.Id;
+        entitlement.CanceledDate = earlierCanceledDate;
+        await repository.CreateAsync(entitlement);
+
+        await userRepository.DeleteAsync(user);
+
+        var result = await repository.GetByIdAsync(entitlement.Id);
+        Assert.NotNull(result);
+        Assert.Equal(PartnershipEntitlementState.Canceled, result.State);
+        Assert.NotEqual(earlierCanceledDate, result.CanceledDate);
+    }
+
+    [Theory, DatabaseData]
     public async Task DeleteUser_AlreadyCanceled_KeepsCanceledDateAndClosesWindow(
         IOrganizationPartnershipEntitlementRepository repository,
         IOrganizationPartnershipRepository partnershipRepository,
