@@ -2,6 +2,7 @@
 using Bit.Api.Dirt.Public.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Api.Utilities.DiagnosticTools;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Dirt.Public.Controllers;
 
 [Route("public/events")]
-[Authorize("Organization")]
+[Authorize(Policies.OrganizationEventsRead)]
 public class EventsController : Controller
 {
     private readonly IEventRepository _eventRepository;
