@@ -16,8 +16,7 @@ public static class ServerSdkCompatibilityExtensions
     /// <summary>
     /// Wires the server up to the <c>Bitwarden.Server.Sdk</c> feature flag pipeline: maps the
     /// existing <see cref="GlobalSettings.LaunchDarkly"/> settings onto <see cref="FeatureFlagOptions"/>,
-    /// registers a server-aware <see cref="IContextBuilder"/>, and registers the deprecated
-    /// <see cref="Bit.Core.Services.IFeatureService"/> as a shim that delegates to the new SDK service.
+    /// registers a server-aware <see cref="IContextBuilder"/>.
     /// </summary>
     /// <remarks>
     /// Assumes the SDK's own feature flag services have already been registered (either through
@@ -88,11 +87,6 @@ public static class ServerSdkCompatibilityExtensions
         services.AddHttpContextAccessor();
         services.TryAddScoped<ICurrentContext, CurrentContext>();
         services.AddContextBuilder<ServerContextBuilder>();
-
-        // Add the existing IFeatureService with a stub implementation that delegates to
-        // the new IFeatureService under the hood. This should help ease migration but should
-        // eventually go away
-        services.TryAddScoped<Bit.Core.Services.IFeatureService, DelegatingFeatureService>();
 
         return services;
     }

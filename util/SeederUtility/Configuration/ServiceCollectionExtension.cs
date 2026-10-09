@@ -98,7 +98,6 @@ public static class ServiceCollectionExtension
         // dependencies on IFeatureService — both the SDK interface and, until migration finishes, the obsolete
         // one. NoopFeatureService satisfies both without pulling in the LaunchDarkly-backed SDK.
         services.TryAddSingleton<Bitwarden.Server.Sdk.Features.IFeatureService, NoopFeatureService>();
-        services.TryAddSingleton<Bit.Core.Services.IFeatureService, NoopFeatureService>();
 
         services.AddScoped<IStripeBillingInitializer, StripeBillingInitializer>();
 
