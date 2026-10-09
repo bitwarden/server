@@ -268,4 +268,147 @@ public class OrganizationSponsorshipsControllerTests
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
             .GetManyBySponsoringOrganizationAsync(sponsoringOrg.Id);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AdminInitiatedRevokeSponsorshipAsync_MemberInitiatedSponsorship_ThrowsBadRequest(
+        Guid sponsoringOrgId,
+        OrganizationSponsorship sponsorship,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sponsorship.IsAdminInitiated = false;
+        sponsorship.FriendlyName = "personal-family@example.com";
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
+            .Returns(new List<OrganizationSponsorship> { sponsorship });
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdminInitiatedRevokeSponsorshipAsync(sponsoringOrgId, sponsorship.FriendlyName));
+
+        Assert.Contains("could not be found under the given sponsoring organization", exception.Message);
+        await sutProvider.GetDependency<IRevokeSponsorshipCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RevokeSponsorshipAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AdminInitiatedRevokeSponsorshipAsync_AdminInitiatedSponsorship_Revokes(
+        Guid sponsoringOrgId,
+        OrganizationSponsorship sponsorship,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sponsorship.IsAdminInitiated = true;
+        sponsorship.FriendlyName = "employee@example.com";
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
+            .Returns(new List<OrganizationSponsorship> { sponsorship });
+
+        // Act
+        await sutProvider.Sut.AdminInitiatedRevokeSponsorshipAsync(sponsoringOrgId, sponsorship.FriendlyName);
+
+        // Assert
+        await sutProvider.GetDependency<IRevokeSponsorshipCommand>().Received(1)
+            .RevokeSponsorshipAsync(sponsorship);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendSponsorshipOffer_AnotherMembersMemberInitiatedSponsorship_DoesNotSend(
+        Guid sponsoringOrgId,
+        OrganizationUser callingOrgUser,
+        OrganizationSponsorship sponsorship,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sponsorship.IsAdminInitiated = false;
+        sponsorship.FriendlyName = "personal-family@example.com";
+        sponsorship.SponsoringOrganizationUserId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrgId, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(sponsoringOrgId, Arg.Any<Guid>()).Returns(callingOrgUser);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
+            .Returns(new List<OrganizationSponsorship> { sponsorship });
+
+        // Act
+        await sutProvider.Sut.ResendSponsorshipOffer(sponsoringOrgId, sponsorship.FriendlyName);
+
+        // Assert
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .SendSponsorshipOfferAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendSponsorshipOffer_OwnMemberInitiatedSponsorship_Sends(
+        Guid sponsoringOrgId,
+        Organization sponsoringOrg,
+        OrganizationUser callingOrgUser,
+        OrganizationSponsorship sponsorship,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sponsorship.IsAdminInitiated = false;
+        sponsorship.FriendlyName = "my-family";
+        sponsorship.SponsoringOrganizationUserId = callingOrgUser.Id;
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrgId, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(sponsoringOrgId, Arg.Any<Guid>()).Returns(callingOrgUser);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
+            .Returns(new List<OrganizationSponsorship> { sponsorship });
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(sponsoringOrgId).Returns(sponsoringOrg);
+
+        // Act
+        await sutProvider.Sut.ResendSponsorshipOffer(sponsoringOrgId, sponsorship.FriendlyName);
+
+        // Assert
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>().Received(1)
+            .SendSponsorshipOfferAsync(sponsoringOrg, callingOrgUser, sponsorship);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ResendSponsorshipOffer_AnotherMembersAdminInitiatedSponsorship_Sends(
+        Guid sponsoringOrgId,
+        Organization sponsoringOrg,
+        OrganizationUser callingOrgUser,
+        OrganizationSponsorship sponsorship,
+        [Policy(PolicyType.FreeFamiliesSponsorshipPolicy, false)] PolicyStatus policy,
+        SutProvider<OrganizationSponsorshipsController> sutProvider)
+    {
+        // Arrange
+        sponsorship.IsAdminInitiated = true;
+        sponsorship.FriendlyName = "employee@example.com";
+        sponsorship.SponsoringOrganizationUserId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IPolicyQuery>()
+            .RunAsync(sponsoringOrgId, PolicyType.FreeFamiliesSponsorshipPolicy).Returns(policy);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(sponsoringOrgId, Arg.Any<Guid>()).Returns(callingOrgUser);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+            .GetManyBySponsoringOrganizationAsync(sponsoringOrgId)
+            .Returns(new List<OrganizationSponsorship> { sponsorship });
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(sponsoringOrgId).Returns(sponsoringOrg);
+
+        // Act
+        await sutProvider.Sut.ResendSponsorshipOffer(sponsoringOrgId, sponsorship.FriendlyName);
+
+        // Assert
+        await sutProvider.GetDependency<ISendSponsorshipOfferCommand>().Received(1)
+            .SendSponsorshipOfferAsync(sponsoringOrg, callingOrgUser, sponsorship);
+    }
 }
