@@ -687,8 +687,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
     {
         var now = DateTime.UtcNow;
         return entitlements.ExecuteUpdateAsync(s => s
-            .SetProperty(e => e.CanceledDate,
-                e => e.State == PartnershipEntitlementState.Canceled ? e.CanceledDate : now)
+            .SetProperty(e => e.CanceledDate, e => e.CanceledDate ?? now)
             .SetProperty(e => e.State, PartnershipEntitlementState.Canceled)
             .SetProperty(e => e.ResumeWindowExpirationDate, (DateTime?)null)
             .SetProperty(e => e.UserId, (Guid?)null)
