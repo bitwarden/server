@@ -8,11 +8,12 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Err
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.v2;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -21,48 +22,38 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 /// </summary>
 public class InviteLinkPolicyValidator(
     IPreAccessEnforcerQuery preAccessEnforcerQuery,
+    IOrganizationUserRepository organizationUserRepository,
     IPolicyRequirementQuery policyRequirementQuery,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-    IOrganizationUserRepository organizationUserRepository,
     IProviderUserRepository providerUserRepository)
     : IInviteLinkPolicyValidator
 {
-    public async Task<CommandResult<InviteLinkPolicyValidationResult>> ValidateAsync(
+    public async Task<ValidationResult<InviteLinkPolicyValidationRequest>> ValidateAsync(
         InviteLinkPolicyValidationRequest request)
     {
-        var user = request.User;
-        var organizationId = request.Organization.Id;
-        var proposedRole = GetProposedRole(request);
-
-        var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
-        var policyEnforcer = await preAccessEnforcerQuery.RunAsync(organizationId);
+        var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(request.User.Id);
+        var policyEnforcer = await preAccessEnforcerQuery.RunAsync(request.Organization.Id);
 
         var singleOrgError = await ValidateSingleOrganizationPolicyAsync(request, policyEnforcer, allOrganizationMemberships);
         if (singleOrgError is not null)
         {
-            return singleOrgError;
+            return Invalid(request, singleOrgError);
         }
 
-        var twoFactorError = await ValidateTwoFactorAuthenticationPolicyAsync(user, proposedRole, policyEnforcer);
+        var twoFactorError = await ValidateTwoFactorAuthenticationPolicyAsync(request, policyEnforcer);
         if (twoFactorError is not null)
         {
-            return twoFactorError;
+            return Invalid(request, twoFactorError);
         }
 
-        var autoConfirmPolicyEnabled = policyEnforcer
-            .Evaluate(PolicyType.AutomaticUserConfirmation, user.Id, proposedRole).IsEnforced;
         var autoConfirmError = await ValidateAutomaticUserConfirmationPolicyAsync(
-            user, organizationId, autoConfirmPolicyEnabled, allOrganizationMemberships);
+            request, policyEnforcer, allOrganizationMemberships);
         if (autoConfirmError is not null)
         {
-            return autoConfirmError;
+            return Invalid(request, autoConfirmError);
         }
 
-        return new InviteLinkPolicyValidationResult
-        {
-            AllOrganizationMemberships = allOrganizationMemberships,
-            AutoConfirmPolicyEnabled = autoConfirmPolicyEnabled,
-        };
+        return Valid(request);
     }
 
     /// <summary>
@@ -85,7 +76,7 @@ public class InviteLinkPolicyValidator(
         }
 
         // This organization
-        if (allOrganizationMemberships.Any(ou => ou.OrganizationId != organizationId)
+        if (IsMemberOfAnotherOrganization(allOrganizationMemberships, organizationId)
             && policyEnforcer.Evaluate(PolicyType.SingleOrg, user.Id, GetProposedRole(request)).IsEnforced)
         {
             return new UserIsAMemberOfAnotherOrganization();
@@ -95,12 +86,14 @@ public class InviteLinkPolicyValidator(
     }
 
     /// <summary>
-    /// The Required Two-Factor Authentication policy of this organization.
+    /// The Require Two-Factor Authentication policy of this organization.
     /// </summary>
     private async Task<Error?> ValidateTwoFactorAuthenticationPolicyAsync(
-        User user, OrganizationUserType proposedRole, IPreAccessPolicyEnforcer policyEnforcer)
+        InviteLinkPolicyValidationRequest request, IPreAccessPolicyEnforcer policyEnforcer)
     {
-        if (policyEnforcer.Evaluate(PolicyType.TwoFactorAuthentication, user.Id, proposedRole).IsEnforced
+        var user = request.User;
+
+        if (policyEnforcer.Evaluate(PolicyType.TwoFactorAuthentication, user.Id, GetProposedRole(request)).IsEnforced
             && !await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user))
         {
             return new TwoFactorRequiredForMembership();
@@ -114,19 +107,21 @@ public class InviteLinkPolicyValidator(
     /// and when this organization enforces it, the user cannot be a provider user or belong to any other
     /// organization (no role exemptions).
     /// </summary>
-    private async Task<Error?> ValidateAutomaticUserConfirmationPolicyAsync(User user, Guid organizationId,
-        bool autoConfirmPolicyEnabled, ICollection<OrganizationUser> allOrganizationMemberships)
+    private async Task<Error?> ValidateAutomaticUserConfirmationPolicyAsync(InviteLinkPolicyValidationRequest request,
+        IPreAccessPolicyEnforcer policyEnforcer, ICollection<OrganizationUser> allOrganizationMemberships)
     {
+        var user = request.User;
+
         // Other organizations
         var autoConfirmRequirement = await policyRequirementQuery
             .GetAsync<AutomaticUserConfirmationPolicyRequirement>(user.Id);
-        if (autoConfirmRequirement.IsEnabledForOrganizationsOtherThan(organizationId))
+        if (autoConfirmRequirement.IsEnabledForOrganizationsOtherThan(request.Organization.Id))
         {
             return new OtherOrganizationDoesNotAllowOtherMembership(user.Email);
         }
 
         // This organization
-        if (!autoConfirmPolicyEnabled)
+        if (!policyEnforcer.Evaluate(PolicyType.AutomaticUserConfirmation, user.Id, GetProposedRole(request)).IsEnforced)
         {
             return null;
         }
@@ -136,7 +131,7 @@ public class InviteLinkPolicyValidator(
             return new ProviderUsersCannotAcceptInviteLink();
         }
 
-        if (allOrganizationMemberships.Any(ou => ou.OrganizationId != organizationId))
+        if (IsMemberOfAnotherOrganization(allOrganizationMemberships, request.Organization.Id))
         {
             return new UserCannotBelongToAnotherOrganization(user.Email);
         }
@@ -150,4 +145,8 @@ public class InviteLinkPolicyValidator(
     /// </summary>
     private static OrganizationUserType GetProposedRole(InviteLinkPolicyValidationRequest request) =>
         request.ExistingOrganizationUser?.Type ?? OrganizationUserType.User;
+
+    private static bool IsMemberOfAnotherOrganization(
+        ICollection<OrganizationUser> allOrganizationMemberships, Guid organizationId) =>
+        allOrganizationMemberships.Any(ou => ou.OrganizationId != organizationId);
 }

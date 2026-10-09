@@ -1,10 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
+﻿using Bit.Core.AdminConsole.Utilities.v2.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
 /// <summary>
-/// Read-only validation that an invite link can be used by the user.
+/// Validates that an invite link can be used by the user.
 /// </summary>
 /// <remarks>
 /// The following are validated, in this order:
@@ -14,9 +13,9 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 ///     <item>The user's email domain is on the link's allowed domain list.</item>
 ///     <item>The user's email is verified.</item>
 /// </list>
-/// The organization is read from the organization ability cache. Returns the invite link it read.
+/// The caller supplies the invite link and organization.
 /// </remarks>
 public interface IInviteLinkEligibilityValidator
 {
-    Task<CommandResult<OrganizationInviteLink>> ValidateAsync(InviteLinkEligibilityValidationRequest request);
+    ValidationResult<InviteLinkEligibilityValidationRequest> Validate(InviteLinkEligibilityValidationRequest request);
 }

@@ -1,12 +1,12 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Business;
+﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
-using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 using PasswordManagerValidation = Bit.Core.AdminConsole.Utilities.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
@@ -20,7 +20,7 @@ public class InviteLinkOrganizationCapabilityValidator(
     IPricingClient pricingClient)
     : IInviteLinkOrganizationCapabilityValidator
 {
-    public async Task<CommandResult<InviteLinkOrganizationCapabilityValidationResult>> ValidateAsync(
+    public async Task<ValidationResult<InviteLinkOrganizationCapabilityValidationRequest>> ValidateAsync(
         InviteLinkOrganizationCapabilityValidationRequest request)
     {
         var organization = request.Organization;
@@ -32,21 +32,15 @@ public class InviteLinkOrganizationCapabilityValidator(
             && organization.PlanType == PlanType.Free
             && await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(request.User.Id) > 0)
         {
-            return new OnlyOneFreeOrganizationAdminAllowed();
+            return Invalid(request, new OnlyOneFreeOrganizationAdminAllowed());
         }
 
-        int? occupiedSeatCount = null;
-        if (existingOrganizationUser is null)
+        if (existingOrganizationUser is null && !await HasAvailablePasswordManagerSeatAsync(request))
         {
-            occupiedSeatCount = (await organizationRepository
-                .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
-            if (!await HasAvailablePasswordManagerSeatAsync(organization, occupiedSeatCount.Value))
-            {
-                return new OrganizationHasNoAvailableSeats(organization.DisplayName());
-            }
+            return Invalid(request, new OrganizationHasNoAvailableSeats(organization.DisplayName()));
         }
 
-        return new InviteLinkOrganizationCapabilityValidationResult { OccupiedSeatCount = occupiedSeatCount };
+        return Valid(request);
     }
 
     /// <summary>
@@ -54,9 +48,15 @@ public class InviteLinkOrganizationCapabilityValidator(
     /// This covers having Password Manager seats, the plan allowing additional seats, the max additional seats,
     /// and the autoscale seat limit.
     /// </summary>
-    private async Task<bool> HasAvailablePasswordManagerSeatAsync(Organization organization, int occupiedSeatCount)
+    private async Task<bool> HasAvailablePasswordManagerSeatAsync(InviteLinkOrganizationCapabilityValidationRequest request)
     {
+        var organization = request.Organization;
+
+        var occupiedSeatCount = (await organizationRepository
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
+
         var plan = await pricingClient.GetPlan(organization.PlanType);
+
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(
             new InviteOrganization(organization, plan), occupiedSeatCount, newUsersToAdd: 1);
 
