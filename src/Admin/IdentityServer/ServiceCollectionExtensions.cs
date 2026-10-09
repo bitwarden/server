@@ -3,6 +3,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -11,10 +12,35 @@ namespace Bit.Admin.IdentityServer;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Wraps an OnValidatePrincipal delegate so that any ShouldRenew=true set by the inner
+    /// delegate (typically SecurityStampValidator) is reset to false after it runs. Exposed
+    /// as a testable seam so the "renewal does not defeat SessionSliding=false" contract
+    /// can be pinned without spinning up a full DI graph.
+    /// </summary>
+    public static Func<Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext, Task>
+        SuppressRenewAfter(
+            Func<Microsoft.AspNetCore.Authentication.Cookies.CookieValidatePrincipalContext, Task> inner)
+        => async ctx =>
+        {
+            await inner(ctx);
+            ctx.ShouldRenew = false;
+        };
+
     public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
         this IServiceCollection services, GlobalSettings globalSettings, AdminSettings adminSettings)
         where TUserStore : class
     {
+        // SessionTimeoutMinutes = 0 (or negative) sets ExpireTimeSpan = Zero and locks every
+        // admin out on the next request with no error message. Fail loudly so a typo in the
+        // env var doesn't brick the portal.
+        if (adminSettings.SessionTimeoutMinutes <= 0)
+        {
+            throw new InvalidOperationException(
+                $"AdminSettings:SessionTimeoutMinutes must be greater than 0 " +
+                $"(got {adminSettings.SessionTimeoutMinutes}).");
+        }
+
         services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
         services.Configure<DataProtectionTokenProviderOptions>(options =>
         {
@@ -53,9 +79,52 @@ public static class ServiceCollectionExtensions
             // OIDC callback; Strict would break SSO. HttpOnly + Secure + Lax is the standard
             // defense-in-depth combo.
             options.Cookie.SameSite = SameSiteMode.Lax;
-            options.ExpireTimeSpan = TimeSpan.FromDays(2);
-            options.SlidingExpiration = true;
+            // Session lifetime and sliding-vs-absolute behavior are both operator-configurable.
+            // With SessionSliding = true (default), this is an idle timeout. With false, it's
+            // intended as a fixed lifetime from sign-in.
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(adminSettings.SessionTimeoutMinutes);
+            options.SlidingExpiration = adminSettings.SessionSliding;
             options.ReturnUrlParameter = "returnUrl";
+        });
+
+        // Show a distinct "session expired" message on the login page whenever the browser sent
+        // our auth cookie but the framework rejected it (idle or absolute expiry). Cookie in
+        // request but user unauth'd = they had a session that just died, not a first-time
+        // visitor. Runs as PostConfigure so it can chain the default OnRedirectToLogin rather
+        // than replace it (Identity's cookie configuration is a PostConfigure too).
+        services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
+        {
+            var existingRedirect = options.Events.OnRedirectToLogin;
+            options.Events.OnRedirectToLogin = ctx =>
+            {
+                var hadCookie = !string.IsNullOrEmpty(options.Cookie.Name)
+                    && ctx.HttpContext.Request.Cookies.ContainsKey(options.Cookie.Name);
+                if (hadCookie)
+                {
+                    var separator = ctx.RedirectUri.Contains('?') ? '&' : '?';
+                    ctx.RedirectUri = $"{ctx.RedirectUri}{separator}error=6";
+                }
+                return existingRedirect(ctx);
+            };
+
+            // SecurityStampValidator.SecurityStampVerified sets ctx.ShouldRenew=true after
+            // each successful re-validation (every SecurityStampValidatorOptions.ValidationInterval,
+            // 5 min by default). CookieAuthenticationHandler.HandleAuthenticateAsync then calls
+            // RequestRefresh(ShouldRenew) unconditionally - NOT gated on SlidingExpiration -
+            // which rewrites IssuedUtc/ExpiresUtc on the ticket. So SessionSliding=false alone
+            // gives sliding-like behavior with 5-min granularity.
+            //
+            // Chain after the stamp validator (do not replace it - revocation via
+            // ReadOnlyEnvIdentityUserStore's FindByIdAsync depends on it running). When the
+            // operator has asked for a fixed lifetime, suppress the renewal that would
+            // otherwise defeat it. Cost: the stamp check now runs on every request instead of
+            // every 5 min. Against ReadOnlyEnvIdentityUserStore that's a config lookup, and
+            // it makes revocation faster.
+            if (!adminSettings.SessionSliding)
+            {
+                options.Events.OnValidatePrincipal =
+                    SuppressRenewAfter(options.Events.OnValidatePrincipal);
+            }
         });
 
         return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
