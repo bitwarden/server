@@ -469,7 +469,7 @@ public class TwoFactorAuthenticationValidatorTests
     // legacy branch once no such token can still be within its lifetime.
     // ---------------------------------------------------------------------------------------
 
-    /// <summary>L1 — a token in the previous format is still honored.</summary>
+    /// <summary>A token in the previous format is still honored.</summary>
     [Theory, BitAutoData]
     public async void VerifyTwoFactorAsync_LegacyRemember_ValidToken_ReturnsTrue(User user)
     {
@@ -486,7 +486,7 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     /// <summary>
-    /// L2 — the previous format embeds the user's security stamp and the framework provider compares
+    /// The previous format embeds the user's security stamp and the framework provider compares
     /// it, so a rotated stamp still rejects these tokens during the transition.
     /// </summary>
     [Theory, BitAutoData]
@@ -506,7 +506,7 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     /// <summary>
-    /// L3 — the two-factor-enabled gate covers the previous format too, so an un-replaced token is
+    /// The two-factor-enabled gate covers the previous format too, so an un-replaced token is
     /// inert for as long as the account has no second factor configured.
     /// </summary>
     [Theory, BitAutoData]
@@ -524,7 +524,7 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.False(result.Succeeded);
     }
 
-    /// <summary>L4 — accepting one signals that a replacement should be issued on this response.</summary>
+    /// <summary>Accepting one signals that a replacement should be issued on this response.</summary>
     [Theory, BitAutoData]
     public async void VerifyTwoFactorAsync_LegacyRemember_Accepted_SignalsUpgrade(User user)
     {
@@ -541,7 +541,7 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     /// <summary>
-    /// L7 — a current-format token never reaches the legacy branch, which is what makes removing
+    /// A current-format token never reaches the legacy branch, which is what makes removing
     /// that branch a no-op for anyone already migrated.
     /// </summary>
     [Theory, BitAutoData]
