@@ -255,6 +255,45 @@ FROM [dbo].[Cipher] WITH (NOLOCK)
 WHERE OrganizationId = @OrgId;
 ```
 
+### Q12: Access Shape Load
+
+Verifies `accessShape` (including `inactiveAccessRate`) and `myItems.deletedRate` presets by the load Access
+Intelligence puts on the org: every org item is fetched, and each item is mapped to every member who reaches it through
+a shared collection, whatever the member's status. Items in My Items map to no member on that path; `MyItemsItems` is
+what a path that includes My Items collections would add (one pair per item).
+
+```sql
+DECLARE @OrgId UNIQUEIDENTIFIER = 'PASTE_ORG_ID_HERE';
+
+WITH Reach AS (
+    SELECT CU.OrganizationUserId, CU.CollectionId
+    FROM [dbo].[CollectionUser] CU WITH (NOLOCK)
+    JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CU.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 0
+    UNION
+    SELECT GU.OrganizationUserId, CG.CollectionId
+    FROM [dbo].[GroupUser] GU WITH (NOLOCK)
+    JOIN [dbo].[CollectionGroup] CG WITH (NOLOCK) ON CG.GroupId = GU.GroupId
+    JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CG.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 0
+),
+Pairs AS (
+    SELECT R.OrganizationUserId, CC.CipherId
+    FROM Reach R
+    JOIN [dbo].[CollectionCipher] CC WITH (NOLOCK) ON CC.CollectionId = R.CollectionId
+    GROUP BY R.OrganizationUserId, CC.CipherId
+)
+SELECT
+    (SELECT COUNT(*) FROM [dbo].[Cipher] WITH (NOLOCK) WHERE OrganizationId = @OrgId) AS ItemsFetched,
+    (SELECT COUNT(*) FROM [dbo].[Cipher] WITH (NOLOCK) WHERE OrganizationId = @OrgId AND DeletedDate IS NOT NULL) AS TrashedItems,
+    COUNT(*) AS MemberItemPairs,
+    SUM(CASE WHEN OU.[Status] = 2 THEN 1 ELSE 0 END) AS ConfirmedPairs,
+    SUM(CASE WHEN OU.[Status] <> 2 THEN 1 ELSE 0 END) AS InvitedAcceptedRevokedPairs,
+    (SELECT COUNT(*)
+     FROM [dbo].[CollectionCipher] CC WITH (NOLOCK)
+     JOIN [dbo].[Collection] C WITH (NOLOCK) ON C.Id = CC.CollectionId AND C.OrganizationId = @OrgId AND C.[Type] = 1) AS MyItemsItems
+FROM Pairs P
+JOIN [dbo].[OrganizationUser] OU WITH (NOLOCK) ON OU.Id = P.OrganizationUserId;
+```
+
 ---
 
 ## Scale Preset Expected Values
@@ -396,6 +435,21 @@ WHERE OrganizationId = @OrgId;
 | Deleted org ciphers   | 25 of 15,000 (5% rate = 750, clamped to the 25 cap). All 25 are also archived (3% overlap = 450, clamped) — 0 are delete-only. |
 
 ---
+
+### 10. Cyberdyne (XL, access shape)
+
+`scale.xl-migrated-cyberdyne` uses `accessShape`, so Q1–Q8 don't apply. Run Q9 and Q12; reruns on a fresh database
+give identical counts.
+
+| Check | Expected |
+| --- | --- |
+| Q9 deleted org ciphers | ~5.7k: 1,400 in the org pool plus ~4.3k in My Items |
+| Q12 `ItemsFetched` / `TrashedItems` | ~123k / ~5.7k |
+| Q12 `MemberItemPairs` | ~976k, of which ~883k confirmed and ~93k (9.5%) invited, accepted or revoked |
+| Q12 `MyItemsItems` | ~62k (3,936 My Items collections, one per confirmed User member) |
+
+`-200k-myitems` keeps the same pairs with ~221k items fetched and ~160k My Items items. `-200k-shared` reaches ~2.6M
+pairs (8.4% not confirmed) with ~212k items fetched.
 
 ## Validation Preset Expected Values
 

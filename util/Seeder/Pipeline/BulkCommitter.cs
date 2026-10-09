@@ -14,6 +14,7 @@ using EfOrganization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Or
 using EfOrganizationApiKey = Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey;
 using EfOrganizationDomain = Bit.Infrastructure.EntityFramework.Models.OrganizationDomain;
 using EfOrganizationUser = Bit.Infrastructure.EntityFramework.Models.OrganizationUser;
+using EfPolicy = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Policy;
 using EfSsoConfig = Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig;
 using EfUser = Bit.Infrastructure.EntityFramework.Models.User;
 
@@ -46,6 +47,8 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         MapAndCopy<Core.Entities.OrganizationApiKey, EfOrganizationApiKey>(context.OrganizationApiKey);
 
+        MapCopyAndClear<Core.AdminConsole.Entities.Policy, EfPolicy>(context.Policies);
+
         CommitSsoConfigs(context.SsoConfigs);
 
         MapCopyAndClear<Core.Entities.User, EfUser>(context.Users);
@@ -72,6 +75,13 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
     }
 
     /// <summary>
+    /// Bulk copy options with no timeout. The 30-second provider default is too short for large presets
+    /// (100k+ ciphers, hundreds of MB), especially against a remote database.
+    /// </summary>
+    private static BulkCopyOptions Options(string? tableName = null) =>
+        new() { TableName = tableName, BulkCopyTimeout = 0 };
+
+    /// <summary>
     /// Resolves the table name for an EF entity type from the EF Core model,
     /// falling back to the C# class name for SQL Server.
     /// </summary>
@@ -89,14 +99,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
 
         var mapped = entities.Select(e => mapper.Map<TEf>(e));
 
-        if (tableName is not null)
-        {
-            db.BulkCopy(new BulkCopyOptions { TableName = tableName }, mapped);
-        }
-        else
-        {
-            db.BulkCopy(mapped);
-        }
+        db.BulkCopy(Options(tableName), mapped);
 
         entities.Clear();
     }
@@ -109,7 +112,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
         }
 
         var mapped = mapper.Map<TEf>(entity);
-        db.BulkCopy(new[] { mapped });
+        db.BulkCopy(Options(), new[] { mapped });
     }
 
     private void CopyAndClear<T>(List<T> entities) where T : class
@@ -119,7 +122,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             return;
         }
 
-        db.BulkCopy(entities);
+        db.BulkCopy(Options(), entities);
         entities.Clear();
     }
 
@@ -182,11 +185,7 @@ internal sealed class BulkCommitter(DatabaseContext db, IMapper mapper)
             Key = c.Key,
         });
 
-        var options = tableName is not null
-            ? new BulkCopyOptions { TableName = tableName }
-            : new BulkCopyOptions();
-
-        db.BulkCopy(options, rows);
+        db.BulkCopy(Options(tableName), rows);
         ciphers.Clear();
     }
 

@@ -97,7 +97,13 @@ internal sealed class GenerateCiphersStep(
 
         if (collectionIds.Count > 0)
         {
-            if (density == null)
+            if (context.Registry.CollectionTargetSizes.Count > 0)
+            {
+                var orphanCount = (int)(count * (density?.OrphanCipherRate ?? 0));
+                collectionCiphers.AddRange(FillTargetSizes(
+                    ciphers, count - orphanCount, collectionIds, context.Registry));
+            }
+            else if (density == null)
             {
                 for (var i = 0; i < ciphers.Count; i++)
                 {
@@ -194,6 +200,86 @@ internal sealed class GenerateCiphersStep(
         context.Ciphers.AddRange(ciphers);
         context.Registry.CipherIds.AddRange(cipherIds);
         context.CollectionCiphers.AddRange(collectionCiphers);
+    }
+
+    /// <summary>
+    /// Fills each collection to its access-shape target size. The first <paramref name="assignedCount"/>
+    /// ciphers each get one primary slot; leftover slots reuse already-assigned ciphers (multi-collection
+    /// items), up to <see cref="EntityRegistry.MaxCollectionsPerCipher"/> collections per cipher, preferring
+    /// ciphers whose primary collection is in the same department.
+    /// </summary>
+    private static List<CollectionCipher> FillTargetSizes(
+        List<Cipher> ciphers, int assignedCount, List<Guid> collectionIds, EntityRegistry registry)
+    {
+        var targetSizes = registry.CollectionTargetSizes;
+        var maxPerCipher = registry.MaxCollectionsPerCipher;
+        var departments = registry.CollectionDepartments;
+        var slots = new List<int>(targetSizes.Sum());
+        for (var c = 0; c < targetSizes.Count; c++)
+        {
+            for (var k = 0; k < targetSizes[c]; k++)
+            {
+                slots.Add(c);
+            }
+        }
+
+        if (slots.Count < assignedCount)
+        {
+            throw new InvalidOperationException(
+                $"Access shape has {slots.Count} collection slots but {assignedCount} non-orphan ciphers; " +
+                "raise collections.totalAssignments or the orphan rate.");
+        }
+
+        // Seeded from the shape so reruns of a preset produce the same assignment. Not HashCode.Combine:
+        // its seed is randomized per process.
+        var random = new Random(unchecked((targetSizes.Count * 397) ^ (targetSizes.Sum() * 31) ^ assignedCount));
+        var slotArray = slots.ToArray();
+        random.Shuffle(slotArray);
+
+        var result = new List<CollectionCipher>(slotArray.Length);
+        var seen = new HashSet<(int Cipher, int Collection)>();
+        var perCipher = new int[assignedCount];
+
+        for (var i = 0; i < assignedCount; i++)
+        {
+            seen.Add((i, slotArray[i]));
+            perCipher[i] = 1;
+            result.Add(new CollectionCipher { CipherId = ciphers[i].Id, CollectionId = collectionIds[slotArray[i]] });
+        }
+
+        var byDepartment = new Dictionary<int, List<int>>();
+        if (departments.Count == collectionIds.Count)
+        {
+            for (var i = 0; i < assignedCount; i++)
+            {
+                var d = departments[slotArray[i]];
+                if (!byDepartment.TryGetValue(d, out var list))
+                {
+                    byDepartment[d] = list = [];
+                }
+                list.Add(i);
+            }
+        }
+
+        for (var s = assignedCount; s < slotArray.Length && assignedCount > 0; s++)
+        {
+            var local = byDepartment.Count > 0 && random.NextDouble() < registry.DepartmentLocality
+                && byDepartment.TryGetValue(departments[slotArray[s]], out var pool) ? pool : null;
+            for (var attempt = 0; attempt < 20; attempt++)
+            {
+                var i = local is not null ? local[random.Next(local.Count)] : random.Next(assignedCount);
+                if (perCipher[i] < maxPerCipher && seen.Add((i, slotArray[s])))
+                {
+                    perCipher[i]++;
+                    result.Add(new CollectionCipher { CipherId = ciphers[i].Id, CollectionId = collectionIds[slotArray[s]] });
+                    break;
+                }
+            }
+        }
+
+        // Each cipher is in at most maxPerCipher collections, so a tight cap can leave slots unfilled
+        ShapeTargets.EnsureReached("collection-cipher rows", result.Count, slotArray.Length);
+        return result;
     }
 
     private static void EnsureCollectionAssignment(List<CollectionCipher> collectionCiphers, Guid cipherId, Guid collectionId)

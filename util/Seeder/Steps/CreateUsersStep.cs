@@ -12,8 +12,13 @@ namespace Bit.Seeder.Steps;
 /// Creates member users and links them to the current organization.
 /// When <c>realisticStatusMix</c> is enabled (and count >= 10), users receive a
 /// realistic distribution of Confirmed/Invited/Accepted/Revoked statuses.
+/// An explicit <c>statusMix</c> overrides both. The first <c>adminCount</c> confirmed members are Admins.
 /// </summary>
-internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false) : IStep
+internal sealed class CreateUsersStep(
+    int count,
+    bool realisticStatusMix = false,
+    Distribution<OrganizationUserStatusType>? statusMix = null,
+    int adminCount = 0) : IStep
 {
     private const int _rsaPoolSize = 100;
 
@@ -23,9 +28,10 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         var orgKey = context.RequireOrgKey();
         var domain = context.RequireDomain();
 
-        var statusDistribution = realisticStatusMix && count >= 10
-            ? UserStatusDistributions.Realistic
-            : UserStatusDistributions.AllConfirmed;
+        var statusDistribution = statusMix
+            ?? (realisticStatusMix && count >= 10
+                ? UserStatusDistributions.Realistic
+                : UserStatusDistributions.AllConfirmed);
 
         var password = context.GetPassword();
         var kdfIterations = context.GetKdfIterations();
@@ -36,10 +42,15 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         // Pre-compute mangled emails and statuses (ManglerService is not thread-safe)
         var mangledEmails = new string[count];
         var statuses = new OrganizationUserStatusType[count];
+        var types = new OrganizationUserType[count];
+        var adminsLeft = adminCount;
         for (var i = 0; i < count; i++)
         {
             mangledEmails[i] = mangler.Mangle($"user{i}@{domain}");
             statuses[i] = statusDistribution.Select(i, count);
+            types[i] = statuses[i] == OrganizationUserStatusType.Confirmed && adminsLeft-- > 0
+                ? OrganizationUserType.Admin
+                : OrganizationUserType.User;
         }
 
         var results = new (User User, OrganizationUser OrgUser, UserKeys Keys, bool IsConfirmed)[count];
@@ -71,7 +82,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
                     : null;
 
                 var orgUser = org.CreateOrganizationUserWithKey(
-                    user, OrganizationUserType.User, statuses[i], memberOrgKey);
+                    user, types[i], statuses[i], memberOrgKey);
 
                 results[i] = (user, orgUser, userKeys, statuses[i] == OrganizationUserStatusType.Confirmed);
 
@@ -94,6 +105,7 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
         var users = new List<User>(count);
         var organizationUsers = new List<OrganizationUser>(count);
         var hardenedOrgUserIds = new List<Guid>(count);
+        var inactiveOrgUserIds = new List<Guid>();
         var userDigests = new List<EntityRegistry.UserDigest>(count);
 
         for (var i = 0; i < count; i++)
@@ -107,11 +119,16 @@ internal sealed class CreateUsersStep(int count, bool realisticStatusMix = false
                 hardenedOrgUserIds.Add(r.OrgUser.Id);
                 userDigests.Add(new EntityRegistry.UserDigest(r.User.Id, r.OrgUser.Id, r.Keys.Key));
             }
+            else
+            {
+                inactiveOrgUserIds.Add(r.OrgUser.Id);
+            }
         }
 
         context.Users.AddRange(users);
         context.OrganizationUsers.AddRange(organizationUsers);
         context.Registry.HardenedOrgUserIds.AddRange(hardenedOrgUserIds);
+        context.Registry.InactiveOrgUserIds.AddRange(inactiveOrgUserIds);
         context.Registry.UserDigests.AddRange(userDigests);
 
         progress?.Report(new PhaseCompleted(SeederPhases.CreatingUsers));
