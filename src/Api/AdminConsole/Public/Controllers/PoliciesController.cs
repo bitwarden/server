@@ -8,6 +8,7 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/policies")]
-[Authorize("Organization")]
 public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
@@ -39,6 +39,7 @@ public class PoliciesController : Controller
     /// Retrieves the details of a policy.
     /// </remarks>
     /// <param name="type">The type of policy to be retrieved.</param>
+    [Authorize(Policies.OrganizationPoliciesRead)]
     [HttpGet("{type}")]
     [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -59,6 +60,7 @@ public class PoliciesController : Controller
     /// <remarks>
     /// Returns a list of your organization's policies.
     /// </remarks>
+    [Authorize(Policies.OrganizationPoliciesRead)]
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<PolicyResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
@@ -77,6 +79,7 @@ public class PoliciesController : Controller
     /// </remarks>
     /// <param name="type">The type of policy to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.Organization)]
     [HttpPut("{type}")]
     [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]

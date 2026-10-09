@@ -6,6 +6,7 @@ using Bit.Api.AdminConsole.Models.Public.Request;
 using Bit.Api.AdminConsole.Models.Public.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.Collections.Interfaces;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -15,7 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/collections")]
-[Authorize("Organization")]
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
@@ -40,6 +40,7 @@ public class CollectionsController : Controller
     /// that was returned upon collection creation.
     /// </remarks>
     /// <param name="id">The identifier of the collection to be retrieved.</param>
+    [Authorize(Policies.OrganizationCollectionsRead)]
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(CollectionResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -62,6 +63,7 @@ public class CollectionsController : Controller
     /// Returns a list of your organization's collections.
     /// Collection objects listed in this call do not include information about their associated groups.
     /// </remarks>
+    [Authorize(Policies.OrganizationCollectionsRead)]
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<CollectionResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
@@ -85,6 +87,7 @@ public class CollectionsController : Controller
     /// </remarks>
     /// <param name="id">The identifier of the collection to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationCollectionsWrite)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(CollectionResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -110,6 +113,7 @@ public class CollectionsController : Controller
     /// Permanently deletes a collection. This cannot be undone.
     /// </remarks>
     /// <param name="id">The identifier of the collection to be deleted.</param>
+    [Authorize(Policies.OrganizationCollectionsWrite)]
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]

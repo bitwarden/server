@@ -5,9 +5,12 @@ using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +18,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/groups")]
-[Authorize("Organization")]
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
@@ -23,6 +25,7 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
+    private readonly IScopedApiKeyGroupMemberValidator _scopedApiKeyGroupMemberValidator;
     private readonly TimeProvider _timeProvider;
 
     public GroupsController(
@@ -31,6 +34,7 @@ public class GroupsController : Controller
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
+        IScopedApiKeyGroupMemberValidator scopedApiKeyGroupMemberValidator,
         TimeProvider timeProvider)
     {
         _groupRepository = groupRepository;
@@ -38,6 +42,7 @@ public class GroupsController : Controller
         _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
+        _scopedApiKeyGroupMemberValidator = scopedApiKeyGroupMemberValidator;
         _timeProvider = timeProvider;
     }
 
@@ -49,6 +54,7 @@ public class GroupsController : Controller
     /// that was returned upon group creation.
     /// </remarks>
     /// <param name="id">The identifier of the group to be retrieved.</param>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -72,6 +78,7 @@ public class GroupsController : Controller
     /// supply the unique group identifier that was returned upon group creation.
     /// </remarks>
     /// <param name="id">The identifier of the group to be retrieved.</param>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet("{id}/member-ids")]
     [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -93,6 +100,7 @@ public class GroupsController : Controller
     /// Returns a list of your organization's groups.
     /// Group objects listed in this call include information about their associated collections.
     /// </remarks>
+    [Authorize(Policies.OrganizationGroupsRead)]
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
@@ -110,6 +118,7 @@ public class GroupsController : Controller
     /// Creates a new group object.
     /// </remarks>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPost]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -133,6 +142,7 @@ public class GroupsController : Controller
     /// </remarks>
     /// <param name="id">The identifier of the group to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -161,6 +171,7 @@ public class GroupsController : Controller
     /// </remarks>
     /// <param name="id">The identifier of the group to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpPut("{id}/member-ids")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -172,6 +183,7 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
+        await ValidateScopedApiKeyMemberChangeAsync(existingGroup.OrganizationId, existingGroup.Id, model.MemberIds ?? []);
         await _groupRepository.UpdateUsersAsync(existingGroup.Id, model.MemberIds, _timeProvider.GetUtcNow().UtcDateTime);
         return new OkResult();
     }
@@ -183,6 +195,7 @@ public class GroupsController : Controller
     /// Permanently deletes a group. This cannot be undone.
     /// </remarks>
     /// <param name="id">The identifier of the group to be deleted.</param>
+    [Authorize(Policies.OrganizationGroupsWrite)]
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -193,7 +206,17 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
+        await ValidateScopedApiKeyMemberChangeAsync(group.OrganizationId, group.Id, []);
         await _groupRepository.DeleteAsync(group);
         return new OkResult();
+    }
+
+    private async Task ValidateScopedApiKeyMemberChangeAsync(Guid organizationId, Guid groupId, IEnumerable<Guid> memberIds)
+    {
+        var error = await _scopedApiKeyGroupMemberValidator.ValidateAsync(organizationId, groupId, memberIds);
+        if (error is not null)
+        {
+            throw new BadRequestException(error.Message);
+        }
     }
 }

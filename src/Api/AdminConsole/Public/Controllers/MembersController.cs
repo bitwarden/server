@@ -12,6 +12,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RevokeUser.v2;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities.Commands;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -26,7 +27,6 @@ using V2_UpdateUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.Organiza
 namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/members")]
-[Authorize("Organization")]
 public class MembersController : BaseAdminConsoleController
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -84,6 +84,7 @@ public class MembersController : BaseAdminConsoleController
     /// unique member identifier that was returned upon member creation.
     /// </remarks>
     /// <param name="id">The identifier of the member to be retrieved.</param>
+    [Authorize(Policies.OrganizationMembersRead)]
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -107,6 +108,7 @@ public class MembersController : BaseAdminConsoleController
     /// supply the unique member identifier that was returned upon member creation.
     /// </remarks>
     /// <param name="id">The identifier of the member to be retrieved.</param>
+    [Authorize(Policies.OrganizationMembersRead)]
     [HttpGet("{id}/group-ids")]
     [ProducesResponseType(typeof(HashSet<Guid>), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -128,6 +130,7 @@ public class MembersController : BaseAdminConsoleController
     /// Returns a list of your organization's members.
     /// Member objects listed in this call include information about their associated collections.
     /// </remarks>
+    [Authorize(Policies.OrganizationMembersRead)]
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<MemberResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
@@ -150,6 +153,7 @@ public class MembersController : BaseAdminConsoleController
     /// Creates a new member object by inviting a user to the organization.
     /// </remarks>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPost]
     [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -189,6 +193,7 @@ public class MembersController : BaseAdminConsoleController
     /// </remarks>
     /// <param name="id">The identifier of the member to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -247,6 +252,7 @@ public class MembersController : BaseAdminConsoleController
     /// </remarks>
     /// <param name="id">The identifier of the member to be updated.</param>
     /// <param name="model">The request model.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPut("{id}/group-ids")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -269,6 +275,7 @@ public class MembersController : BaseAdminConsoleController
     /// Removes a member from the organization. This cannot be undone. The user account will still remain.
     /// </remarks>
     /// <param name="id">The identifier of the member to be removed.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpDelete("{id}")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
@@ -290,6 +297,7 @@ public class MembersController : BaseAdminConsoleController
     /// Re-sends the invitation email to an organization member.
     /// </remarks>
     /// <param name="id">The identifier of the member to re-invite.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPost("{id}/reinvite")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -309,6 +317,7 @@ public class MembersController : BaseAdminConsoleController
     /// Revoke a member's access to an organization.
     /// </summary>
     /// <param name="id">The ID of the member to be revoked.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPost("{id}/revoke")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
@@ -344,6 +353,7 @@ public class MembersController : BaseAdminConsoleController
     /// Restores a previously revoked member of the organization.
     /// </remarks>
     /// <param name="id">The identifier of the member to be restored.</param>
+    [Authorize(Policies.OrganizationMembersWrite)]
     [HttpPost("{id}/restore")]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
