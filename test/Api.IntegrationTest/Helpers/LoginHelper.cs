@@ -30,6 +30,16 @@ public class LoginHelper
         _client.DefaultRequestHeaders.Add("client_id", clientId);
     }
 
+    /// <summary>
+    /// Authenticates the client with a new scoped organization API key holding <paramref name="scopes"/>.
+    /// Requires <see cref="ScopedOrganizationApiKeysApiApplicationFactory"/>.
+    /// </summary>
+    public async Task LoginWithScopedOrganizationApiKeyAsync(Guid organizationId, params string[] scopes)
+    {
+        var token = await _factory.LoginWithScopedOrganizationApiKeyAsync(organizationId, scopes);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    }
+
     private async Task<(string clientId, string apiKey)> GetOrganizationApiKey<T>(
         WebApplicationFactoryBase<T> factory,
         Guid organizationId)
