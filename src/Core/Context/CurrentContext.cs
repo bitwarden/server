@@ -106,7 +106,9 @@ public class CurrentContext(
 
         ClientId = GetClaimValue(claimsDict, "client_id");
 
-        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        // Clients that keep Duende's default "client_" claim prefix (organization API keys) carry "client_type".
+        var clientType = GetClaimValue(claimsDict, Claims.Type)
+            ?? GetClaimValue(claimsDict, $"client_{Claims.Type}");
         if (clientType != null)
         {
             if (Enum.TryParse(clientType, out IdentityClientType c))

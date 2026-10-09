@@ -236,6 +236,91 @@ public class CurrentContextTests
     }
 
     [Theory, BitAutoData]
+    public async Task SetContextAsync_OrganizationApiKeyToken_ResolvesOrganizationClientType(Guid organizationId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", $"organization.{organizationId}"),
+            new("client_sub", organizationId.ToString()),
+            new("client_type", IdentityClientType.Organization.ToString()),
+            new("scope", "api.organization")
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        var currentContext = NewCurrentContext();
+
+        await currentContext.SetContextAsync(user);
+
+        Assert.Equal(IdentityClientType.Organization, currentContext.IdentityClientType);
+        Assert.Equal(organizationId, currentContext.OrganizationId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_UserApiKeyToken_ResolvesUserClientType(Guid userId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", $"user.{userId}"),
+            new("sub", userId.ToString()),
+            new(Claims.Type, IdentityClientType.User.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        var currentContext = NewCurrentContext();
+
+        await currentContext.SetContextAsync(user);
+
+        Assert.Equal(IdentityClientType.User, currentContext.IdentityClientType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_UserTokenWithoutTypeClaim_ResolvesUserClientType(Guid userId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", "web"),
+            new("sub", userId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        var currentContext = NewCurrentContext();
+
+        await currentContext.SetContextAsync(user);
+
+        Assert.Equal(IdentityClientType.User, currentContext.IdentityClientType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_InstallationToken_ResolvesUserClientType(Guid installationId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", $"installation.{installationId}"),
+            new("client_sub", installationId.ToString())
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        var currentContext = NewCurrentContext();
+
+        await currentContext.SetContextAsync(user);
+
+        Assert.Equal(IdentityClientType.User, currentContext.IdentityClientType);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetContextAsync_ScimPrincipal_ResolvesUserClientType(Guid organizationId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", $"organization.{organizationId}"),
+            new("client_sub", organizationId.ToString()),
+            new("scope", "api.scim")
+        };
+        var user = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        var currentContext = NewCurrentContext();
+
+        await currentContext.SetContextAsync(user);
+
+        Assert.Equal(IdentityClientType.User, currentContext.IdentityClientType);
+    }
+
+    [Theory, BitAutoData]
     public async Task SetContextAsync_ServiceAccount_SetsServiceAccountOrganizationId(
         SutProvider<CurrentContext> sutProvider,
         Guid organizationId)
@@ -812,4 +897,7 @@ public class CurrentContextTests
     }
 
     #endregion
+
+    private static CurrentContext NewCurrentContext() =>
+        new(Substitute.For<IProviderOrganizationRepository>(), Substitute.For<IProviderUserRepository>());
 }
