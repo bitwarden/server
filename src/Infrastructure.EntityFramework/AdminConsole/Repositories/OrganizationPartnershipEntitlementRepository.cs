@@ -71,6 +71,11 @@ public class OrganizationPartnershipEntitlementRepository
     public async Task<bool> ReplaceIfUnchangedAsync(
         AdminConsoleEntities.OrganizationPartnershipEntitlement entitlement, DateTime expectedRevisionDate)
     {
+        if (entitlement.RevisionDate == expectedRevisionDate)
+        {
+            throw new ArgumentException("RevisionDate must be advanced before a conditional replace.", nameof(entitlement));
+        }
+
         var rowsAffected = 0;
         await ProtectDataAndSaveAsync(entitlement, async () =>
         {
