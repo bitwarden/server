@@ -235,6 +235,33 @@ public class CurrentContextTests
         Assert.Equal(organizationId, sutProvider.Sut.OrganizationId);
     }
 
+    [Theory]
+    [BitAutoData("organization.12345", "api.organization.members.write", true)]
+    [BitAutoData("organization.12345", null, true)]
+    [BitAutoData("organization.12345", "api.organization", false)]
+    [BitAutoData("web", "api", false)]
+    public async Task SetContextAsync_SetsIsScopedOrganizationApiKey(
+        string clientId,
+        string? scope,
+        bool expected,
+        SutProvider<CurrentContext> sutProvider,
+        Guid organizationId)
+    {
+        var claims = new List<Claim>
+        {
+            new("client_id", clientId),
+            new("client_sub", organizationId.ToString())
+        };
+        if (scope != null)
+        {
+            claims.Add(new Claim("scope", scope));
+        }
+
+        await sutProvider.Sut.SetContextAsync(new ClaimsPrincipal(new ClaimsIdentity(claims)));
+
+        Assert.Equal(expected, sutProvider.Sut.IsScopedOrganizationApiKey);
+    }
+
     [Theory, BitAutoData]
     public async Task SetContextAsync_ServiceAccount_SetsServiceAccountOrganizationId(
         SutProvider<CurrentContext> sutProvider,

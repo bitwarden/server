@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
@@ -77,6 +78,61 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
             .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n => n.Type == PushType.SyncOrgKeys && n.TargetId == organizationUser.UserId!.Value));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task RestoreUser_WhenScopedApiKeyRestoresElevatedMember_ThrowsAndDoesNotRestore(
+        OrganizationUserType targetRole,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organizationUser.Type = targetRole;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi));
+
+        Assert.Equal(new ScopedApiKeyCanOnlyManageUsers().Message, exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenScopedApiKeyRestoresUser_Restores(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.User)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, Arg.Any<OrganizationUserStatusType>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenLegacyPublicApiRestoresAdmin_Restores(
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Admin)] OrganizationUser organizationUser,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        RestoreUser_Setup(organization, null, organizationUser, sutProvider);
+
+        await sutProvider.Sut.RestoreUserAsync(organizationUser, EventSystemUser.PublicApi);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .RestoreAsync(organizationUser.Id, Arg.Any<OrganizationUserStatusType>());
     }
 
     [Theory, BitAutoData]

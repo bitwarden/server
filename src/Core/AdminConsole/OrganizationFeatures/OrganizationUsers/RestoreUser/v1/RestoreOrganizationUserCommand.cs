@@ -3,6 +3,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Enforcement.AutoConfirm;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -76,6 +77,11 @@ public class RestoreOrganizationUserCommand(
 
     private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser, string defaultCollectionName)
     {
+        if (currentContext.IsScopedOrganizationApiKey && organizationUser.Type != OrganizationUserType.User)
+        {
+            throw new BadRequestException(new ScopedApiKeyCanOnlyManageUsers().Message);
+        }
+
         if (organizationUser.Status != OrganizationUserStatusType.Revoked)
         {
             throw new BadRequestException(new AlreadyActive().Message);

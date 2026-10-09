@@ -15,6 +15,7 @@ using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -1323,12 +1324,76 @@ public class InviteOrganizationUserCommandTests
                 users.Single().Groups.Single() == group.Id));
     }
 
+    [Theory]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task InviteImportedOrganizationUsersAsync_WhenScopedApiKeyInvitesElevatedRole_ThenFailureIsReturnedAndNoUserIsCreated(
+        OrganizationUserType type,
+        MailAddress address,
+        Organization organization,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        var request = BuildInviteRequest(organization, address.Address, timeProvider, [], [], type);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        var failure = Assert.IsType<Failure<InviteOrganizationUsersResponse>>(result);
+        Assert.Equal(ScopedApiKeyCanOnlyInviteUsersError.Code, failure.Error.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceive()
+            .CreateManyAsync(Arg.Any<IEnumerable<CreateOrganizationUser>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenScopedApiKeyInvitesUser_ThenUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        var request = BuildInviteRequest(organization, address.Address, timeProvider, [], []);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+        sutProvider.GetDependency<ICurrentContext>().IsScopedOrganizationApiKey.Returns(true);
+
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        Assert.IsType<Success<InviteOrganizationUsersResponse>>(result);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateManyAsync(Arg.Any<IEnumerable<CreateOrganizationUser>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteImportedOrganizationUsersAsync_WhenLegacyPublicApiInvitesAdmin_ThenUserIsCreated(
+        MailAddress address,
+        Organization organization,
+        FakeTimeProvider timeProvider,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        var request = BuildInviteRequest(organization, address.Address, timeProvider, [], [], OrganizationUserType.Admin);
+        ArrangeInvitableOrganization(sutProvider, organization, request);
+
+        var result = await sutProvider.Sut.InviteImportedOrganizationUsersAsync(request);
+
+        Assert.IsType<Success<InviteOrganizationUsersResponse>>(result);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateManyAsync(Arg.Any<IEnumerable<CreateOrganizationUser>>());
+    }
+
     private static InviteOrganizationUsersRequest BuildInviteRequest(
         Organization organization,
         string email,
         FakeTimeProvider timeProvider,
         IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups) =>
+        IEnumerable<Guid> groups,
+        OrganizationUserType type = OrganizationUserType.User) =>
         new(
             invites:
             [
@@ -1336,7 +1401,7 @@ public class InviteOrganizationUserCommandTests
                     email: email,
                     assignedCollections: collections,
                     groups: groups,
-                    type: OrganizationUserType.User,
+                    type: type,
                     permissions: new Permissions(),
                     externalId: null,
                     accessSecretsManager: false)

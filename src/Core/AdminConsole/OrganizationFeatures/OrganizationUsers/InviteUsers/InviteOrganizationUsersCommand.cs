@@ -14,6 +14,7 @@ using Bit.Core.AdminConsole.Utilities.Commands;
 using Bit.Core.AdminConsole.Utilities.Errors;
 using Bit.Core.AdminConsole.Utilities.Validation;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -39,7 +40,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     IPricingClient pricingClient,
     IGlobalSettings globalSettings,
     ICollectionRepository collectionRepository,
-    IGroupRepository groupRepository
+    IGroupRepository groupRepository,
+    ICurrentContext currentContext
     ) : IInviteOrganizationUsersCommand
 {
 
@@ -116,6 +118,12 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task<CommandResult<InviteOrganizationUsersResponse>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
+        if (currentContext.IsScopedOrganizationApiKey && request.Invites.Any(i => i.Type != OrganizationUserType.User))
+        {
+            return new Failure<InviteOrganizationUsersResponse>(new ScopedApiKeyCanOnlyInviteUsersError(
+                new InviteOrganizationUsersResponse(request.Organization.Id)));
+        }
+
         var plan = await pricingClient.GetPlan(request.Organization.PlanType);
         if (plan is null && !globalSettings.SelfHosted)
         {
