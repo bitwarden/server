@@ -94,7 +94,8 @@ public class ImportCiphersController : Controller
         // is whether the user has access to the import feature at all
         if (collections.Count == 0)
         {
-            if (!await _currentContext.AccessImportExport(orgId)) {
+            if (!await _currentContext.AccessImportExport(orgId))
+            {
                 return false;
             }
             return true;
