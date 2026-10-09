@@ -232,9 +232,10 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpDelete("{sponsoringOrganizationId}")]
+    [Authorize<MemberRequirement>]
+    [HttpDelete("{organizationId}")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
+    public async Task RevokeSponsorship([FromRoute(Name = "organizationId")] Guid sponsoringOrganizationId)
     {
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
@@ -250,10 +251,11 @@ public class OrganizationSponsorshipsController : Controller
     }
 
     [Authorize("Application")]
-    [HttpPost("{sponsoringOrganizationId}/delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE /{sponsoringOrganizationId} instead.")]
+    [Authorize<MemberRequirement>]
+    [HttpPost("{organizationId}/delete")]
+    [Obsolete("This endpoint is deprecated. Use DELETE /{organizationId} instead.")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostRevokeSponsorship(Guid sponsoringOrganizationId)
+    public async Task PostRevokeSponsorship([FromRoute(Name = "organizationId")] Guid sponsoringOrganizationId)
     {
         await RevokeSponsorship(sponsoringOrganizationId);
     }
