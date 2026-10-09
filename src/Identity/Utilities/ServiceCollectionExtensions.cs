@@ -51,6 +51,8 @@ public static class ServiceCollectionExtensions
                     options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                // Room for a scoped organization API key requesting its whole scope catalog by name.
+                options.InputLengthRestrictions.Scope = 1000;
                 options.KeyManagement.Enabled = false;
                 options.UserInteraction.LoginUrl = "/sso/Login";
             })

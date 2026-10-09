@@ -64,6 +64,22 @@ public class OrganizationScopedApiKeyTokenTests
     }
 
     [Theory, BitAutoData]
+    public async Task ScopedKey_RequestingEveryCatalogScopeByName_ReceivesThem(Organization organization)
+    {
+        organization = await CreateOrganizationAsync(_factory, organization);
+        var (key, secret) = await CreateScopedKeyAsync(_factory, organization.Id,
+            [.. ApiScopes.OrganizationApiKeyScopes]);
+
+        var context = await PostTokenAsync(_factory, ClientId(organization.Id, key.Id), secret,
+            string.Join(' ', ApiScopes.OrganizationApiKeyScopes));
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        var token = await ReadAccessTokenAsync(context);
+        var scopes = token.Claims.Where(c => c.Type == "scope").Select(c => c.Value).Order().ToArray();
+        Assert.Equal<string>(ApiScopes.OrganizationApiKeyScopes.Order(), scopes);
+    }
+
+    [Theory, BitAutoData]
     public async Task ScopedKey_RequestingApiOrganization_Fails(Organization organization)
     {
         organization = await CreateOrganizationAsync(_factory, organization);
