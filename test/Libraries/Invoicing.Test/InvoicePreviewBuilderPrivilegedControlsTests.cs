@@ -164,23 +164,24 @@ public class InvoicePreviewBuilderPrivilegedControlsTests
     }
 
     // Two prices sharing the pam-seat reference (e.g. old and new price IDs during a price migration) is a Stripe
-    // misconfiguration the preview refuses to guess at, and the error names both prices so it can be fixed.
+    // misconfiguration the preview refuses to guess at. The preview invoice has no ID, so the error names the
+    // colliding prices; neither test price ID is a substring of the other, so each assertion can fail on its own.
     [Fact]
     public void BuildFromInvoice_DuplicatePamSeat_ThrowsNamingBothPrices()
     {
         var invoice = Invoice.FromJson("""
         {
-          "id": "in_preview_duplicate_pam", "total": 48500, "amount_due": 48500,
+          "total": 48500, "amount_due": 48500,
           "lines": { "data": [
             { "amount": 36000, "quantity": 5,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
               "pricing": { "price_details": { "price": { "id": "price_pm_seat_annually", "unit_amount_decimal": "7200", "metadata": { "purchasable_reference": "pm-seat" } } } } },
             { "amount": 6000, "quantity": 5,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
-              "pricing": { "price_details": { "price": { "id": "price_pam_seat_annually", "unit_amount_decimal": "1200", "metadata": { "purchasable_reference": "pam-seat" } } } } },
+              "pricing": { "price_details": { "price": { "id": "price_pam_seat_old", "unit_amount_decimal": "1200", "metadata": { "purchasable_reference": "pam-seat" } } } } },
             { "amount": 6500, "quantity": 5,
               "parent": { "subscription_item_details": { "proration": false }, "type": "subscription_item_details" },
-              "pricing": { "price_details": { "price": { "id": "price_pam_seat_annually_2027", "unit_amount_decimal": "1300", "metadata": { "purchasable_reference": "pam-seat" } } } } }
+              "pricing": { "price_details": { "price": { "id": "price_pam_seat_new", "unit_amount_decimal": "1300", "metadata": { "purchasable_reference": "pam-seat" } } } } }
           ] }
         }
         """);
@@ -189,9 +190,8 @@ public class InvoicePreviewBuilderPrivilegedControlsTests
 
         var exception = Assert.Throws<InvalidOperationException>(
             () => builder.Build(invoice, PlanTierType.Enterprise, PlanCadenceType.Annually));
-        Assert.Contains("in_preview_duplicate_pam", exception.Message);
-        Assert.Contains("price_pam_seat_annually", exception.Message);
-        Assert.Contains("price_pam_seat_annually_2027", exception.Message);
+        Assert.Contains("price_pam_seat_old", exception.Message);
+        Assert.Contains("price_pam_seat_new", exception.Message);
     }
 
     [Fact]
@@ -202,8 +202,8 @@ public class InvoicePreviewBuilderPrivilegedControlsTests
           "id": "sub_preview_duplicate_pam",
           "items": { "data": [
             { "id": "si_pm", "quantity": 5, "price": { "id": "price_pm_seat_annually", "unit_amount": 7200, "unit_amount_decimal": "7200", "metadata": { "purchasable_reference": "pm-seat" } } },
-            { "id": "si_pam_1", "quantity": 5, "price": { "id": "price_pam_seat_annually", "unit_amount": 1200, "unit_amount_decimal": "1200", "metadata": { "purchasable_reference": "pam-seat" } } },
-            { "id": "si_pam_2", "quantity": 5, "price": { "id": "price_pam_seat_annually_2027", "unit_amount": 1300, "unit_amount_decimal": "1300", "metadata": { "purchasable_reference": "pam-seat" } } }
+            { "id": "si_pam_1", "quantity": 5, "price": { "id": "price_pam_seat_old", "unit_amount": 1200, "unit_amount_decimal": "1200", "metadata": { "purchasable_reference": "pam-seat" } } },
+            { "id": "si_pam_2", "quantity": 5, "price": { "id": "price_pam_seat_new", "unit_amount": 1300, "unit_amount_decimal": "1300", "metadata": { "purchasable_reference": "pam-seat" } } }
           ] }
         }
         """);
@@ -213,8 +213,8 @@ public class InvoicePreviewBuilderPrivilegedControlsTests
         var exception = Assert.Throws<InvalidOperationException>(
             () => builder.Build(subscription, PlanTierType.Enterprise, PlanCadenceType.Annually));
         Assert.Contains("sub_preview_duplicate_pam", exception.Message);
-        Assert.Contains("price_pam_seat_annually", exception.Message);
-        Assert.Contains("price_pam_seat_annually_2027", exception.Message);
+        Assert.Contains("price_pam_seat_old", exception.Message);
+        Assert.Contains("price_pam_seat_new", exception.Message);
     }
 
     // Registering pam-seat as known lets a coupon scoped to the Privileged Controls product attach to its item,

@@ -13,7 +13,6 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     internal InvoicePreview Build(Invoice invoice, PlanTierType planTier, PlanCadenceType cadence)
     {
         var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
-        var priceIdsByReference = new Dictionary<string, string>();
         var prorationLines = new List<(string Reference, InvoiceLineItem Line)>();
         var discounts = DiscountMapper.Partition(invoice, logger);
 
@@ -39,13 +38,13 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Cost = (price?.UnitAmountDecimal ?? 0) / 100m,
                 Discounts = discounts.ItemLevel.GetValueOrDefault(reference),
             };
-            var priceId = price!.Id;
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException(
-                    $"Invoice {invoice.Id} resolved purchasable reference '{reference}' on two prices: {priceIdsByReference[reference]} and {priceId}.");
+                // Preview invoices have no ID; the colliding price IDs are what locates the misconfiguration.
+                throw DuplicateReference("The preview invoice", reference, invoice.Lines!.Data
+                    .Where(invoiceLine => invoiceLine.Parent?.SubscriptionItemDetails?.Proration != true)
+                    .Select(invoiceLine => invoiceLine.Pricing?.PriceDetails?.Price));
             }
-            priceIdsByReference[reference] = priceId;
         }
 
         return new InvoicePreview
@@ -53,11 +52,11 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
             PlanTier = planTier,
             Cadence = CadenceFromInvoice(invoice) ?? cadence,
             PasswordManager = BuildPasswordManagerItems(lineItemsByReference,
-                SummarizeProrations(prorationLines, InvoicePreviewSection.PasswordManager)),
+                SummarizeProrations(prorationLines, ProductType.PasswordManager)),
             SecretsManager = BuildSecretsManagerItems(lineItemsByReference,
-                SummarizeProrations(prorationLines, InvoicePreviewSection.SecretsManager)),
+                SummarizeProrations(prorationLines, ProductType.SecretsManager)),
             PrivilegedControls = BuildPrivilegedControlsItems(lineItemsByReference,
-                SummarizeProrations(prorationLines, InvoicePreviewSection.PrivilegedControls)),
+                SummarizeProrations(prorationLines, ProductType.PrivilegedControls)),
             Discounts = discounts.CartLevel.Length > 0 ? discounts.CartLevel : null,
             EstimatedTax = (invoice.TotalTaxes?.Sum(tax => tax.Amount) ?? 0) / 100m,
             Total = invoice.Total / 100m,
@@ -90,7 +89,6 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
     internal InvoicePreview Build(Subscription subscription, PlanTierType planTier, PlanCadenceType cadence)
     {
         var lineItemsByReference = new Dictionary<string, InvoicePreviewItem>();
-        var priceIdsByReference = new Dictionary<string, string>();
         var total = 0m;
 
         foreach (var subscriptionItem in subscription.Items?.Data ?? [])
@@ -111,13 +109,11 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
                 Quantity = subscriptionItem.Quantity,
                 Cost = unitCost,
             };
-            var priceId = subscriptionItem.Price!.Id;
             if (!lineItemsByReference.TryAdd(reference, item))
             {
-                throw new InvalidOperationException(
-                    $"Subscription {subscription.Id} resolved purchasable reference '{reference}' on two prices: {priceIdsByReference[reference]} and {priceId}.");
+                throw DuplicateReference($"Subscription {subscription.Id}", reference,
+                    subscription.Items!.Data.Select(existingItem => existingItem.Price));
             }
-            priceIdsByReference[reference] = priceId;
         }
 
         // Password Manager seats are the projection's invariant; a missing line is a Stripe misconfiguration.
@@ -159,12 +155,24 @@ internal sealed class InvoicePreviewBuilder(ILogger<InvoicePreviewBuilder> logge
         return reference;
     }
 
+    // Two prices sharing a reference is a Stripe misconfiguration the preview refuses to guess at. Only built when
+    // it's about to be thrown, so the hot path carries no bookkeeping for it.
+    private static InvalidOperationException DuplicateReference(string subject, string reference, IEnumerable<Price?> prices)
+    {
+        var priceIds = prices
+            .OfType<Price>()
+            .Where(price => price.Metadata?.GetValueOrDefault(StripeConstants.MetadataKeys.PurchasableReference) == reference)
+            .Select(price => price.Id);
+        return new InvalidOperationException(
+            $"{subject} resolved purchasable reference '{reference}' on more than one price: {string.Join(", ", priceIds)}.");
+    }
+
     // One proration row per purchasable, so the client can tell which item each row offsets.
     private static PurchasableProration[]? SummarizeProrations(
-        List<(string Reference, InvoiceLineItem Line)> prorationLines, InvoicePreviewSection section)
+        List<(string Reference, InvoiceLineItem Line)> prorationLines, ProductType product)
     {
         var rows = prorationLines
-            .Where(proration => PurchasableReferences.SectionOf(proration.Reference) == section)
+            .Where(proration => PurchasableReferences.ProductOf(proration.Reference) == product)
             .GroupBy(proration => proration.Reference)
             .Select(group => ProrationMapper.Summarize(group.Key, group.Select(proration => proration.Line).ToList()))
             .OfType<PurchasableProration>()
