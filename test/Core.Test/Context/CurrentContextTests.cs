@@ -236,9 +236,13 @@ public class CurrentContextTests
     }
 
     [Theory]
-    [BitAutoData("organization.12345", "api.organization.members.write", true)]
-    [BitAutoData("organization.12345", null, true)]
-    [BitAutoData("organization.12345", "api.organization", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36", "api.organization.members.write", true)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", "api.organization", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", "api.scim", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70", null, false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.12345", "api.organization.members.write", false)]
+    [BitAutoData("organization.12345.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36", "api.organization.members.write", false)]
+    [BitAutoData("organization.a9a4ad6f-5c1e-4f4a-9a0b-3f2d6c1e8b70.0b7f3c2e-9d41-4e6a-8f15-2c7a9e4d1b36.extra", "api.organization.members.write", false)]
     [BitAutoData("web", "api", false)]
     public async Task SetContextAsync_SetsIsScopedOrganizationApiKey(
         string clientId,
