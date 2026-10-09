@@ -1,5 +1,6 @@
 ﻿using System.Data.Common;
 using AutoMapper;
+using Bit.Core.AdminConsole.Enums.Partnerships;
 using Bit.Core.Billing.Premium.Models;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -473,6 +474,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => s.UserId == user.Id));
             dbContext.NotificationStatuses.RemoveRange(dbContext.NotificationStatuses.Where(ns => ns.UserId == user.Id));
             dbContext.Notifications.RemoveRange(dbContext.Notifications.Where(n => n.UserId == user.Id));
+            await CancelPartnershipEntitlementsAsync(
+                dbContext.OrganizationPartnershipEntitlements.Where(e => e.UserId == user.Id));
 
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);
@@ -525,6 +528,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.Sends.Where(s => targetIds.Contains(s.UserId ?? default)).ExecuteDeleteAsync();
             await dbContext.NotificationStatuses.Where(ns => targetIds.Contains(ns.UserId)).ExecuteDeleteAsync();
             await dbContext.Notifications.Where(n => targetIds.Contains(n.UserId ?? default)).ExecuteDeleteAsync();
+            await CancelPartnershipEntitlementsAsync(
+                dbContext.OrganizationPartnershipEntitlements.Where(e => targetIds.Contains(e.UserId ?? default)));
 
             await dbContext.Users.Where(u => targetIds.Contains(u.Id)).ExecuteDeleteAsync();
 
@@ -672,5 +677,28 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             item.Collection.DefaultUserCollectionEmail = item.Collection.DefaultUserCollectionEmail ?? item.UserEmail;
             item.Collection.RevisionDate = DateTime.UtcNow;
         }
+    }
+
+    /// <summary>
+    /// Account deletion ends a sponsorship like a user exit: canceled and released, with no resume window.
+    /// </summary>
+    /// <remarks>
+    /// Two statements because MySQL applies SET assignments left to right, so a single update can't read the
+    /// pre-update State to decide whether to stamp CanceledDate.
+    /// </remarks>
+    private static async Task CancelPartnershipEntitlementsAsync(
+        IQueryable<AdminConsole.Models.OrganizationPartnershipEntitlement> entitlements)
+    {
+        var now = DateTime.UtcNow;
+        await entitlements
+            .Where(e => e.State != PartnershipEntitlementState.Canceled)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(e => e.State, PartnershipEntitlementState.Canceled)
+                .SetProperty(e => e.CanceledDate, now));
+        await entitlements.ExecuteUpdateAsync(s => s
+            .SetProperty(e => e.ResumeWindowExpirationDate, (DateTime?)null)
+            .SetProperty(e => e.UserId, (Guid?)null)
+            .SetProperty(e => e.AccountRef, (Guid?)null)
+            .SetProperty(e => e.RevisionDate, now));
     }
 }
