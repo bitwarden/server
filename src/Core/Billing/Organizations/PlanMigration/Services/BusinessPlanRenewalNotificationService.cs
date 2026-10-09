@@ -10,6 +10,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Models.Mail.Billing.Renewal.BusinessPlanRenewal2020Migration;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -22,6 +23,7 @@ public class BusinessPlanRenewalNotificationService(
     IStripeAdapter stripeAdapter,
     IMailer mailer,
     IOrganizationRepository organizationRepository,
+    GlobalSettings globalSettings,
     ILogger<BusinessPlanRenewalNotificationService> logger)
     : IBusinessPlanRenewalNotificationService
 {
@@ -90,6 +92,7 @@ public class BusinessPlanRenewalNotificationService(
         await mailer.SendEmail(new BusinessPlanRenewal2020MigrationMail
         {
             ToEmails = [organization.BillingEmail],
+            ReplyToAddress = globalSettings.Mail.SupportReplyToEmail,
             View = new BusinessPlanRenewal2020MigrationMailView
             {
                 RenewalDate = renewalDate.Value.ToString("MMMM d, yyyy", culture),

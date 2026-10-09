@@ -12,7 +12,7 @@ using Bit.Core.Billing.Payment.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Stripe;
 using Stripe.Tax;
 

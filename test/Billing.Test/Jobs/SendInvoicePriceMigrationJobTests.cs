@@ -8,7 +8,7 @@ using Bit.Core.Billing.Organizations.PlanMigration.Repositories;
 using Bit.Core.Billing.Organizations.PlanMigration.Services;
 using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;

@@ -18,14 +18,14 @@ public class CreateCollectionCommand : ICreateCollectionCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionAccessValidator _collectionAccessValidator;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public CreateCollectionCommand(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         ICollectionAccessValidator collectionAccessValidator,
-        IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
@@ -52,13 +52,6 @@ public class CreateCollectionCommand : ICreateCollectionCommand
         var usersList = users?.ToList();
 
         var groupsToSave = org.UseGroups ? groupsList : null;
-
-        // Cannot use Manage with ReadOnly/HidePasswords permissions
-        var invalidAssociations = groupsList?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
-        if (invalidAssociations?.Any() ?? false)
-        {
-            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
-        }
 
         var accessValidation = await _collectionAccessValidator.ValidateAsync(
             new CollectionAccessValidationRequest(collection.OrganizationId, groupsToSave, usersList));

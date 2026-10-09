@@ -3,11 +3,13 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Request;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -35,6 +37,7 @@ public class OrganizationUsersControllerInviteTests
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly ICollectionRepository _collectionRepository;
 
     private Organization _organization = null!;
     private string _ownerEmail = null!;
@@ -50,6 +53,7 @@ public class OrganizationUsersControllerInviteTests
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         _groupRepository = _factory.GetService<IGroupRepository>();
+        _collectionRepository = _factory.GetService<ICollectionRepository>();
     }
 
     public async Task InitializeAsync()
@@ -276,6 +280,78 @@ public class OrganizationUsersControllerInviteTests
         Assert.NotNull(organization);
         Assert.Equal(1, organization.Seats);
     }
+
+    [Fact]
+    public async Task Invite_WithADefaultUserCollection_AsManageUsersHolder_IsRejectedAndWritesNoAccess()
+    {
+        await SetAllowAdminAccessToAllCollectionItemsAsync(true);
+
+        var (attackerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = true });
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        var defaultCollection = await CreateCollectionAsync(CollectionType.DefaultUserCollection);
+
+        var invitedEmail = $"invited-{Guid.NewGuid()}@bitwarden.com";
+        var response = await InviteAsync(new OrganizationUserInviteRequestModel
+        {
+            Emails = [invitedEmail],
+            Type = OrganizationUserType.User,
+            Collections = [new SelectionReadOnlyRequestModel { Id = defaultCollection.Id, Manage = false }],
+            Groups = []
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        Assert.Null(await _organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, invitedEmail));
+        var collectionWithAccess = await _collectionRepository.GetByIdWithAccessAsync(defaultCollection.Id);
+        Assert.Empty(collectionWithAccess.Item2.Users);
+    }
+
+    [Fact]
+    public async Task Invite_WithASharedCollection_AsManageUsersHolder_Succeeds()
+    {
+        await SetAllowAdminAccessToAllCollectionItemsAsync(true);
+
+        var (attackerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = true });
+        await _loginHelper.LoginAsync(attackerEmail);
+
+        var sharedCollection = await CreateCollectionAsync(CollectionType.SharedCollection);
+
+        var invitedEmail = $"invited-{Guid.NewGuid()}@bitwarden.com";
+        var response = await InviteAsync(new OrganizationUserInviteRequestModel
+        {
+            Emails = [invitedEmail],
+            Type = OrganizationUserType.User,
+            Collections = [new SelectionReadOnlyRequestModel { Id = sharedCollection.Id, Manage = false }],
+            Groups = []
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var created = await _organizationUserRepository.GetByOrganizationEmailAsync(_organization.Id, invitedEmail);
+        Assert.NotNull(created);
+        var (_, collections) = await _organizationUserRepository.GetByIdWithCollectionsAsync(created.Id);
+        Assert.Equal(sharedCollection.Id, Assert.Single(collections).Id);
+    }
+
+    private async Task SetAllowAdminAccessToAllCollectionItemsAsync(bool value)
+    {
+        _organization.AllowAdminAccessToAllCollectionItems = value;
+        await _organizationRepository.ReplaceAsync(_organization);
+        // ReplaceAsync does not refresh the cached ability the authorization handler reads, so push it explicitly.
+        await _factory.GetService<IOrganizationAbilityCacheService>()
+            .UpsertOrganizationAbilityAsync(_organization);
+    }
+
+    private Task<Collection> CreateCollectionAsync(CollectionType type) =>
+        _collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = _organization.Id,
+            Name = $"Test Collection {Guid.NewGuid()}",
+            Type = type
+        });
 
     private Task<HttpResponseMessage> InviteAsync(OrganizationUserInviteRequestModel model)
     {

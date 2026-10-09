@@ -55,12 +55,21 @@ public abstract class BaseBillingCommand<T>(
                     new BadRequest(
                         "The tax ID number you provided was invalid. Please try again or contact support for assistance."),
 
-                _ => new Unhandled(stripeException)
+                _ => Unmapped(stripeException)
             };
+
+            // Unhandled is the only branch the caller cannot diagnose from the response, so it has to log.
+            Unhandled Unmapped(StripeException exception)
+            {
+                logger.LogError(exception,
+                    "{Command}: An unmapped Stripe input error occurred | Code = {Code}", CommandName,
+                    exception.StripeError.Code);
+                return new Unhandled(exception);
+            }
         }
         catch (ConflictException conflictException)
         {
-            logger.LogError("{Command}: {Message}", CommandName, conflictException.Message);
+            logger.LogError(conflictException, "{Command}: {Message}", CommandName, conflictException.Message);
             return DefaultConflict != null ?
                 DefaultConflict :
                 new Unhandled(conflictException);

@@ -28,7 +28,7 @@ namespace Bit.Identity.Test.IdentityServer;
 public class CustomTokenRequestValidatorTests
 {
     private readonly IUserService _userService;
-    private readonly IFeatureService _featureService;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
     private readonly ICurrentContext _currentContext;
     private readonly FakeLogger<CustomTokenRequestValidator> _logger;
@@ -49,7 +49,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ILogger<UserManager<User>>>());
 
         _userService = Substitute.For<IUserService>();
-        _featureService = Substitute.For<IFeatureService>();
+        _featureService = Substitute.For<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
         _currentContext = Substitute.For<ICurrentContext>();
         _logger = new FakeLogger<CustomTokenRequestValidator>();
