@@ -162,7 +162,7 @@ BEGIN
         [dbo].[OrganizationPartnershipEntitlement]
     SET
         [State] = 3,
-        [CanceledDate] = ISNULL([CanceledDate], GETUTCDATE()),
+        [CanceledDate] = CASE WHEN [State] = 3 THEN [CanceledDate] ELSE GETUTCDATE() END,
         [ResumeWindowExpirationDate] = NULL,
         [UserId] = NULL,
         [AccountRef] = NULL,
