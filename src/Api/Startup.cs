@@ -136,6 +136,14 @@ public class Startup
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
             });
+            foreach (var (policyName, scope) in Policies.OrganizationScopedPolicyScopes)
+            {
+                config.AddPolicy(policyName, policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, scope, ApiScopes.ApiOrganization);
+                });
+            }
             config.AddPolicy(Policies.Installation, policy =>
             {
                 policy.RequireAuthenticatedUser();

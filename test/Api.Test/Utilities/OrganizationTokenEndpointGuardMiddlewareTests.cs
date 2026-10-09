@@ -38,6 +38,24 @@ public class OrganizationTokenEndpointGuardMiddlewareTests
         Assert.True(nextCalled());
     }
 
+    [Theory]
+    [InlineData(Policies.OrganizationMembersRead)]
+    [InlineData(Policies.OrganizationMembersWrite)]
+    [InlineData(Policies.OrganizationGroupsRead)]
+    [InlineData(Policies.OrganizationGroupsWrite)]
+    [InlineData(Policies.OrganizationCollectionsRead)]
+    [InlineData(Policies.OrganizationCollectionsWrite)]
+    [InlineData(Policies.OrganizationPoliciesRead)]
+    [InlineData(Policies.OrganizationEventsRead)]
+    [InlineData(Policies.OrganizationSubscriptionRead)]
+    [InlineData(Policies.OrganizationSubscriptionWrite)]
+    public async Task OrganizationToken_EndpointWithScopedOrganizationPolicy_CallsNext(string policy)
+    {
+        var (_, nextCalled) = await InvokeAsync(OrganizationClientId, new AuthorizeAttribute(policy));
+
+        Assert.True(nextCalled());
+    }
+
     [Fact]
     public async Task OrganizationToken_AllowAnonymousEndpoint_CallsNext()
     {
