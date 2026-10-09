@@ -5,10 +5,12 @@ using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +25,7 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
+    private readonly IScopedApiKeyGroupMemberValidator _scopedApiKeyGroupMemberValidator;
     private readonly TimeProvider _timeProvider;
 
     public GroupsController(
@@ -31,6 +34,7 @@ public class GroupsController : Controller
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
+        IScopedApiKeyGroupMemberValidator scopedApiKeyGroupMemberValidator,
         TimeProvider timeProvider)
     {
         _groupRepository = groupRepository;
@@ -38,6 +42,7 @@ public class GroupsController : Controller
         _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
+        _scopedApiKeyGroupMemberValidator = scopedApiKeyGroupMemberValidator;
         _timeProvider = timeProvider;
     }
 
@@ -178,6 +183,7 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
+        await ValidateScopedApiKeyMemberChangeAsync(existingGroup.OrganizationId, existingGroup.Id, model.MemberIds ?? []);
         await _groupRepository.UpdateUsersAsync(existingGroup.Id, model.MemberIds, _timeProvider.GetUtcNow().UtcDateTime);
         return new OkResult();
     }
@@ -200,7 +206,17 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
+        await ValidateScopedApiKeyMemberChangeAsync(group.OrganizationId, group.Id, []);
         await _groupRepository.DeleteAsync(group);
         return new OkResult();
+    }
+
+    private async Task ValidateScopedApiKeyMemberChangeAsync(Guid organizationId, Guid groupId, IEnumerable<Guid> memberIds)
+    {
+        var error = await _scopedApiKeyGroupMemberValidator.ValidateAsync(organizationId, groupId, memberIds);
+        if (error is not null)
+        {
+            throw new BadRequestException(error.Message);
+        }
     }
 }

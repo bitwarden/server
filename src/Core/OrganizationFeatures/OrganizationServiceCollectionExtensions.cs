@@ -200,6 +200,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
     {
         services.TryAddScoped<IGroupCollectionAccessValidator, GroupCollectionAccessValidator>();
+        services.TryAddScoped<IScopedApiKeyGroupMemberValidator, ScopedApiKeyGroupMemberValidator>();
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
