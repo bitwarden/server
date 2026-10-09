@@ -134,6 +134,17 @@ public class OrganizationClientProviderTests
     }
 
     [Theory, BitAutoData]
+    public async Task GetAsync_ScopedIdentifier_SecretExpiresWithKey(Organization organization)
+    {
+        var key = ArrangeValidScopedKey(organization);
+        key.ExpireAt = DateTime.UtcNow.AddDays(1);
+
+        var client = await _sut.GetAsync($"{organization.Id}.{key.Id}");
+
+        Assert.Equal(key.ExpireAt, Assert.Single(client!.ClientSecrets).Expiration);
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAsync_ScopedIdentifier_OrganizationNotFound_ReturnsNull(Organization organization)
     {
         var key = ArrangeValidScopedKey(organization);

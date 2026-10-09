@@ -104,7 +104,8 @@ internal class OrganizationClientProvider : IClientProvider
         {
             ClientId = $"organization.{organization.Id}.{key.Id}",
             RequireClientSecret = true,
-            ClientSecrets = [new Secret(key.ClientSecretHash)],
+            // Duende checks secret expiration on every request, including for cached clients.
+            ClientSecrets = [new Secret(key.ClientSecretHash, key.ExpireAt)],
             AllowedScopes = (key.GetScopes() ?? []).Intersect(ApiScopes.OrganizationApiKeyScopes).ToList(),
             AllowedGrantTypes = GrantTypes.ClientCredentials,
             AccessTokenLifetime = 3600 * 1,
